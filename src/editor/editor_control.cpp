@@ -6,6 +6,7 @@
 #include "editor/platform/clipboard.h"
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
+#include <wx/wupdlock.h>
 #include <cmath>
 #include <type_traits>
 #include <utility>
@@ -62,7 +63,7 @@ void EditorControl::BindCoreEvent(const wxEventTypeTag<Event>& type, Handler han
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                 wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
-      caretTimer_(this), scrollTimer_(this), widenTimer_(this) {
+      caretTimer_(this), scrollTimer_(this), widenTimer_(this), dwellTimer_(this) {
     // The native Notepad4 host initializes these tables before any document
     // copies its ASCII word classes. The wx host must do the same.
     [[maybe_unused]] static const bool unicodeDataInitialized = [] {
@@ -142,9 +143,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickScroll(); }, scrollTimer_.GetId());
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickWiden(); }, widenTimer_.GetId());
+    BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickDwell(); }, dwellTimer_.GetId());
     BindCoreEvent(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    BindCoreEvent(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { core_->MouseDeparted(); });
     BindCoreEvent(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
     BindCoreEvent(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& event) { core_->Wheel(event); });
     const auto scroll = [this](wxScrollWinEvent& event) { core_->Scroll(event); };
@@ -190,6 +193,12 @@ EditorControl::~EditorControl() {
 
 void EditorControl::FlushPendingUIUpdate() {
     core_->FlushPendingUIUpdate();
+}
+
+void EditorControl::SetColorCallTipMode(ColorCallTipMode mode) {
+    constexpr int colorDwellMilliseconds = 250;
+    colorCallTipMode_ = mode;
+    Send(Message::SetMouseDwellTime, mode == ColorCallTipMode::Off ? Scintilla::TimeForever : colorDwellMilliseconds);
 }
 
 void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
@@ -512,6 +521,30 @@ void EditorControl::SetCodeFoldingVisible(bool visible) {
     UpdateFoldMargin();
     if (!visible) Send(Message::FoldAll, static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Expand)));
     core_->UpdateWrapLayout();
+}
+
+void EditorControl::ToggleAllFolds() {
+    using enum Scintilla::FoldAction;
+    {
+        const wxWindowUpdateLocker redraw(this);
+        core_->WndProc(Message::FoldAll,
+                       static_cast<uintptr_t>(std::to_underlying(Toggle) | std::to_underlying(ContractEveryLevel)), 0);
+    }
+    FinishBatchFold();
+}
+
+void EditorControl::FinishBatchFold() {
+    using enum Scintilla::Message;
+    using enum Scintilla::CaretPolicy;
+    constexpr int horizontalCaretSlop = 50;
+    constexpr int verticalCaretSlop = 5;
+    constexpr auto strictPolicy = static_cast<uintptr_t>(std::to_underlying(Slop | Strict | Even));
+    Send(SetXCaretPolicy, strictPolicy, horizontalCaretSlop);
+    Send(SetYCaretPolicy, strictPolicy, verticalCaretSlop);
+    Send(ScrollCaret);
+    Send(SetXCaretPolicy, static_cast<uintptr_t>(std::to_underlying(Slop | Even)), horizontalCaretSlop);
+    Send(SetYCaretPolicy, static_cast<uintptr_t>(std::to_underlying(Even)), 0);
+    Refresh(false);
 }
 
 void EditorControl::UpdateFoldMargin() {

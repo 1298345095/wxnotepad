@@ -444,7 +444,7 @@ private:
         NativeFold::Paint(editor);
         Layout(frame);
         editor->Send(GotoPos, 0);
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
         Require(!editor->Send(GetLineVisible, 3) && !editor->Send(GetLineVisible, 7),
                 "the combined fixture hides nested and unrelated blocks");
         NativeSearch::Command(frame, whitespace);

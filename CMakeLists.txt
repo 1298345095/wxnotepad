@@ -76,10 +76,12 @@ add_library(editor_runtime STATIC
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
     src/editor/block_navigation.cpp
+    src/editor/fold_commands.cpp
     src/editor/selection_commands.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/base64_conversion.cpp
+    src/editor/rtf_export.cpp
     src/editor/platform/native_encoding.cpp
     src/editor/native_byte_history.cpp
     src/editor/compress_whitespace.cpp
@@ -102,6 +104,7 @@ add_library(editor_runtime STATIC
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
+    src/editor/editor_color_calltip.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
     src/editor/platform/character_hex.cpp
@@ -185,7 +188,7 @@ if(WIN32)
         src/editor/platform/directwrite_surface.cpp)
     target_include_directories(editor_runtime PRIVATE "${directwrite_generated}")
     target_compile_definitions(editor_runtime PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
-    target_link_libraries(editor_features PRIVATE advapi32)
+    target_link_libraries(editor_features PRIVATE advapi32 shell32 ole32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
     target_link_libraries(app_shell PRIVATE shell32 ole32 comdlg32)
 endif()
@@ -358,6 +361,10 @@ if(BUILD_TESTING)
         pkg_check_modules(GTK_UNIX_PRINT REQUIRED gtk+-unix-print-3.0)
         target_include_directories(printing PRIVATE ${GTK_UNIX_PRINT_INCLUDE_DIRS})
     endif()
+    add_editor_test(full_screen original_full_screen 60)
+    add_test(NAME original_full_screen_settings COMMAND full_screen)
+    set_tests_properties(original_full_screen_settings PROPERTIES TIMEOUT 60
+        ENVIRONMENT "WXNOTEPAD_FULL_SCREEN_SETTINGS=1")
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
     if(WIN32)
@@ -396,6 +403,7 @@ if(BUILD_TESTING)
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
+    add_editor_test(save_backup original_save_backup 30)
     add_editor_test(current_encoding original_current_encoding 90)
     add_test(NAME original_current_encoding_native_keys COMMAND current_encoding)
     set_tests_properties(original_current_encoding_native_keys PROPERTIES TIMEOUT 90
@@ -430,6 +438,7 @@ if(BUILD_TESTING)
         target_link_libraries(clipboard_peer PRIVATE PkgConfig::GTK)
     endif()
     add_editor_test(clipboard_smoke system_clipboard 30)
+    target_compile_definitions(clipboard_smoke PRIVATE WXNOTEPAD_RTF_REFERENCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data/rtf")
     add_test(NAME original_read_only_clipboard COMMAND clipboard_smoke)
     set_tests_properties(original_read_only_clipboard PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=read-only")
     add_test(NAME original_clipboard_shapes COMMAND clipboard_smoke)
@@ -678,6 +687,9 @@ if(BUILD_TESTING)
     add_editor_test(fold_cpp cpp_fold_margin 60)
     add_editor_test(search_folds folded_search_replace 60)
     add_editor_test(fold_all fold_all_commands 60)
+    add_editor_test(fold_commands original_toggle_folds 60)
+    target_compile_definitions(fold_commands PRIVATE
+        "FOLD_COMMAND_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/fold_commands_reference.tsv\"")
     add_editor_test(fold_view original_folding_view 60)
     if(WIN32)
         add_test(NAME original_folding_view_dpi96 COMMAND fold_view)
@@ -720,6 +732,12 @@ if(BUILD_TESTING)
     add_gui_program(completion_settings tests/completion_settings.cpp app_shell)
     add_test(NAME original_completion_settings COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/completion_settings_process.py" "$<TARGET_FILE:completion_settings>")
     add_editor_test(completion_popup original_completion_popup 60)
+    add_editor_test(color_calltip original_color_calltip 90)
+    if(NOT WIN32)
+        add_test(NAME original_color_calltip_scale2 COMMAND color_calltip)
+        set_tests_properties(original_color_calltip_scale2 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+    endif()
     add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
     add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
     add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
@@ -838,7 +856,8 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_original_custom_contrast PROPERTIES TIMEOUT 90
             ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
 
-        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup unicode_controls)
+        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup
+                      unicode_controls color_calltip)
             add_gui_program(directwrite_${probe} tests/${probe}.cpp app_shell)
             target_compile_definitions(directwrite_${probe} PRIVATE WXNOTEPAD_TEST_DIRECTWRITE)
         endforeach()
@@ -859,6 +878,8 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_automatic_completion PROPERTIES TIMEOUT 120)
         add_test(NAME native_directwrite_completion_popup COMMAND directwrite_completion_popup)
         set_tests_properties(native_directwrite_completion_popup PROPERTIES TIMEOUT 60)
+        add_test(NAME native_directwrite_color_calltip COMMAND directwrite_color_calltip)
+        set_tests_properties(native_directwrite_color_calltip PROPERTIES TIMEOUT 90)
         add_gui_program(native_gdi_resize_viewport tests/native_resize_viewport.cpp app_shell)
         target_compile_definitions(native_gdi_resize_viewport PRIVATE WXNOTEPAD_TEST_GDI)
         add_test(NAME native_gdi_original_resize_viewport COMMAND native_gdi_resize_viewport)
@@ -952,6 +973,9 @@ if(BUILD_TESTING)
     else()
         add_editor_test(native_byte_information native_invalid_byte_character_information 60)
     endif()
+    add_editor_test(search_continuation original_search_continuation 60)
+    add_test(NAME original_rtf_clipboard COMMAND clipboard_smoke)
+    set_tests_properties(original_rtf_clipboard PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=rtf")
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

@@ -62,6 +62,11 @@ whitespace markers start off. These choices stay with the current window through
 New, Open, Save As and language changes; they are not saved between runs.
 See the [navigation and view validation record](docs/observations/navigation-view-README.md).
 
+View → Show CallTip previews hexadecimal colors when you hover over them.
+Choose RGBA, ARGB, BGRA or ABGR to match the document's format, then click a
+preview to edit the color in the native chooser. Hold Shift when accepting the
+chooser to write uppercase hexadecimal digits. The setting starts Off.
+
 The status bar shows the 1-based logical line and core column at the active
 caret. Tabs follow the current tab stops; wrapped rows do not create document
 lines. A nonempty stream selection also shows its Unicode scalar count, rather
@@ -108,7 +113,14 @@ original selection scope, rectangular-selection handling and history behavior.
 Save As remains F6; Ctrl+Shift+S converts selected tabs to spaces.
 
 Search → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
-Shift+F3 finds the previous match. Wrap around is enabled by default, while
+Shift+F3 finds the previous match. Before a query has been set, these keys use
+an existing selection when Copy Selection as Find Text is on; otherwise they
+open Find. Save Find Text (Alt+F3) saves the selected text without moving to
+another match. Ctrl+F3 and Ctrl+Shift+F3 use the selected text to find the next
+or previous match. These three explicit commands select the word at the caret
+when there is no selection and follow the original line fallback.
+
+Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
 Replace share the query and options for the current application session.
 Opening imports selected text up to 1 MiB, or the clipboard under the original
@@ -125,7 +137,10 @@ changes and edits clear the count and indicators. Find All bookmarks remain unti
 the next Find All operation; New/Open clear them with the replaced document.
 
 Search → Replace / Ctrl+H opens the replacement view. Replace revalidates the
-selected match before editing; Replace All searches the complete current
+selected match before editing. Replace Next (F4) continues with the submitted
+query and replacement, including an intentionally empty replacement. Before
+the first replacement is submitted, F4 in the editor opens Replace; F4 in the
+Find dialog leaves it in Find mode. Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single
 replacement or Replace All operation can be undone once. Byte-identical
 single replacements and Replace All preserve the save point and redo history.
@@ -179,7 +194,8 @@ BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
 without a BOM. Open As GBK explicitly decodes CP936. File → Encoding and More
 (F9) choose the live document's destination format, including BOM-less UTF-16LE
 and GBK, GB18030 (CP54936), and Big5 (CP950); Reload → With Encoding (F8)
-reinterprets disk bytes. Encoding-only
+reinterprets disk bytes. The Reload submenu also has quick commands for UTF-8,
+native ANSI, native OEM, and the configured default encoding. Encoding-only
 changes participate in Save and unsaved-change decisions while retaining text
 and history. Save and Save As write the chosen encoding and BOM, shown in the
 status bar. [Encoding behavior](docs/encoding.md) covers empty files and native
@@ -272,8 +288,9 @@ C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX, TypeScript/TSX, Ru
 and TypeScript use the original shared JavaScript lexer with separate keyword lists
 and four dialect properties. Their tab settings default to two spaces; JSX shares
 the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
-collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
-blocks. These commands change visibility without editing text or history. Find
+collapse or expand its block. View → Toggle Folds offers Default Levels, All
+Levels, Current Block, Current Level, and Levels 1–10. These commands change
+visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while
 leaving unrelated folds collapsed. Replacement still searches the full document.
 See the [syntax and folding validation record](docs/observations/syntax-README.md).

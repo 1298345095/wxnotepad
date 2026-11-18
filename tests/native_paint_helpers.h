@@ -13,7 +13,6 @@
 #include <cairo.h>
 #endif
 
-// Numeric samples from the actual widget paint surface; no image capture.
 namespace NativePaint {
 inline void Complete(EditorControl* editor) {
     class Completion final : public wxEvtHandler {
@@ -45,32 +44,11 @@ inline void Complete(EditorControl* editor) {
         if (completion.completed < expected) throw std::runtime_error("actual native editor paint must complete");
     }
 }
-inline std::vector<wxColour> Read(EditorControl* editor, const wxRect& area) {
-    std::vector<wxColour> pixels;
-    const auto sample = [&area, &pixels](wxDC& dc) {
-        for (int y = area.y; y < area.GetBottom() + 1; ++y) {
-            for (int x = area.x; x < area.GetRight() + 1; ++x) {
-                int nativeX = x;
-                int nativeY = y;
-#ifdef __WXGTK__
-                auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());
-                double deviceX = x;
-                double deviceY = y;
-                cairo_user_to_device(context, &deviceX, &deviceY);
-                nativeX = static_cast<int>(deviceX);
-                nativeY = static_cast<int>(deviceY);
-#endif
-                wxColour colour;
-                if (!dc.GetPixel(nativeX, nativeY, &colour)) throw std::runtime_error("read actual widget paint pixel");
-                pixels.push_back(colour);
-            }
-        }
-    };
+inline void Observe(wxWindow* editor, const std::function<void(wxDC&)>& sample) {
 #ifdef __WXGTK__
     class Observation final : public wxEvtHandler {
     public:
-        Observation(EditorControl* editor, const std::function<void(wxDC&)>& sample)
-            : editor_(editor), sample_(sample) {
+        Observation(wxWindow* editor, const std::function<void(wxDC&)>& sample) : editor_(editor), sample_(sample) {
             editor_->PushEventHandler(this);
         }
         ~Observation() override { editor_->PopEventHandler(false); }
@@ -86,7 +64,7 @@ inline std::vector<wxColour> Read(EditorControl* editor, const wxRect& area) {
         bool pending = true;
 
     private:
-        EditorControl* editor_;
+        wxWindow* editor_;
         std::function<void(wxDC&)> sample_;
     };
     Observation observation(editor, sample);
@@ -105,6 +83,29 @@ inline std::vector<wxColour> Read(EditorControl* editor, const wxRect& area) {
     wxClientDC dc(editor);
     sample(dc);
 #endif
+}
+
+inline std::vector<wxColour> Read(wxWindow* editor, const wxRect& area) {
+    std::vector<wxColour> pixels;
+    Observe(editor, [&area, &pixels](wxDC& dc) {
+        for (int y = area.y; y < area.GetBottom() + 1; ++y) {
+            for (int x = area.x; x < area.GetRight() + 1; ++x) {
+                int nativeX = x;
+                int nativeY = y;
+#ifdef __WXGTK__
+                auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());
+                double deviceX = x;
+                double deviceY = y;
+                cairo_user_to_device(context, &deviceX, &deviceY);
+                nativeX = static_cast<int>(deviceX);
+                nativeY = static_cast<int>(deviceY);
+#endif
+                wxColour colour;
+                if (!dc.GetPixel(nativeX, nativeY, &colour)) throw std::runtime_error("read actual widget paint pixel");
+                pixels.push_back(colour);
+            }
+        }
+    });
     return pixels;
 }
 

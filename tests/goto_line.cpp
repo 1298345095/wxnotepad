@@ -272,7 +272,7 @@ void FoldedNavigationHistory(EditorFrame* frame) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
     editor->Send(GotoPos, 0);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(GetLineVisible, 2) && !editor->Send(GetLineVisible, 6),
             "fixture must hide nested and unrelated target blocks");
     editor->Send(EmptyUndoBuffer);
@@ -309,7 +309,7 @@ void FoldedNavigationHistory(EditorFrame* frame) {
     Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetFoldExpanded, 1) && editor->Send(GetLineVisible, 2) &&
                 !editor->Send(GetFoldExpanded, 5) && !editor->Send(GetLineVisible, 6),
             "navigation must reveal only the target's folded ancestors");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Dialog(frame, id, [](wxDialog* dialog, wxTextCtrl* input) {
         input->SetValue("");
         Column(dialog)->SetValue("30");

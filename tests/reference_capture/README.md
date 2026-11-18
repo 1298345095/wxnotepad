@@ -11,10 +11,13 @@ output path as documented in the corresponding observation:
 - [Automatic word completion](../../docs/observations/automatic-completion.md)
 - [Automatic tag closure](../../docs/observations/auto-close-tags.md)
 - [Caret appearance](../../docs/observations/caret-appearance.md)
+- [Color CallTips](../../docs/observations/color-calltips.md)
 - [Header insertion](../../docs/observations/header-insertion.md)
 - [Markdown dialects](../../docs/observations/syntax-markdown.md)
 - [Manual word completion](../../docs/observations/word-completion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
+- [Search continuation](../../docs/observations/search-continuation.md)
+- [Manual Save Backup](../../docs/observations/save-backup.md)
 - [Word wrap settings and DPI](../../docs/observations/word-wrap-settings.md)
 - [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)
 

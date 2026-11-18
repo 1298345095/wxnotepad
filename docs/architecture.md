@@ -249,7 +249,7 @@ test dependencies.
 The private `ReadDocument` operation returns a complete decoded candidate or a
 read/decode error. `DocumentSession::Load` accepts a `DocumentLoad::Intent` and
 owns the discard/save decision, any necessary re-read, document replacement and
-loaded-settings callback. The four intents expose the actual loading operations:
+loaded-settings callback. The intents expose the actual loading operations:
 
 | Intent | Session-owned loading rules |
 | --- | --- |
@@ -257,6 +257,7 @@ loaded-settings callback. The four intents expose the actual loading operations:
 | `Reload` | Capture the current path and use the full current encoding as a weak detection hint. |
 | `ReloadWithEncoding` | Capture the current path and decode using the selected source codec. The app has already completed its discard warning and picker. |
 | `ReloadAsUtf8` | Capture the current path and view, ask the save/discard decision, then read using UTF-8. |
+| `ReloadQuickEncoding` | Use the same quick reload decision and view rules with a native ANSI/OEM source or the configured default source. The resolver separates native format identity from the codec and determines BOM identity from the file. |
 
 An omitted decision means replacement is already approved. A cancelled source
 selection or a reload of an untitled document returns `Cancelled` without asking
@@ -430,10 +431,15 @@ Additional payloads remain an explicit follow-up: rectangular/line selection tag
 files, shell objects and application-specific formats are not migrated by the
 stream-text slice. Linux IME also remains deferred.
 
-The current platform implementation still contains incomplete capabilities:
-`WxSurface::Layout` returns null, `CreateCallTipWindow` is empty, and popup-menu
-methods are stubs. Future work should complete the relevant existing interface
-instead of inferring support from the compiled core.
+Color CallTips use Scintilla's dwell, CallTip layout, painting and click
+notification. The wx popup shares the editor's nonactivating window behavior
+with completion and paints directly into the popup's native device context at
+its current scale. The editor owns color scanning and replacement, and the
+application frame owns the View command and settings lifecycle.
+
+`WxSurface::Layout` still returns null and original-core popup-menu methods
+are stubs. Future work should complete the relevant existing interface instead
+of inferring support from the compiled core.
 
 ## Portability, build and lightweight constraints
 

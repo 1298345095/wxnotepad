@@ -117,22 +117,25 @@ wxMenu* EditorFrame::CreateToolsMenu() {
 }
 
 void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
-    reloadEncodingId_ = wxWindow::NewControlId();
-    reloadUtf8Id_ = wxWindow::NewControlId();
-    reload->Append(reloadUtf8Id_, _("As &UTF-8\tShift+F8"));
-    reload->AppendSeparator();
-    reload->Append(reloadEncodingId_, _("With &Encoding...\tF8"));
-    for (const int id : {reloadEncodingId_, reloadUtf8Id_})
+    const auto append = [this, reload](const wxString& label, auto load) {
+        const int id = wxWindow::NewControlId();
+        reload->Append(id, label);
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, id);
-    for (const int id : {reloadEncodingId_, reloadUtf8Id_})
         Bind(
             wxEVT_MENU,
-            [this, id](wxCommandEvent&) {
-                const auto result = id == reloadEncodingId_ ? ReloadWithEncoding() : ReloadAsUtf8();
+            [this, load](wxCommandEvent&) {
+                const auto result = load();
                 if (result.status == OpenStatus::Failed)
                     wxMessageBox(result.error, _("Could not reload file"), wxOK | wxICON_ERROR, this);
             },
             id);
+    };
+    append(_("As &UTF-8\tShift+F8"), [this] { return ReloadAsUtf8(); });
+    append(_("As &ANSI\tCtrl+Shift+A"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Ansi); });
+    append(_("As &OEM\tCtrl+Shift+O"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Oem); });
+    reload->AppendSeparator();
+    append(_("&Default Encoding\tCtrl+Alt+F"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Default); });
+    append(_("With &Encoding...\tF8"), [this] { return ReloadWithEncoding(); });
 }
 
 void EditorFrame::AppendEncodingCommands(wxMenu* file) {
@@ -219,6 +222,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
     }
     file->Append(wxID_SAVE, _("&Save\tCtrl+S"));
     file->Append(wxID_SAVEAS, _("Save &As...\tF6"));
+    const int saveBackup = wxWindow::NewControlId();
+    file->Append(saveBackup, _("Save Back&up"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { document_.SaveBackup(); }, saveBackup);
     saveCopyId_ = wxWindow::NewControlId();
     file->Append(saveCopyId_, _("Save Cop&y...\tCtrl+F6"));
     const int saveOriginalTime = wxWindow::NewControlId();
@@ -427,6 +433,13 @@ wxMenu* EditorFrame::CreateEditMenu() {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
         copyAdd);
+    const int copyRtf = wxWindow::NewControlId();
+    clipboard->Append(copyRtf, _("Copy as &RTF"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CopyAsRtf(document_.IsDefaultEncoding()); }, copyRtf);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        copyRtf);
     edit->AppendSubMenu(clipboard, _("Cop&y to Clipboard"));
     edit->AppendSeparator();
     AppendEditingCommands(edit);
@@ -853,13 +866,27 @@ void EditorFrame::AppendLineWrappingCommands(wxMenu* edit) {
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
     edit->Append(wxID_FIND, _("&Find...\tCtrl+F"));
+    const int saveFind = wxWindow::NewControlId();
+    const int replaceNext = wxWindow::NewControlId();
+    edit->Append(saveFind, _("Sa&ve Find Text\tAlt+F3"));
     edit->Append(wxID_FORWARD, _("Find &Next\tF3"));
     edit->Append(wxID_BACKWARD, _("Find &Previous\tShift+F3"));
     edit->Append(wxID_REPLACE, _("R&eplace...\tCtrl+H"));
+    edit->Append(replaceNext, _("Repl&ace Next\tF4"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { search_.SaveSelectionAsFindText(true); }, saveFind);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(true); }, wxID_REPLACE);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindPrevious(); }, wxID_BACKWARD);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ReplaceNext(); }, replaceNext);
+
+    const int nextSelection = wxWindow::NewControlId();
+    const int previousSelection = wxWindow::NewControlId();
+    const std::array<wxAcceleratorEntry, 2> selectionKeys = {
+        {{wxACCEL_CTRL, WXK_F3, nextSelection}, {wxACCEL_CTRL | wxACCEL_SHIFT, WXK_F3, previousSelection}}};
+    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(selectionKeys.size()), selectionKeys.data()));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Forward); }, nextSelection);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Backward); }, previousSelection);
 }
 
 void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
@@ -1097,12 +1124,20 @@ wxMenu* EditorFrame::CreateViewMenu() {
             id);
     }
     view->AppendSubMenu(occurrences, _("Mark &Occurrences"));
+    AppendCallTipCommands(view);
     view->AppendSeparator();
     AppendMarginCommands(view);
     view->AppendSeparator();
     AppendFoldCommands(view);
     view->AppendSeparator();
     AppendZoomCommands(view);
+    const int fullScreen = wxWindow::NewControlId();
+#ifdef __WXMSW__
+    view->Append(fullScreen, _("Toggle Full &Screen\tF11 [Esc]"));
+#else
+    view->Append(fullScreen, _("Toggle Full &Screen [Esc]\tF11"));
+#endif
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { SetFullScreen(!FullScreenActive()); }, fullScreen);
     return view;
 }
 
@@ -1126,6 +1161,26 @@ void EditorFrame::AppendIndentationOptions(wxMenu* view) {
             }
         },
         tabSettings);
+}
+
+void EditorFrame::AppendCallTipCommands(wxMenu* view) {
+    auto* modes = new wxMenu;
+    const std::array<wxString, 5> labels{_("&Off"), "RGBA", "ARGB", "BGRA", "ABGR"};
+    for (size_t index = 0; index < labels.size(); ++index) {
+        const auto mode = static_cast<ColorCallTipMode>(index);
+        const int id = wxWindow::NewControlId();
+        auto* item = modes->AppendRadioItem(id, labels[index]);
+        if ((settings_ ? settings_->values : defaults_).showCallTip == mode) item->Check(true);
+        Bind(
+            wxEVT_MENU,
+            [this, modes, id, mode](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).showCallTip = mode;
+                editor_->SetColorCallTipMode(mode);
+                modes->Check(id, true);
+            },
+            id);
+    }
+    view->AppendSubMenu(modes, _("Show CallTip"));
 }
 
 void EditorFrame::AppendZoomCommands(wxMenu* view) {
@@ -1322,20 +1377,25 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetCodeFoldingVisible(!editor_->CodeFoldingVisible()); }, show);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CodeFoldingVisible()); }, show);
     auto* folds = new wxMenu;
-    const auto addFoldCommand = [this, folds](const wxString& label, uintptr_t action) {
+    const auto addFoldCommand = [this, folds](const wxString& label, FoldCommand command, int level = 0) {
         const int id = wxWindow::NewControlId();
         folds->Append(id, label);
         Bind(
             wxEVT_MENU,
-            [this, action](wxCommandEvent&) {
-                if (editor_->CodeFoldingVisible()) editor_->Send(Scintilla::Message::FoldAll, action);
+            [this, command, level](wxCommandEvent&) {
+                editor_->ToggleFolds(command, SyntaxFor(document_.Language()).original, level);
             },
             id);
     };
-    addFoldCommand(_("&Collapse All"),
-                   static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)) |
-                       static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::ContractEveryLevel)));
-    addFoldCommand(_("&Expand All"), static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Expand)));
+    using enum FoldCommand;
+    addFoldCommand(_("&Default Levels\tShift+Alt+D"), DefaultLevels);
+    addFoldCommand(_("&All Levels\tShift+Alt+A"), AllLevels);
+    addFoldCommand(_("&Current Block\tAlt+C"), CurrentBlock);
+    addFoldCommand(_("Current &Level"), CurrentLevel);
+    folds->AppendSeparator();
+    for (int level = 1; level < 10; ++level)
+        addFoldCommand(wxString::Format(_("Level &%d\tAlt+%d"), level, level), NumericLevel, level - 1);
+    addFoldCommand(_("Level 1&0"), NumericLevel, 9);
     view->AppendSubMenu(folds, _("&Toggle Folds"));
 }
 
@@ -1475,6 +1535,7 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && HandleFullScreenEscape()) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (event.ShiftDown() && !event.MetaDown())
@@ -1686,12 +1747,29 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
         ShowFind(true);
     else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
         Search(!event.ShiftDown(), true);
-    else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
-        FindNext();
-    else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
-             !event.MetaDown())
-        FindPrevious();
-    else
+    else if (event.GetKeyCode() == WXK_F3) {
+        switch (event.GetModifiers()) {
+        case wxMOD_NONE:
+            FindNext();
+            break;
+        case wxMOD_SHIFT:
+            FindPrevious();
+            break;
+        case wxMOD_ALT:
+            search_.SaveSelectionAsFindText(true);
+            break;
+        case wxMOD_CONTROL:
+            FindSelection(SearchDirection::Forward);
+            break;
+        case wxMOD_CONTROL | wxMOD_SHIFT:
+            FindSelection(SearchDirection::Backward);
+            break;
+        default:
+            break;
+        }
+    } else if (event.GetKeyCode() == WXK_F4 && !event.AltDown()) {
+        if (!event.HasAnyModifiers()) ReplaceNext();
+    } else
         return false;
     return true;
 }
@@ -1763,7 +1841,30 @@ void EditorFrame::HandleAltBlockNavigationKey(const wxKeyEvent& event, int key) 
     }
 }
 
+void EditorFrame::HandleFullScreenKey(int modifiers) {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    switch (modifiers) {
+    case wxMOD_NONE:
+        SetFullScreen(!FullScreenActive());
+        break;
+    case wxMOD_ALT:
+        preferences.showMenu = !preferences.showMenu;
+        ApplyBarVisibility();
+        break;
+    case wxMOD_SHIFT:
+        preferences.showStatusbar = !preferences.showStatusbar;
+        ApplyBarVisibility();
+        break;
+    default:
+        break;
+    }
+}
+
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F11) {
+        HandleFullScreenKey(event.GetModifiers());
+        return true;
+    }
     if (event.GetKeyCode() == 'V' && event.ControlDown() && event.ShiftDown()) {
         if (!event.AltDown() && !event.MetaDown()) editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching());
         return true;
@@ -2072,6 +2173,29 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             id);
     }
     appearance->AppendSeparator();
+    auto* fullScreen = new wxMenu;
+    for (const auto& [label, bit] : {std::pair{wxTRANSLATE("On &Startup"), FullScreenMode_OnStartup},
+                                     std::pair{wxTRANSLATE("Hide &Title"), FullScreenMode_HideTitle}}) {
+        const int id = wxWindow::NewControlId();
+        fullScreen->AppendCheckItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                preferences.fullScreenMode ^= bit;
+#ifdef __WXMSW__
+                if (bit == FullScreenMode_HideTitle) RefreshFullScreen();
+#endif
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                event.Check(((settings_ ? settings_->values : defaults_).fullScreenMode & bit) != 0);
+            },
+            id);
+    }
+    appearance->AppendSubMenu(fullScreen, _("Full Scree&n Mode"));
     auto* scrollPastLastLine = new wxMenu;
     // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).
     for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&No"), 1}, std::pair{wxTRANSLATE("&One Page"), 0},

@@ -2,6 +2,7 @@
 
 #include "settings/original_settings_constants.h"
 #include "editor/font_settings.h"
+#include "editor/color_calltip_mode.h"
 #include <utility>
 #include "settings/ui_language.h"
 #include "editor/display_units.h"
@@ -31,6 +32,7 @@ struct OriginalSettings {
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
     bool showStatusbar = true;
+    int fullScreenMode = FullScreenMode_Default;
     bool wordWrap = true;
     int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
     WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;
@@ -97,6 +99,7 @@ struct OriginalSettings {
     wxString dateTimeLong;
     bool viewEOLs = false;
     bool showUnicodeControlCharacter = false;
+    ColorCallTipMode showCallTip = ColorCallTipMode::Off;
     bool showWordWrapSymbols = false;
     int wordWrapSymbols = 2;
     // wxnotepad opt-in; false retains original growth-only width tracking.

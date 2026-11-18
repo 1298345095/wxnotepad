@@ -222,16 +222,16 @@ void Languages(EditorFrame* frame, const wxString& renderer) {
         Box(editor, 0, true);
         Require(editor->Send(GetFoldExpanded, fixture.nested),
                 "original default-level folding must leave nested expansion state intact");
-        View(frame, "Expand All");
-        View(frame, "Collapse All");
+        NativeSearch::RevealAllFolds(frame);
+        View(frame, "All Levels");
         Box(editor, 0, true);
         NativeFold::MarginClick(editor, 0, "outer fold must reopen with nested collapse retained");
         Require(editor->Send(GetFoldExpanded, 0) && !editor->Send(GetFoldExpanded, fixture.nested),
                 "Collapse All must retain the nested header's own collapse state");
         Box(editor, fixture.nested, true);
-        View(frame, "Expand All");
+        NativeSearch::RevealAllFolds(frame);
         Box(editor, 0, false);
-        View(frame, "Collapse All");
+        View(frame, "All Levels");
         View(frame, "Show Code Folding");
         Box(editor, 0, false);
         View(frame, "Show Code Folding");
@@ -239,7 +239,7 @@ void Languages(EditorFrame* frame, const wxString& renderer) {
         Box(editor, 0, true);
         Require(NativeSearch::Text(editor) == fixture.text && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "fold ellipsis and native hit testing must preserve document bytes and history");
-        View(frame, "Expand All");
+        NativeSearch::RevealAllFolds(frame);
     }
 }
 void Layout(EditorFrame* frame, const wxString& renderer) {
@@ -277,13 +277,13 @@ void Layout(EditorFrame* frame, const wxString& renderer) {
     frame->SetClientSize(frame->FromDIP(wxSize(560, 440)));
     NativeFold::Paint(editor);
     Box(editor, 0, true);
-    View(frame, "Expand All");
+    NativeSearch::RevealAllFolds(frame);
     Box(editor, 0, false);
     Scheme(frame, "Plain Text");
     Scheme(frame, "C/C++");
     NativeFold::MarginClick(editor, 0, "syntax reapplication must keep the original fold display setup");
     Box(editor, 0, true);
-    View(frame, "Expand All");
+    NativeSearch::RevealAllFolds(frame);
     View(frame, "Word Wrap");
     frame->SetClientSize(frame->FromDIP(wxSize(720, 440)));
 }
@@ -323,8 +323,8 @@ void Document(EditorFrame* frame) {
     editor->Send(SetSel, 0, 0);
     editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("x"));
     editor->Send(Undo);
-    View(frame, "Expand All");
-    View(frame, "Collapse All");
+    NativeSearch::RevealAllFolds(frame);
+    View(frame, "All Levels");
     Require(editor->Send(CanRedo) && !editor->Send(GetModify), "fold display must preserve the save point and redo");
     editor->Send(Redo);
     Require(NativeSearch::Text(editor) == std::string(source) + "x", "redo must restore only the document edit");

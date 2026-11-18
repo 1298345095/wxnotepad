@@ -126,6 +126,10 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "取代 %zu 處"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&All Levels\tShift+Alt+A"
+msgstr "所有層級(&A)\tShift+Alt+A"
+
 # Original Notepad4 zh-Hant: IDD_WARNLINEENDS/IDC_WARNINCONSISTENTEOLS; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Always show this dialog."
@@ -184,11 +188,6 @@ msgstr "全部清除(&C)\tAlt+F2"
 msgid "&Closing tag (can be edited):"
 msgstr "結束標籤（可編輯）(&C)："
 
-# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (collapse action); adapted where needed.
-#: src/app/editor_frame_commands.cpp
-msgid "&Collapse All"
-msgstr "全部摺疊(&C)"
-
 # Original Notepad4 zh-Hant: IDD_LINENUM/IDC_COLUMN_RANGE; adapted where needed.
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
@@ -211,8 +210,20 @@ msgid "&Copy Line\tCtrl+Shift+C"
 msgstr "複製行(&C)\tCtrl+Shift+C"
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Current Block\tAlt+C"
+msgstr "目前區塊(&C)\tAlt+C"
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr "解碼(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr "預設編碼(&D)\tCtrl+Alt+F"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Levels\tShift+Alt+D"
+msgstr "預設層級(&D)\tShift+Alt+D"
 
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -282,11 +293,6 @@ msgstr "編碼識別碼(&E)\tCtrl+F8"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
 msgstr "儲存檔案時確保換行字元一致(&E)。"
-
-# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
-#: src/app/editor_frame_commands.cpp
-msgid "&Expand All"
-msgstr "全部展開(&E)"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/File menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -782,6 +788,14 @@ msgstr "外觀(&R)"
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "適用於一般文字搜尋。使用正規表示式時，請使用單詞邊界。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr "作為 &ANSI\tCtrl+Shift+A"
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
+msgstr "作為 &OEM\tCtrl+Shift+O"
+
 # Original Notepad4 zh-Hant: CMD_RELOADUTF8; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
@@ -1078,6 +1092,10 @@ msgstr "將貼上緩衝區複製為搜尋文字"
 msgid "Copy Selection As Find Text"
 msgstr "將選取範圍複製為搜尋文字"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr "複製為富文字(&R)"
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "無法關閉已寫入完成的暫存檔案。"
@@ -1160,6 +1178,10 @@ msgstr "剪下行(&T)\tCtrl+Shift+X"
 #: src/app/editor_frame_commands.cpp
 msgid "Current &Date"
 msgstr "目前日期(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Current &Level"
+msgstr "目前層級(&L)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_INSERT_LOC_DATETIME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1379,6 +1401,10 @@ msgstr "完整路徑名稱(&P)\tAlt+Shift+F9"
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr "完整路徑名稱(&P)\tCtrl+Shift+F9"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Full Scree&n Mode"
+msgstr "全螢幕模式(&N)"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "GitHub GFM"
 msgstr "GitHub GFM"
@@ -1460,6 +1486,10 @@ msgstr "依檔案類型分組(&T)。"
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr "Hex 轉字元(&R)\tCtrl+Alt+C"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Hide &Title"
+msgstr "隱藏標題列(&T)"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_HIGHLIGHTCURRENTLINE_SUBLINE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1602,6 +1632,15 @@ msgstr "LS — 行分隔符號(&I)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
 msgstr "Latin-1 (Windows-1252)"
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Level &%d\tAlt+%d"
+msgstr "層級 &%d\tAlt+%d"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Level 1&0"
+msgstr "層級 1&0"
 
 # Original Notepad4 zh-Hant: IDD_LONGLINES (accessible limit label); adapted where needed.
 #: src/app/dialogs/long_line_settings_dialog.cpp
@@ -1808,6 +1847,10 @@ msgstr "無"
 msgid "OEM United States (DOS-437)"
 msgstr "OEM United States (DOS-437)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "On &Startup"
+msgstr "啟動時進入全螢幕(&S)"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr "僅使用文件內的單詞"
@@ -2000,6 +2043,10 @@ msgstr "移除最近檔案？"
 msgid "Ren&dering Technology"
 msgstr "繪製技術(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Repl&ace Next\tF4"
+msgstr "取代下一個(&A)\tF4"
+
 # Original Notepad4 zh-Hant: IDD_REPLACE title (shortened); adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Replace"
@@ -2056,6 +2103,10 @@ msgstr "SHY — 軟連字號(&X)"
 msgid "SVG"
 msgstr "SVG"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Sa&ve Find Text\tAlt+F3"
+msgstr "儲存尋找文字(&V)\tAlt+F3"
+
 # Original Notepad4 zh-Hant: IDM_FILE_SAVEAS; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Save &As...\tF6"
@@ -2065,6 +2116,10 @@ msgstr "另存為(&A)...\tF6"
 #: src/app/editor_frame.cpp
 msgid "Save As"
 msgstr "另存為"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Save Back&up"
+msgstr "儲存備份(&U)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVECOPY; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2258,6 +2313,10 @@ msgstr "顯示空白字元(&W)\tCtrl+Shift+8"
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Show &edge line."
 msgstr "顯示邊緣線(&E)。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show CallTip"
+msgstr "顯示呼叫提示"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show Character &Info"
@@ -2577,6 +2636,14 @@ msgstr "轉八進位(&O)"
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr "切換區塊註解(&C)\tCtrl+Q"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen\tF11 [Esc]"
+msgstr "切換全螢幕(&S)\tF11 [Esc]"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen [Esc]\tF11"
+msgstr "切換全螢幕(&S) [Esc]\tF11"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
 msgstr "繁體中文 (Big5, Big5-HKSCS)"
@@ -2862,3 +2929,11 @@ msgstr "縮放比例（%d%% 至 %d%%）："
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (collapse action); adapted where needed.
+#~ msgid "&Collapse All"
+#~ msgstr "全部摺疊(&C)"
+
+# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
+#~ msgid "&Expand All"
+#~ msgstr "全部展開(&E)"

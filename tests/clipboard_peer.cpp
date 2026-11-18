@@ -8,6 +8,10 @@
 #include <chrono>
 #include <cstring>
 #include <memory>
+#include <string_view>
+#ifdef __WXMSW__
+#include <richedit.h>
+#endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #ifdef GDK_WINDOWING_WAYLAND
@@ -164,7 +168,7 @@ private:
         wxRemoveFile(request);
         RecordStage("request-claimed");
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste" ||
-            command.StartsWith("shape") || command.StartsWith("utility-")) {
+            command.StartsWith("rtf-") || command.StartsWith("shape") || command.StartsWith("utility-")) {
             frame_->SetTitle(wxString::Format("wxnotepad clipboard focus: peer [%lu]", wxGetProcessId()));
             wxString focusFile;
             if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
@@ -223,6 +227,69 @@ private:
 #endif
         Respond(cleared ? "ready" : "failed");
     }
+    void ReadRichText() {
+        RecordStage("reading-native-rtf");
+        std::string rtf;
+#ifdef __WXMSW__
+        if (!::OpenClipboard(static_cast<HWND>(frame_->GetHandle()))) {
+            Respond("failed");
+            return;
+        }
+        const auto format = ::RegisterClipboardFormatW(L"Rich Text Format");
+        const bool onlyRtf = ::CountClipboardFormats() == 1 && ::EnumClipboardFormats(0) == format;
+        const auto memory = onlyRtf ? ::GetClipboardData(format) : nullptr;
+        if (const auto* bytes = static_cast<const char*>(::GlobalLock(memory))) {
+            const auto* terminator = static_cast<const char*>(std::memchr(bytes, 0, ::GlobalSize(memory)));
+            if (terminator) rtf.assign(bytes, terminator);
+            ::GlobalUnlock(memory);
+        }
+        ::CloseClipboard();
+#elif defined(__WXGTK__)
+        auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+        GdkAtom* targets = nullptr;
+        gint count = 0;
+        bool onlyRtf = gtk_clipboard_wait_for_targets(clipboard, &targets, &count);
+        for (gint index = 0; onlyRtf && index < count; ++index) {
+            const std::unique_ptr<char, decltype(&g_free)> name(gdk_atom_name(targets[index]), &g_free);
+            const std::string_view target(name.get());
+            onlyRtf = target == "text/rtf" || target == "TIMESTAMP" || target == "TARGETS" || target == "MULTIPLE" ||
+                      target == "SAVE_TARGETS";
+        }
+        g_free(static_cast<void*>(targets));
+        if (onlyRtf) {
+            const auto target = gdk_atom_intern_static_string("text/rtf");
+            auto* data = gtk_clipboard_wait_for_contents(clipboard, target);
+            if (data) {
+                const auto length = gtk_selection_data_get_length(data);
+                if (length > 0) rtf.assign(reinterpret_cast<const char*>(gtk_selection_data_get_data(data)), length);
+                gtk_selection_data_free(data);
+            }
+        }
+#endif
+        if (rtf.empty()) {
+            Respond("missing or additional native formats");
+            return;
+        }
+        wxFFile file(directory_ + "/received.txt", "wb");
+        if (file.Write(rtf.data(), rtf.size()) != rtf.size() || !file.Close()) {
+            Respond("failed");
+            return;
+        }
+        Respond("rtf");
+    }
+#ifdef __WXMSW__
+    bool PasteRichText() {
+        wxTextCtrl rich(frame_, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_RICH2);
+        const auto hwnd = static_cast<HWND>(rich.GetHandle());
+        const auto format = ::RegisterClipboardFormatW(L"Rich Text Format");
+        if (!::SendMessageW(hwnd, EM_CANPASTE, format, 0)) return false;
+        ::SendMessageW(hwnd, EM_PASTESPECIAL, format, 0);
+        wxTextAttr style;
+        const auto text = rich.GetValue();
+        return text.StartsWith("int value = 42;") && text.Contains(wxString::FromUTF8("中文 😀")) &&
+               rich.GetStyle(0, style) && style.GetTextColour() == wxColour(0, 0, 255);
+    }
+#endif
     void ReadShape(const wxString& command) {
         RecordStage("reading-clipboard-shape");
         wxString shape = "stream";
@@ -421,6 +488,12 @@ private:
             UtilityFormats();
         } else if (command == "utility-empty") {
             UtilityEmpty();
+        } else if (command == "rtf-read") {
+            ReadRichText();
+#ifdef __WXMSW__
+        } else if (command == "rtf-paste") {
+            Respond(PasteRichText() ? "rtf-pasted" : "formatted paste differs");
+#endif
         } else if (command == "shape-read" || command == "utility-read" || command == "utility-raw") {
             ReadShape(command);
         } else if (command.StartsWith("shape-") || command.StartsWith("utility-offer")) {

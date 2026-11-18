@@ -1,6 +1,7 @@
 // wx rendering and window adapter for the pinned Notepad4 Scintilla core.
 // Basic LTR rendering and native nonactivating completion UI.
 #include "core_headers.h"
+#include "editor/editor_core.h"
 #include <utility>
 #include "editor/display_units.h"
 #include "editor/print_font.h"
@@ -425,11 +426,9 @@ PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
 }
 // Adapted from wxWidgets 3.3.3 src/stc/PlatWX.cpp: wxSTCPopupBase,
 // wxSTCListBox. The original core retains all keyboard and completion state.
-class CompletionPopup final : public wxPopupWindow {
+class EditorPopup : public wxPopupWindow {
 public:
-    explicit CompletionPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS | wxBORDER_NONE) {
-        SetName("Word completion");
-    }
+    explicit EditorPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS | wxBORDER_NONE) {}
     bool AcceptsFocus() const override { return false; }
 #ifdef __WXMSW__
     bool Show(bool show) override {
@@ -450,6 +449,10 @@ public:
         return wxPopupWindow::MSWHandleMessage(result, message, first, second);
     }
 #endif
+};
+class CompletionPopup final : public EditorPopup {
+public:
+    explicit CompletionPopup(wxWindow* parent) : EditorPopup(parent) { SetName("Word completion"); }
 };
 class CompletionList final : public wxVListBox {
 public:
@@ -647,3 +650,56 @@ bool ShowAssertionPopUps(bool value) noexcept {
 }
 } // namespace Platform
 } // namespace Scintilla::Internal
+
+class EditorControl::Core::CallTipPopup final : public Scintilla::Internal::EditorPopup {
+public:
+    explicit CallTipPopup(Core& core) : EditorPopup(&core.window_), core_(&core) {
+        SetName("Color CallTip");
+        SetBackgroundStyle(wxBG_STYLE_PAINT);
+        Bind(wxEVT_PAINT, &CallTipPopup::Paint, this);
+        Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+            if (!core_) return;
+            core_->ct.MouseClick(Scintilla::Internal::Point(event.GetX(), event.GetY()));
+            core_->CallTipClick();
+        });
+    }
+
+    void Detach() noexcept { core_ = nullptr; }
+
+private:
+    void Paint(wxPaintEvent&) {
+        wxPaintDC dc(this);
+        if (!core_) return;
+        core_->RunNativeOperation([&] {
+            auto surface = Scintilla::Internal::Surface::Allocate(core_->technology);
+            surface->Init(&dc, this);
+            if (!surface->Initialised())
+                throw Scintilla::Internal::NativeDrawingError("CallTip drawing target unavailable");
+            surface->SetMode({Scintilla::CpUtf8});
+            core_->ct.PaintCT(surface.get());
+#ifdef __WXMSW__
+            if (core_->technology == Scintilla::Technology::DirectWrite &&
+                !Scintilla::Internal::FinishDirectWriteDrawing(*surface))
+                Refresh(false);
+#endif
+        });
+    }
+
+    Core* core_;
+};
+
+void SCICALL EditorControl::Core::CreateCallTipWindow(Scintilla::Internal::PRectangle) noexcept {
+    if (ct.wCallTip.Created()) return;
+    RunNativeOperation([&] {
+        auto* popup = new CallTipPopup(*this);
+        ct.wCallTip = popup;
+        ct.wDraw = popup;
+    });
+}
+
+void EditorControl::Core::DestroyCallTipWindow() noexcept {
+    if (!ct.wCallTip.Created()) return;
+    static_cast<CallTipPopup*>(ct.wCallTip.GetID())->Detach();
+    ct.wCallTip.Destroy();
+    ct.wDraw = nullptr;
+}

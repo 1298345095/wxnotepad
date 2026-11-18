@@ -49,22 +49,48 @@ void CheckMenu(EditorFrame* frame) {
            "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
-    // Notepad4.rc at 89b8b36: CMD_RELOADUTF8, separator, IDM_RECODE_SELECT,
-    // after filtering commands whose encoding capabilities are not delivered.
+    // Notepad4.rc at 89b8b36: the three source-codec commands precede
+    // Default Encoding and With Encoding, retaining their original separator.
     auto* reload = Submenu(bar->GetMenu(0), "Reload");
-    Order(reload, {"As UTF-8", "With Encoding..."});
-    Require(reload->GetMenuItemCount() == 3 && reload->FindItemByPosition(1)->IsSeparator(),
+    Order(reload, {"As UTF-8", "As ANSI", "As OEM", "Default Encoding", "With Encoding..."});
+    Require(reload->GetMenuItemCount() == 6 && reload->FindItemByPosition(3)->IsSeparator(),
             "Reload retains the original separator between quick reload and the encoding chooser");
-    Order(bar->GetMenu(2), {"Find...", "Find Next", "Find Previous", "Replace...", "Find Matching Brace",
-                            "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
-                            "Select Lines in Current Block", "Select to Document Start", "Select to Document End",
-                            "Select to Next", "Select to Previous", "Bookmarks", "Goto"});
-    Order(bar->GetMenu(3),
-          {"Default Code Font...",   "Default Text Font...",      "Caret Style",           "Word Wrap",
-           "Long Line Marker",       "Indentation Guides",        "Show Whitespace",       "Show Line Endings",
-           "Show Wrap Symbols",      "Unicode Control Character", "Visual Brace Matching", "Highlight Current Block",
-           "Highlight Current Line", "Mark Occurrences",          "Line Numbers",          "Bookmark Margin",
-           "Change History Marker",  "Show Code Folding",         "Toggle Folds",          "Zoom"});
+    Order(bar->GetMenu(2),
+          {"Find...", "Save Find Text", "Find Next", "Find Previous", "Replace...", "Replace Next",
+           "Find Matching Brace", "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
+           "Select Lines in Current Block", "Select to Document Start", "Select to Document End", "Select to Next",
+           "Select to Previous", "Bookmarks", "Goto"});
+    Order(bar->GetMenu(3), {"Default Code Font...",
+                            "Default Text Font...",
+                            "Caret Style",
+                            "Word Wrap",
+                            "Long Line Marker",
+                            "Indentation Guides",
+                            "Show Whitespace",
+                            "Show Line Endings",
+                            "Show Wrap Symbols",
+                            "Unicode Control Character",
+                            "Visual Brace Matching",
+                            "Highlight Current Block",
+                            "Highlight Current Line",
+                            "Mark Occurrences",
+                            "Show CallTip",
+                            "Line Numbers",
+                            "Bookmark Margin",
+                            "Change History Marker",
+                            "Show Code Folding",
+                            "Toggle Folds",
+                            "Zoom",
+#ifdef __WXMSW__
+                            "Toggle Full Screen"});
+#else
+                            "Toggle Full Screen [Esc]"});
+#endif
+    auto* folds = Submenu(bar->GetMenu(3), "Toggle Folds");
+    Order(folds, {"Default Levels", "All Levels", "Current Block", "Current Level", "Level 1", "Level 2", "Level 3",
+                  "Level 4", "Level 5", "Level 6", "Level 7", "Level 8", "Level 9", "Level 10"});
+    Require(folds->GetMenuItemCount() == 15 && folds->FindItemByPosition(4)->IsSeparator(),
+            "Toggle Folds separates its four general commands from the ten numeric levels");
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
