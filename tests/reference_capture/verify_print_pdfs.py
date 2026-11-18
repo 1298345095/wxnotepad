@@ -8,7 +8,9 @@ import xml.etree.ElementTree as ET
 
 
 def pdf_pages(tool, path):
-    text = subprocess.check_output([tool, '-enc', 'UTF-8', '-layout', path, '-'], encoding='utf-8')
+    # Read glyphs in output order: layout heuristics can merge compact headers
+    # and right-aligned footers into body rows.
+    text = subprocess.check_output([tool, '-enc', 'UTF-8', '-raw', path, '-'], encoding='utf-8')
     return [page for page in text.split('\f') if page.strip()]
 
 

@@ -19,9 +19,17 @@ The Windows dialog uses the same common Print dialog as Notepad4. Printing uses
 its GDI device context regardless of the editor's GDI or DirectWrite setting. On
 Linux, GTK provides the print dialog and Cairo/Pango printer context. wxnotepad
 uses the pinned Scintilla print layout, with the current syntax styles and the
-printer's metrics. Long physical lines can continue across pages. The bundled
-static GTK SDK builds the configured print backends into GTK itself so the dialog
-and backends use a single GObject registry.
+printer's metrics. Titles and footers use the global text font at the original
+printer cell heights, independently of body print zoom, with one-device-pixel
+black rules.
+
+Long physical lines continue across pages without counting already printed rows
+again. The pinned original printed only 456 of 1,000 ordered markers in the
+14,000-byte fixture; wxnotepad prints all 1,000. This is an intentional repair of
+the original printing defect and can add pages previously lost to that defect.
+
+The bundled static GTK SDK builds the configured print backends into GTK itself
+so the dialog and backends use a single GObject registry.
 
 `original_printing` is the native CTest case. On GTK it drives the native dialog
 and uses only the virtual File backend. Set `WXNOTEPAD_PRINT_TEST_OUTPUT_DIR` to an
