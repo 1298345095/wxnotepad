@@ -880,6 +880,7 @@ msgstr "反引號"
 msgid "Bash"
 msgstr "Bash"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Black on white"
 msgstr "白底黑字"
@@ -904,10 +905,12 @@ msgstr "為符合的行新增書籤(&K)"
 msgid "Boo&kmarks"
 msgstr "書籤(&K)"
 
+#. TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Bottom margin"
 msgstr "下邊界"
 
+#. TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Bottom:"
 msgstr "下："
@@ -1041,10 +1044,12 @@ msgstr "關閉"
 msgid "Code page %d (unavailable)"
 msgstr "字碼頁 %d（無法使用）"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Color on white"
 msgstr "白底彩色"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: use white backgrounds except in the line number margin.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Color on white (except line numbers)"
 msgstr "白底彩色（行號除外）"
@@ -1234,6 +1239,7 @@ msgstr "目前日期與時間(&T)"
 msgid "Current encoding"
 msgstr "目前編碼"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print with the current editor theme colors.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Current screen color (WYSIWYG)"
 msgstr "目前螢幕色彩（所見即所得）"
@@ -1389,15 +1395,17 @@ msgstr "檔案名與副檔名(&E)\tShift+F9"
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "檔案名與副檔名(&X)\tCtrl+F9"
 
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename"
 msgstr "檔名"
 
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and current date without the time.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename, Current Date"
 msgstr "檔名、目前日期"
 
-#. TRANSLATORS: IDS_PRINT_HEADER choices for text at the top of each printed page.
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and the current date and time.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename, Current Date and Time"
 msgstr "檔名、目前日期和時間"
@@ -1450,7 +1458,7 @@ msgstr "搜尋字串"
 msgid "Finish completion (Esc cancels)"
 msgstr "確認完成（Esc 取消）"
 
-#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_FOOTER_LIST.
+#. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
 msgstr "頁尾："
@@ -1547,7 +1555,7 @@ msgstr "跳到選取範圍結尾(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "依檔案類型分組(&T)。"
 
-#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_HEADER_LIST.
+#. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
 msgstr "頁首："
@@ -1643,6 +1651,7 @@ msgstr "插入 Tab 為空白(&S)"
 msgid "Invalid regular expression"
 msgstr "無效的正規表示式"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: invert lightness when printing a dark theme.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Invert light (dark background)"
 msgstr "反轉亮度（深色背景）"
@@ -1708,16 +1717,17 @@ msgstr "LS — 行分隔符號(&I)"
 msgid "Latin-1 (Windows-1252)"
 msgstr "Latin-1 (Windows-1252)"
 
+#. TRANSLATORS: IDS_PRINT_HEADER and IDS_PRINT_FOOTER choice to omit the header or footer.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Leave blank"
 msgstr "留白"
 
-#. TRANSLATORS: Screen reader names for the four IDC_PAGESETUP_MARGIN_* inputs.
+#. TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left margin"
 msgstr "左邊界"
 
-#. TRANSLATORS: Paper edge labels in IDD_PAGESETUP, in left/top/right/bottom order.
+#. TRANSLATORS: Left paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
 msgstr "左："
@@ -1807,11 +1817,12 @@ msgstr "Lua"
 msgid "Margin click selects visual &subline"
 msgstr "按一下邊欄選取視覺子行(&S)"
 
+#. TRANSLATORS: IDD_PAGESETUP margin group in a U.S. measurement locale.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Margins (inches)"
 msgstr "邊界（英吋）"
 
-#. TRANSLATORS: IDD_PAGESETUP margin group with the current unit made explicit.
+#. TRANSLATORS: IDD_PAGESETUP margin group in a metric measurement locale.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Margins (millimeters)"
 msgstr "邊界（公釐）"
@@ -1943,7 +1954,7 @@ msgstr "續行不縮排"
 msgid "None"
 msgstr "無"
 
-#. TRANSLATORS: IDS_PRINT_COLOR choices for mapping editor colors to print.
+#. TRANSLATORS: IDS_PRINT_COLOR choice: normal print color mapping.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Normal"
 msgstr "正常"
@@ -2024,7 +2035,7 @@ msgstr "PS — 段落分隔符號(&G)"
 msgid "Page %s"
 msgstr "第 %s 頁"
 
-#. TRANSLATORS: IDS_PRINT_FOOTER choices for text at the bottom of each printed page.
+#. TRANSLATORS: IDS_PRINT_FOOTER choice: show the page number at the bottom of each page.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Page Number"
 msgstr "頁碼"
@@ -2062,19 +2073,22 @@ msgstr "純文字"
 msgid "Print"
 msgstr "列印"
 
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print color mode"
 msgstr "列印色彩模式"
 
-#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_COLOR_MODE_LIST.
+#. TRANSLATORS: Caption for IDC_PAGESETUP_COLOR_MODE_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print color mode:"
 msgstr "列印色彩模式："
 
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print footer"
 msgstr "列印頁尾"
 
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print header"
 msgstr "列印頁首"
@@ -2084,6 +2098,7 @@ msgstr "列印頁首"
 msgid "Print zoom"
 msgstr "列印縮放比例"
 
+#. TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 #, c-format
 msgid "Print zoom (%d%% to %d%%):"
@@ -2246,10 +2261,12 @@ msgstr "回復"
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr "回復檔案到上次儲存時的狀態？您的變更會遺失！"
 
+#. TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right margin"
 msgstr "右邊界"
 
+#. TRANSLATORS: Right paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right:"
 msgstr "右："
@@ -2822,10 +2839,12 @@ msgstr "切換全螢幕(&S)\tF11 [Esc]"
 msgid "Toggle Full &Screen [Esc]\tF11"
 msgstr "切換全螢幕(&S) [Esc]\tF11"
 
+#. TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Top margin"
 msgstr "上邊界"
 
+#. TRANSLATORS: Top paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Top:"
 msgstr "上："

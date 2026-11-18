@@ -32,6 +32,7 @@ struct DetectedEncoding {
     std::optional<unsigned> unsupportedCodePage;
     bool systemDefault = false;
     bool systemOem = false;
+    std::optional<unsigned> nativeAnsiCodePage = std::nullopt;
 };
 struct NativeSourceCodePages {
     unsigned ansi;

@@ -718,6 +718,7 @@ msgstr ""
 msgid "Bash"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Black on white"
 msgstr ""
@@ -738,10 +739,12 @@ msgstr ""
 msgid "Boo&kmarks"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Bottom margin"
 msgstr ""
 
+#. TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Bottom:"
 msgstr ""
@@ -862,10 +865,12 @@ msgstr ""
 msgid "Code page %d (unavailable)"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Color on white"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: use white backgrounds except in the line number margin.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Color on white (except line numbers)"
 msgstr ""
@@ -1042,6 +1047,7 @@ msgstr ""
 msgid "Current encoding"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print with the current editor theme colors.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Current screen color (WYSIWYG)"
 msgstr ""
@@ -1179,15 +1185,17 @@ msgstr ""
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and current date without the time.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename, Current Date"
 msgstr ""
 
-#. TRANSLATORS: IDS_PRINT_HEADER choices for text at the top of each printed page.
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and the current date and time.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename, Current Date and Time"
 msgstr ""
@@ -1232,7 +1240,7 @@ msgstr ""
 msgid "Finish completion (Esc cancels)"
 msgstr ""
 
-#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_FOOTER_LIST.
+#. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
 msgstr ""
@@ -1314,7 +1322,7 @@ msgstr ""
 msgid "Group by file &type."
 msgstr ""
 
-#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_HEADER_LIST.
+#. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
 msgstr ""
@@ -1396,6 +1404,7 @@ msgstr ""
 msgid "Invalid regular expression"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: invert lightness when printing a dark theme.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Invert light (dark background)"
 msgstr ""
@@ -1459,16 +1468,17 @@ msgstr ""
 msgid "Latin-1 (Windows-1252)"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_HEADER and IDS_PRINT_FOOTER choice to omit the header or footer.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Leave blank"
 msgstr ""
 
-#. TRANSLATORS: Screen reader names for the four IDC_PAGESETUP_MARGIN_* inputs.
+#. TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left margin"
 msgstr ""
 
-#. TRANSLATORS: Paper edge labels in IDD_PAGESETUP, in left/top/right/bottom order.
+#. TRANSLATORS: Left paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
 msgstr ""
@@ -1549,11 +1559,12 @@ msgstr ""
 msgid "Margin click selects visual &subline"
 msgstr ""
 
+#. TRANSLATORS: IDD_PAGESETUP margin group in a U.S. measurement locale.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Margins (inches)"
 msgstr ""
 
-#. TRANSLATORS: IDD_PAGESETUP margin group with the current unit made explicit.
+#. TRANSLATORS: IDD_PAGESETUP margin group in a metric measurement locale.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Margins (millimeters)"
 msgstr ""
@@ -1668,7 +1679,7 @@ msgstr ""
 msgid "None"
 msgstr ""
 
-#. TRANSLATORS: IDS_PRINT_COLOR choices for mapping editor colors to print.
+#. TRANSLATORS: IDS_PRINT_COLOR choice: normal print color mapping.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Normal"
 msgstr ""
@@ -1744,7 +1755,7 @@ msgstr ""
 msgid "Page %s"
 msgstr ""
 
-#. TRANSLATORS: IDS_PRINT_FOOTER choices for text at the bottom of each printed page.
+#. TRANSLATORS: IDS_PRINT_FOOTER choice: show the page number at the bottom of each page.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Page Number"
 msgstr ""
@@ -1782,19 +1793,22 @@ msgstr ""
 msgid "Print"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print color mode"
 msgstr ""
 
-#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_COLOR_MODE_LIST.
+#. TRANSLATORS: Caption for IDC_PAGESETUP_COLOR_MODE_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print color mode:"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print footer"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print header"
 msgstr ""
@@ -1804,6 +1818,7 @@ msgstr ""
 msgid "Print zoom"
 msgstr ""
 
+#. TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 #, c-format
 msgid "Print zoom (%d%% to %d%%):"
@@ -1946,10 +1961,12 @@ msgstr ""
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right margin"
 msgstr ""
 
+#. TRANSLATORS: Right paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right:"
 msgstr ""
@@ -2453,10 +2470,12 @@ msgstr ""
 msgid "Toggle Full &Screen [Esc]\tF11"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Top margin"
 msgstr ""
 
+#. TRANSLATORS: Top paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Top:"
 msgstr ""

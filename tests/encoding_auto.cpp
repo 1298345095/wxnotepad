@@ -1,5 +1,6 @@
 #include "document/document_session.h"
 #include "editor/editor_control.h"
+#include "editor/platform/native_encoding.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <array>
@@ -26,6 +27,21 @@ void CheckQuickReloadWithUtf8SystemAnsi() {
     const auto oem = DetectQuickReloadEncoding("caf\x{e9}", QuickReloadEncoding::Oem, {}, utf8System);
     Require(oem.encoding == FileEncoding::Dos437 && !oem.bom && !oem.systemDefault && oem.systemOem,
             "Quick OEM still uses the native OEM source and identity");
+    constexpr NativeSourceCodePages utf8WithGbk{65001, 936, 437};
+    const auto malformed = DetectQuickReloadEncoding("abc\x{81}", QuickReloadEncoding::Ansi, {}, utf8WithGbk);
+    Require(malformed.encoding == FileEncoding::Gbk && !malformed.bom && malformed.systemDefault &&
+                !malformed.systemOem && malformed.nativeAnsiCodePage == 936,
+            "Quick ANSI retains native GBK identity when strict legacy recoding fails on a UTF-8 system");
+    const auto valid = DetectQuickReloadEncoding("\x{d6}\x{d0}", QuickReloadEncoding::Ansi, {}, utf8WithGbk);
+    Require(valid.encoding == FileEncoding::Gbk && !valid.bom && !valid.systemDefault && !valid.systemOem &&
+                !valid.nativeAnsiCodePage,
+            "Quick ANSI adopts explicit GBK when strict legacy recoding succeeds on a UTF-8 system");
+#ifdef __WXMSW__
+    NativeByteRanges raw;
+    const auto buffer = NativeDefaultEncodingBuffer("\x{d6}\x{d0}\x{81}", &raw, malformed.nativeAnsiCodePage);
+    Require(buffer == "中\x{81}" && raw.size() == 1 && raw.front().start == 3 && raw.front().end == 4,
+            "native GBK fallback decodes valid text and marks the malformed byte for lossless Save");
+#endif
 }
 std::string Text(EditorControl& editor) {
     std::string text(static_cast<size_t>(editor.Send(Scintilla::Message::GetLength)) + 1, '\0');

@@ -363,7 +363,8 @@ struct LoadedDocument {
     OriginalFileVariables variables;
 };
 
-wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& options) {
+wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& options,
+                              std::optional<unsigned> nativeAnsiCodePage) {
     using enum FileEncoding;
     auto& bytes = loaded.text;
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
@@ -372,7 +373,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     if (loaded.systemDefault && loaded.encoding != Utf8) {
         // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
         // through Unicode, just like the native Base64 Decode boundary.
-        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw);
+        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw, nativeAnsiCodePage);
     } else if (loaded.encoding == Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));
@@ -428,7 +429,7 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path,
     loaded.bom = detected.bom;
     loaded.systemDefault = sourceEncoding ? sourceEncoding->systemDefault : detected.systemDefault;
     loaded.systemOem = sourceEncoding ? sourceEncoding->systemOem : detected.systemOem;
-    const auto error = DecodeLoadedDocument(loaded, options);
+    const auto error = DecodeLoadedDocument(loaded, options, detected.nativeAnsiCodePage);
     if (!error.empty()) return error;
     return loaded;
 }
