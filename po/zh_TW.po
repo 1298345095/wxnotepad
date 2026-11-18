@@ -214,6 +214,10 @@ msgstr "複製行(&C)\tCtrl+Shift+C"
 msgid "&Decode"
 msgstr "解碼(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr "預設編碼(&D)\tCtrl+Alt+F"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Default encoding:"
@@ -782,6 +786,14 @@ msgstr "外觀(&R)"
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "適用於一般文字搜尋。使用正規表示式時，請使用單詞邊界。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr "作為 &ANSI\tCtrl+Shift+A"
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
+msgstr "作為 &OEM\tCtrl+Shift+O"
+
 # Original Notepad4 zh-Hant: CMD_RELOADUTF8; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
@@ -1077,6 +1089,10 @@ msgstr "將貼上緩衝區複製為搜尋文字"
 #: src/app/editor_frame_commands.cpp
 msgid "Copy Selection As Find Text"
 msgstr "將選取範圍複製為搜尋文字"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr "複製為富文字(&R)"
 
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."

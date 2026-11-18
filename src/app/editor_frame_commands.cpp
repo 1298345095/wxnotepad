@@ -115,22 +115,25 @@ wxMenu* EditorFrame::CreateToolsMenu() {
 }
 
 void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
-    reloadEncodingId_ = wxWindow::NewControlId();
-    reloadUtf8Id_ = wxWindow::NewControlId();
-    reload->Append(reloadUtf8Id_, _("As &UTF-8\tShift+F8"));
-    reload->AppendSeparator();
-    reload->Append(reloadEncodingId_, _("With &Encoding...\tF8"));
-    for (const int id : {reloadEncodingId_, reloadUtf8Id_})
+    const auto append = [this, reload](const wxString& label, auto load) {
+        const int id = wxWindow::NewControlId();
+        reload->Append(id, label);
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, id);
-    for (const int id : {reloadEncodingId_, reloadUtf8Id_})
         Bind(
             wxEVT_MENU,
-            [this, id](wxCommandEvent&) {
-                const auto result = id == reloadEncodingId_ ? ReloadWithEncoding() : ReloadAsUtf8();
+            [this, load](wxCommandEvent&) {
+                const auto result = load();
                 if (result.status == OpenStatus::Failed)
                     wxMessageBox(result.error, _("Could not reload file"), wxOK | wxICON_ERROR, this);
             },
             id);
+    };
+    append(_("As &UTF-8\tShift+F8"), [this] { return ReloadAsUtf8(); });
+    append(_("As &ANSI\tCtrl+Shift+A"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Ansi); });
+    append(_("As &OEM\tCtrl+Shift+O"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Oem); });
+    reload->AppendSeparator();
+    append(_("&Default Encoding\tCtrl+Alt+F"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Default); });
+    append(_("With &Encoding...\tF8"), [this] { return ReloadWithEncoding(); });
 }
 
 void EditorFrame::AppendEncodingCommands(wxMenu* file) {
@@ -409,6 +412,13 @@ wxMenu* EditorFrame::CreateEditMenu() {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
         copyAdd);
+    const int copyRtf = wxWindow::NewControlId();
+    clipboard->Append(copyRtf, _("Copy as &RTF"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CopyAsRtf(document_.IsDefaultEncoding()); }, copyRtf);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        copyRtf);
     edit->AppendSubMenu(clipboard, _("Cop&y to Clipboard"));
     edit->AppendSeparator();
     AppendEditingCommands(edit);
