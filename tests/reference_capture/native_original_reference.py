@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -16,6 +17,7 @@ def main():
     parser.add_argument('--build-dir', type=Path, default=ROOT / '.ci/original-reference')
     parser.add_argument('--compiler-cache', action='store_true', help='Use the existing CI sccache launcher')
     parser.add_argument('--output', type=Path, default=ROOT / '.ci/reports/original-gdi-viewport.tsv')
+    parser.add_argument('--word-wrap-output-dir', type=Path)
     args = parser.parse_args()
     if sys.platform != 'win32':
         raise SystemExit('The original reference requires native Windows')
@@ -44,6 +46,14 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([build / 'cmake/native_original_viewport.exe', output], check=True, timeout=120)
     print(output.read_text(encoding='utf-8'), end='')
+    if args.word_wrap_output_dir:
+        for variant in ('current', 'dpi96'):
+            environment = dict(os.environ)
+            if variant == 'dpi96':
+                environment['__COMPAT_LAYER'] = 'DPIUNAWARE'
+            subprocess.run([build / 'cmake/native_original_viewport.exe', '--word-wrap',
+                            ROOT / 'tests/data', args.word_wrap_output_dir.resolve() / variant],
+                           env=environment, check=True, timeout=90)
 
 
 if __name__ == '__main__':

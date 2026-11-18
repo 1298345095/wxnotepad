@@ -137,6 +137,7 @@ jobs:
             --archive .ci/build/notepad4-source.tar \
             --build-dir .ci/original-reference \
             --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
+            --word-wrap-output-dir .ci/reports/original-word-wrap \
             2>&1 | tee .ci/reports/original-gdi-reference.log
       - name: Capture Windows visual brace and mixed-EOL crash dumps
         if: runner.os == 'Windows'
@@ -161,6 +162,7 @@ jobs:
         shell: bash
         env:
           WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
+          WXNOTEPAD_ORIGINAL_WRAP_REFERENCE: ${{ github.workspace }}/.ci/reports/original-word-wrap
         run: python -X utf8 .github/scripts/ci.py test --backend windows
       - name: Repeat Windows visual brace regression with crash evidence
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}

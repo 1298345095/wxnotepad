@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <ScintillaTypes.h>
@@ -61,20 +62,138 @@ void Paint() {
         }
     }
 }
-void Resize(HWND frame, int width, bool setup) {
+void Resize(HWND frame, int width, bool setup, int height = ViewportHeight) {
     for (int attempt = 0; attempt < (setup ? 3 : 1); ++attempt) {
         RECT client{}, outer{};
         GetClientRect(editor, &client);
         GetWindowRect(frame, &outer);
         Require(SetWindowPos(frame, nullptr, 0, 0, outer.right - outer.left + width - client.right,
-                             outer.bottom - outer.top + ViewportHeight - client.bottom,
+                             outer.bottom - outer.top + height - client.bottom,
                              SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE),
                 "resize original frame");
         Paint();
         GetClientRect(editor, &client);
-        if (client.right == width && client.bottom == ViewportHeight) return;
+        if (client.right == width && client.bottom == height) return;
     }
     throw std::runtime_error("original control reaches the exact physical viewport");
+}
+void WordWrapReference(HWND frame, const std::filesystem::path& inputsPath,
+                       const std::filesystem::path& outputDirectory) {
+    const int dpi = static_cast<int>(GetDpiForWindow(editor));
+    const auto tableName = "word_wrap_original_" + std::to_string(dpi) + ".tsv";
+    std::ifstream inputs(inputsPath / "word_wrap_inputs.tsv");
+    std::map<std::string, std::string> samples;
+    std::string sample, hex;
+    while (inputs >> sample >> hex) {
+        std::string text;
+        for (size_t offset = 0; offset < hex.size(); offset += 2)
+            text += static_cast<char>(std::stoi(hex.substr(offset, 2), nullptr, 16));
+        samples.emplace(sample, std::move(text));
+    }
+    Require(samples.size() == 4, "original wrap host receives all four frozen input samples");
+    std::ifstream reference(inputsPath / tableName);
+    Require(static_cast<bool>(reference), "frozen original wrap scenes exist for this DPI");
+    std::string header;
+    std::getline(reference, header);
+    std::filesystem::create_directories(outputDirectory);
+    std::filesystem::copy_file(inputsPath / "word_wrap_inputs.tsv", outputDirectory / "word_wrap_inputs.tsv",
+                               std::filesystem::copy_options::overwrite_existing);
+    std::ofstream output(outputDirectory / tableName);
+    Require(static_cast<bool>(output), "open independent original wrap output");
+    output << header << '\n';
+    int records = 0, mode = 0, indent = 0, width = 0, height = 0, recordedDpi = 0;
+    while (reference >> sample >> mode >> indent >> width >> height >> recordedDpi) {
+        std::array<intptr_t, 17> frozen{};
+        for (auto& value : frozen)
+            reference >> value;
+        Require(static_cast<bool>(reference) && samples.contains(sample) && recordedDpi == dpi,
+                "original wrap scene retains its sample, geometry and all seventeen fields");
+        const auto& text = samples.at(sample);
+        Send(Message::SetText, 0, reinterpret_cast<intptr_t>(""));
+        Send(Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.c_str()));
+        Send(Message::SetCodePage, Scintilla::CpUtf8);
+        Send(Message::SetLexer, 1);
+        Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
+        Send(Message::SetTechnology, static_cast<uintptr_t>(Scintilla::Technology::Default));
+        Send(Message::SetZoom, 100);
+        Send(Message::SetFontQuality, static_cast<uintptr_t>(Scintilla::FontQuality::QualityDefault));
+        Send(Message::SetFontLocale, 0, reinterpret_cast<intptr_t>(""));
+        Send(Message::StyleSetFont, DefaultStyle, reinterpret_cast<intptr_t>("Consolas"));
+        constexpr int WrapPointSizeHundredths = 1000;
+        Send(Message::StyleSetSizeFractional, DefaultStyle, WrapPointSizeHundredths);
+        Send(Message::StyleSetWeight, DefaultStyle, static_cast<intptr_t>(Scintilla::FontWeight::Normal));
+        Send(Message::StyleSetItalic, DefaultStyle, 0);
+        Send(Message::StyleSetCharacterSet, DefaultStyle, static_cast<intptr_t>(Scintilla::CharacterSet::Default));
+        Send(Message::StyleSetStretch, DefaultStyle, static_cast<intptr_t>(Scintilla::FontStretch::Normal));
+        Send(Message::StyleClearAll);
+        Send(Message::SetTabWidth, 8);
+        Send(Message::SetIndent, 3);
+        Send(Message::SetExtraAscent, 0);
+        Send(Message::SetExtraDescent, 0);
+        Send(Message::SetMarginLeft, 0, 1);
+        Send(Message::SetMarginRight, 0, 1);
+        for (int margin = 0; margin < 5; ++margin)
+            Send(Message::SetMarginWidthN, margin, 0);
+        Send(Message::SetDefaultFoldDisplayText, 0, reinterpret_cast<intptr_t>("\xC2\xB7\xC2\xB7\xC2\xB7"));
+        Send(Message::FoldDisplayTextSetStyle, static_cast<uintptr_t>(Scintilla::FoldDisplayTextStyle::Boxed));
+        Send(Message::EmptyUndoBuffer);
+        Send(Message::SetSavePoint);
+        Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        Send(Message::Undo);
+        Send(Message::SetSel, 6, 1);
+        if (sample == "folded") {
+            const auto base = static_cast<intptr_t>(Scintilla::FoldLevel::Base);
+            Send(Message::SetFoldLevel, 0, base | static_cast<intptr_t>(Scintilla::FoldLevel::HeaderFlag));
+            for (int line = 1; line < 4; ++line)
+                Send(Message::SetFoldLevel, line, base + 1);
+            Send(Message::SetFoldLevel, 4, base);
+            Send(Message::FoldLine, 0, static_cast<intptr_t>(Scintilla::FoldAction::Contract));
+        }
+        // These independent frozen dialog results remain the settings oracle.
+        // Only native font measurement and resulting layout are host-dependent.
+        constexpr std::array settings{Message::SetWrapMode,
+                                      Message::SetWrapIndentMode,
+                                      Message::SetWrapStartIndent,
+                                      Message::SetWrapVisualFlags,
+                                      Message::SetWrapVisualFlagsLocation,
+                                      Message::SetMarginOptions,
+                                      Message::SetCaretLineHighlightSubLine};
+        for (size_t index = 0; index < settings.size(); ++index)
+            Send(settings[index], static_cast<uintptr_t>(frozen[index]));
+        Resize(frame, width, true, height);
+        const std::array<intptr_t, 17> observed{
+            Send(Message::GetWrapMode),
+            Send(Message::GetWrapIndentMode),
+            Send(Message::GetWrapStartIndent),
+            Send(Message::GetWrapVisualFlags),
+            Send(Message::GetWrapVisualFlagsLocation),
+            Send(Message::GetMarginOptions),
+            Send(Message::GetCaretLineHighlightSubLine),
+            Send(Message::WrapCount, 0),
+            Send(Message::GetLineVisible, 2),
+            Send(Message::GetAnchor),
+            Send(Message::GetCurrentPos),
+            Send(Message::GetModify),
+            Send(Message::CanUndo),
+            Send(Message::CanRedo),
+            Send(Message::TextHeight, 0),
+            Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>("W")),
+            Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>("中文"))};
+        for (size_t index = 0; index < observed.size(); ++index)
+            if (index != 7 && index < 14)
+                Require(observed[index] == frozen[index], "original settings, folds and history retain frozen results");
+        std::string actual(text.size() + 1, char{});
+        Send(Message::GetText, actual.size(), reinterpret_cast<intptr_t>(actual.data()));
+        actual.pop_back();
+        Require(actual == text, "independent original wrap host preserves every fixture byte");
+        output << sample << '\t' << mode << '\t' << indent << '\t' << width << '\t' << height << '\t' << dpi;
+        for (const auto value : observed)
+            output << '\t' << value;
+        output << '\n';
+        ++records;
+    }
+    Require(records == 32, "independent original wrap host emits all thirty-two records");
+    std::printf("original wrap: %d records at %d DPI\n", records, dpi);
 }
 std::string Fixture() {
     std::string text = "name = [";
@@ -162,7 +281,8 @@ void Record(std::ostream& output, int width) {
 int wmain(int count, wchar_t** arguments) {
     HWND frame = nullptr;
     try {
-        Require(count == 2, "provide the original reference TSV output path");
+        const bool wordWrap = count == 4 && std::wstring_view(arguments[1]) == L"--word-wrap";
+        Require(count == 2 || wordWrap, "provide the original reference output or word-wrap input/output paths");
         const auto instance = GetModuleHandleW(nullptr);
         Require(Scintilla_RegisterClasses(instance), "register original native control");
         WNDCLASSW windowClass{};
@@ -178,6 +298,13 @@ int wmain(int count, wchar_t** arguments) {
                                  frame, nullptr, instance, nullptr);
         Require(editor != nullptr, "create untouched original control");
         ShowWindow(frame, SW_SHOW);
+        if (wordWrap) {
+            WordWrapReference(frame, arguments[2], arguments[3]);
+            DestroyWindow(frame);
+            editor = nullptr;
+            Scintilla_ReleaseResources();
+            return 0;
+        }
         const auto text = Fixture();
         Scene(text);
         std::ofstream output{std::filesystem::path(arguments[1])};

@@ -101,3 +101,24 @@ python tests/reference_capture/capture_word_wrap.py ORIGINAL_EXE tests/data/word
 Raw captures belong outside the repository. Review their numeric rows before
 updating the committed `word_wrap_original_144.tsv` and `word_wrap_original_96.tsv`
 tables. Run native capture/probes through the entry points in `docs/ci.md`.
+
+## Approved same-host CI layout reference
+
+Windows CI measured the two Chinese glyphs at 24 pixels at 96 DPI, while the
+development host's frozen original table measures 28. The user approved obtaining
+font metrics and wrapped-row counts from an independent original control on the
+same CI machine, preserving exact comparisons and the original frozen tables.
+
+The existing independently built, untouched pinned Win32 core replays all 32
+scenes at current DPI and in complementary 96-DPI emulation. It reads the frozen
+original dialog settings as scene inputs. Configuration, fold visibility,
+selection and history must still equal their frozen values; only the wrapped-row
+count, line height and Latin/CJK widths are measured anew. It verifies every
+input byte and exact client geometry. wxnotepad then compares all seventeen
+observed fields exactly against these independent records.
+
+The source archive retains its existing pinned hash check. Both original tables
+and inputs remain in CI evidence. `WXNOTEPAD_ORIGINAL_WRAP_REFERENCE` selects the
+generated record directories; standalone runs without it keep using the frozen
+tables. This changes the layout reference source, with no changes to assertions,
+deadlines, parallelism or application font/rendering behavior.

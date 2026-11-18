@@ -66,6 +66,15 @@ and verifies forward/backward UTC jumps without changing the host clock.
 The Modify Lines native dialog uses the same asynchronous compositor-presentation
 confirmation as its parent frame before sending input to its multiline fields.
 
+Windows builds an independent untouched pinned Win32 control for its existing
+GDI viewport reference and the word-wrap layout reference. The latter replays
+all 32 frozen scenes at current DPI and complementary 96 DPI. Frozen original
+dialog settings, folds, selection and history remain invariant; native font
+metrics and wrapped-row counts come from that same-host original control.
+All seventeen wxnotepad fields are compared exactly. The source archive hash,
+frozen tables, complete inputs and native output remain in evidence. See
+`docs/observations/word-wrap-settings.md` for the approved reference-source change.
+
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.
