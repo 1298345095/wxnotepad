@@ -309,51 +309,67 @@ private:
     bool cancel_;
 };
 
-void CheckColorEdit(EditorFrame* frame, const wxString& mode, const char* source, intptr_t hover,
-                    const wxColour& initial, const char* expected, intptr_t start, intptr_t end, intptr_t caret,
-                    bool cancel = false, bool shift = false) {
+enum class ColorChoice : uint8_t { Accept, Cancel, AcceptUppercase };
+
+struct ColorEditCase {
+    const char* mode;
+    const char* source;
+    intptr_t hover;
+    wxColour initial;
+    const char* expected;
+    intptr_t start = 0;
+    intptr_t end = 0;
+    intptr_t caret = 0;
+    ColorChoice choice = ColorChoice::Accept;
+};
+
+void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    NativeSearch::Command(frame, CallTipMenu(frame)->FindItem(mode));
-    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source));
+    NativeSearch::Command(frame, CallTipMenu(frame)->FindItem(edit.mode));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(edit.source));
     editor->Send(SetSel, 1, 3);
     editor->Send(EmptyUndoBuffer);
     editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
-    Hover(editor, hover);
+    Hover(editor, edit.hover);
     Require(WaitFor([editor] { return VisibleCallTip(editor); }), "original color previews before edit");
-    const bool changed = std::string_view(expected) != source;
-    ChooseColor chooser(initial, cancel, changed || cancel ? wxColour(205, 171, 239) : initial, shift);
+    const bool changed = std::string_view(edit.expected) != edit.source;
+    const bool cancel = edit.choice == ColorChoice::Cancel;
+    ChooseColor chooser(edit.initial, cancel, changed || cancel ? wxColour(205, 171, 239) : edit.initial,
+                        edit.choice == ColorChoice::AcceptUppercase);
     ClickCallTip(VisibleCallTip(editor));
     Require(WaitFor([&] { return chooser.completed; }) && chooser.matched,
             "click opens the native chooser with the original computed RGB");
-    Require(NativeSearch::Text(editor) == expected && bool(editor->Send(GetModify)) == changed &&
+    Require(NativeSearch::Text(editor) == edit.expected && bool(editor->Send(GetModify)) == changed &&
                 bool(editor->Send(CanUndo)) == changed && !editor->Send(CanRedo),
             "closing the native chooser applies the original bytes and edit history");
     if (!changed) {
         NativeSearch::Selection(editor, 1, 3, "cancel or choosing the same color keeps the original selection");
         return;
     }
-    NativeSearch::Selection(editor, caret, caret, "choosing a color leaves the original caret at the replacement end");
+    NativeSearch::Selection(editor, edit.caret, edit.caret,
+                            "choosing a color leaves the original caret at the replacement end");
     editor->Send(Undo);
-    Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && editor->Send(CanRedo),
+    Require(NativeSearch::Text(editor) == edit.source && !editor->Send(GetModify) && editor->Send(CanRedo),
             "one Undo restores the original bytes and clean save point");
-    NativeSearch::Selection(editor, start, end, "Undo restores the original selected digit range");
+    NativeSearch::Selection(editor, edit.start, edit.end, "Undo restores the original selected digit range");
     editor->Send(Redo);
-    Require(NativeSearch::Text(editor) == expected && editor->Send(GetModify),
+    Require(NativeSearch::Text(editor) == edit.expected && editor->Send(GetModify),
             "one Redo restores the native color replacement");
-    NativeSearch::Selection(editor, caret, caret, "Redo restores the replacement caret");
+    NativeSearch::Selection(editor, edit.caret, edit.caret, "Redo restores the replacement caret");
 }
 
 void CheckEdits(EditorFrame* frame) {
-    CheckColorEdit(frame, "ARGB", "pre #1Bd4 and", 5, {187, 221, 68}, "pre #11cdabef and", 5, 9, 13);
-    CheckColorEdit(frame, "RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0, true);
-    CheckColorEdit(frame, "RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0);
-    CheckColorEdit(frame, "RGBA", "pre #0BD0 and", 6, {0, 187, 221}, "pre #cdabef and", 5, 9, 11);
-    CheckColorEdit(frame, "BGRA", "pre #00a5ef00 and", 7, {239, 165, 0}, "pre #efabcd and", 5, 13, 11);
-    CheckColorEdit(frame, "ABGR", "pre 0X12a5EF74 and", 6, {116, 239, 165}, "pre 0X12efabcdand", 6, 15, 14);
+    CheckColorEdit(frame, {"ARGB", "pre #1Bd4 and", 5, {187, 221, 68}, "pre #11cdabef and", 5, 9, 13});
+    CheckColorEdit(frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0, ColorChoice::Cancel});
+    CheckColorEdit(frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and"});
+    CheckColorEdit(frame, {"RGBA", "pre #0BD0 and", 6, {0, 187, 221}, "pre #cdabef and", 5, 9, 11});
+    CheckColorEdit(frame, {"BGRA", "pre #00a5ef00 and", 7, {239, 165, 0}, "pre #efabcd and", 5, 13, 11});
+    CheckColorEdit(frame, {"ABGR", "pre 0X12a5EF74 and", 6, {116, 239, 165}, "pre 0X12efabcdand", 6, 15, 14});
 #ifdef __WXMSW__
-    CheckColorEdit(frame, "RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #CDABEF and", 5, 8, 11, false, true);
+    CheckColorEdit(
+        frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #CDABEF and", 5, 8, 11, ColorChoice::AcceptUppercase});
 #endif
     std::puts("PASS: native chooser RGB, cancel/same, all modes, alpha, 0X range and exact Undo/Redo");
 }
