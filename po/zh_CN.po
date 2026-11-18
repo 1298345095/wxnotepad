@@ -1070,9 +1070,25 @@ msgstr "删除行(&E)\tCtrl+Shift+D"
 msgid "DTD"
 msgstr "DTD"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr "默认代码字体(&C)...\tAlt+F12"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr "默认文本字体(&T)..."
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr "默认代码字体"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
 msgstr "默认编码"
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
+msgstr "默认文本字体"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default encoding"
@@ -1971,6 +1987,18 @@ msgstr "滚动超出末行(&L)"
 msgid "Search wrapped"
 msgstr "搜索已循环"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All\tCtrl+A"
+msgstr "全选(&A)\tCtrl+A"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Lines (Expand Selection)\tCtrl+Shift+Space"
+msgstr "选择行（扩展选区）(&L)\tCtrl+Shift+Space"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Word\tCtrl+Alt+Space"
+msgstr "选择单词(&W)\tCtrl+Alt+Space"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select &default encoding:"
 msgstr "选择默认编码(&D):"
@@ -1999,6 +2027,14 @@ msgstr "选择当前文件编码(&E):"
 msgid "Select source &encoding to reload file:"
 msgstr "选择重新载入文件使用的编码(&S):"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document En&d"
+msgstr "选择至文档末尾(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document Star&t"
+msgstr "选择至文档开头(&T)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTOMATCHINGBRACE.
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Matching B&race\tCtrl+Shift+B"
@@ -2023,6 +2059,10 @@ msgstr "设置(&T)"
 msgid "Settings saved"
 msgstr "当前程序设置已被保存"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Menu\tAlt+F11"
+msgstr "显示菜单(&M)\tAlt+F11"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWWHITESPACE.
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
@@ -2045,6 +2085,10 @@ msgstr "显示代码折叠(&F)\tCtrl+Shift+Alt+F"
 #: src/app/editor_frame_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
 msgstr "显示换行符(&E)\tCtrl+Shift+9"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Stat&usbar\tShift+F11"
+msgstr "显示状态栏(&U)\tShift+F11"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAPSYMBOLS.
 #: src/app/editor_frame_commands.cpp
@@ -2439,6 +2483,10 @@ msgstr "未命名"
 #: src/app/editor_frame_commands.cpp
 msgid "Update File Time"
 msgstr "更新文件时间"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
+msgstr "使用默认代码样式(&C)\tShift+F12"
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Global Tab Settings"

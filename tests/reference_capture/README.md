@@ -7,6 +7,7 @@ library and Win32 APIs. Supply the original executable and an external evidence
 output path as documented in the corresponding observation:
 
 - [Block navigation](../../docs/observations/block-navigation.md)
+- [Word, line and document-edge selection](../../docs/observations/selection-commands.md)
 - [Automatic word completion](../../docs/observations/automatic-completion.md)
 - [Automatic tag closure](../../docs/observations/auto-close-tags.md)
 - [Caret appearance](../../docs/observations/caret-appearance.md)
@@ -14,6 +15,7 @@ output path as documented in the corresponding observation:
 - [Markdown dialects](../../docs/observations/syntax-markdown.md)
 - [Manual word completion](../../docs/observations/word-completion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
+- [Word wrap settings and DPI](../../docs/observations/word-wrap-settings.md)
 - [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)
 
 Raw captures belong in the external evidence directory. Reviewed reference data

@@ -77,6 +77,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     wxGetTopLevelParent(this)->Bind(wxEVT_MOVE, &EditorControl::OnHostMove, this);
 #endif
     SetAutoInsertMask(autoInsertMask_);
+    // Notepad4 89b8b36 Notepad4.cpp startup / GetFoldDisplayEllipsis:
+    // editor storage is UTF-8, independently of the document's file encoding.
+    Send(Message::FoldDisplayTextSetStyle,
+         static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldDisplayTextStyle::Boxed)));
+    Send(Message::SetDefaultFoldDisplayText, 0, reinterpret_cast<intptr_t>("\xC2\xB7\xC2\xB7\xC2\xB7"));
     occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
@@ -416,7 +421,8 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
-        message == Message::StyleSetItalic || message == Message::SetZoom || message == Message::SetTechnology) {
+        message == Message::StyleSetItalic || message == Message::StyleSetWeight || message == Message::SetZoom ||
+        message == Message::SetTechnology) {
         lineNumberWidthDirty_ = true;
         bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;

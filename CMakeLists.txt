@@ -76,6 +76,7 @@ add_library(editor_runtime STATIC
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
     src/editor/block_navigation.cpp
+    src/editor/selection_commands.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/base64_conversion.cpp
@@ -125,6 +126,7 @@ add_library(editor_features STATIC
     src/editor/word_completion.cpp
     src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
+    src/editor/font_settings.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -578,6 +580,21 @@ if(BUILD_TESTING)
     add_test(NAME original_word_wrap_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_settings_process.py" "$<TARGET_FILE:word_wrap_settings>")
     set_tests_properties(original_word_wrap_settings PROPERTIES TIMEOUT 180)
+    if(WIN32)
+        add_test(NAME original_word_wrap_settings_dpi96 COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_settings_process.py" "$<TARGET_FILE:word_wrap_settings>")
+        set_tests_properties(original_word_wrap_settings_dpi96 PROPERTIES TIMEOUT 180
+            ENVIRONMENT "WXNOTEPAD_WRAP_DPI96=1")
+        add_test(NAME original_word_wrap_reference COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_reference_process.py" "$<TARGET_FILE:word_wrap_settings>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+        set_tests_properties(original_word_wrap_reference PROPERTIES TIMEOUT 120)
+        add_test(NAME original_word_wrap_reference_dpi96 COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_reference_process.py" "$<TARGET_FILE:word_wrap_settings>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+        set_tests_properties(original_word_wrap_reference_dpi96 PROPERTIES TIMEOUT 120
+            ENVIRONMENT "WXNOTEPAD_WRAP_DPI96=1")
+    endif()
     add_editor_test(word_wrap word_wrap_view 60)
     if(WIN32)
         foreach(target IN ITEMS clipboard_smoke word_wrap)
@@ -592,6 +609,7 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(navigation_bindings original_navigation_bindings 60)
     add_editor_test(block_navigation original_block_navigation 120)
+    add_editor_test(selection_commands original_selection_commands 90)
     add_editor_test(matching_brace original_matching_brace_commands 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -846,6 +864,15 @@ if(BUILD_TESTING)
         set_tests_properties(native_renderer_commands PROPERTIES TIMEOUT 60)
     endif()
 
+    add_editor_test(default_fonts original_default_fonts 60)
+    if(WIN32)
+        target_link_libraries(default_fonts PRIVATE imm32)
+        add_test(NAME original_default_fonts_gdi COMMAND default_fonts)
+        set_tests_properties(original_default_fonts_gdi PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_DEFAULT_FONTS_GDI=1")
+    endif()
+    add_test(NAME original_default_fonts_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/default_fonts_process.py" "$<TARGET_FILE:default_fonts>")
+    set_tests_properties(original_default_fonts_lifecycle PROPERTIES TIMEOUT 180)
     add_editor_test(rendering_settings original_rendering_settings_menu 60)
     if(WIN32)
         target_link_libraries(rendering_settings PRIVATE imm32)
@@ -876,6 +903,25 @@ if(BUILD_TESTING)
     target_include_directories(completion_candidates PRIVATE src)
     add_test(NAME completion_candidate_contract COMMAND completion_candidates)
     set_tests_properties(completion_candidate_contract PROPERTIES TIMEOUT 20)
+
+    add_editor_test(fold_ellipsis original_boxed_fold_ellipsis 90)
+    if(WIN32)
+        add_test(NAME original_boxed_fold_ellipsis_dpi96 COMMAND fold_ellipsis)
+        set_tests_properties(original_boxed_fold_ellipsis_dpi96 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_FOLDING_DPI96=1")
+    else()
+        add_test(NAME original_boxed_fold_ellipsis_hidpi COMMAND fold_ellipsis)
+        set_tests_properties(original_boxed_fold_ellipsis_hidpi PROPERTIES TIMEOUT 90 ENVIRONMENT "GDK_SCALE=2")
+    endif()
+
+    add_editor_test(bar_visibility original_bar_visibility 60)
+    add_test(NAME original_bar_visibility_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/bar_visibility_process.py" "$<TARGET_FILE:bar_visibility>")
+    set_tests_properties(original_bar_visibility_lifecycle PROPERTIES TIMEOUT 120)
+    if(WIN32)
+        add_test(NAME original_hidden_menu_cleanup COMMAND bar_visibility --cleanup)
+        set_tests_properties(original_hidden_menu_cleanup PROPERTIES TIMEOUT 15)
+    endif()
 
 endif()
 

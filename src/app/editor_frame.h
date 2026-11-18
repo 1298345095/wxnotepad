@@ -16,6 +16,10 @@ class wxMenu;
 class EditorFrame final : public wxFrame {
 public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
+    ~EditorFrame() override;
+#ifdef __WXMSW__
+    bool MSWTranslateMessage(WXMSG* message) override;
+#endif
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
@@ -91,6 +95,7 @@ private:
     void ShowWordWrapSettings();
     void ApplyWrapSymbols();
     void CreateMenus();
+    void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
     void AppendEncodingCommands(wxMenu* file);
@@ -164,6 +169,7 @@ private:
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     void UpdatePositionStatus();
+    void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);

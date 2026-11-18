@@ -972,8 +972,24 @@ msgstr ""
 msgid "DTD"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1814,6 +1830,18 @@ msgstr ""
 msgid "Search wrapped"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All\tCtrl+A"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Lines (Expand Selection)\tCtrl+Shift+Space"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Word\tCtrl+Alt+Space"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select &default encoding:"
 msgstr ""
@@ -1839,6 +1867,14 @@ msgid "Select source &encoding to reload file:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Select to Document En&d"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document Star&t"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Select to Matching B&race\tCtrl+Shift+B"
 msgstr ""
 
@@ -1859,6 +1895,10 @@ msgid "Settings saved"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Show &Menu\tAlt+F11"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
 msgstr ""
 
@@ -1876,6 +1916,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Stat&usbar\tShift+F11"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2232,6 +2276,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Update File Time"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
 msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
