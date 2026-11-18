@@ -148,15 +148,9 @@ public:
         }
     }
 };
-void CharacterInfo(EditorFrame* frame, const CharacterInfoFixture& fixture, bool readonly = false,
-                   bool rectangle = false) {
+void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured) {
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
     Require(id != wxNOT_FOUND, "Edit Special exposes original Show Character Info");
-    auto* editor = frame->Editor();
-    Reset(editor, fixture.text, fixture.anchor, fixture.caret);
-    editor->Send(SetReadOnly, readonly);
-    if (rectangle) editor->Send(SetSelectionMode, std::to_underlying(Scintilla::SelectionMode::Rectangle));
-    const auto selections = editor->Send(GetSelections);
     {
         wxClipboardLocker lock;
         if (!lock) throw TestEditor::Failure("open native clipboard for owned fixture");
@@ -165,7 +159,6 @@ void CharacterInfo(EditorFrame* frame, const CharacterInfoFixture& fixture, bool
     }
     Feedback feedback;
     NativeSearch::Command(frame, id);
-    auto captured = fixture.payload;
     if (wxGetEnv("WXNOTEPAD_EXPECT_NO_CHARACTER_METADATA", nullptr))
         captured = captured.substr(0, captured.find("\nName:"));
     const auto expected = wxString::FromUTF8(captured.data(), captured.size());
@@ -178,6 +171,15 @@ void CharacterInfo(EditorFrame* frame, const CharacterInfoFixture& fixture, bool
         Require(wxTheClipboard->GetData(clipboard) && clipboard.GetText() == expected,
                 "real system clipboard replaces previous offer with the same original technical payload");
     }
+}
+void CharacterInfo(EditorFrame* frame, const CharacterInfoFixture& fixture, bool readonly = false,
+                   bool rectangle = false) {
+    auto* editor = frame->Editor();
+    Reset(editor, fixture.text, fixture.anchor, fixture.caret);
+    editor->Send(SetReadOnly, readonly);
+    if (rectangle) editor->Send(SetSelectionMode, std::to_underlying(Scintilla::SelectionMode::Rectangle));
+    const auto selections = editor->Send(GetSelections);
+    DisplayCharacterInfo(frame, fixture.payload);
     Require(TestEditor::Text(editor) == fixture.text && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "Character Info leaves original document, save point and history unchanged");
     TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret, "Character Info preserves selection direction");
@@ -210,6 +212,15 @@ void EncodedDocuments(EditorFrame* frame) {
         const auto eol = editor->Send(GetEOLMode);
         const auto bom = frame->DocumentHasBom();
         editor->Send(SetSel, 0, editor->Send(GetLength));
+        // Also frozen in original-03's explicit Windows-1252 sample.
+        constexpr std::string_view acuteInformation =
+            "Unicode: U+00E9\nUTF-16: 00E9\nUTF-8: C3 A9\nHTML: &#233;\n"
+            "Name: LATIN SMALL LETTER E WITH ACUTE\nCategory: Ll Lowercase_Letter";
+        DisplayCharacterInfo(frame, fixture.encoding == FileEncoding::Windows1252 ? acuteInformation
+                                                                                  : CharacterInfoFixtures[1].payload);
+        Require(TestEditor::Text(editor) == text && !editor->Send(GetModify),
+                "Character Info reports original decoded scalar without changing explicit-encoding document");
+        TestEditor::RequireSelection(editor, 0, text.size(), "encoded Character Info preserves selection");
         NativeSearch::Command(frame, id);
         Require(frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == bom &&
                     editor->Send(GetEOLMode) == eol,
@@ -256,6 +267,17 @@ public:
                     CharacterInfo(frame, fixture);
                 CharacterInfo(frame, CharacterInfoFixtures.front(), true);
                 CharacterInfo(frame, CharacterInfoFixtures.front(), false, true);
+                CharacterInfo(frame, {"empty", "", 0, 0, CharacterInfoFixtures[4].payload});
+                Reset(frame->Editor(), "A", 0, 1);
+                frame->Editor()->Send(InsertText, 1, reinterpret_cast<intptr_t>("!"));
+                frame->Editor()->Send(Undo);
+                frame->Editor()->Send(SetSel, 1, 0);
+                DisplayCharacterInfo(frame, CharacterInfoFixtures.front().payload);
+                Require(frame->Editor()->Send(CanRedo) && !frame->Editor()->Send(CanUndo) &&
+                            !frame->Editor()->Send(GetModify),
+                        "Character Info preserves pending redo and save point");
+                TestEditor::RequireSelection(frame->Editor(), 1, 0,
+                                             "Character Info preserves pending history selection");
                 EncodedDocuments(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
