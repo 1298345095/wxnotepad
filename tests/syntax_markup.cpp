@@ -394,7 +394,7 @@ void NativeTabsAndFoldedFind(EditorFrame* frame) {
     const std::string text = "<html>\n<body>\n<p>needle</p>\n</body>\n</html>\n";
     TestEditor::ResetStream(editor, text.c_str(), 0, 0);
     editor->Send(Message::Colourise, 0, -1);
-    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(Message::GetLineVisible, 2), "shared Collapse All hides nested markup");
     NativeSearch::Command(frame, wxID_FIND);
     auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
@@ -417,7 +417,7 @@ void NativeTabsAndFoldedFind(EditorFrame* frame) {
                 TestEditor::Text(editor) == text && !editor->Send(Message::GetModify),
             "shared occurrence marks cover opening and closing markup tags without editing");
     NativeSearch::Click(wxDynamicCast(query->GetParent(), wxDialog), wxID_CANCEL);
-    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+    NativeSearch::RevealAllFolds(frame);
     Require(editor->Send(Message::GetLineVisible, 3), "shared Expand All restores markup visibility");
     std::puts("PASS: native HTML/XML tabs, alias/file precedence and folded markup Find");
 }

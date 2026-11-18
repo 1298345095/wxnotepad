@@ -1,3 +1,4 @@
+#include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "file_helpers.h"
@@ -369,7 +370,7 @@ public:
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
                 Require(!editor->Send(GetLineVisible, 1), "fixture includes folded logical text");
                 editor->Send(SetSel, 0, editor->Send(PositionFromLine, 3));
                 Menu(frame, "Edit", "Indent");
@@ -379,7 +380,7 @@ public:
                 const auto y = editor->Send(PointYFromPosition, 0, caret);
                 Require(caret <= editor->Send(GetLength) && y >= 0 && y < editor->GetClientSize().y,
                         "block command keeps a valid visible caret");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+                NativeSearch::RevealAllFolds(frame);
                 std::puts("PASS: wrapped rows, folded logical content and valid visible caret");
                 SearchSession search(*editor);
                 SearchRequest request;

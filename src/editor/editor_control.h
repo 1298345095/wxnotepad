@@ -25,12 +25,14 @@
 
 wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 struct SyntaxDefinition;
+struct SyntaxOriginalMetadata;
 
 // Original Edit.h::LineSelectionMode, including its built-in Visual Studio default.
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 // Original Styles.h::LineHighlightMode.
 enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
 enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSibling };
+enum class FoldCommand { DefaultLevels, AllLevels, CurrentBlock, CurrentLevel, NumericLevel };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -139,6 +141,7 @@ public:
     void ToggleChangeHistory();
     bool CodeFoldingVisible() const { return codeFoldingVisible_; }
     void SetCodeFoldingVisible(bool visible);
+    void ToggleFolds(FoldCommand command, const SyntaxOriginalMetadata& syntax, int level = 0);
     bool CurrentBlockHighlighted() const { return highlightCurrentBlock_; }
     void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
@@ -195,6 +198,8 @@ private:
     void UpdateLineNumberMargin();
     void UpdateBookmarkMargin();
     void UpdateFoldMargin();
+    void ToggleAllFolds();
+    void FinishBatchFold();
     void OnPaint(wxPaintEvent& event);
     void OnIdle(wxIdleEvent& event);
     void OnKeyDown(wxKeyEvent& event);

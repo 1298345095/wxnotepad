@@ -1,6 +1,8 @@
 #pragma once
 
+#include "native_search_helpers.h"
 #include "syntax_test_helpers.h"
+#include "native_search_helpers.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
 #include <SciLexer.h>
@@ -67,10 +69,10 @@ inline void FoldCommands(EditorFrame* frame) {
         }
     }
     Require(header >= 0, "fixture must expose an original fold header");
-    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(GetLineVisible, static_cast<uintptr_t>(header + 1)),
             "Collapse All hides each language's original fold body");
-    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+    NativeSearch::RevealAllFolds(frame);
     Require(editor->Send(GetLineVisible, static_cast<uintptr_t>(header + 1)),
             "Expand All restores each language's fold body");
 }

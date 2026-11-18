@@ -17,21 +17,24 @@ void AllVisible(EditorControl* editor) {
     for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line)
         Require(editor->Send(Message::GetLineVisible, line), "Expand All must reveal every document line");
 }
-void HiddenCaret(EditorFrame* frame, int collapse, int expand) {
+void ExplicitContractAll(EditorControl* editor) {
+    editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
+}
+void HiddenCaret(EditorFrame* frame, int allLevels) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto hidden = editor->Send(PositionFromLine, 2) + 4;
     editor->Send(SetSel, hidden + 2, hidden);
-    NativeSearch::Command(frame, collapse);
+    ExplicitContractAll(editor);
     Require(editor->Send(GetCurrentPos) == 0 && editor->Send(GetAnchor) == 0 && !editor->Send(GetFoldExpanded, 0),
-            "Collapse All must move hidden caret and anchor to a visible header without reopening folds");
+            "explicit FoldAll must move hidden caret and anchor to a visible header without reopening folds");
     const auto caretY = editor->Send(PointYFromPosition, 0, editor->Send(GetCurrentPos));
     Require(caretY >= 0 && caretY < editor->GetClientSize().y,
             "repaired caret must remain inside the visible viewport");
-    NativeSearch::Command(frame, expand);
-    std::puts("PASS: Collapse All repairs hidden selection endpoints and keeps the caret on screen");
+    NativeSearch::Command(frame, allLevels);
+    std::puts("PASS: explicit FoldAll repairs hidden selection endpoints and keeps the caret on screen");
 }
-void FoldHistory(EditorFrame* frame, int collapse, int expand, const std::string& source) {
+void FoldHistory(EditorFrame* frame, int allLevels, const std::string& source) {
     auto* editor = frame->Editor();
     const auto append = [editor](const char* text) {
         using enum Scintilla::Message;
@@ -45,8 +48,8 @@ void FoldHistory(EditorFrame* frame, int collapse, int expand, const std::string
     Require(editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
             "history fixture must have Undo, Redo and modified text");
     const auto revision = editor->DocumentRevision();
-    NativeSearch::Command(frame, collapse);
-    NativeSearch::Command(frame, expand);
+    NativeSearch::Command(frame, allLevels);
+    NativeSearch::Command(frame, allLevels);
     Require(NativeSearch::Text(editor) == source + "first" && editor->DocumentRevision() == revision &&
                 editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
             "fold commands must preserve dirty bytes, document revision and existing Undo/Redo");
@@ -59,7 +62,7 @@ void FoldHistory(EditorFrame* frame, int collapse, int expand, const std::string
             "Redo after folding must retain both original edits in order");
     std::puts("PASS: dirty bytes, document revision, save point and existing Undo/Redo survive folding");
 }
-void ScrolledFolds(EditorFrame* frame, int collapse, int expand, const std::string& source) {
+void ScrolledFolds(EditorFrame* frame, int allLevels, const std::string& source) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     std::string scrolled;
@@ -71,20 +74,20 @@ void ScrolledFolds(EditorFrame* frame, int collapse, int expand, const std::stri
     editor->Send(GotoPos, editor->Send(PositionFromLine, 198));
     editor->Send(SetFirstVisibleLine, 190);
     Paint(editor);
-    NativeSearch::Command(frame, collapse);
+    ExplicitContractAll(editor);
     const auto current = editor->Send(GetCurrentPos);
     const auto currentLine = editor->Send(LineFromPosition, current);
     const auto y = editor->Send(PointYFromPosition, 0, current);
     Require(editor->Send(GetLineVisible, currentLine) && y >= 0 && y < editor->GetClientSize().y &&
                 editor->Send(VisibleFromDocLine, 6) == 1 && editor->Send(DocLineFromVisible, 1) == 6 &&
                 editor->Send(GetFirstVisibleLine) < editor->Send(GetLineCount),
-            "scrolled Collapse All must map display lines and keep the repaired caret on screen");
-    NativeSearch::Command(frame, expand);
+            "scrolled explicit FoldAll must map display lines and keep the repaired caret on screen");
+    NativeSearch::Command(frame, allLevels);
     AllVisible(editor);
     Require(editor->Send(VisibleFromDocLine, 198) == 198, "Expand All must restore the full document display mapping");
     std::puts("PASS: resized and scrolled commands retain visible caret and coherent display-line mapping");
 }
-void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
+void LanguageFoldCommands(EditorFrame* frame, int allLevels) {
     auto* editor = frame->Editor();
     struct LanguageFixture {
         const char* name;
@@ -102,19 +105,18 @@ void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
         Paint(editor);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         const bool capable = editor->Send(GetMarginWidthN, 2) > 0;
-        Require(frame->GetMenuBar()->IsEnabled(collapse) == capable &&
-                    frame->GetMenuBar()->IsEnabled(expand) == capable,
+        Require(frame->GetMenuBar()->IsEnabled(allLevels) == capable,
                 "fold command enablement must follow the selected language's folding capability");
         if (!capable) {
             std::printf("SKIP: %s folding is not enabled in this integration revision\n", language.name);
             continue;
         }
         editor->Send(GotoPos, 0);
-        NativeSearch::Command(frame, collapse);
+        NativeSearch::Command(frame, allLevels);
         Require(!editor->Send(GetFoldExpanded, 0) && !editor->Send(GetFoldExpanded, 1) &&
                     !editor->Send(GetLineVisible, 2),
                 "every enabled language must support nested Collapse All");
-        NativeSearch::Command(frame, expand);
+        NativeSearch::Command(frame, allLevels);
         AllVisible(editor);
         Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetFoldExpanded, 1),
                 "every enabled language must reset nested flags with Expand All");
@@ -124,9 +126,9 @@ void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
             editor->Send(SetSavePoint);
             editor->Send(GotoPos, 0);
             Paint(editor);
-            NativeSearch::Command(frame, collapse);
-            NativeSearch::Command(frame, collapse);
-            NativeSearch::Command(frame, expand);
+            NativeSearch::Command(frame, allLevels);
+            NativeSearch::Command(frame, allLevels);
+            NativeSearch::Command(frame, allLevels);
             AllVisible(editor);
             Require(NativeSearch::Text(editor) == noHeaders && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
                         editor->Send(GetCurrentPos) == 0,
@@ -136,7 +138,7 @@ void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
     }
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    Require(frame->GetMenuBar()->IsEnabled(collapse) && frame->GetMenuBar()->IsEnabled(expand),
+    Require(frame->GetMenuBar()->IsEnabled(allLevels),
             "Plain Text must retain the original preference-based native fold command gate");
     std::puts("PASS: native command enablement follows the folding preference in Plain Text");
 }
@@ -156,32 +158,29 @@ public:
                 editor->Send(EmptyUndoBuffer);
                 editor->Send(SetSavePoint);
                 editor->Send(GotoPos, 0);
-                const int collapse = frame->GetMenuBar()->FindMenuItem("View", "Collapse All");
-                const int expand = frame->GetMenuBar()->FindMenuItem("View", "Expand All");
-                Require(collapse != wxNOT_FOUND && expand != wxNOT_FOUND, "native fold menu commands must exist");
-                NativeSearch::Command(frame, collapse);
+                const int allLevels = frame->GetMenuBar()->FindMenuItem("View", "All Levels");
+                Require(allLevels != wxNOT_FOUND, "native All Levels command must exist");
+                NativeSearch::Command(frame, allLevels);
                 Require(!editor->Send(GetFoldExpanded, 0) && !editor->Send(GetFoldExpanded, 1) &&
                             !editor->Send(GetLineVisible, 1) && !editor->Send(GetLineVisible, 2) &&
                             editor->Send(GetLineVisible, 6),
                         "Collapse All must contract both outer and nested lexer headers");
-                NativeSearch::Command(frame, collapse);
-                NativeSearch::Command(frame, expand);
+                NativeSearch::Command(frame, allLevels);
                 AllVisible(editor);
                 Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetFoldExpanded, 1),
                         "Expand All must reset every nested expansion flag");
                 editor->Send(FoldLine, 1, static_cast<intptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)));
-                NativeSearch::Command(frame, expand);
-                NativeSearch::Command(frame, expand);
+                NativeSearch::RevealAllFolds(frame);
                 AllVisible(editor);
                 Require(editor->Send(GetFoldExpanded, 1), "Expand All must open individually collapsed folds");
                 Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
                             !editor->Send(CanRedo),
                         "repeated fold commands must preserve bytes, save point and empty history");
                 std::puts("PASS: actual menu commands contract nested headers and expand every line repeatedly");
-                HiddenCaret(frame, collapse, expand);
-                FoldHistory(frame, collapse, expand, source);
-                ScrolledFolds(frame, collapse, expand, source);
-                LanguageFoldCommands(frame, collapse, expand);
+                HiddenCaret(frame, allLevels);
+                FoldHistory(frame, allLevels, source);
+                ScrolledFolds(frame, allLevels, source);
+                LanguageFoldCommands(frame, allLevels);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

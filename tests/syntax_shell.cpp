@@ -1,3 +1,4 @@
+#include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "syntax_test_helpers.h"
@@ -64,8 +65,7 @@ void OriginalShell(EditorFrame* frame, const std::filesystem::path& directory) {
     Require(editor->Send(Message::StyleGetEOLFilled, SCE_SH_HERE_DELIM) &&
                 editor->Send(Message::StyleGetEOLFilled, SCE_SH_HERE_Q),
             "original heredoc style groups must fill the line ending");
-    const int collapse = frame->GetMenuBar()->FindMenuItem("View", "Collapse All");
-    const int expand = frame->GetMenuBar()->FindMenuItem("View", "Expand All");
+    const int collapse = frame->GetMenuBar()->FindMenuItem("View", "All Levels");
     Command(frame, collapse);
     Require(!editor->Send(Message::GetLineVisible, 3), "Collapse All must hide the shell body");
     SearchSession search(*editor);
@@ -73,7 +73,7 @@ void OriginalShell(EditorFrame* frame, const std::filesystem::path& directory) {
     Require(search.Find(SearchDirection::Forward).status == FindStatus::Found &&
                 editor->Send(Message::GetLineVisible, 6),
             "search must reveal a match in a folded shell heredoc");
-    Command(frame, expand);
+    NativeSearch::RevealAllFolds(frame);
     for (int line = 0; line < 10; ++line)
         Require(editor->Send(Message::GetLineVisible, line), "Expand All must reveal shell lines");
     editor->Send(Message::SetSel, 0, 0);
