@@ -137,6 +137,7 @@ private:
     void AppendSelectionOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
+    void AppendCallTipCommands(wxMenu* view);
     void AppendMarginCommands(wxMenu* view);
     void ToggleIndentationGuides();
     void ToggleLongLineMarker();

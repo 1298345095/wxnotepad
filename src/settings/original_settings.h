@@ -2,6 +2,7 @@
 
 #include "settings/original_settings_constants.h"
 #include "editor/font_settings.h"
+#include "editor/color_calltip_mode.h"
 #include <utility>
 #include "settings/ui_language.h"
 #include "editor/display_units.h"
@@ -96,6 +97,7 @@ struct OriginalSettings {
     wxString dateTimeLong;
     bool viewEOLs = false;
     bool showUnicodeControlCharacter = false;
+    ColorCallTipMode showCallTip = ColorCallTipMode::Off;
     bool showWordWrapSymbols = false;
     int wordWrapSymbols = 2;
     // wxnotepad opt-in; false retains original growth-only width tracking.

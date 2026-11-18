@@ -431,10 +431,15 @@ Additional payloads remain an explicit follow-up: rectangular/line selection tag
 files, shell objects and application-specific formats are not migrated by the
 stream-text slice. Linux IME also remains deferred.
 
-The current platform implementation still contains incomplete capabilities:
-`WxSurface::Layout` returns null, `CreateCallTipWindow` is empty, and popup-menu
-methods are stubs. Future work should complete the relevant existing interface
-instead of inferring support from the compiled core.
+Color CallTips use Scintilla's dwell, CallTip layout, painting and click
+notification. The wx popup shares the editor's nonactivating window behavior
+with completion and paints directly into the popup's native device context at
+its current scale. The editor owns color scanning and replacement, and the
+application frame owns the View command and settings lifecycle.
+
+`WxSurface::Layout` still returns null and original-core popup-menu methods
+are stubs. Future work should complete the relevant existing interface instead
+of inferring support from the compiled core.
 
 ## Portability, build and lightweight constraints
 

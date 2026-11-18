@@ -62,6 +62,11 @@ whitespace markers start off. These choices stay with the current window through
 New, Open, Save As and language changes; they are not saved between runs.
 See the [navigation and view validation record](docs/observations/navigation-view-README.md).
 
+View → Show CallTip previews hexadecimal colors when you hover over them.
+Choose RGBA, ARGB, BGRA or ABGR to match the document's format, then click a
+preview to edit the color in the native chooser. Hold Shift when accepting the
+chooser to write uppercase hexadecimal digits. The setting starts Off.
+
 The status bar shows the 1-based logical line and core column at the active
 caret. Tabs follow the current tab stops; wrapped rows do not create document
 lines. A nonempty stream selection also shows its Unicode scalar count, rather

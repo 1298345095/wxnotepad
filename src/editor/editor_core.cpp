@@ -365,6 +365,7 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
 
 EditorControl::Core::~Core() {
     SetIdle(false);
+    DestroyCallTipWindow();
 #ifdef __WXMSW__
     DestroySystemCaret();
 #endif
@@ -567,6 +568,10 @@ void EditorControl::Core::TickWiden() {
     TickFor(TickReason::widen);
 }
 
+void EditorControl::Core::TickDwell() {
+    TickFor(TickReason::dwell);
+}
+
 void EditorControl::Core::Scroll(wxScrollWinEvent& event) {
     const bool vertical = event.GetOrientation() == wxVERTICAL;
     int position = event.GetPosition();
@@ -650,6 +655,10 @@ void EditorControl::Core::Mouse(wxMouseEvent& event) {
 
 void EditorControl::Core::CaptureLost() {
     ChangeMouseCapture(false);
+}
+
+void EditorControl::Core::MouseDeparted() {
+    MouseLeave();
 }
 
 void EditorControl::Core::SyncSystemCaret() {
@@ -874,6 +883,15 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
             return;
         }
         HandleCompletionNotification(notification);
+        if (notification.nmhdr.code == Scintilla::Notification::DwellStart && !ac.Active()
+#ifdef __WXMSW__
+            && !imeComposing_
+#endif
+        ) {
+            window_.ShowColorCallTip(notification.position);
+        } else if (notification.nmhdr.code == Scintilla::Notification::CallTipClick) {
+            window_.QueueColorCallTipEdit();
+        }
         UpdateNotificationState(notification);
     } catch (const std::bad_alloc&) {
         // Notifications run inside the document's edit/undo transaction. Keep
@@ -1041,6 +1059,7 @@ void EditorControl::Core::StartDrag() {
 bool EditorControl::Core::FineTickerRunning(TickReason reason) const noexcept {
     if (reason == TickReason::scroll) return window_.scrollTimer_.IsRunning();
     if (reason == TickReason::widen) return window_.widenTimer_.IsRunning();
+    if (reason == TickReason::dwell) return window_.dwellTimer_.IsRunning();
     return reason == TickReason::caret && window_.caretTimer_.IsRunning();
 }
 
@@ -1051,6 +1070,8 @@ void EditorControl::Core::FineTickerStart(TickReason reason, int millis, int) no
         window_.scrollTimer_.Start(millis);
     else if (reason == TickReason::widen)
         window_.widenTimer_.Start(millis);
+    else if (reason == TickReason::dwell)
+        window_.dwellTimer_.StartOnce(millis);
 }
 
 void EditorControl::Core::FineTickerCancel(TickReason reason) noexcept {
@@ -1060,6 +1081,8 @@ void EditorControl::Core::FineTickerCancel(TickReason reason) noexcept {
         window_.scrollTimer_.Stop();
     else if (reason == TickReason::widen)
         window_.widenTimer_.Stop();
+    else if (reason == TickReason::dwell)
+        window_.dwellTimer_.Stop();
 }
 
 bool EditorControl::Core::SetIdle(bool on) noexcept {
@@ -1111,8 +1134,4 @@ std::string EditorControl::Core::EncodedFromUTF8(std::string_view text) const {
 
 intptr_t EditorControl::Core::DefWndProc(Message, uintptr_t, intptr_t) {
     return 0;
-}
-
-void SCICALL EditorControl::Core::CreateCallTipWindow(core::PRectangle) noexcept {
-    // Call-tip popup windows are outside the currently supported host UI.
 }

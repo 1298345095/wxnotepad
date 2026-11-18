@@ -118,6 +118,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     editor_->SetFontSettings(preferences.fonts);
     editor_->SetAutoInsertMask(preferences.autoInsertMask);
     editor_->SetCompletionSettings(preferences.completion);
+    editor_->SetColorCallTipMode(preferences.showCallTip);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
     editor_->Send(Scintilla::Message::SetEndAtLastLine, preferences.endAtLastLine);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);

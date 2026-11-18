@@ -3,6 +3,7 @@
 #include "settings/original_settings_constants.h"
 #include "editor/align_lines.h"
 #include "editor/completion_styles.h"
+#include "editor/color_calltip_mode.h"
 #include "editor/word_completion.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
@@ -43,6 +44,7 @@ public:
     explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
+    void SetColorCallTipMode(ColorCallTipMode mode);
     uint64_t DocumentRevision() const { return documentRevision_; }
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
@@ -163,6 +165,17 @@ private:
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
+    wxTimer dwellTimer_;
+    ColorCallTipMode colorCallTipMode_ = ColorCallTipMode::Off;
+    struct ColorCallTipRange {
+        intptr_t start;
+        intptr_t end;
+        uint32_t color;
+    };
+    std::optional<ColorCallTipRange> colorCallTip_;
+    void ShowColorCallTip(intptr_t position);
+    void QueueColorCallTipEdit();
+    void EditColorCallTip(ColorCallTipRange range);
     std::unique_ptr<Core> core_;
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
     std::unique_ptr<OccurrenceMarking> occurrences_;

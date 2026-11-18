@@ -1078,6 +1078,7 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendCaretCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
+    AppendCallTipCommands(view);
     view->AppendSeparator();
     const int matchBraces = wxWindow::NewControlId();
     view->AppendCheckItem(matchBraces, _("Visual &Brace Matching\tCtrl+Shift+V"));
@@ -1142,6 +1143,26 @@ void EditorFrame::AppendIndentationOptions(wxMenu* view) {
             }
         },
         tabSettings);
+}
+
+void EditorFrame::AppendCallTipCommands(wxMenu* view) {
+    auto* modes = new wxMenu;
+    const std::array<wxString, 5> labels{_("&Off"), "RGBA", "ARGB", "BGRA", "ABGR"};
+    for (size_t index = 0; index < labels.size(); ++index) {
+        const auto mode = static_cast<ColorCallTipMode>(index);
+        const int id = wxWindow::NewControlId();
+        auto* item = modes->AppendRadioItem(id, labels[index]);
+        if ((settings_ ? settings_->values : defaults_).showCallTip == mode) item->Check(true);
+        Bind(
+            wxEVT_MENU,
+            [this, modes, id, mode](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).showCallTip = mode;
+                editor_->SetColorCallTipMode(mode);
+                modes->Check(id, true);
+            },
+            id);
+    }
+    view->AppendSubMenu(modes, _("Show CallTip"));
 }
 
 void EditorFrame::AppendZoomCommands(wxMenu* view) {
