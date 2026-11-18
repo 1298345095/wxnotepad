@@ -4,6 +4,8 @@
 *.sha256 text eol=lf
 tests/fixtures/encoding_175/*.bin binary
 tests/fixtures/encoding_175/*.utf8 binary
+tests/data/rtf/*.rtf binary
+tests/data/rtf/*.bin binary
 # Original JavaScript lexer observations use LF byte offsets and lengths.
 tests/fixtures/javascript/sample.js text eol=lf
 tests/fixtures/javascript/sample.jsx text eol=lf

@@ -34,9 +34,9 @@ struct SaveResult {
 };
 enum class OpenStatus { Opened, Cancelled, Failed };
 namespace DocumentLoad {
-// Automatic detection, an explicit codec, or a source codec with native ANSI/OEM
-// identity. Detection supplies the BOM in all three cases.
-using SourceDecoding = std::variant<std::monostate, FileEncoding, EncodingChoice>;
+// Automatic detection, an explicit codec or native identity, or a quick
+// command's source. Detection supplies the loaded document's BOM.
+using SourceDecoding = std::variant<std::monostate, FileEncoding, EncodingChoice, QuickReloadEncoding>;
 struct Open {
     std::optional<wxString> source;
     SourceDecoding decoding{};
@@ -51,7 +51,11 @@ struct ReloadAsUtf8 {
     // Asked before reading, after the current path and view have been captured.
     std::function<bool()> beforeReplace{};
 };
-using Intent = std::variant<Open, Reload, ReloadWithEncoding, ReloadAsUtf8>;
+struct ReloadQuickEncoding {
+    QuickReloadEncoding encoding;
+    std::function<bool()> beforeReplace{};
+};
+using Intent = std::variant<Open, Reload, ReloadWithEncoding, ReloadAsUtf8, ReloadQuickEncoding>;
 } // namespace DocumentLoad
 struct LineEndingCounts {
     size_t crlf = 0;

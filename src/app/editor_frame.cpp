@@ -611,6 +611,11 @@ OpenResult EditorFrame::ReloadAsUtf8() {
         [this] { return ConfirmDiscardChanges(_("Save changes to %s before reloading?")); }});
 }
 
+OpenResult EditorFrame::ReloadQuickEncoding(QuickReloadEncoding encoding) {
+    return LoadFile(DocumentLoad::ReloadQuickEncoding{
+        encoding, [this] { return ConfirmDiscardChanges(_("Save changes to %s before reloading?")); }});
+}
+
 OpenResult EditorFrame::Open() {
     OpenFileDialog dialog(this);
     return Open(dialog.Choose());

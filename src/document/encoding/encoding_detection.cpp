@@ -482,6 +482,22 @@ bool IsUtf8(std::string_view bytes) {
     return true;
 }
 
+DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEncoding source,
+                                           const EncodingOptions& options) {
+    const auto native = NativeCodePage();
+    const auto oem = OemCodePage(native);
+    using enum QuickReloadEncoding;
+    const int index = source == Ansi ? CPI_DEFAULT : source == Oem ? CPI_OEM : DefaultEncoding(options.defaultEncoding);
+    const bool ansi = index == CPI_DEFAULT;
+    auto detected = Choice(index, native, oem, ansi);
+    if (detected.encoding && !ansi && index != CPI_OEM)
+        return DetectSignatureEncoding(bytes, detected.encoding, LegacyCodePage(native), oem).value_or(detected);
+    if (ansi && (native == catalog[CPI_UTF8].codePage || options.loadANSIasUTF8 || options.loadASCIIasUTF8) &&
+        std::all_of(bytes.begin(), bytes.end(), [](unsigned char ch) { return ch < 128; }))
+        detected.systemDefault = false;
+    return detected;
+}
+
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<FileEncoding> explicitEncoding, const EncodingOptions& options,
                                 std::optional<EncodingChoice> weakEncoding) {

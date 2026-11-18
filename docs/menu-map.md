@@ -11,7 +11,7 @@ File
   Save; Save As; Save Copy; Save with Original Time
   File Mode > Read Only Mode
   Revert (F5)
-  Reload > As UTF-8; separator; With Encoding
+  Reload > As UTF-8 (Shift+F8); As ANSI (Ctrl+Shift+A); As OEM (Ctrl+Shift+O); separator; Default Encoding (Ctrl+Alt+F); With Encoding (F8)
   Line Endings > Windows (CR+LF); Unix/macOS (LF); Classic Mac OS (CR); Default
   Update File Time
   Recent (History) (Alt+H)
@@ -19,7 +19,7 @@ Edit
   Undo; Redo
   Cut; Copy; Paste; Swap
   Clear Clipboard
-  Copy to Clipboard > File Name; File Name and Ext.; Full Path Name; Copy All; Copy Add
+  Copy to Clipboard > File Name; File Name and Ext.; Full Path Name; Copy All; Copy Add; Copy as RTF
   Selection
     Duplicate
     Toggle Line Comment; Toggle Block Comment; Indent; Unindent
