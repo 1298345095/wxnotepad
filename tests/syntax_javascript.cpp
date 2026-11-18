@@ -1,3 +1,4 @@
+#include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor/editor_control.h"
@@ -248,14 +249,13 @@ public:
                     TestSyntax::Command(frame, wxID_REDO);
                     Compare(frame, fixture.editedStyles, fixture.editedFolds);
                     TestSyntax::Command(frame, wxID_UNDO);
-                    const int collapse = frame->GetMenuBar()->FindMenuItem("View", "Collapse All");
-                    const int expand = frame->GetMenuBar()->FindMenuItem("View", "Expand All");
+                    const int collapse = frame->GetMenuBar()->FindMenuItem("View", "All Levels");
                     TestSyntax::Command(frame, collapse);
                     bool hidden = false;
                     for (size_t line = 0; line < fixture.folds.size(); ++line)
                         hidden |= !editor->Send(GetLineVisible, line);
                     Require(hidden, "Collapse All must hide an original JS/TS fold");
-                    TestSyntax::Command(frame, expand);
+                    NativeSearch::RevealAllFolds(frame);
                     for (size_t line = 0; line < fixture.folds.size(); ++line)
                         Require(editor->Send(GetLineVisible, line), "Expand All reveals every folded line");
                     Require(TestEditor::Text(editor) == bytes && !editor->Send(GetModify),

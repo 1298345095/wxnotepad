@@ -57,3 +57,36 @@ regressions. `final-view-tests.log` records both final visual fixtures passing a
 the read-only history assertion was aligned with the original public API.
 Canonical clang-format 23.1.2 and `git diff --check` pass. The parent integration
 run owns the final X11/Wayland, full Windows, clang-tidy and independent review.
+
+## Toggle Folds commands (#234)
+
+View → Toggle Folds provides Default Levels (`Shift+Alt+D`), All Levels
+(`Shift+Alt+A`), Current Block (`Alt+C`), Current Level, and Levels 1–10.
+`Alt+1` through `Alt+9` select their matching levels. The submenu stays
+enabled when the folding margin is hidden; the commands do nothing in that
+state. The commands add no settings.
+
+All Levels delegates to the pinned core's toggle with contraction at every
+level. Individual level commands choose their direction from the first header
+whose expanded state actually changes. Indentation-based lexers count parent
+headers; other lexers use their numeric fold levels. Default Levels applies
+the selected scheme's mask and style exclusion after styling the document.
+
+The pinned original executable was run before counterpart changes in seven
+isolated Windows processes. The capture script is
+`tests/reference_capture/capture_fold_commands.py`; the raw state, menu tree,
+SHA-256, and inputs are in
+`F:/wxnotepad-evidence/native-workflows-implementation-2026-11-18/234/original-01/original.json`.
+The registered `original_toggle_folds` fixture replays all 78 transitions
+through the native menu and repeats them with the original shortcuts where
+assigned. The frozen data include each line's expansion and visibility,
+directed selection, viewport, bytes, save point, and Undo/Redo. Cases cover
+C++, uneven Python indentation, Markdown, dirty history, a scrolled view, and
+a header without effective children. The menu hierarchy test also checks the
+original ordering and separator.
+
+On the original, All Levels can hide both selection endpoints without moving
+them. This is independent of the older explicit `FoldAll` API's wxnotepad
+selection repair: the native replay checks the original offsets, and the two
+legacy repair assertions still exercise the explicit API. Margin clicks,
+block navigation, and the boxed fold display retain their existing checks.

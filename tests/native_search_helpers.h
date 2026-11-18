@@ -69,6 +69,19 @@ inline void Command(EditorFrame* frame, int id) {
 #endif
     wxYield();
 }
+inline void RevealAllFolds(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    const auto* bar = frame->GetMenuBar();
+    const int id = bar->FindMenuItem("View", "All Levels");
+    const auto allExpanded = [editor = frame->Editor()] {
+        for (intptr_t line = 0; line < editor->Send(GetLineCount); ++line)
+            if (!editor->Send(GetFoldExpanded, line) || !editor->Send(GetLineVisible, line)) return false;
+        return true;
+    };
+    Command(frame, id);
+    if (!allExpanded()) Command(frame, id);
+    if (!allExpanded()) throw std::runtime_error("native All Levels must reveal all folds within two toggles");
+}
 inline void Toggle(wxCheckBox* option, bool checked) {
     if (option->GetValue() == checked) return;
 #ifdef __WXMSW__

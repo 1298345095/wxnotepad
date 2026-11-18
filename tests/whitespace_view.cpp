@@ -109,7 +109,7 @@ public:
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>("int main() {\n\t return 0;  \n}\n"));
                 NativeFold::Paint(editor);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
                 Require(!editor->Send(GetLineVisible, 1), "the fixture must contain a collapsed block");
                 NativeSearch::Command(frame, id);
                 NativeSearch::Command(frame, id);

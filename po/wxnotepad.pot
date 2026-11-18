@@ -86,6 +86,10 @@ msgid_plural "%zu replacements"
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&All Levels\tShift+Alt+A"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Always show this dialog."
 msgstr ""
@@ -134,10 +138,6 @@ msgstr ""
 msgid "&Closing tag (can be edited):"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
-msgid "&Collapse All"
-msgstr ""
-
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
 msgid "&Column (empty or 1 - %lld):"
@@ -156,11 +156,19 @@ msgid "&Copy Line\tCtrl+Shift+C"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Current Block\tAlt+C"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Levels\tShift+Alt+D"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -217,10 +225,6 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
-msgstr ""
-
-#: src/app/editor_frame_commands.cpp
-msgid "&Expand All"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -985,6 +989,10 @@ msgid "Current &Date"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Current &Level"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Current Date &Time"
 msgstr ""
 
@@ -1366,6 +1374,15 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Level &%d\tAlt+%d"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Level 1&0"
 msgstr ""
 
 #: src/app/dialogs/long_line_settings_dialog.cpp

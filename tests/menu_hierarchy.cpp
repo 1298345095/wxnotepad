@@ -65,6 +65,11 @@ void CheckMenu(EditorFrame* frame) {
            "Show Wrap Symbols",      "Unicode Control Character", "Visual Brace Matching", "Highlight Current Block",
            "Highlight Current Line", "Mark Occurrences",          "Line Numbers",          "Bookmark Margin",
            "Change History Marker",  "Show Code Folding",         "Toggle Folds",          "Zoom"});
+    auto* folds = Submenu(bar->GetMenu(3), "Toggle Folds");
+    Order(folds, {"Default Levels", "All Levels", "Current Block", "Current Level", "Level 1", "Level 2", "Level 3",
+                  "Level 4", "Level 5", "Level 6", "Level 7", "Level 8", "Level 9", "Level 10"});
+    Require(folds->GetMenuItemCount() == 15 && folds->FindItemByPosition(4)->IsSeparator(),
+            "Toggle Folds separates its four general commands from the ten numeric levels");
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});

@@ -288,8 +288,9 @@ C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX, TypeScript/TSX, Ru
 and TypeScript use the original shared JavaScript lexer with separate keyword lists
 and four dialect properties. Their tab settings default to two spaces; JSX shares
 the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
-collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
-blocks. These commands change visibility without editing text or history. Find
+collapse or expand its block. View → Toggle Folds offers Default Levels, All
+Levels, Current Block, Current Level, and Levels 1–10. These commands change
+visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while
 leaving unrelated folds collapsed. Replacement still searches the full document.
 See the [syntax and folding validation record](docs/observations/syntax-README.md).

@@ -6,6 +6,7 @@
 #include "editor/platform/clipboard.h"
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
+#include <wx/wupdlock.h>
 #include <cmath>
 #include <type_traits>
 #include <utility>
@@ -520,6 +521,30 @@ void EditorControl::SetCodeFoldingVisible(bool visible) {
     UpdateFoldMargin();
     if (!visible) Send(Message::FoldAll, static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Expand)));
     core_->UpdateWrapLayout();
+}
+
+void EditorControl::ToggleAllFolds() {
+    using enum Scintilla::FoldAction;
+    {
+        const wxWindowUpdateLocker redraw(this);
+        core_->WndProc(Message::FoldAll,
+                       static_cast<uintptr_t>(std::to_underlying(Toggle) | std::to_underlying(ContractEveryLevel)), 0);
+    }
+    FinishBatchFold();
+}
+
+void EditorControl::FinishBatchFold() {
+    using enum Scintilla::Message;
+    using enum Scintilla::CaretPolicy;
+    constexpr int horizontalCaretSlop = 50;
+    constexpr int verticalCaretSlop = 5;
+    constexpr auto strictPolicy = static_cast<uintptr_t>(std::to_underlying(Slop | Strict | Even));
+    Send(SetXCaretPolicy, strictPolicy, horizontalCaretSlop);
+    Send(SetYCaretPolicy, strictPolicy, verticalCaretSlop);
+    Send(ScrollCaret);
+    Send(SetXCaretPolicy, static_cast<uintptr_t>(std::to_underlying(Slop | Even)), horizontalCaretSlop);
+    Send(SetYCaretPolicy, static_cast<uintptr_t>(std::to_underlying(Even)), 0);
+    Refresh(false);
 }
 
 void EditorControl::UpdateFoldMargin() {

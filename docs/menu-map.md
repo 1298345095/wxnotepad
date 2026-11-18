@@ -63,7 +63,8 @@ View
   Show CallTip > Off; RGBA; ARGB; BGRA; ABGR
   Visual Brace Matching; Highlight Current Block; Highlight Current Line; Mark Occurrences
   Line Numbers; Bookmark Margin; Change History Marker
-  Show Code Folding; Toggle Folds > Collapse All; Expand All
+  Show Code Folding
+  Toggle Folds > Default Levels; All Levels; Current Block; Current Level; Levels 1–10
   Zoom > Zoom In; Zoom Out; Zoom Level; Reset Zoom
 Scheme
   Automatic; delivered syntax schemes
@@ -92,6 +93,7 @@ wxnotepad retains these specific placements:
 - Automatic and the currently delivered syntax choices occupy Scheme directly.
 - Auto Indent stays next to tab and long-line preferences in Settings.
 - Auto-Shrink Horizontal Scrollbar occupies Settings > Appearance.
-- The delivered Collapse All and Expand All actions occupy View > Toggle Folds.
+- View > Toggle Folds retains Shift+Alt+D for Default Levels, Shift+Alt+A for
+  All Levels, Alt+C for Current Block, and Alt+1 through Alt+9 for those levels.
 - Goto Selection Start/End now have visible entries at the original Goto positions,
   retaining Ctrl+Shift+Comma and Ctrl+Shift+Period.
