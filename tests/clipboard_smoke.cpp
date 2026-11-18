@@ -2299,6 +2299,7 @@ public:
         encodingSettings_.values.encoding.loadASCIIasUTF8 = false;
         encodingSettings_.values.encoding.loadANSIasUTF8 = false;
         auto* frame = new EditorFrame(defaultSwap ? &encodingSettings_ : nullptr);
+        TestEditor::UseFixedWidthFont(frame->Editor());
         wxString focusProbe;
         if (wxGetEnv("WXNOTEPAD_CLIPBOARD_FOCUS_PROBE", &focusProbe)) {
             InitFocusProbe(frame);

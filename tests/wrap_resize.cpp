@@ -143,6 +143,9 @@ public:
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = true;
+        // The resize oracle owns its exact viewport widths; the unrelated
+        // expanded menu bar has a wider GTK minimum than the 360px fixture.
+        settings_->values.showMenu = false;
         settings_->values.fileWatching.mode = FileWatchingMode::None;
         auto* frame = new EditorFrame(settings_.get());
         TestRenderer::Select(frame->Editor());

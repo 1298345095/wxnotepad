@@ -295,6 +295,7 @@ public:
         }
 #endif
         auto* frame = new EditorFrame;
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {

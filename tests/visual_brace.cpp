@@ -172,7 +172,7 @@ void Lifecycle(EditorFrame* frame, int toggle) {
     editor->Send(SetSel, 0, 0);
     editor->Send(EmptyUndoBuffer);
     editor->Send(SetSavePoint);
-    editor->Send(StyleSetSizeFractional, 0, 1450);
+    TestEditor::UseFixedWidthFont(editor, 14.5);
     editor->Send(SetZoom, 150);
     std::array<char, 256> font{};
     editor->Send(StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
@@ -241,6 +241,7 @@ public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         auto* frame = new EditorFrame;
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {

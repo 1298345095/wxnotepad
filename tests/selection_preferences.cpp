@@ -227,6 +227,7 @@ public:
         }
 #endif
         auto* frame = new EditorFrame;
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->SetClientSize(frame->FromDIP(wxSize(420, 600)));
         frame->ShowWithoutActivating();
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {

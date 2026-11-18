@@ -62,9 +62,13 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                     editor->Send(StyleGetFore, SCE_MARKDOWN_PLAIN_LINK) == 0x008064 &&
                     editor->Send(StyleGetFore, SCE_H_TAG) == 0x008064,
                 "Markdown installs original line flags, emphasis, headings, links and embedded HTML attributes");
-        for (int style = 0; style <= SCE_MARKDOWN_HARD_LINE_BREAK; ++style)
-            Require(editor->Send(StyleGetSizeFractional, style) == fontSize,
-                    "all original Markdown styles inherit the native font point size");
+        for (int style = 0; style <= SCE_MARKDOWN_HARD_LINE_BREAK; ++style) {
+            const auto expectedSize = style == std::to_underlying(Scintilla::StylesCommon::FoldDisplayText)
+                                          ? fontSize - 2 * Scintilla::FontSizeMultiplier
+                                          : fontSize;
+            Require(editor->Send(StyleGetSizeFractional, style) == expectedSize,
+                    "Markdown styles retain the base font and the original smaller Fold Ellipsis font");
+        }
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                     frame->GetStatusBar()->GetStatusText().Contains(wxString(dialect.name) + " (override)"),
                 "same-path reopen retains the explicit Markdown dialect");
@@ -269,6 +273,7 @@ public:
         settings_->values.detectIndentation = false;
         settings_->values.globalTabs = {7, 3, true};
         auto* frame = new EditorFrame(settings_.get());
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
         CallAfter([this, frame] {
             try {

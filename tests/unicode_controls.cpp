@@ -261,6 +261,7 @@ public:
         settings_.values = OriginalSettings{};
         settings_.values.wordWrap = false;
         auto* frame = new EditorFrame(&settings_);
+        TestEditor::UseFixedWidthFont(frame->Editor());
         TestRenderer::Select(frame->Editor());
         std::printf("Native representation DPI: %d x %d\n", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
 #ifdef __WXMSW__
