@@ -170,4 +170,5 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    # Preserve the DWORD bits even when sys.exit converts through a signed C long.
+    sys.exit(ctypes.c_int32(main()).value)
