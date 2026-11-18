@@ -6,8 +6,10 @@
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
+#include "app/dialogs/word_wrap_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
+#include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
 #include "app/dialogs/document_dialogs.h"
@@ -1070,7 +1072,7 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
 void EditorFrame::AppendDisplayCommands(wxMenu* view) {
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, _("&Word Wrap\tCtrl+Shift+W"));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleWordWrap(); }, wordWrap);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
@@ -1124,10 +1126,49 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         },
         symbols);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(showWordWrapSymbols_); }, symbols);
+    const int controlCharacters = wxWindow::NewControlId();
+    view->AppendCheckItem(controlCharacters, _("Un&icode Control Character"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (document_.IsDefaultEncoding()) return;
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.showUnicodeControlCharacter = !preferences.showUnicodeControlCharacter;
+            ApplyUnicodeControlCharacter();
+        },
+        controlCharacters);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!document_.IsDefaultEncoding());
+            event.Check((settings_ ? settings_->values : defaults_).showUnicodeControlCharacter);
+        },
+        controlCharacters);
     // One frame hook owns dispatch; the dialog retains its narrower callback.
     Bind(wxEVT_CHAR_HOOK, [this, whitespace, eol, symbols](wxKeyEvent& event) {
         if (!HandleCommandKey(event) && !HandleDisplayKey(event, whitespace, eol, symbols)) event.Skip();
     });
+}
+
+void EditorFrame::ApplyUnicodeControlCharacter() {
+    // EditShowUnicodeControlCharacter/EditOnCodePageChanged at Notepad4 89b8b36;
+    // see licenses/Notepad4.txt. The host stores all text as UTF-8, so eligibility
+    // follows the document's logical CPI_DEFAULT identity.
+    const bool visible =
+        (settings_ ? settings_->values : defaults_).showUnicodeControlCharacter && !document_.IsDefaultEncoding();
+    if (visible == unicodeControlCharactersVisible_) return;
+    unicodeControlCharactersVisible_ = visible;
+    for (const auto& character : UnicodeControlInsertions) {
+        if (!character.representation[0]) continue;
+        editor_->Send(visible ? Scintilla::Message::SetRepresentation : Scintilla::Message::ClearRepresentation,
+                      reinterpret_cast<uintptr_t>(character.utf8),
+                      visible ? reinterpret_cast<intptr_t>(character.representation) : 0);
+    }
+    // Original InvalidateStyleRedraw(): representation messages alone retain
+    // cached line widths. Preserve the current caret preference while invoking
+    // the same core invalidation before wrapping, hit-testing and repainting.
+    editor_->Send(Scintilla::Message::SetCaretLineVisibleAlways,
+                  editor_->Send(Scintilla::Message::GetCaretLineVisibleAlways));
 }
 
 void EditorFrame::ApplyWrapSymbols() {
@@ -1166,6 +1207,38 @@ void EditorFrame::ApplyWrapSymbols() {
     }
     editor_->Send(Message::SetWrapVisualFlagsLocation, location);
     editor_->Send(Message::SetWrapVisualFlags, flags);
+}
+
+void EditorFrame::ToggleWordWrap() {
+    editor_->ToggleWordWrap();
+    wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+}
+
+void EditorFrame::ShowWordWrapSettings() {
+    using enum Scintilla::Message;
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    auto choice = preferences;
+    choice.wordWrapMode = std::to_underlying(editor_->PreferredWordWrapMode());
+    choice.wordWrapIndent = editor_->WordWrapIndent();
+    choice.wordWrapSymbols = wordWrapSymbols_;
+    choice.showWordWrapSymbols = showWordWrapSymbols_;
+    choice.wordWrapSelectSubLine = editor_->Send(GetMarginOptions) != 0;
+    choice.highlightCurrentLine = std::to_underlying(editor_->GetCurrentLineHighlightMode()) +
+                                  10 * static_cast<int>(editor_->Send(GetCaretLineHighlightSubLine));
+    if (!ShowWordWrapSettingsDialog(this, choice)) return;
+    preferences.wordWrap = wordWrap_ = choice.wordWrap;
+    preferences.wordWrapMode = choice.wordWrapMode;
+    preferences.wordWrapIndent = choice.wordWrapIndent;
+    preferences.wordWrapSymbols = wordWrapSymbols_ = choice.wordWrapSymbols;
+    preferences.showWordWrapSymbols = showWordWrapSymbols_ = choice.showWordWrapSymbols;
+    preferences.wordWrapSelectSubLine = choice.wordWrapSelectSubLine;
+    preferences.highlightCurrentLine = choice.highlightCurrentLine;
+    editor_->SetWordWrapMode(static_cast<Scintilla::Wrap>(choice.wordWrapMode));
+    if (!wordWrap_) editor_->SetWordWrapMode(Scintilla::Wrap::None);
+    editor_->SetWordWrapIndent(choice.wordWrapIndent);
+    editor_->Send(SetMarginOptions, choice.wordWrapSelectSubLine);
+    editor_->Send(SetCaretLineHighlightSubLine, choice.highlightCurrentLine >= 10);
+    ApplyWrapSymbols();
 }
 
 void EditorFrame::AppendFoldCommands(wxMenu* view) {
@@ -1634,7 +1707,7 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
         editor_->SetCurrentLineHighlightMode(LineHighlightMode::OutlineFrame);
     else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
-        editor_->ToggleWordWrap();
+        ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
@@ -1707,6 +1780,41 @@ void EditorFrame::ToggleReadOnlyMode() {
 }
 
 void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
+    const int showHex = wxWindow::NewControlId();
+    edit->Append(showHex, _("&Show Hex Code"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!ShowHexCode(*editor_, document_.IsDefaultEncoding()))
+                wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        showHex);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        showHex);
+    const int showCharacter = wxWindow::NewControlId();
+    edit->Append(showCharacter, _("Show Character &Info"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto technical = CharacterInformation(*editor_);
+            const auto payload = wxString::FromUTF8(technical);
+            editor_->Send(Scintilla::Message::CopyText, technical.size(), reinterpret_cast<intptr_t>(technical.data()));
+            wxDialog dialog(this, wxID_ANY, _("Character Info"));
+            auto* contents = new wxBoxSizer(wxVERTICAL);
+            auto* information = new wxStaticText(&dialog, wxID_ANY, wxEmptyString);
+            information->SetLabelText(payload);
+            information->SetName("Character information");
+            contents->Add(information, 0, wxALL, dialog.FromDIP(12));
+            contents->Add(dialog.CreateSeparatedButtonSizer(wxOK), 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+            dialog.SetSizerAndFit(contents);
+            dialog.CentreOnParent();
+            dialog.ShowModal();
+        },
+        showCharacter);
+    edit->AppendSeparator();
     const int completeWord = wxWindow::NewControlId();
     auto* completionItem = edit->Append(completeWord, _("Complete &Word\tAlt+/"));
     completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
@@ -1831,6 +1939,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
     AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
+    const int wordWrapSettings = wxWindow::NewControlId();
+    view->Append(wordWrapSettings, _("Word Wrap Settings..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowWordWrapSettings(); }, wordWrapSettings);
     const int longLineSettings = wxWindow::NewControlId();
     view->Append(longLineSettings, _("Long Line Settings..."));
     Bind(
@@ -1864,6 +1975,24 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     auto* appearance = new wxMenu;
+    auto* scrollPastLastLine = new wxMenu;
+    // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).
+    for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&No"), 1}, std::pair{wxTRANSLATE("&One Page"), 0},
+                                      std::pair{wxTRANSLATE("&Half Page"), 2}, std::pair{wxTRANSLATE("1/&3 Page"), 3},
+                                      std::pair{wxTRANSLATE("1/&4 Page"), 4}}) {
+        const int id = wxWindow::NewControlId();
+        scrollPastLastLine->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetEndAtLastLine, mode); },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetEndAtLastLine) == mode);
+            },
+            id);
+    }
+    appearance->AppendSubMenu(scrollPastLastLine, _("Scroll Past &Last Line"));
     const int shrinkScrollWidth = wxWindow::NewControlId();
     appearance->AppendCheckItem(shrinkScrollWidth, _("Auto-Shrink Horizontal Scrollbar"));
     Bind(

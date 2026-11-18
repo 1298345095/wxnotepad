@@ -64,13 +64,14 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
-    Order(bar->GetMenu(5), {"Language", "Insert Tabs as Spaces", "Tab Settings...", "Long Line Settings...",
-                            "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent",
-                            "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
+    Order(bar->GetMenu(5),
+          {"Language", "Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
+           "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
+           "Appearance", "File Change Notification...", "Other Settings",
 #ifdef __WXMSW__
-                            "Advanced Settings",
+           "Advanced Settings",
 #endif
-                            "Save Settings On Exit", "Save Settings Now"});
+           "Save Settings On Exit", "Save Settings Now"});
 #ifdef __WXMSW__
     Order(Submenu(bar->GetMenu(5), "Advanced Settings"), {"Rendering Technology"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Advanced Settings"), "Rendering Technology"), {"Legacy GDI", "Direct2D"});
