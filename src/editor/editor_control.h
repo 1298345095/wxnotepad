@@ -195,6 +195,7 @@ private:
     void UpdateBookmarkMargin();
     void UpdateFoldMargin();
     void OnPaint(wxPaintEvent& event);
+    void OnIdle(wxIdleEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);
 #ifdef __WXMSW__

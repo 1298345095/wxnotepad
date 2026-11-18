@@ -39,6 +39,7 @@ public:
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
 
     void Draw(wxDC& dc);
+    void OnIdle(wxIdleEvent& event);
     void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
     void Resize();
     void UpdateWrapLayout();
@@ -115,7 +116,7 @@ private:
     bool FineTickerRunning(TickReason reason) const noexcept override;
     void FineTickerStart(TickReason reason, int millis, int) noexcept override;
     void FineTickerCancel(TickReason reason) noexcept override;
-    bool SetIdle(bool) noexcept override;
+    bool SetIdle(bool on) noexcept override;
     void SetMouseCapture(bool on) noexcept override;
     bool HaveMouseCapture() const noexcept override;
     void UpdateBaseElements() noexcept override;

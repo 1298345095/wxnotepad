@@ -364,6 +364,7 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
 }
 
 EditorControl::Core::~Core() {
+    SetIdle(false);
 #ifdef __WXMSW__
     DestroySystemCaret();
 #endif
@@ -1061,8 +1062,24 @@ void EditorControl::Core::FineTickerCancel(TickReason reason) noexcept {
         window_.widenTimer_.Stop();
 }
 
-bool EditorControl::Core::SetIdle(bool) noexcept {
-    return false;
+bool EditorControl::Core::SetIdle(bool on) noexcept {
+    // wxSTC 3.3.3 ScintillaWX::SetIdle: let the original core finish pending
+    // wrapping and styling through the host's normal idle event loop.
+    if (idler.state != on) {
+        if (on)
+            window_.Bind(wxEVT_IDLE, &EditorControl::OnIdle, &window_);
+        else
+            window_.Unbind(wxEVT_IDLE, &EditorControl::OnIdle, &window_);
+        idler.state = on;
+    }
+    return idler.state;
+}
+
+void EditorControl::Core::OnIdle(wxIdleEvent& event) {
+    if (Idle())
+        event.RequestMore();
+    else
+        SetIdle(false);
 }
 
 void EditorControl::Core::SetMouseCapture(bool on) noexcept {

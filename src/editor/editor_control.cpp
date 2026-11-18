@@ -586,6 +586,10 @@ void EditorControl::OnPaint(wxPaintEvent&) {
     core_->Draw(dc);
 }
 
+void EditorControl::OnIdle(wxIdleEvent& event) {
+    RunNativeEvent([&] { core_->OnIdle(event); });
+}
+
 void EditorControl::OnSize(wxSizeEvent& event) {
     core_->Resize();
     Refresh(false);
