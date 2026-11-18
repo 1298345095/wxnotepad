@@ -110,6 +110,7 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
         ReadInt("WordWrapIndent", std::to_underlying(defaults.wordWrapIndent)),
         std::to_underlying(WrapContinuationIndent::None), std::to_underlying(WrapContinuationIndent::DeepIndent)));
     values.wordWrapSelectSubLine = ReadBool("WordWrapSelectSubLine", defaults.wordWrapSelectSubLine);
+    values.endAtLastLine = std::clamp(ReadInt("EndAtLastLine", defaults.endAtLastLine), 0, 4);
     values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
     values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
@@ -469,6 +470,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),
                  std::to_underlying(defaults.wordWrapIndent));
         WriteBool("WordWrapSelectSubLine", values.wordWrapSelectSubLine, defaults.wordWrapSelectSubLine);
+        WriteInt("EndAtLastLine", values.endAtLastLine, defaults.endAtLastLine);
         WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
         WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
