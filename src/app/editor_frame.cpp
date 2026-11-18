@@ -87,9 +87,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
     Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
-        // The native status bar finalizes its height when the frame is shown.
-        // Layout from that real client area instead of the pre-show geometry.
-        if (event.IsShown()) CallAfter([this] { Layout(); });
+        // Recalculate native bar metrics on the shown window before laying out
+        // the editor; Layout alone retains the pre-show non-client geometry.
+        if (event.IsShown()) CallAfter([this] { ApplyBarVisibility(); });
         event.Skip();
     });
 #endif

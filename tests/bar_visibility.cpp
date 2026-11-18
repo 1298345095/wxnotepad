@@ -152,6 +152,7 @@ public:
                 NativePaint::Complete(frame->Editor());
                 const auto initial = frame->Editor()->GetSize();
                 const auto initialStatus = frame->GetStatusBar()->GetSize();
+                std::printf("Initial frame client height=%d\n", frame->GetClientSize().y);
                 NativeSearch::Command(frame, status);
                 NativePaint::Complete(frame->Editor());
                 Require(!frame->GetStatusBar()->IsShown(), "native menu hides status bar");
