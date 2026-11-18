@@ -14,6 +14,19 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+void CheckQuickReloadWithUtf8SystemAnsi() {
+    constexpr NativeSourceCodePages utf8System{65001, 1252, 437};
+    const auto western = DetectQuickReloadEncoding("caf\x{e9}", QuickReloadEncoding::Ansi, {}, utf8System);
+    Require(western.encoding == FileEncoding::Windows1252 && !western.bom && !western.systemDefault &&
+                !western.systemOem,
+            "Quick ANSI uses the explicit legacy codec for non-ASCII bytes on a UTF-8 system");
+    const auto ascii = DetectQuickReloadEncoding("ASCII", QuickReloadEncoding::Ansi, {}, utf8System);
+    Require(ascii.encoding == FileEncoding::Utf8 && !ascii.bom && !ascii.systemDefault && !ascii.systemOem,
+            "Quick ANSI keeps explicit UTF-8 for ASCII on a UTF-8 system");
+    const auto oem = DetectQuickReloadEncoding("caf\x{e9}", QuickReloadEncoding::Oem, {}, utf8System);
+    Require(oem.encoding == FileEncoding::Dos437 && !oem.bom && !oem.systemDefault && oem.systemOem,
+            "Quick OEM still uses the native OEM source and identity");
+}
 std::string Text(EditorControl& editor) {
     std::string text(static_cast<size_t>(editor.Send(Scintilla::Message::GetLength)) + 1, '\0');
     editor.Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
@@ -410,6 +423,7 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 CheckAutomaticDetection(editor, directory);
+                CheckQuickReloadWithUtf8SystemAnsi();
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

@@ -139,7 +139,10 @@ Encoding (Ctrl+Alt+F) use that same decision and target the current named file.
 ANSI and OEM select the native mappings. A leading UTF-8 signature is data
 when read as native ANSI or OEM. Under the original ASCII load options, a
 quick ANSI reload of ASCII bytes can result in the explicit native codec
-identity. An unsupported native code page reports a reload error.
+identity. When Windows uses UTF-8 as its system ANSI code page, quick ANSI
+reload uses the legacy ANSI code page for non-ASCII input below the original
+legacy conversion size limit and records that explicit codec. ASCII remains
+explicit UTF-8. An unsupported native code page reports a reload error.
 
 Default Encoding selects the configured encoding as the source. A configured
 UTF-8, UTF-16LE, or UTF-16BE BOM variant selects its underlying codec, and the

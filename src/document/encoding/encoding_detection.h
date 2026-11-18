@@ -33,6 +33,11 @@ struct DetectedEncoding {
     bool systemDefault = false;
     bool systemOem = false;
 };
+struct NativeSourceCodePages {
+    unsigned ansi;
+    unsigned legacyAnsi;
+    unsigned oem;
+};
 bool IsUtf8(std::string_view bytes);
 int NormalizeEncodingSetting(int value);
 std::optional<EncodingChoice> DefaultEncodingChoice(int setting);
@@ -45,3 +50,5 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<EncodingChoice> weakEncoding = std::nullopt);
 DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEncoding source,
                                            const EncodingOptions& options);
+DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEncoding source,
+                                           const EncodingOptions& options, NativeSourceCodePages pages);

@@ -306,9 +306,13 @@ void NativePrint(EditorFrame& frame) {
             "printing does not change editor length, caret or history");
     std::puts("PASS: native GTK Print Cancel, whole buffer, requested page, and live selection");
 
-    InstallWrappedFixture(*editor);
+    const auto wrapped = InstallWrappedFixture(*editor);
     PageSetup(frame, "125%", wxID_OK);
     PdfPrint(frame, output, "styled-wrap", GTK_PRINT_PAGES_ALL);
+    const auto middle = wrapped.length / 2;
+    editor->Send(Scintilla::Message::SetSel, middle, middle + 1);
+    PdfPrint(frame, output, "selected-wrap", GTK_PRINT_PAGES_ALL);
+    editor->Send(Scintilla::Message::SetSel, 0, 0);
     PageSetup(frame, "150%", wxID_OK, std::to_underlying(Scintilla::PrintOption::BlackOnWhite));
     PdfPrint(frame, output, "monochrome-wrap", GTK_PRINT_PAGES_ALL);
 }

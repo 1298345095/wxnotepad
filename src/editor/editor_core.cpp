@@ -7,6 +7,7 @@
 #include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
 #include "editor/platform/native_drawing_error.h"
+#include "editor/platform/print_surface.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
 #include "editor/platform/gtk_drag_drop.h"
@@ -401,6 +402,26 @@ intptr_t EditorControl::Core::SelectionCharacterCount() {
         selectionCountDirty_ = false;
     }
     return selectedCharacters_;
+}
+
+Scintilla::Position EditorControl::FormatPrintRange(const core::PrintSurface& printer, bool draw,
+                                                    Scintilla::CharacterRangeFull range, Scintilla::Rectangle area) {
+    return core_->FormatPrintRange(printer, draw, range, area);
+}
+
+Scintilla::Position EditorControl::Core::FormatPrintRange(const core::PrintSurface& printer, bool draw,
+                                                          Scintilla::CharacterRangeFull range,
+                                                          Scintilla::Rectangle area) {
+    Scintilla::Position next = 0;
+    RunNativeOperation([&] {
+        const auto surface = core::AllocatePrintSurface(printer);
+        const auto measure = core::AllocatePrintSurface(printer);
+        if (!surface->Initialised() || !measure->Initialised()) return;
+        surface->SetMode(CurrentSurfaceMode());
+        measure->SetMode(CurrentSurfaceMode());
+        next = view.FormatRange(draw, range, area, surface.get(), measure.get(), *this, vs);
+    });
+    return next;
 }
 
 void EditorControl::Core::Draw(wxDC& dc) {

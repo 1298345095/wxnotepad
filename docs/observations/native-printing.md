@@ -34,16 +34,18 @@ so the dialog and backends use a single GObject registry.
 `original_printing` is the native CTest case. On GTK it drives the native dialog
 and uses only the virtual File backend. Set `WXNOTEPAD_PRINT_TEST_OUTPUT_DIR` to an
 existing directory for a run to retain `whole.pdf`, `page2.pdf`,
-`all-with-selection.pdf`, `styled-wrap.pdf` (125% color), and
+`all-with-selection.pdf`, `styled-wrap.pdf` (125% color), `selected-wrap.pdf`
+(selection within one wrapped physical line), and
 `monochrome-wrap.pdf` (150%, Black on white). Verify the text, color and size with
 Poppler’s `pdftotext` and `pdftohtml`:
 
 ```text
-python -X utf8 tests/reference_capture/verify_print_pdfs.py whole.pdf all-with-selection.pdf page2.pdf --wrapped styled-wrap.pdf --monochrome monochrome-wrap.pdf
+python -X utf8 tests/reference_capture/verify_print_pdfs.py whole.pdf all-with-selection.pdf page2.pdf --wrapped styled-wrap.pdf --wrapped-selection selected-wrap.pdf --monochrome monochrome-wrap.pdf
 ```
 
 The verifier compares the ordered markers and footer of the requested page with
-the corresponding whole-document page. On Windows, use the scoped
+the corresponding whole-document page. It also requires all 1,000 markers when
+the selection covers only part of the wrapped line. On Windows, use the scoped
 `tests/reference_capture/capture_wx_printing.py` test fixture with the
 `printing.exe` test target and a visible, selected Microsoft Print to PDF device.
 Use the documented `ci.py probe` or `ci.py test` entry points. The counterpart

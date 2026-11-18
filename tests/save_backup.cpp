@@ -96,6 +96,21 @@ public:
     std::vector<fs::path> paths;
 };
 
+wxDateTime BackupTimestamp() {
+    auto time = wxDateTime::UNow();
+    time.SetMillisecond(0);
+    return time;
+}
+
+std::pair<wxDateTime, wxDateTime> TimestampedBackup(EditorFrame& frame, int command) {
+    frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    const auto start = BackupTimestamp();
+    NativeSearch::ActivateCommand(&frame, command);
+    const auto end = BackupTimestamp();
+    wxYield();
+    return {start, end};
+}
+
 void RequireTimestamp(const fs::path& file, const wxString& basename, const wxString& extension,
                       const wxDateTime& start, const wxDateTime& end) {
     for (auto time = start; time <= end; time += wxTimeSpan::Second()) {
@@ -129,9 +144,7 @@ void NamedBackup(EditorFrame& frame) {
     const auto path = RequireSourcePath(frame, source);
     frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(item->IsEnabled(), "unmodified named document can create a backup");
-    const auto start = wxDateTime::Now();
-    NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto [start, end] = TimestampedBackup(frame, command);
     size_t backups = 0;
     for (const auto& entry : std::filesystem::directory_iterator(directory)) {
         if (entry.path() == source) continue;
@@ -178,9 +191,7 @@ void NamedFallback(EditorFrame& frame, const FallbackFixture& fixture) {
 
     const auto fallback = FallbackDirectory();
     Require(MatchingNames(fallback, prefix).empty(), "fallback fixture namespace is unused");
-    const auto start = wxDateTime::Now();
-    NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto [start, end] = TimestampedBackup(frame, command);
     const OwnedBackups owned{MatchingNames(fallback, prefix)};
     Require(owned.paths.size() == 1, "a missing source directory falls back to native user data");
     RequireTimestamp(owned.paths.front(), TestFiles::Filename(name), ".txt", start, end);
@@ -208,9 +219,7 @@ void UntitledBackup(EditorFrame& frame) {
     TestEditor::Append(&frame, payload);
     using enum Scintilla::Message;
     frame.Editor()->Send(SetSel, 3, 1);
-    const auto start = wxDateTime::Now();
-    NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto [start, end] = TimestampedBackup(frame, command);
     OwnedBackups owned;
     for (const auto& item : MatchingNames(fallback, "Untitled ")) {
         if (std::ranges::find(before, item) == before.end() && TestFiles::Bytes(item) == payload)
@@ -237,9 +246,7 @@ void ExtensionQuirks(EditorFrame& frame) {
     TestFiles::WriteBytes(path, "space");
     Require(frame.Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
             "opens original extension-space fixture");
-    const auto start = wxDateTime::Now();
-    NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto [start, end] = TimestampedBackup(frame, command);
     const auto backups = MatchingNames(directory, "file.my suffix ");
     Require(backups.size() == 1 && TestFiles::Bytes(backups.front()) == "space",
             "space in extension creates one same-directory backup");
@@ -286,9 +293,7 @@ void RequireEncodedBackup(EditorFrame& frame, const fs::path& source, std::strin
                           std::string_view expected) {
     const auto path = RequireSourcePath(frame, source);
     const auto command = frame.GetMenuBar()->FindMenuItem("File", "Save Backup");
-    const auto start = wxDateTime::Now();
-    NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto [start, end] = TimestampedBackup(frame, command);
     const auto backups = MatchingNames(source.parent_path(), "source ");
     Require(backups.size() == 1, "encoded document creates exactly one sibling backup");
     RequireTimestamp(backups.front(), "source", ".bak", start, end);
@@ -344,7 +349,7 @@ void BackupCollisions(EditorFrame& frame, bool collisionAtFallback) {
     const auto fallback = FallbackDirectory();
     Require(MatchingNames(fallback, prefix).empty(), "collision fixture namespace is unused");
     fs::create_directories(fallback);
-    const auto start = wxDateTime::Now();
+    const auto start = BackupTimestamp();
     std::vector<fs::path> existing;
     OwnedBackups owned;
     for (int offset = -1; offset <= 4; ++offset) {
@@ -362,7 +367,7 @@ void BackupCollisions(EditorFrame& frame, bool collisionAtFallback) {
     }
     const auto command = frame.GetMenuBar()->FindMenuItem("File", "Save Backup");
     NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto end = BackupTimestamp();
     Require(end <= start + wxTimeSpan::Seconds(4), "collision fixture spans the command's local timestamp");
     const auto observed = MatchingNames(fallback, prefix);
     Require(std::ranges::all_of(
@@ -450,10 +455,12 @@ void BackupWriteFailure(EditorFrame& frame) {
     const auto fallback = FallbackDirectory();
     Require(MatchingNames(fallback, "source ").empty(), "write failure fixture starts without a fallback");
     const auto command = frame.GetMenuBar()->FindMenuItem("File", "Save Backup");
+    frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
     {
         const ShortWriteLimit limit;
-        NativeSearch::Command(&frame, command);
+        NativeSearch::ActivateCommand(&frame, command);
     }
+    wxYield();
     Require(MatchingNames(directory, "source ").empty(), "partial backup bytes are deleted after a real short write");
     Require(MatchingNames(fallback, "source ").empty(), "successful creation followed by write failure does not retry");
     Require(TestFiles::Bytes(source) == input && TestEditor::Text(&frame) == input && !frame.DocumentIsModified() &&
@@ -516,9 +523,7 @@ void NativeAnsiFallback(EditorFrame& frame, EncodingChoice native) {
     const auto fallback = FallbackDirectory();
     Require(MatchingNames(fallback, prefix).empty(), "ANSI fallback fixture namespace is unused");
     const auto command = frame.GetMenuBar()->FindMenuItem("File", "Save Backup");
-    const auto start = wxDateTime::Now();
-    NativeSearch::Command(&frame, command);
-    const auto end = wxDateTime::Now();
+    const auto [start, end] = TimestampedBackup(frame, command);
     const OwnedBackups owned{MatchingNames(fallback, prefix)};
     Require(owned.paths.size() == 1, "native ANSI document uses fallback when its directory disappears");
     RequireTimestamp(owned.paths.front(), TestFiles::Filename(name), ".txt", start, end);

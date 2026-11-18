@@ -5,6 +5,7 @@
 #include <utility>
 #include "editor/display_units.h"
 #include "editor/print_font.h"
+#include "print_surface.h"
 #include "text_measurement.h"
 #include "native_drawing_error.h"
 #include "diagnostics/trace.h"
@@ -113,18 +114,13 @@ class WxSurface final : public Surface {
 public:
     ~WxSurface() noexcept override { Release(); }
     void Init(WindowID id) noexcept override { Initialize(Host(id), nullptr); }
-    void Init(SurfaceID dc, WindowID, bool printing) noexcept override {
-        if (printing) {
-            Release();
-            if (!dc) return;
-            const auto& printer = *static_cast<const PrintSurface*>(dc);
-            if (!printer.dc.IsOk()) return;
-            printing_ = true;
-            dc_ = &printer.dc;
-            measurement_ = &printer.measurement;
-            return;
-        }
-        Initialize(nullptr, static_cast<wxDC*>(dc));
+    void Init(SurfaceID dc, WindowID, bool) noexcept override { Initialize(nullptr, static_cast<wxDC*>(dc)); }
+    void InitPrint(const PrintSurface& printer) noexcept {
+        Release();
+        if (!printer.dc.IsOk()) return;
+        printing_ = true;
+        dc_ = &printer.dc;
+        measurement_ = &printer.measurement;
     }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
@@ -357,6 +353,11 @@ public:
         // wxDC drawing is synchronous and has no adapter-owned command buffer.
     }
 };
+std::unique_ptr<Surface> AllocatePrintSurface(const PrintSurface& printer) {
+    auto surface = std::make_unique<WxSurface>();
+    surface->InitPrint(printer);
+    return surface;
+}
 std::unique_ptr<Surface> Surface::Allocate([[maybe_unused]] Scintilla::Technology technology) {
 #ifdef __WXMSW__
     if (technology == Technology::DirectWrite) return AllocateDirectWriteSurface();

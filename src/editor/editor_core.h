@@ -39,6 +39,8 @@ public:
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
 
     void Draw(wxDC& dc);
+    Scintilla::Position FormatPrintRange(const Scintilla::Internal::PrintSurface& printer, bool draw,
+                                         Scintilla::CharacterRangeFull range, Scintilla::Rectangle area);
     void OnIdle(wxIdleEvent& event);
     void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
     void Resize();

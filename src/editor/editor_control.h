@@ -27,6 +27,13 @@
 wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 struct SyntaxDefinition;
 struct SyntaxOriginalMetadata;
+namespace Scintilla {
+struct CharacterRangeFull;
+struct Rectangle;
+namespace Internal {
+struct PrintSurface;
+}
+} // namespace Scintilla
 
 // Original Edit.h::LineSelectionMode, including its built-in Visual Studio default.
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
@@ -44,6 +51,8 @@ public:
     explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
+    Scintilla::Position FormatPrintRange(const Scintilla::Internal::PrintSurface& printer, bool draw,
+                                         Scintilla::CharacterRangeFull range, Scintilla::Rectangle area);
     void SetColorCallTipMode(ColorCallTipMode mode);
     uint64_t DocumentRevision() const { return documentRevision_; }
     uint64_t SelectionRevision() const;

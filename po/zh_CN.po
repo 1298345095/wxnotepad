@@ -90,6 +90,7 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "%zu 处替换"
 
+#. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_commands.cpp
 msgid "&All Levels\tShift+Alt+A"
 msgstr "所有级别(&A)\tShift+Alt+A"
@@ -171,6 +172,7 @@ msgstr "复制(&C)\tCtrl+C"
 msgid "&Copy Line\tCtrl+Shift+C"
 msgstr "复制行(&C)\tCtrl+Shift+C"
 
+#. TRANSLATORS: Toggle the fold block surrounding the caret (IDM_VIEW_FOLD_CURRENT_BLOCK).
 #: src/app/editor_frame_commands.cpp
 msgid "&Current Block\tAlt+C"
 msgstr "当前块(&C)\tAlt+C"
@@ -179,10 +181,12 @@ msgstr "当前块(&C)\tAlt+C"
 msgid "&Decode"
 msgstr "解码(&D)"
 
+#. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr "默认编码(&D)\tCtrl+Alt+F"
 
+#. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr "默认级别(&D)\tShift+Alt+D"
@@ -407,6 +411,7 @@ msgstr "无(&N)。"
 msgid "&Normal"
 msgstr "正常(&M)"
 
+#. TRANSLATORS: Disable hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_OFF).
 #: src/app/editor_frame_commands.cpp
 msgid "&Off"
 msgstr "关闭(&O)"
@@ -448,6 +453,7 @@ msgstr "粘贴(&P)\tCtrl+V"
 msgid "&Prefix text to lines:"
 msgstr "每行前缀文本(&P):"
 
+#. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Print...\tCtrl+P"
 msgstr "打印(&P)...\tCtrl+P"
@@ -567,6 +573,7 @@ msgstr "制表符设置(&T)..."
 msgid "&Toggle\tCtrl+F2"
 msgstr "切换(&T)\tCtrl+F2"
 
+#. TRANSLATORS: View submenu for expanding or collapsing code folds (IDM_VIEW_FOLD_*).
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle Folds"
 msgstr "切换折叠(&T)"
@@ -717,15 +724,18 @@ msgstr "外观(&R)"
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "适用于字面文本搜索。正则表达式中请使用单词边界。"
 
+#. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
 #: src/app/editor_frame_commands.cpp
 msgid "As &ANSI\tCtrl+Shift+A"
 msgstr "作为 &ANSI\tCtrl+Shift+A"
 
+#. TRANSLATORS: Reopen the file with the system OEM source encoding (CMD_RELOADOEM).
 #: src/app/editor_frame_commands.cpp
 msgid "As &OEM\tCtrl+Shift+O"
 msgstr "作为 &OEM\tCtrl+Shift+O"
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_RELOADUTF8.
+#. TRANSLATORS: Reopen the file with UTF-8 as the source encoding (CMD_RELOADUTF8).
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
 msgstr "作为 UTF-&8\tShift+F8"
@@ -788,7 +798,7 @@ msgstr "反引号"
 msgid "Bash"
 msgstr "Bash"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Black on white"
 msgstr "白底黑字"
 
@@ -809,7 +819,11 @@ msgstr "为匹配的行添加书签(&K)"
 msgid "Boo&kmarks"
 msgstr "书签(&K)"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Bottom margin"
+msgstr "下页边距"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Bottom:"
 msgstr "下："
 
@@ -933,11 +947,11 @@ msgstr "关闭"
 msgid "Code page %d (unavailable)"
 msgstr "代码页 %d (不可用)"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Color on white"
 msgstr "白底彩色"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Color on white (except line numbers)"
 msgstr "白底彩色（行号除外）"
 
@@ -1017,6 +1031,7 @@ msgstr "复制剪贴板内容作为查找文本"
 msgid "Copy Selection As Find Text"
 msgstr "复制选中文本作为查找文本"
 
+#. TRANSLATORS: Copies styled text to the clipboard in Rich Text Format (IDM_EDIT_COPYRTF).
 #: src/app/editor_frame_commands.cpp
 msgid "Copy as &RTF"
 msgstr "复制为富文本(&R)"
@@ -1050,6 +1065,7 @@ msgstr "无法打开目标文件以写入。"
 msgid "Could not open the file for reading."
 msgstr "无法打开文件以读取。"
 
+#. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
 #: src/app/editor_print_job.cpp
 #, c-format
 msgid "Could not print \"%s\"."
@@ -1109,6 +1125,7 @@ msgstr "剪切行(&T)\tCtrl+Shift+X"
 msgid "Current &Date"
 msgstr "当前日期(&D)"
 
+#. TRANSLATORS: Toggle all blocks at the caret's fold depth (IDM_VIEW_FOLD_CURRENT_LEVEL).
 #: src/app/editor_frame_commands.cpp
 msgid "Current &Level"
 msgstr "当前级别(&L)"
@@ -1122,7 +1139,7 @@ msgstr "当前日期和时间(&T)"
 msgid "Current encoding"
 msgstr "当前编码"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Current screen color (WYSIWYG)"
 msgstr "当前屏幕颜色（所见即所得）"
 
@@ -1266,15 +1283,16 @@ msgstr "文件名和扩展名(&E)\tShift+F9"
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "文件名和扩展名(&X)\tCtrl+F9"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename"
 msgstr "文件名"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename, Current Date"
 msgstr "文件名、当前日期"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: IDS_PRINT_HEADER choices for text at the top of each printed page.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Filename, Current Date and Time"
 msgstr "文件名、当前日期和时间"
 
@@ -1322,7 +1340,8 @@ msgstr "搜索字符串"
 msgid "Finish completion (Esc cancels)"
 msgstr "用于执行自动完成的按键(使用 Esc 键取消)"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_FOOTER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
 msgstr "页脚："
 
@@ -1336,6 +1355,7 @@ msgstr "完整路径名称(&P)\tAlt+Shift+F9"
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr "完整路径名称(&P)\tCtrl+Shift+F9"
 
+#. TRANSLATORS: Appearance submenu for full screen preferences (IDM_VIEW_FULLSCREEN_*).
 #: src/app/editor_frame_commands.cpp
 msgid "Full Scree&n Mode"
 msgstr "全屏模式(&N)"
@@ -1416,7 +1436,8 @@ msgstr "跳转到选区结束(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "按文件类型分组(&T)。"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_HEADER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
 msgstr "页眉："
 
@@ -1425,6 +1446,7 @@ msgstr "页眉："
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr "十六进制转字符(&R)\tCtrl+Alt+C"
 
+#. TRANSLATORS: Hide the title bar in full screen (IDM_VIEW_FULLSCREEN_HIDE_TITLE).
 #: src/app/editor_frame_commands.cpp
 msgid "Hide &Title"
 msgstr "隐藏标题栏(&T)"
@@ -1503,7 +1525,7 @@ msgstr "插入制表符为空格(&S)"
 msgid "Invalid regular expression"
 msgstr "正则表达式无效"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Invert light (dark background)"
 msgstr "反转亮度（深色背景）"
 
@@ -1567,19 +1589,27 @@ msgstr "LS — 行分隔符(&C)"
 msgid "Latin-1 (Windows-1252)"
 msgstr "Latin-1 (Windows-1252)"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Leave blank"
 msgstr "留空"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: Screen reader names for the four IDC_PAGESETUP_MARGIN_* inputs.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Left margin"
+msgstr "左页边距"
+
+#. TRANSLATORS: Paper edge labels in IDD_PAGESETUP, in left/top/right/bottom order.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
 msgstr "左："
 
+#. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
 #: src/app/editor_frame_commands.cpp
 #, c-format
 msgid "Level &%d\tAlt+%d"
 msgstr "级别 &%d\tAlt+%d"
 
+#. TRANSLATORS: The tenth fold depth, with 0 as the menu mnemonic (IDM_VIEW_FOLD_LEVEL10).
 #: src/app/editor_frame_commands.cpp
 msgid "Level 1&0"
 msgstr "级别 1&0"
@@ -1651,11 +1681,12 @@ msgstr "Lua"
 msgid "Margin click selects visual &subline"
 msgstr "点击边栏选择可视子行(&S)"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Margins (inches)"
 msgstr "页边距（英寸）"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: IDD_PAGESETUP margin group with the current unit made explicit.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Margins (millimeters)"
 msgstr "页边距（毫米）"
 
@@ -1778,7 +1809,8 @@ msgstr "续行不缩进"
 msgid "None"
 msgstr "无"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: IDS_PRINT_COLOR choices for mapping editor colors to print.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Normal"
 msgstr "正常"
 
@@ -1786,6 +1818,7 @@ msgstr "正常"
 msgid "OEM United States (DOS-437)"
 msgstr "OEM 美国 (DOS-437)"
 
+#. TRANSLATORS: Enter full screen when starting the editor (IDM_VIEW_FULLSCREEN_ON_START).
 #: src/app/editor_frame_commands.cpp
 msgid "On &Startup"
 msgstr "启动时进入全屏(&S)"
@@ -1847,20 +1880,24 @@ msgstr "PDI — 结束方向隔离(&P)"
 msgid "PS — Para&graph Separator"
 msgstr "PS — 段落分隔符(&T)"
 
+#. TRANSLATORS: IDS_PRINT_PAGENUM footer; %s is the already localized page number.
 #: src/app/editor_print_job.cpp
 #, c-format
 msgid "Page %s"
 msgstr "第 %s 页"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: IDS_PRINT_FOOTER choices for text at the bottom of each printed page.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Page Number"
 msgstr "页码"
 
+#. TRANSLATORS: Opens paper, margin and print style settings (IDM_FILE_PAGESETUP).
 #: src/app/editor_frame_commands.cpp
 msgid "Page Se&tup..."
 msgstr "页面设置(&T)..."
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: Title of the printing configuration dialog (IDD_PAGESETUP).
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Page Setup"
 msgstr "页面设置"
 
@@ -1868,7 +1905,8 @@ msgstr "页面设置"
 msgid "Pandoc"
 msgstr "Pandoc"
 
-#: src/app/editor_printing.cpp
+#. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Paper and &Orientation..."
 msgstr "纸张和方向(&O)..."
 
@@ -1881,15 +1919,34 @@ msgstr "圆括号 ()"
 msgid "Plain Text"
 msgstr "纯文本"
 
+#. TRANSLATORS: Title of the print failure message.
 #: src/app/editor_print_job.cpp
 msgid "Print"
 msgstr "打印"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print color mode"
+msgstr "打印颜色模式"
+
+#. TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_COLOR_MODE_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Print color mode:"
 msgstr "打印颜色模式："
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print footer"
+msgstr "打印页脚"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print header"
+msgstr "打印页眉"
+
+#. TRANSLATORS: Screen reader name for the IDC_PAGESETUP_ZOOMLEVEL percentage field.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print zoom"
+msgstr "打印缩放比例"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
 #, c-format
 msgid "Print zoom (%d%% to %d%%):"
 msgstr "打印缩放（%d%% 至 %d%%）："
@@ -2006,6 +2063,7 @@ msgstr "移除最近的文件？"
 msgid "Ren&dering Technology"
 msgstr "渲染技术(&D)"
 
+#. TRANSLATORS: Replace the next match with the initialized replacement (IDM_EDIT_REPLACENEXT).
 #: src/app/editor_frame_commands.cpp
 msgid "Repl&ace Next\tF4"
 msgstr "替换下一个(&A)\tF4"
@@ -2039,7 +2097,11 @@ msgstr "还原"
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr "还原文件到上次保存时的状态？您的修改将会丢失！"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Right margin"
+msgstr "右页边距"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right:"
 msgstr "右："
 
@@ -2065,6 +2127,7 @@ msgstr "SHY — 软连字符(&Q)"
 msgid "SVG"
 msgstr "SVG"
 
+#. TRANSLATORS: Store the selection as the next search term (IDM_EDIT_SAVEFIND).
 #: src/app/editor_frame_commands.cpp
 msgid "Sa&ve Find Text\tAlt+F3"
 msgstr "保存查找文本(&V)\tAlt+F3"
@@ -2078,6 +2141,7 @@ msgstr "另存为(&A)...\tF6"
 msgid "Save As"
 msgstr "另存为"
 
+#. TRANSLATORS: Saves a separate backup without changing the current file (IDM_FILE_SAVEBACKUP).
 #: src/app/editor_frame_commands.cpp
 msgid "Save Back&up"
 msgstr "保存备份(&U)"
@@ -2260,6 +2324,7 @@ msgstr "显示空白(&W)\tCtrl+Shift+8"
 msgid "Show &edge line."
 msgstr "显示边缘线(&G)。"
 
+#. TRANSLATORS: View submenu for hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_*).
 #: src/app/editor_frame_commands.cpp
 msgid "Show CallTip"
 msgstr "显示调用提示"
@@ -2576,15 +2641,21 @@ msgstr "转八进制(&O)"
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr "切换块注释(&C)\tCtrl+Q"
 
+#. TRANSLATORS: Toggle full screen; Esc exits it (IDM_VIEW_TOGGLE_FULLSCREEN).
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Full &Screen\tF11 [Esc]"
 msgstr "切换全屏(&S)\tF11 [Esc]"
 
+#. TRANSLATORS: Linux menu displays Esc in the caption because only F11 is an accelerator.
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Full &Screen [Esc]\tF11"
 msgstr "切换全屏(&S) [Esc]\tF11"
 
-#: src/app/editor_printing.cpp
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Top margin"
+msgstr "上页边距"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Top:"
 msgstr "上："
 
@@ -2742,6 +2813,7 @@ msgstr "只匹配完整单词(&W)"
 msgid "Windows (CR+LF)"
 msgstr "Windows (CR+LF)"
 
+#. TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).
 #: src/app/editor_frame_commands.cpp
 msgid "With &Encoding...\tF8"
 msgstr "指定编码(&W)...\tF8"
