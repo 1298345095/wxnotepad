@@ -145,6 +145,10 @@ msgstr "自動重新載入（如未修改）(&A)。"
 msgid "&Automatic"
 msgstr "自動(&A)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Base64"
+msgstr "&Base64"
+
 # Original Notepad4 zh-Hant: IDM_VIEW_MARGIN (mnemonic reviewed among View siblings); adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Bookmark Margin\tCtrl+Shift+M"
@@ -205,6 +209,10 @@ msgstr "複製(&C)\tCtrl+C"
 #: src/app/editor_frame_commands.cpp
 msgid "&Copy Line\tCtrl+Shift+C"
 msgstr "複製行(&C)\tCtrl+Shift+C"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Decode"
+msgstr "解碼(&D)"
 
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -616,6 +624,10 @@ msgstr "切換(&T)\tCtrl+F2"
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle Folds"
 msgstr "切換摺疊(&T)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Tools"
+msgstr "工具(&T)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_INSERT_UTC_DATETIME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1168,6 +1180,10 @@ msgid "DTD"
 msgstr "DTD"
 
 #: src/app/editor_frame_commands.cpp
+msgid "Decode as &Hex"
+msgstr "解碼為 Hex(&H)"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Default &Code Font...\tAlt+F12"
 msgstr "預設程式碼字型(&C)...\tAlt+F12"
 
@@ -1235,6 +1251,10 @@ msgstr "啟用多重選取(&M)"
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Enclose Selection"
 msgstr "圍住選取的文字"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Encode as HTML Embedded &Image"
+msgstr "編碼為 HTML 嵌入圖片(&I)"
 
 #: src/app/editor_frame.cpp
 msgid "Encoding Conversion"
@@ -2329,6 +2349,10 @@ msgstr "特殊(&I)"
 msgid "Square brackets []"
 msgstr "方括號 []"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Standard &Encode"
+msgstr "標準編碼(&E)"
+
 # Original Notepad4 zh-Hant: IDD_AUTOCOMPLETION/IDC_AUTO_COMPLETE_INSIDE_STRING; adapted where needed.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
@@ -2590,6 +2614,10 @@ msgstr "URL 解碼(&R)\tCtrl+Shift+R"
 #: src/app/editor_frame_commands.cpp
 msgid "URL &Encode\tCtrl+Shift+E"
 msgstr "URL 編碼(&E)\tCtrl+Shift+E"
+
+#: src/app/editor_frame_commands.cpp
+msgid "URL &Safe Encode"
+msgstr "URL 安全編碼(&S)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_URLCOMPONENTENCODE; adapted where needed.
 #: src/app/editor_frame_commands.cpp

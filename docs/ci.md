@@ -19,7 +19,15 @@ The Linux CI job builds once, then partitions each backend's complete selected
 CTest list across private sessions, using the available CPU count by default.
 Each shard owns its Xvfb, D-Bus and Weston session, focus driver, CTest workspace,
 JUnit result and display logs. Tests inside a shard remain serial; shards run
-concurrently without sharing native dialogs or clipboard ownership. Registration,
+concurrently without sharing native dialogs or clipboard ownership. Xvfb allocates
+its own display number with `-displayfd` and reports readiness before the command
+starts; each session retains its own authentication cookie. If allocation selects
+the reserved primary display `:0`, that owned server stays alive while a second
+server allocates the test display. The native-input primary-desktop guard remains
+in force. This avoids
+`xvfb-run -a` exhausting its ten display-number retries and then launching a client
+against another session's display. The native bootstrap regression connects forty
+concurrent clients through the actual CI entry point. Registration,
 commands and original working directories come from the configured CTest tree.
 The per-backend test plan records every selected test and its shard. `test --jobs N`
 sets the Linux session count. Wayland still runs if X11 tests fail after a successful

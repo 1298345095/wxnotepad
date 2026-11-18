@@ -103,6 +103,10 @@ msgid "&Automatic"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Base64"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Bookmark Margin\tCtrl+Shift+M"
 msgstr ""
 
@@ -149,6 +153,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Copy Line\tCtrl+Shift+C"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Decode"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -482,6 +490,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle Folds"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Tools"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -973,6 +985,10 @@ msgid "DTD"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Decode as &Hex"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Default &Code Font...\tAlt+F12"
 msgstr ""
 
@@ -1030,6 +1046,10 @@ msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Enclose Selection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Encode as HTML Embedded &Image"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -1986,6 +2006,10 @@ msgstr ""
 msgid "Square brackets []"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Standard &Encode"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
 msgstr ""
@@ -2212,6 +2236,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "URL &Encode\tCtrl+Shift+E"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "URL &Safe Encode"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
