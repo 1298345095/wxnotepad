@@ -559,7 +559,16 @@ if(BUILD_TESTING)
     add_editor_test(case_conversion original_case_conversion 60)
     add_editor_test(custom_case original_custom_case 60)
     add_editor_test(character_hex original_character_hex 60)
-    add_editor_test(character_information original_character_information 90)
+    if(WIN32)
+        add_gui_program(character_information tests/character_information.cpp app_shell)
+        add_test(NAME original_character_information COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_hang_monitor.py"
+            --dump-directory "${CMAKE_BINARY_DIR}/Testing/Temporary/character-information-hangs" --dump-after 75
+            -- "$<TARGET_FILE:character_information>")
+        set_tests_properties(original_character_information PROPERTIES TIMEOUT 90)
+    else()
+        add_editor_test(character_information original_character_information 90)
+    endif()
     add_test(NAME packaged_character_information COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/character_information_process.py" "$<TARGET_FILE:wxnotepad>"
         --cmake-dir "${CMAKE_BINARY_DIR}"
