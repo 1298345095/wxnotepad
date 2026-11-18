@@ -102,6 +102,8 @@ public:
     void DeleteLine();
     void JumpToPosition(intptr_t position);
     void GoToBlock(BlockNavigation command);
+    void SelectWord();
+    void SelectLines(bool currentBlock = false);
     void SelectCurrentBlockLines();
     void FocusSelectionBoundary(bool start);
     void MatchBrace(bool select = false);

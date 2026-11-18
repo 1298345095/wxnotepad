@@ -307,6 +307,12 @@ wxMenu* EditorFrame::CreateEditMenu() {
     edit->Append(wxID_CUT, _("Cu&t\tCtrl+X"));
     edit->Append(wxID_COPY, _("&Copy\tCtrl+C"));
     edit->Append(wxID_PASTE, _("&Paste\tCtrl+V"));
+    edit->Append(wxID_SELECTALL, _("Select &All\tCtrl+A"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectAll); }, wxID_SELECTALL);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        wxID_SELECTALL);
     const int swap = wxWindow::NewControlId();
     edit->Append(swap, _("S&wap\tCtrl+K"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SwapClipboard(document_.IsDefaultEncoding()); }, swap);
@@ -815,6 +821,20 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
     const int selectMatchingBrace = wxWindow::NewControlId();
     edit->Append(selectMatchingBrace, _("Select to Matching B&race\tCtrl+Shift+B"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
+    const int selectWord = wxWindow::NewControlId();
+    edit->Append(selectWord, _("Select &Word\tCtrl+Alt+Space"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectWord(); }, selectWord);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        selectWord);
+    const int selectLines = wxWindow::NewControlId();
+    edit->Append(selectLines, _("Select &Lines (Expand Selection)\tCtrl+Shift+Space"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectLines(); }, selectLines);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        selectLines);
     const int selectBlock = wxWindow::NewControlId();
     edit->Append(selectBlock, _("Select Lines in &Current Block\tAlt+Shift+]"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectCurrentBlockLines(); }, selectBlock);
@@ -823,6 +843,24 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
         [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
         selectBlock);
     edit->AppendSeparator();
+    const int selectDocumentStart = wxWindow::NewControlId();
+    const int selectDocumentEnd = wxWindow::NewControlId();
+    edit->Append(selectDocumentStart, _("Select to Document Star&t"));
+    edit->Append(selectDocumentEnd, _("Select to Document En&d"));
+    // Preserve the original boundary setters, including reverse and rectangular selections.
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetSelectionStart, 0); },
+        selectDocumentStart);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::SetSelectionEnd, editor_->Send(Scintilla::Message::GetLength));
+        },
+        selectDocumentEnd);
+    for (const int id : {selectDocumentStart, selectDocumentEnd})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, id);
     const int selectNext = wxWindow::NewControlId();
     const int selectPrevious = wxWindow::NewControlId();
     edit->Append(selectNext, _("Select to Ne&xt\tCtrl+Alt+F2"));
@@ -1511,6 +1549,16 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_SPACE && event.ControlDown() && (event.AltDown() || event.ShiftDown())) {
+        if (!event.MetaDown() && event.AltDown() != event.ShiftDown()) {
+            if (event.AltDown())
+                editor_->SelectWord();
+            else
+                editor_->SelectLines();
+        }
+        // Consume extra modifiers before native accelerators can drop them.
+        return true;
+    }
     if (HandleBlockNavigationKey(event)) return true;
     if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
         editor_->MatchBrace(event.ShiftDown());
