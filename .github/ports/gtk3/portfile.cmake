@@ -22,6 +22,7 @@ vcpkg_extract_source_archive(SOURCE_PATH
         cairo-cpp-linkage.patch
         avoid-multiple-definition.diff
         gtk3-pathbar-button-cancellation.patch
+        gtk3-static-print-backends.patch
 )
 
 vcpkg_find_acquire_program(PKGCONFIG)

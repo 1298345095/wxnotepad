@@ -96,6 +96,19 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.fonts.textStyle = ReadString("Default Text Style", defaults.fonts.textStyle, "Global Styles");
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
+    auto& print = values.printing;
+    print.header = static_cast<PrintHeader>(std::clamp(ReadInt("PrintHeader", std::to_underlying(print.header)),
+                                                       std::to_underlying(PrintHeader::FilenameAndDateTime),
+                                                       std::to_underlying(PrintHeader::Blank)));
+    print.footer = static_cast<PrintFooter>(std::clamp(ReadInt("PrintFooter", std::to_underlying(print.footer)),
+                                                       std::to_underlying(PrintFooter::PageNumber),
+                                                       std::to_underlying(PrintFooter::Blank)));
+    print.colour = static_cast<Scintilla::PrintOption>(std::clamp(
+        ReadInt("PrintColorMode", std::to_underlying(print.colour)), std::to_underlying(Scintilla::PrintOption::Normal),
+        std::to_underlying(Scintilla::PrintOption::ScreenColours)));
+    print.zoom = std::clamp(ReadInt("PrintZoom", print.zoom), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
+    for (size_t index = 0; index < PrintMarginKeys.size(); ++index)
+        print.margins[index] = std::max(ReadInt(PrintMarginKeys[index], print.margins[index]), -1);
     values.uiLanguage = UILanguage::Normalize(ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
     const int recent = ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
     values.saveRecentFiles = (recent & 1) != 0;
@@ -483,6 +496,14 @@ bool SettingsStore::Save(bool explicitSave) {
             WriteString("Default", style.defaultStyle, {}, section);
         }
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
+        const auto& print = values.printing;
+        const auto& defaultPrint = defaults.printing;
+        WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
+        WriteInt("PrintFooter", std::to_underlying(print.footer), std::to_underlying(defaultPrint.footer));
+        WriteInt("PrintColorMode", std::to_underlying(print.colour), std::to_underlying(defaultPrint.colour));
+        WriteInt("PrintZoom", print.zoom, defaultPrint.zoom);
+        for (size_t index = 0; index < PrintMarginKeys.size(); ++index)
+            WriteInt(PrintMarginKeys[index], print.margins[index], defaultPrint.margins[index]);
         WriteInt("SaveRecentFiles",
                  static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
                                   static_cast<unsigned>(values.saveRecentFiles)),

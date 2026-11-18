@@ -873,3 +873,36 @@
  	static VOID CALLBACK WorkCallback([[maybe_unused]] PTP_CALLBACK_INSTANCE instance, PVOID context, [[maybe_unused]] PTP_WORK work) {
  		LayoutWorker *worker = static_cast<LayoutWorker *>(context);
  		worker->DoWork();
+@@ -2999,14 +3004,8 @@
+ 		// line of the page.
+ 		if (lineVisible == 0) {
+ 			const Sci::Position startWithinLine = nPrintPos - posLineStart;
+-			for (int iwl = 0; iwl < ll.lines - 1; iwl++) {
+-				if (ll.LineStart(iwl) <= startWithinLine && ll.LineStart(iwl + 1) >= startWithinLine) {
+-					lineVisible = -iwl;
+-				}
+-			}
+-
+-			if (ll.lines > 1 && startWithinLine >= ll.LineStart(ll.lines - 1)) {
+-				lineVisible = -(ll.lines - 1);
++			for (int iwl = 1; iwl < ll.lines && ll.LineStart(iwl) <= startWithinLine; iwl++) {
++				lineVisible = -iwl;
+ 			}
+ 		}
+ 
+@@ -3042,12 +3041,11 @@
+ 						DrawLine(surface, model, vsPrint, &ll, lineDoc, lineVisible, xOrigin, rcLine, iwl, DrawPhase::all);
+ 					}
+ 					ypos += vsPrint.lineHeight;
++					// Resume at the absolute start of the next display row.
++					// Skipped rows on a continued line consume no bytes again.
++					nPrintPos = iwl + 1 == ll.lines ? posLineEnd : posLineStart + ll.LineStart(iwl + 1);
+ 				}
+ 				lineVisible++;
+-				if (iwl == ll.lines - 1)
+-					nPrintPos = posLineEnd;
+-				else
+-					nPrintPos += ll.LineStart(iwl + 1) - ll.LineStart(iwl);
+ 			}
+ 		}
+ 

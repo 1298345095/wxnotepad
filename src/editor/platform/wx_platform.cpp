@@ -4,6 +4,7 @@
 #include "editor/editor_core.h"
 #include <utility>
 #include "editor/display_units.h"
+#include "editor/print_font.h"
 #include "text_measurement.h"
 #include "native_drawing_error.h"
 #include "diagnostics/trace.h"
@@ -66,9 +67,24 @@ class WxSurface final : public Surface {
     std::unique_ptr<wxDC> owned_;
     wxBitmap bitmap_;
     std::vector<std::unique_ptr<wxDCClipper>> clips_;
-    std::unique_ptr<TextMeasurement> measurement_;
+    std::unique_ptr<TextMeasurement> ownedMeasurement_;
+    const TextMeasurement* measurement_ = nullptr;
     bool utf8_ = true;
-    void FontSet(const Font* f) { dc_->SetFont(static_cast<const WxFont*>(f)->font); }
+    bool printing_ = false;
+    wxFont sourcePrintFont_;
+    wxFont printerFont_;
+    void FontSet(const Font* f) {
+        const auto& font = static_cast<const WxFont*>(f)->font;
+        if (!printing_) {
+            dc_->SetFont(font);
+            return;
+        }
+        if (!sourcePrintFont_.IsOk() || !sourcePrintFont_.IsSameAs(font)) {
+            sourcePrintFont_ = font;
+            printerFont_ = FontForPrinter(font, *dc_);
+        }
+        dc_->SetFont(printerFont_);
+    }
     wxString String(std::string_view s) const {
         return utf8_ ? wxString::FromUTF8(s.data(), s.size()) : wxString::From8BitData(s.data(), s.size());
     }
@@ -82,9 +98,9 @@ class WxSurface final : public Surface {
             if (window) owned = std::make_unique<wxClientDC>(window);
             auto* dc = owned ? owned.get() : borrowed;
             if (!dc || !dc->IsOk()) return;
-            auto measurement = std::make_unique<TextMeasurement>(*dc);
+            ownedMeasurement_ = std::make_unique<TextMeasurement>(*dc);
+            measurement_ = ownedMeasurement_.get();
             owned_ = std::move(owned);
-            measurement_ = std::move(measurement);
             dc_ = dc;
         } catch (const std::bad_alloc&) {
             // The no-throw Surface contract reports resource failure through Initialised().
@@ -97,7 +113,19 @@ class WxSurface final : public Surface {
 public:
     ~WxSurface() noexcept override { Release(); }
     void Init(WindowID id) noexcept override { Initialize(Host(id), nullptr); }
-    void Init(SurfaceID dc, WindowID, bool) noexcept override { Initialize(nullptr, static_cast<wxDC*>(dc)); }
+    void Init(SurfaceID dc, WindowID, bool printing) noexcept override {
+        if (printing) {
+            Release();
+            if (!dc) return;
+            const auto& printer = *static_cast<const PrintSurface*>(dc);
+            if (!printer.dc.IsOk()) return;
+            printing_ = true;
+            dc_ = &printer.dc;
+            measurement_ = &printer.measurement;
+            return;
+        }
+        Initialize(nullptr, static_cast<wxDC*>(dc));
+    }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
         // GTK logical coordinates need a full-resolution backing bitmap; MSW
@@ -110,7 +138,8 @@ public:
         if (!dc->IsOk()) throw NativeDrawingError("The native surface drawing context is unavailable");
         auto measurement = std::make_unique<TextMeasurement>(*dc);
         p->owned_ = std::move(dc);
-        p->measurement_ = std::move(measurement);
+        p->ownedMeasurement_ = std::move(measurement);
+        p->measurement_ = p->ownedMeasurement_.get();
         p->dc_ = p->owned_.get();
         return p;
     }
@@ -121,7 +150,11 @@ public:
     void Release() noexcept override {
         while (!clips_.empty())
             clips_.pop_back();
-        measurement_.reset();
+        measurement_ = nullptr;
+        ownedMeasurement_.reset();
+        printerFont_ = wxNullFont;
+        sourcePrintFont_ = wxNullFont;
+        printing_ = false;
         owned_.reset();
         bitmap_ = wxNullBitmap;
         dc_ = nullptr;
