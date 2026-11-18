@@ -86,6 +86,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     editor_->SetAutoInsertMask(preferences.autoInsertMask);
     editor_->SetCompletionSettings(preferences.completion);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
+    editor_->Send(Scintilla::Message::SetEndAtLastLine, preferences.endAtLastLine);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
     editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
@@ -180,6 +181,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrapMode = std::to_underlying(editor_->PreferredWordWrapMode());
     settings_->values.wordWrapIndent = editor_->WordWrapIndent();
     settings_->values.wordWrapSelectSubLine = editor_->Send(Scintilla::Message::GetMarginOptions) != 0;
+    settings_->values.endAtLastLine = static_cast<int>(editor_->Send(Scintilla::Message::GetEndAtLastLine));
     settings_->values.autoShrinkScrollWidth = editor_->AutoShrinkScrollWidth();
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.showBookmarkMargin = editor_->BookmarkMarginVisible();
