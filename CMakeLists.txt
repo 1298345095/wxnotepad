@@ -70,6 +70,7 @@ add_library(editor_runtime STATIC
     src/editor/platform/latex_input.cpp
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
+    src/editor/character_information.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
@@ -528,6 +529,27 @@ if(BUILD_TESTING)
     add_editor_test(case_conversion original_case_conversion 60)
     add_editor_test(custom_case original_custom_case 60)
     add_editor_test(character_hex original_character_hex 60)
+    add_editor_test(character_information original_character_information 90)
+    add_test(NAME packaged_character_information COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/character_information_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}"
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/character-information-package")
+    set_tests_properties(packaged_character_information PROPERTIES TIMEOUT 120)
+    if(UNIX AND NOT APPLE)
+        find_package(ICU QUIET COMPONENTS uc)
+        if(ICU_FOUND)
+            string(REGEX MATCH "^[0-9]+" character_metadata_major "${ICU_VERSION}")
+            add_library(character_metadata_unavailable SHARED tests/character_metadata_unavailable.cpp)
+            set_target_properties(character_metadata_unavailable PROPERTIES OUTPUT_NAME icuuc
+                SOVERSION "${character_metadata_major}"
+                LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/unavailable-character-metadata")
+            add_dependencies(character_information character_metadata_unavailable)
+            add_test(NAME original_character_information_no_metadata COMMAND "${CMAKE_COMMAND}" -E env
+                "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:character_metadata_unavailable>"
+                "WXNOTEPAD_EXPECT_NO_CHARACTER_METADATA=1" "$<TARGET_FILE:character_information>")
+            set_tests_properties(original_character_information_no_metadata PROPERTIES TIMEOUT 90)
+        endif()
+    endif()
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(measurement_threads native_parallel_measurement 90)
