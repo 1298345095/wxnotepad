@@ -96,7 +96,7 @@ void FoldedSelection(EditorFrame* frame) {
     editor->ToggleWordWrap();
     NativeFold::Paint(editor);
     Require(editor->Send(WrapCount, 1) > 1, "fixture must wrap the selected logical line");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(GetLineVisible, 1), "fixture must hide the inner logical line");
     editor->Send(SetSel, 24, 18);
     Convert(frame, "LF");

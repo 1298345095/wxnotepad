@@ -107,7 +107,7 @@ void ReadOnlyLanguageFolds(EditorFrame* frame, int show) {
         const auto redo = editor->Send(CanRedo);
         Require(undo && redo && editor->Send(GetModify), "fold preference history fixture must have undo and redo");
         editor->Send(SetReadOnly, 1);
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
         if (fixture.header) Require(!editor->Send(GetLineVisible, 2), "language fixture must contract nested content");
         const auto caret = editor->Send(GetCurrentPos);
         const auto anchor = editor->Send(GetAnchor);
@@ -177,7 +177,7 @@ public:
                 NativeFold::Paint(editor);
                 editor->Send(EmptyUndoBuffer);
                 editor->Send(SetSavePoint);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
                 Require(!editor->Send(GetLineVisible, 2), "fixture must contain hidden nested content");
                 NativeSearch::Command(frame, show);
                 Require(editor->Send(GetMarginWidthN, 2) == 0, "hiding folding must remove its actual margin");
@@ -201,7 +201,7 @@ public:
                         "native zoom must grow the actual folding hit geometry");
                 NativeFold::MarginClick(editor, 1, "zoomed folding margin must remain clickable");
                 Require(!editor->Send(GetLineVisible, 2), "zoomed native margin hit must fold its header");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+                NativeSearch::RevealAllFolds(frame);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Reset Zoom"));
                 editor->Send(GotoPos, editor->Send(PositionFromLine, 2));
                 NativeFold::Paint(editor);
@@ -209,9 +209,9 @@ public:
                 NativeKeys::Shortcut(frame, 'F', true, true, true);
                 Require(editor->Send(GetMarginWidthN, 2) == 0, "native Ctrl+Shift+Alt+F must hide folding");
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("View", "Collapse All")),
+                Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("View", "All Levels")),
                         "original fold commands must remain enabled while folding is hidden");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
                 Require(editor->Send(GetLineVisible, 2),
                         "fold commands while hidden must retain the original no-op behavior");
                 NativeKeys::Shortcut(frame, 'F', true, true, true);

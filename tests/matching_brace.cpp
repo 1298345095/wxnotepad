@@ -193,7 +193,7 @@ void CollapsedBraceTargets(EditorFrame* frame, int find, int select) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Language(frame, "C/C++");
-    const int collapse = frame->GetMenuBar()->FindMenuItem("View", "Collapse All");
+    const int collapse = frame->GetMenuBar()->FindMenuItem("View", "All Levels");
     Require(collapse != wxNOT_FOUND, "fold fixture must expose Collapse All");
     Load(editor, "{\n x\n}\n{\n y\n}\n", 0, 0);
     editor->Send(Colourise, 0, -1);

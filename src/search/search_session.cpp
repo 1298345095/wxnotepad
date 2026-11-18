@@ -209,6 +209,34 @@ void SearchSession::Configure(SearchRequest request) {
     request_ = std::move(request);
 }
 
+void SearchSession::SeedFindOptions(bool transformBackslashes) {
+    request_.options.transformBackslashes = transformBackslashes;
+    replacementPrepared_ = true;
+}
+
+bool SearchSession::SaveSelectionAsFindText(bool selectWord) {
+    using Scintilla::Message;
+    auto length = editor_.Send(Message::GetSelText);
+    if (length == 0 && selectWord) {
+        editor_.SelectWord();
+        length = editor_.Send(Message::GetSelText);
+    }
+    if (length <= 0 || static_cast<size_t>(length) >= SearchLimits::SelectionBytes) return false;
+
+    std::string text(static_cast<size_t>(length) + 1, '\0');
+    editor_.Send(Message::GetSelText, 0, reinterpret_cast<intptr_t>(text.data()));
+    request_.query = wxString::FromUTF8(text.c_str());
+    request_.options.regularExpression = false;
+    SeedFindOptions(false);
+    hasFindText_ = true;
+    return true;
+}
+
+std::optional<FindResult> SearchSession::FindSelection(SearchDirection direction) {
+    if (!SaveSelectionAsFindText(true)) return std::nullopt;
+    return Find(direction);
+}
+
 void SearchSession::RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty) {
     recentFind_ = std::move(find);
     recentReplace_ = std::move(replace);
@@ -230,10 +258,13 @@ void SearchSession::Remember(bool replacement) {
     };
     if (!request_.query.empty()) {
         hasFindText_ = true;
+        replacementPrepared_ = replacementPrepared_ || request_.options != SearchOptions{};
         add(recentFind_, request_.query);
         if (replacement) {
             add(recentReplace_, request_.replacement);
             lastReplaceEmpty_ = request_.replacement.empty();
+            replacementInitialized_ = true;
+            replacementPrepared_ = replacementPrepared_ || !lastReplaceEmpty_;
         }
     }
 }
@@ -341,6 +372,14 @@ Scintilla::FindOption SearchSession::SearchFlags() const {
 }
 
 ReplaceOneResult SearchSession::ReplaceOne() {
+    return ReplaceOne(true);
+}
+
+ReplaceOneResult SearchSession::ReplaceNext() {
+    return ReplaceOne(replacementPrepared_);
+}
+
+ReplaceOneResult SearchSession::ReplaceOne(bool applyReplacement) {
     using enum Scintilla::Message;
     const auto query = QueryBytes();
     if (!query.length()) return {false, FindResult{FindStatus::EmptyQuery}};
@@ -359,7 +398,8 @@ ReplaceOneResult SearchSession::ReplaceOne() {
         return {false, FindFrom(start, SearchDirection::Forward)};
     }
     const auto replacement = ReplacementBytes();
-    const auto effect = EvaluateTargetReplacement(editor_, replacement, UsesRegex());
+    const auto effect =
+        applyReplacement ? EvaluateTargetReplacement(editor_, replacement, UsesRegex()) : ReplacementEffect::Unchanged;
     if (effect == ReplacementEffect::ExpansionFailed) return {};
     const bool changesBytes = effect == ReplacementEffect::Changed;
     auto after = end;

@@ -266,7 +266,7 @@ public:
                 editor->Refresh();
                 editor->Update();
                 wxYield();
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
                 Require(!editor->Send(GetLineVisible, 2), "fixture includes folded content");
                 editor->Send(SetSel, 7, 30);
                 NativeAlt(frame, true);
@@ -275,7 +275,7 @@ public:
                         "folded selection moves its hidden logical lines with original bounds");
                 Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++")),
                         "move preserves selected language");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+                NativeSearch::RevealAllFolds(frame);
                 std::puts("PASS: wrapped and folded logical lines, language preservation");
                 SavedBytes(frame);
                 result_ = 0;

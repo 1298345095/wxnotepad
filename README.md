@@ -108,7 +108,14 @@ original selection scope, rectangular-selection handling and history behavior.
 Save As remains F6; Ctrl+Shift+S converts selected tabs to spaces.
 
 Search → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
-Shift+F3 finds the previous match. Wrap around is enabled by default, while
+Shift+F3 finds the previous match. Before a query has been set, these keys use
+an existing selection when Copy Selection as Find Text is on; otherwise they
+open Find. Save Find Text (Alt+F3) saves the selected text without moving to
+another match. Ctrl+F3 and Ctrl+Shift+F3 use the selected text to find the next
+or previous match. These three explicit commands select the word at the caret
+when there is no selection and follow the original line fallback.
+
+Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
 Replace share the query and options for the current application session.
 Opening imports selected text up to 1 MiB, or the clipboard under the original
@@ -125,7 +132,10 @@ changes and edits clear the count and indicators. Find All bookmarks remain unti
 the next Find All operation; New/Open clear them with the replaced document.
 
 Search → Replace / Ctrl+H opens the replacement view. Replace revalidates the
-selected match before editing; Replace All searches the complete current
+selected match before editing. Replace Next (F4) continues with the submitted
+query and replacement, including an intentionally empty replacement. Before
+the first replacement is submitted, F4 in the editor opens Replace; F4 in the
+Find dialog leaves it in Find mode. Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single
 replacement or Replace All operation can be undone once. Byte-identical
 single replacements and Replace All preserve the save point and redo history.
@@ -273,8 +283,9 @@ C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX, TypeScript/TSX, Ru
 and TypeScript use the original shared JavaScript lexer with separate keyword lists
 and four dialect properties. Their tab settings default to two spaces; JSX shares
 the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
-collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
-blocks. These commands change visibility without editing text or history. Find
+collapse or expand its block. View → Toggle Folds offers Default Levels, All
+Levels, Current Block, Current Level, and Levels 1–10. These commands change
+visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while
 leaving unrelated folds collapsed. Replacement still searches the full document.
 See the [syntax and folding validation record](docs/observations/syntax-README.md).

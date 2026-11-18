@@ -122,11 +122,11 @@ void Geometry(EditorFrame* frame) {
     for (int line = 1; line <= 100; ++line)
         editor->Send(SetFoldLevel, line, base + 1);
     editor->Send(SetFoldLevel, 101, base);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(GetLineVisible, 100) && editor->Send(GetLineVisible, 101),
             "native collapse hides 100 child rows");
     Limits(frame, FoldedLimits);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+    NativeSearch::RevealAllFolds(frame);
     Limits(frame, LongLimits);
 
     // A 41-glyph viewport puts each 80-glyph line on exactly two wrapped rows.

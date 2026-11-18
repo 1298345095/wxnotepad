@@ -133,27 +133,7 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
         search_.Configure(std::move(request));
     });
     parent->Bind(wxEVT_EDITOR_STATE_CHANGED, &FindReplaceDialog::OnEditorState, this);
-    const int selectNext = wxWindow::NewControlId();
-    const int selectPrevious = wxWindow::NewControlId();
-    const std::array<wxAcceleratorEntry, 4> searchKeys = {
-        {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
-         {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD},
-         {wxACCEL_CTRL | wxACCEL_ALT, WXK_F2, selectNext},
-         {wxACCEL_CTRL | wxACCEL_ALT | wxACCEL_SHIFT, WXK_F2, selectPrevious}}};
-    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(searchKeys.size()), searchKeys.data()));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward, true); }, selectNext);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward, true); }, selectPrevious);
-    Bind(wxEVT_CHAR_HOOK, [this, onKey = std::move(onKey)](wxKeyEvent& event) {
-        using enum SearchDirection;
-        if (event.GetKeyCode() == WXK_F3 && !event.ControlDown() && !event.AltDown() && !event.MetaDown())
-            Find(event.ShiftDown() ? Backward : Forward);
-        else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
-            Find(event.ShiftDown() ? Backward : Forward, true);
-        else
-            onKey(event);
-    });
+    BindSearchKeys(std::move(onKey));
     Bind(
         wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Forward, wxGetKeyState(WXK_SHIFT)); },
         wxID_FORWARD);
@@ -173,6 +153,73 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     Bind(wxEVT_BUTTON, [close](wxCommandEvent&) { close(); }, wxID_CANCEL);
     Bind(wxEVT_CLOSE_WINDOW, [close](wxCloseEvent&) { close(); });
     UpdateButtons();
+}
+
+void FindReplaceDialog::BindSearchKeys(std::function<void(wxKeyEvent&)> onKey) {
+    const int selectNext = wxWindow::NewControlId();
+    const int selectPrevious = wxWindow::NewControlId();
+    const int saveFind = wxWindow::NewControlId();
+    const int nextSelection = wxWindow::NewControlId();
+    const int previousSelection = wxWindow::NewControlId();
+    const int replaceNext = wxWindow::NewControlId();
+    const std::array<wxAcceleratorEntry, 8> searchKeys = {
+        {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
+         {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD},
+         {wxACCEL_ALT, WXK_F3, saveFind},
+         {wxACCEL_CTRL, WXK_F3, nextSelection},
+         {wxACCEL_CTRL | wxACCEL_SHIFT, WXK_F3, previousSelection},
+         {wxACCEL_NORMAL, WXK_F4, replaceNext},
+         {wxACCEL_CTRL | wxACCEL_ALT, WXK_F2, selectNext},
+         {wxACCEL_CTRL | wxACCEL_ALT | wxACCEL_SHIFT, WXK_F2, selectPrevious}}};
+    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(searchKeys.size()), searchKeys.data()));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward, true); }, selectNext);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward, true); }, selectPrevious);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { SaveFindText(); }, saveFind);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Forward); }, nextSelection);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Backward); }, previousSelection);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (replace_) ReplaceOne();
+        },
+        replaceNext);
+    Bind(wxEVT_CHAR_HOOK, [this, onKey = std::move(onKey)](wxKeyEvent& event) {
+        if (!HandleSearchKey(event)) onKey(event);
+    });
+}
+
+bool FindReplaceDialog::HandleSearchKey(const wxKeyEvent& event) {
+    using enum SearchDirection;
+    if (event.GetKeyCode() == WXK_F3) {
+        switch (event.GetModifiers()) {
+        case wxMOD_NONE:
+            Find(Forward);
+            break;
+        case wxMOD_SHIFT:
+            Find(Backward);
+            break;
+        case wxMOD_ALT:
+            SaveFindText();
+            break;
+        case wxMOD_CONTROL:
+            FindSelection(Forward);
+            break;
+        case wxMOD_CONTROL | wxMOD_SHIFT:
+            FindSelection(Backward);
+            break;
+        default:
+            break;
+        }
+    } else if (event.GetKeyCode() == WXK_F4 && !event.AltDown()) {
+        if (replace_ && !event.HasAnyModifiers()) ReplaceOne();
+    } else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown()) {
+        Find(event.ShiftDown() ? Backward : Forward, true);
+    } else {
+        return false;
+    }
+    return true;
 }
 
 FindReplaceDialog::~FindReplaceDialog() {
@@ -288,9 +335,7 @@ bool FindReplaceDialog::SeedQuery(bool firstTime) {
     if (!text.empty()) {
         const auto escaped = EscapeFindText(text);
         transformBackslashes_->SetValue(escaped.controls && !search_.Request().options.regularExpression);
-        auto request = search_.Request();
-        request.options.transformBackslashes = transformBackslashes_->GetValue();
-        search_.Configure(std::move(request));
+        search_.SeedFindOptions(transformBackslashes_->GetValue());
         // APPM_COPYDATA in the original leaves the existing query control alone.
         if (firstTime) query_->ChangeValue(escaped.text);
     }
@@ -322,6 +367,21 @@ void FindReplaceDialog::UpdateButtons() {
     findAllButton_->Enable(!query_->IsEmpty());
 }
 
+void FindReplaceDialog::SaveFindText() {
+    search_.SaveSelectionAsFindText(true);
+    query_->ChangeValue(search_.Request().query);
+    regularExpression_->SetValue(false);
+    transformBackslashes_->SetValue(false);
+    wholeWord_->Enable();
+    UpdateButtons();
+    query_->SetFocus();
+    query_->SelectAll();
+}
+
+void FindReplaceDialog::FindSelection(SearchDirection direction) {
+    if (const auto result = search_.FindSelection(direction)) reportFind_(*result);
+}
+
 void FindReplaceDialog::Find(SearchDirection direction, bool extendSelection) {
     if (query_->IsEmpty()) return;
     ConfigureSearch();
@@ -331,7 +391,7 @@ void FindReplaceDialog::Find(SearchDirection direction, bool extendSelection) {
 void FindReplaceDialog::ReplaceOne() {
     if (query_->IsEmpty()) return;
     ConfigureSearch();
-    const auto result = search_.ReplaceOne();
+    const auto result = search_.ReplaceNext();
     if (result.next) reportFind_(*result.next);
 }
 

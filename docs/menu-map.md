@@ -47,7 +47,7 @@ Edit
     Encoding Identifier; Script Shebang Line
   Special > Complete Word (Alt+/); Character to Hex; Hex to Character; Escape C Chars; Unescape C Chars
 Search
-  Find; Find Next; Find Previous; Replace
+  Find; Save Find Text (Alt+F3); Find Next; Find Previous; Replace; Replace Next (F4)
   Find Matching Brace; Select to Matching Brace; Select Lines in Current Block
   Select to Next; Select to Previous
   Bookmarks > Toggle; Goto Next; Goto Previous; Select All; Clear All
@@ -62,7 +62,8 @@ View
   Show Whitespace; Show Line Endings; Show Wrap Symbols
   Visual Brace Matching; Highlight Current Block; Highlight Current Line; Mark Occurrences
   Line Numbers; Bookmark Margin; Change History Marker
-  Show Code Folding; Toggle Folds > Collapse All; Expand All
+  Show Code Folding
+  Toggle Folds > Default Levels; All Levels; Current Block; Current Level; Levels 1–10
   Zoom > Zoom In; Zoom Out; Zoom Level; Reset Zoom
   Toggle Full Screen (F11; Esc exits after dismissing any active completion list or CallTip)
 Scheme
@@ -95,6 +96,7 @@ wxnotepad retains these specific placements:
 - Automatic and the currently delivered syntax choices occupy Scheme directly.
 - Auto Indent stays next to tab and long-line preferences in Settings.
 - Auto-Shrink Horizontal Scrollbar occupies Settings > Appearance.
-- The delivered Collapse All and Expand All actions occupy View > Toggle Folds.
+- View > Toggle Folds retains Shift+Alt+D for Default Levels, Shift+Alt+A for
+  All Levels, Alt+C for Current Block, and Alt+1 through Alt+9 for those levels.
 - Goto Selection Start/End now have visible entries at the original Goto positions,
   retaining Ctrl+Shift+Comma and Ctrl+Shift+Period.

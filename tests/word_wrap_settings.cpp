@@ -182,7 +182,7 @@ void Exercise(EditorFrame* frame, SettingsStore& settings) {
     editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(GetLineVisible, 2), "wrap fixture has a collapsed logical block");
     editor->Send(EmptyUndoBuffer);
     editor->Send(SetSavePoint);

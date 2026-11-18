@@ -90,6 +90,10 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "%zu 处替换"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&All Levels\tShift+Alt+A"
+msgstr "所有级别(&A)\tShift+Alt+A"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_WARNINCONSISTENTEOLS.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Always show this dialog."
@@ -146,10 +150,6 @@ msgstr "全部清除(&C)\tAlt+F2"
 msgid "&Closing tag (can be edited):"
 msgstr "闭合标签(可编辑)(&C):"
 
-#: src/app/editor_frame_commands.cpp
-msgid "&Collapse All"
-msgstr "全部折叠(&C)"
-
 # Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM / IDC_COLUMN_RANGE.
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
@@ -172,12 +172,20 @@ msgid "&Copy Line\tCtrl+Shift+C"
 msgstr "复制行(&C)\tCtrl+Shift+C"
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Current Block\tAlt+C"
+msgstr "当前块(&C)\tAlt+C"
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr "解码(&D)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr "默认编码(&D)\tCtrl+Alt+F"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Levels\tShift+Alt+D"
+msgstr "默认级别(&D)\tShift+Alt+D"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Default encoding:"
@@ -243,10 +251,6 @@ msgstr "编码标识符(&E)\tCtrl+F8"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
 msgstr "保存时确保换行符一致(&E)。"
-
-#: src/app/editor_frame_commands.cpp
-msgid "&Expand All"
-msgstr "全部展开(&E)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / File menu.
 #: src/app/editor_frame_commands.cpp
@@ -1080,6 +1084,10 @@ msgstr "剪切行(&T)\tCtrl+Shift+X"
 msgid "Current &Date"
 msgstr "当前日期(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Current &Level"
+msgstr "当前级别(&L)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LOC_DATETIME.
 #: src/app/editor_frame_commands.cpp
 msgid "Current Date &Time"
@@ -1498,6 +1506,15 @@ msgstr "LS — 行分隔符(&C)"
 msgid "Latin-1 (Windows-1252)"
 msgstr "Latin-1 (Windows-1252)"
 
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Level &%d\tAlt+%d"
+msgstr "级别 &%d\tAlt+%d"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Level 1&0"
+msgstr "级别 1&0"
+
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Limit for long lines"
 msgstr "长行限定"
@@ -1870,6 +1887,10 @@ msgstr "移除最近的文件？"
 msgid "Ren&dering Technology"
 msgstr "渲染技术(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Repl&ace Next\tF4"
+msgstr "替换下一个(&A)\tF4"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Replace"
 msgstr "替换"
@@ -1920,6 +1941,10 @@ msgstr "SHY — 软连字符(&Q)"
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"
 msgstr "SVG"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Sa&ve Find Text\tAlt+F3"
+msgstr "保存查找文本(&V)\tAlt+F3"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEAS.
 #: src/app/editor_frame_commands.cpp
@@ -2694,3 +2719,9 @@ msgstr "缩放级别 (%d%% 到 %d%%):"
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+#~ msgid "&Collapse All"
+#~ msgstr "全部折叠(&C)"
+
+#~ msgid "&Expand All"
+#~ msgstr "全部展开(&E)"
