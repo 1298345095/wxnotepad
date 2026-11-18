@@ -76,7 +76,10 @@ void ReadLocalVariables(std::string_view window, OriginalFileVariables& variable
         variables.tabIndents = *tabs != 0;
     variables.any = variables.tabWidth.has_value() || variables.indentWidth.has_value() ||
                     variables.tabsAsSpaces.has_value() || variables.tabIndents.has_value();
-    variables.any |= IntegerVariable(window, "truncate-lines").has_value();
+    if (const auto truncate = IntegerVariable(window, "truncate-lines"); truncate.has_value()) {
+        variables.wordWrap = *truncate == 0;
+        variables.any = true;
+    }
     if (const auto boundary = IntegerVariable(window, "fill-column"); boundary.has_value())
         variables.longLinesLimit = std::clamp(*boundary, 0, OriginalSettingLimits::MaxLongLineColumn);
     variables.any |= variables.longLinesLimit.has_value();
