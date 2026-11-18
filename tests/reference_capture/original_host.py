@@ -19,11 +19,12 @@ kernel.VirtualFreeEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD]
 kernel.CloseHandle.argtypes = [w.HANDLE]
 CALLBACK = c.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
 user.EnumDesktopWindows.argtypes = [w.HANDLE, CALLBACK, w.LPARAM]
+user.WaitForInputIdle.argtypes = [w.HANDLE, w.DWORD]
 
 
 class Original:
-    def __init__(self, path, executable, desktop, desktop_name):
-        arguments = [str(executable), "/n", "/ns", "/e", "utf-8"]
+    def __init__(self, path, executable, desktop, desktop_name, encoding="utf-8"):
+        arguments = [str(executable), "/n", "/ns", "/e", encoding]
         if path:
             arguments.append(str(path))
         self.process = Process(arguments, desktop_name)
@@ -45,6 +46,7 @@ class Original:
             user.EnumDesktopWindows(desktop, CALLBACK(window), 0)
             time.sleep(.03)
         assert self.editor, "owned original editor appeared"
+        assert user.WaitForInputIdle(self.process.handle, 15000) == 0, "original startup finished before observation"
         self.handle = kernel.OpenProcess(0x38, False, self.process.pid)
         assert self.handle
         self.memory = kernel.VirtualAllocEx(self.handle, None, 1048576, 0x3000, 4)
