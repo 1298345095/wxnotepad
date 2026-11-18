@@ -164,6 +164,8 @@ private:
     void ShowFind(bool replace = false);
     void FindNext();
     void FindPrevious();
+    void FindSelection(SearchDirection direction);
+    void ReplaceNext();
     void Search(bool forward, bool extendSelection = false);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
