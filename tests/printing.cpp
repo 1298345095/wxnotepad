@@ -274,10 +274,24 @@ void NativePrint(EditorFrame& frame) {
     auto* editor = frame.Editor();
     const auto fixture = InstallFixture(*editor);
 
-    PrintResponse cancel({}, GTK_PRINT_PAGES_ALL);
-    cancel.Start(25);
-    NativeKeys::Shortcut(&frame, 'P', true);
-    Require(cancel.sawDialog, "Ctrl+P opens the native Print dialog and it can be canceled");
+    {
+        const NativeTrace::Gesture trace(*editor, 'P', wxMOD_CONTROL);
+        wxString focusFile;
+        NativeKeys::FocusEditor(&frame, "wxnotepad", focusFile);
+        PrintResponse cancel({}, GTK_PRINT_PAGES_ALL);
+        cancel.Start(25);
+        {
+            wxFFile file(focusFile, "wb");
+            Require(file.Write(NativeTrace::Request("key:ctrl+p")), "request the native Ctrl+P shortcut");
+        }
+        // The dialog can consume key-up after the accelerator opened it.
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!cancel.sawDialog && std::chrono::steady_clock::now() < deadline) {
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Require(cancel.sawDialog, "Ctrl+P opens the native Print dialog and it can be canceled");
+    }
     const auto temporary = wxFileName::CreateTempFileName("wxnotepad-print-");
     Require(!temporary.empty() && wxRemoveFile(temporary), "allocate a clean path for the virtual printer");
     const auto output = temporary + ".pdf";
