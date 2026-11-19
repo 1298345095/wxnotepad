@@ -615,10 +615,12 @@ int64_t QueryPerformanceCounter() noexcept {
 }
 namespace Platform {
 ColourRGBA Chrome() noexcept {
-    return ColourRGBA(240, 240, 240);
+    const auto colour = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    return ColourRGBA(colour.Red(), colour.Green(), colour.Blue());
 }
 ColourRGBA ChromeHighlight() noexcept {
-    return ColourRGBA(255, 255, 255);
+    const auto colour = wxSystemSettings::GetColour(wxSYS_COLOUR_3DHIGHLIGHT);
+    return ColourRGBA(colour.Red(), colour.Green(), colour.Blue());
 }
 const char* DefaultFont() noexcept {
 #ifdef _WIN32

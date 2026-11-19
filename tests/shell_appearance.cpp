@@ -10,6 +10,7 @@
 #include <wx/dialog.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/settings.h>
 #ifdef __WXMSW__
 #include <commctrl.h>
 #endif
@@ -37,6 +38,35 @@ void ClipboardOffer(wxDataObject* data) {
     if (data) Require(wxTheClipboard->SetData(data), "private clipboard accepts the offered native data");
 }
 #endif
+void DisabledArtworkColours(wxToolBar* toolbar) {
+    if (!wxSystemSettings::GetAppearance().IsDark()) return;
+    const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    Require(foreground != background, "native Dark theme exposes a distinct disabled foreground");
+    for (const int command : {wxID_UNDO, wxID_REDO, wxID_CUT}) {
+        const auto* tool = toolbar->FindById(command);
+        for (const int size : {16, 24, 32, 40, 48}) {
+            const auto normal = tool->GetNormalBitmapBundle().GetBitmap(wxSize(size, size)).ConvertToImage();
+            const auto disabled = tool->GetDisabledBitmapBundle().GetBitmap(wxSize(size, size)).ConvertToImage();
+            int visiblePixels = 0;
+            for (int y = 0; y < disabled.GetHeight(); ++y) {
+                for (int x = 0; x < disabled.GetWidth(); ++x) {
+                    Require(normal.GetAlpha(x, y) == disabled.GetAlpha(x, y),
+                            "disabled Dark artwork preserves the supplied shape and edge transparency");
+                    if (disabled.GetAlpha(x, y) != wxALPHA_OPAQUE) continue;
+                    ++visiblePixels;
+                    Require(disabled.GetRed(x, y) == foreground.Red() &&
+                                disabled.GetGreen(x, y) == foreground.Green() &&
+                                disabled.GetBlue(x, y) == foreground.Blue(),
+                            "disabled Dark artwork uses the readable native disabled-text foreground");
+                }
+            }
+            Require(visiblePixels > 0, "disabled Dark artwork contains visible native foreground strokes");
+        }
+    }
+    std::printf("PASS: native Dark disabled artwork foreground #%02x%02x%02x on #%02x%02x%02x\n", foreground.Red(),
+                foreground.Green(), foreground.Blue(), background.Red(), background.Green(), background.Blue());
+}
 class AppearanceApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -98,6 +128,7 @@ public:
                         "native status painting displays the complete size beside its sizing grip");
 #endif
                 auto* toolbar = frame->GetToolBar();
+                DisabledArtworkColours(toolbar);
 #if defined(__WXGTK__) || defined(__WXMSW__)
                 ClipboardOffer(new wxTextDataObject("native toolbar text"));
                 AwaitPaste(toolbar, true);
@@ -126,7 +157,7 @@ public:
                         "native toolbar buttons are actually disabled for no-edit history");
 #endif
                 Require(toolbar->FindById(wxID_UNDO)->GetDisabledBitmap().IsOk(),
-                        "disabled history commands use the original blended artwork");
+                        "disabled history commands have native themed artwork");
                 editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(toolbar->GetToolEnabled(wxID_UNDO), "editing enables the same toolbar Undo command");

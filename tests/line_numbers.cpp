@@ -3,6 +3,8 @@
 #include <memory>
 #include <utility>
 #include "editor/go_to_location.h"
+#include "syntax/syntax_scheme.h"
+#include <wx/settings.h>
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/menu.h>
@@ -39,6 +41,54 @@ void Shortcut(wxWindow* window) {
 }
 std::string Lines(int count) {
     return std::string(static_cast<size_t>(count - 1), '\n');
+}
+intptr_t ColourValue(const wxColour& colour) {
+    return colour.Red() | (colour.Green() << 8U) | (colour.Blue() << 16U);
+}
+void NativeMarginColours(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    constexpr auto numberStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber);
+    constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    auto* editor = frame->Editor();
+    const auto foreground = ColourValue(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT));
+    const auto background = ColourValue(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
+    std::printf("Default native margin: expected=%06llx/%06llx actual=%06llx/%06llx\n",
+                static_cast<long long>(foreground), static_cast<long long>(background),
+                static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
+                static_cast<long long>(editor->Send(StyleGetBack, numberStyle)));
+    Require(editor->Send(StyleGetFore, numberStyle) == foreground &&
+                editor->Send(StyleGetBack, numberStyle) == background,
+            "default line numbers use a coherent native foreground/background pair");
+    const auto originalFonts = editor->Fonts();
+    auto fonts = originalFonts;
+    // A document may explicitly use a light palette while native chrome is dark.
+    fonts.textStyle = "fore:#102030; back:#F0E0D0";
+    fonts.codeStyle = "fore:#213141; back:#E1D1C1";
+    fonts.Scheme(SyntaxLanguage::Cpp).defaultStyle = "fore:#324252; back:#D2C2B2";
+    editor->SetFontSettings(fonts);
+    for (const auto language : {SyntaxLanguage::PlainText, SyntaxLanguage::Cpp, SyntaxLanguage::Python}) {
+        ApplySyntaxLanguage(*editor, language);
+        std::printf("Native margin colors: fore=%06llx back=%06llx; actual=%06llx/%06llx\n",
+                    static_cast<long long>(foreground), static_cast<long long>(background),
+                    static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
+                    static_cast<long long>(editor->Send(StyleGetBack, numberStyle)));
+        Require(editor->Send(StyleGetFore, numberStyle) == foreground &&
+                    editor->Send(StyleGetBack, numberStyle) == background,
+                "line numbers retain the native foreground/background pair independently of document colors");
+        const auto expectedFore = language == SyntaxLanguage::PlainText ? 0x302010
+                                  : language == SyntaxLanguage::Cpp     ? 0x524232
+                                                                        : 0x413121;
+        const auto expectedBack = language == SyntaxLanguage::PlainText ? 0xD0E0F0
+                                  : language == SyntaxLanguage::Cpp     ? 0xB2C2D2
+                                                                        : 0xC1D1E1;
+        Require(editor->Send(StyleGetFore, defaultStyle) == expectedFore &&
+                    editor->Send(StyleGetBack, defaultStyle) == expectedBack,
+                "native margin colors preserve explicit global and per-scheme document colors");
+    }
+    editor->SetFontSettings(originalFonts);
+    ApplySyntaxLanguage(*editor, SyntaxLanguage::PlainText);
+    TestEditor::UseFixedWidthFont(editor);
+    std::puts("PASS: native margin pair and explicit document colors survive language changes");
 }
 void MenuAndShortcut(EditorFrame* frame) {
     using enum Scintilla::Message;
@@ -239,10 +289,10 @@ public:
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
-        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
+                NativeMarginColours(frame);
                 MenuAndShortcut(frame);
                 MarginGeometry(frame);
                 FoldedCaretAndHistory(frame);
