@@ -154,6 +154,13 @@ public:
                 NativePaint::Complete(editor);
                 Require(status->GetStatusText(3) == "Sel 8 / 13" && status->GetStatusText(4) == "SelLn 2",
                         "original selection reports separate scalar and byte counts and selected lines");
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Lines)));
+                NativePaint::Complete(editor);
+                Require(status->GetStatusText(3) == "Sel 8 / 13" && status->GetStatusText(4) == "SelLn 2",
+                        "line selection reports original nonrectangular Unicode character and byte counts");
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
                 Require(frame->GetTitle().StartsWith("* "), "original modified title prefix includes its space");
                 frame->SetSize(wxSize(1000, 700));
                 editor->Send(GotoPos, 0);
