@@ -1,6 +1,8 @@
 #pragma once
 
 #include <wx/string.h>
+#include <wx/timer.h>
+#include "settings/auto_save_options.h"
 #include <cstdint>
 #include "ScintillaTypes.h"
 #include "syntax/syntax_catalog.h"
@@ -11,6 +13,7 @@
 #include <functional>
 #include <string>
 #include <variant>
+#include <vector>
 
 class EditorControl;
 enum class EncodingLossChoice { Cancel, Replace };
@@ -73,8 +76,10 @@ struct OpenResult {
 // File identity belongs to the session; the original core owns text and history.
 class DocumentSession final {
 public:
-    explicit DocumentSession(EditorControl& editor, EncodingOptions options = {}, SyntaxDetectionOptions detection = {})
-        : editor_(editor), encodingOptions_(options), detection_(detection) {}
+    explicit DocumentSession(EditorControl& editor, EncodingOptions options = {}, SyntaxDetectionOptions detection = {},
+                             AutoSaveOptions autoSave = {})
+        : autoSave_(autoSave), editor_(editor), encodingOptions_(options), detection_(detection) {}
+    ~DocumentSession();
     const wxString& Path() const { return path_; }
     wxString FileNameText(FileNamePart part) const;
     bool IsReadOnlyFile() const { return readOnlyFile_; }
@@ -92,7 +97,11 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
-    void SaveBackup();
+    void SaveBackup(bool automatic = false);
+    void ConfigureAutoSave(AutoSaveOptions options);
+    void DocumentChanged();
+    void StopAutoSave(bool keepBackups);
+    static wxString BackupDirectory();
     bool UpdateFileTime();
     // Reload intents obtain their path and any current-encoding hint from this
     // session. Loaded settings are applied before restoring the same-path view.
@@ -125,6 +134,21 @@ public:
     void SelectLanguage(std::optional<SyntaxLanguage> language);
 
 private:
+    class BackupTimer final : public wxTimer {
+    public:
+        explicit BackupTimer(DocumentSession& document) : document_(document) {}
+        void Notify() override { document_.SaveBackup(true); }
+
+    private:
+        DocumentSession& document_;
+    };
+    BackupTimer backupTimer_{*this};
+    AutoSaveOptions autoSave_;
+    uint64_t lastBackupRevision_ = 0;
+    uint64_t observedBackupRevision_ = 0;
+    std::vector<wxString> automaticBackupPaths_;
+    void StartBackupTimer(bool reset);
+    wxString WriteBackup(bool automatic);
     EditorControl& editor_;
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;

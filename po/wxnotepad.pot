@@ -123,6 +123,10 @@ msgstr ""
 msgid "&Boundary:"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr ""
@@ -146,6 +150,10 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Command:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -316,6 +324,10 @@ msgstr ""
 msgid "&Lower Case\tCtrl+U"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr ""
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
 msgstr ""
@@ -456,6 +468,14 @@ msgstr ""
 
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Right."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -639,6 +659,10 @@ msgstr ""
 msgid "All Files (*)"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All files (*.*)"
 msgstr ""
@@ -698,6 +722,14 @@ msgstr ""
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr ""
@@ -720,6 +752,14 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -850,6 +890,10 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Choose an existing file to open."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "Choose program"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1061,6 +1105,11 @@ msgstr ""
 msgid "Could not restart wxnotepad."
 msgstr ""
 
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
+msgstr ""
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not save file"
@@ -1179,6 +1228,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
 msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
@@ -1762,6 +1815,10 @@ msgstr ""
 msgid "Only words in document"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
 msgstr ""
@@ -1891,6 +1948,10 @@ msgstr ""
 #: src/app/dialogs/print_page_setup_dialog.cpp
 #, c-format
 msgid "Print zoom (%d%% to %d%%):"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -2044,6 +2105,10 @@ msgstr ""
 msgid "Right:"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr ""
@@ -2126,6 +2191,11 @@ msgstr ""
 #: src/app/new_window.cpp
 #, c-format
 msgid "Save changes to %s before restarting?"
+msgstr ""
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -2431,6 +2501,14 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Text files (*.txt)"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
 msgstr ""
 
 #: src/app/editor_frame_file_watching.cpp

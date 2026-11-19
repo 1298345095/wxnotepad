@@ -169,6 +169,10 @@ msgstr "為符合的行新增書籤(&B)"
 msgid "&Boundary:"
 msgstr "長度(&B)："
 
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr "瀏覽(&B)..."
+
 # Original Notepad4 zh-Hant: IDD_INFOBOX/IDCANCEL; adapted where needed.
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
@@ -199,6 +203,10 @@ msgstr "欄（留空或 1 - %lld）(&C)："
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
 msgstr "按欄排序（矩形選取範圍）(&C)。"
+
+#: src/app/run_command.cpp
+msgid "&Command:"
+msgstr "命令(&C)："
 
 # Original Notepad4 zh-Hant: IDM_EDIT_COPY; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -402,6 +410,10 @@ msgstr "長行標記(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小寫(&L)\tCtrl+U"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr "手動刪除備份(&M)。"
+
 # Original Notepad4 zh-Hant: IDD_SORT/IDC_SORT_MERGE_DUP; adapted where needed.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
@@ -575,6 +587,14 @@ msgstr "回復(&V)\tF5"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Right."
 msgstr "靠右(&R)。"
+
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr "執行(&R)"
+
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
+msgstr "執行命令(&R)...\tCtrl+R"
 
 # Original Notepad4 zh-Hant: IDS_ASK_SAVE (save action); adapted where needed.
 #: src/app/editor_frame.cpp
@@ -789,6 +809,10 @@ msgstr "行對齊"
 msgid "All Files (*)"
 msgstr "所有檔案 (*)"
 
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
+msgstr "所有檔案 (*)|*"
+
 # Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All files (*.*)"
@@ -856,6 +880,14 @@ msgstr "自動補上 HTML 與 XML 結束標籤"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自動縮短水平捲軸"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr "自動儲存設定"
+
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr "自動儲存設定..."
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr "自動"
@@ -883,6 +915,14 @@ msgstr "在縮排處按 Backspace 鍵刪除至 Tab 定位點"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
 msgstr "反引號"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr "備份間隔（秒）(&S)："
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
+msgstr "備份間隔（秒）"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
@@ -1025,6 +1065,10 @@ msgstr "儲存前請先選擇檔案名稱。"
 #: src/document/document_session.cpp
 msgid "Choose an existing file to open."
 msgstr "選擇要開啟的現有檔案。"
+
+#: src/app/run_command.cpp
+msgid "Choose program"
+msgstr "選擇程式"
 
 # Original Notepad4 zh-Hant: IDM_LINEENDINGS_CR; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1249,6 +1293,11 @@ msgstr "無法取代目的檔案：%s"
 msgid "Could not restart wxnotepad."
 msgstr "無法重新啟動 wxnotepad。"
 
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
+msgstr "無法執行命令：%s"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not save file"
@@ -1381,6 +1430,10 @@ msgstr "在選取範圍內繪製方塊游標(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr "啟用多重選取(&M)"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
+msgstr "啟用定期備份(&P)。"
 
 # Original Notepad4 zh-Hant: IDD_ENCLOSESELECTION title; adapted where needed.
 #: src/app/dialogs/enclose_selection_dialog.cpp
@@ -2037,6 +2090,10 @@ msgstr "只有檔案擁有者才能變更擁有者的寫入權限。"
 msgid "Only words in document"
 msgstr "僅使用文件內的單詞"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
+msgstr "開啟資料夾(&F)"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING/IDC_ASCIIASUTF8; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
@@ -2172,6 +2229,10 @@ msgstr "列印縮放比例"
 #, c-format
 msgid "Print zoom (%d%% to %d%%):"
 msgstr "列印縮放（%d%% 至 %d%%）："
+
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr "程式 (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|所有檔案 (*.*)|*.*"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
@@ -2344,6 +2405,10 @@ msgstr "右邊界"
 msgid "Right:"
 msgstr "右："
 
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr "執行命令"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
@@ -2441,6 +2506,11 @@ msgstr "重新載入前是否儲存對 %s 的變更？"
 #, c-format
 msgid "Save changes to %s before restarting?"
 msgstr "重新啟動前是否儲存對 %s 的變更？"
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
+msgstr "執行工具前儲存對 %s 的修改？"
 
 # Original Notepad4 zh-Hant: IDS_ASK_SAVE (title); adapted where needed.
 #: src/app/editor_frame.cpp
@@ -2788,6 +2858,14 @@ msgstr "Tab 轉為空白"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Text files (*.txt)"
 msgstr "文字檔案 (*.txt)"
+
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr "命令中有未閉合的引號。"
+
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
+msgstr "命令以未完成的跳脫字元結尾。"
 
 # Original Notepad4 zh-Hant: IDS_FILECHANGENOTIFY2; adapted where needed.
 #: src/app/editor_frame_file_watching.cpp
