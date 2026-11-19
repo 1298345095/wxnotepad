@@ -66,8 +66,12 @@ private:
     void Run() {
         Await([this] { return Sequence("sequence\t0\n"); }, "initial native observation is published");
         auto* editor = frame_->Editor();
+#ifdef __WXGTK__
         wxString focusFile;
         NativeKeys::FocusEditor(frame_, "unchanged observer acknowledgement", focusFile);
+#else
+        NativeKeys::Shortcut(frame_, 'A', true);
+#endif
         Command(1);
         Await([this] { return Sequence("sequence\t1\n"); }, "warm unchanged-state acknowledgement is published");
         selection_ = editor->SelectionRevision();
