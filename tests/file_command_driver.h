@@ -143,7 +143,7 @@ private:
         return title == "Save file" || title == (profile_ == FileDialogProfile::Open ? "Open file" : "Save As");
     }
     bool IsErrorTitle(const wxString& title) const {
-        return title == "Could not save file" ||
+        return title == "Could not save file" || title == "Could not change file protection" ||
                (profile_ == FileDialogProfile::Open && title == "Could not open file");
     }
     FileDialogProfile profile_;

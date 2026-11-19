@@ -528,14 +528,60 @@ wxString DocumentSession::FileNameText(FileNamePart part) const {
 
 bool DocumentSession::RefreshReadOnlyFile() {
     readOnlyFile_ = false;
-    if (path_.empty()) return false;
+    readOnlyFileFlag_ = false;
+    readOnlyFileChangeError_.clear();
+    if (path_.empty()) {
+        readOnlyFileChangeError_ = _("Save the document before changing file permissions.");
+        return false;
+    }
 #ifdef __WXMSW__
     const auto attributes = GetFileAttributesW(path_.wc_str());
-    readOnlyFile_ = attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_READONLY) != 0;
+    if (attributes == INVALID_FILE_ATTRIBUTES)
+        readOnlyFileChangeError_ = wxString::Format(_("Could not read file attributes: %s"), wxSysErrorMsg());
+    else if (attributes & FILE_ATTRIBUTE_DIRECTORY)
+        readOnlyFileChangeError_ = _("This command changes a file, not a directory.");
+    else
+        readOnlyFile_ = readOnlyFileFlag_ = (attributes & FILE_ATTRIBUTE_READONLY) != 0;
 #else
-    readOnlyFile_ = wxFileExists(path_) && !wxFileName::IsFileWritable(path_);
+    struct stat state{};
+    if (stat(path_.fn_str(), &state) != 0)
+        readOnlyFileChangeError_ = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
+    else if (!S_ISREG(state.st_mode))
+        readOnlyFileChangeError_ = _("This command changes a file, not a directory.");
+    else {
+        readOnlyFileFlag_ = (state.st_mode & S_IWUSR) == 0;
+        readOnlyFile_ = state.st_uid == geteuid() ? readOnlyFileFlag_ : !wxFileName::IsFileWritable(path_);
+        if (state.st_uid != geteuid())
+            readOnlyFileChangeError_ = _("Only the file owner can change the owner's write permission.");
+    }
 #endif
     return readOnlyFile_;
+}
+
+wxString DocumentSession::ToggleReadOnlyFile() {
+    RefreshReadOnlyFile();
+    wxString error = readOnlyFileChangeError_;
+    if (error.empty()) {
+#ifdef __WXMSW__
+        const auto attributes = GetFileAttributesW(path_.wc_str());
+        if (attributes == INVALID_FILE_ATTRIBUTES ||
+            !SetFileAttributesW(path_.wc_str(), attributes ^ FILE_ATTRIBUTE_READONLY))
+            error = wxString::Format(_("Could not change file attributes: %s"), wxSysErrorMsg());
+#else
+        struct stat state{};
+        if (stat(path_.fn_str(), &state) != 0)
+            error = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
+        else if (state.st_uid != geteuid())
+            error = _("Only the file owner can change the owner's write permission.");
+        else if (chmod(path_.fn_str(),
+                       (state.st_mode & (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)) ^ S_IWUSR) != 0)
+            error = wxString::Format(_("Could not change the file owner's write permission: %s"), wxSysErrorMsg());
+#endif
+    }
+    RefreshReadOnlyFile();
+    // Original IDM_FILE_READONLY_FILE releases F10 when the disk file becomes writable.
+    if (!readOnlyFile_ && readOnlyFileChangeError_.empty()) editor_.Send(Scintilla::Message::SetReadOnly, 0);
+    return error;
 }
 
 SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination,
