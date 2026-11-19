@@ -7,6 +7,8 @@ import time
 
 from resource_process import wait_state
 
+ATSPI_IPC_ERROR = 1  # ATSPI_ERROR_IPC; this native error enum is not exposed by the GI bindings.
+
 
 def plain(text):
     return text.replace('&', '').replace('_', '')
@@ -264,10 +266,30 @@ class Dialogs:
 
     def set_input(self, window, name, text):
         if sys.platform != 'win32':
-            for child in self.children(window):
-                if child.get_role() in (self.atspi.Role.TEXT, self.atspi.Role.ENTRY) and child.get_name() == name:
-                    assert child.get_editable_text_iface().set_text_contents(text)
+            from gi.repository import GLib
+            deadline = time.monotonic() + 10
+            last_error = None
+            while time.monotonic() < deadline:
+                target = None
+                try:
+                    window.clear_cache()
+                    for child in self.children(window):
+                        if child.get_role() in (self.atspi.Role.TEXT, self.atspi.Role.ENTRY) and child.get_name() == name:
+                            target = child.get_editable_text_iface()
+                            break
+                except GLib.GError as error:
+                    if (error.domain != 'atspi_error' or error.code != ATSPI_IPC_ERROR or
+                            error.message != 'timeout from dbind'):
+                        raise
+                    if last_error is None:
+                        print(f'Native input {name!r} read-only lookup: {error}', file=sys.stderr, flush=True)
+                    last_error = str(error)
+                if target is not None:
+                    # A timed-out write may already have happened; never repeat it.
+                    assert target.set_text_contents(text)
                     return
+                time.sleep(.03)
+            raise AssertionError(f'Accessible input {name!r} not ready; last read-only error: {last_error}')
         else:
             entries = []
             for child in self.children(window):
