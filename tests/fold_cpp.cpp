@@ -141,11 +141,20 @@ public:
                         "caret repair must retain collapsed visibility, bytes, save point and history");
                 std::puts(
                     "PASS: nested states and non-header clicks are stable; hidden selection moves to visible header");
+                // Isolate pattern coverage from the native palette checked by
+                // original_shell_appearance. Both colors still use the 8x8 path.
+                constexpr intptr_t CoverageWhite = 0xFFFFFF;
+                editor->Send(SetFoldMarginColour, 1, CoverageWhite);
+                editor->Send(SetFoldMarginHiColour, 1, CoverageWhite);
+                Paint(editor);
                 MarginBackground(editor);
                 editor->Send(SetBufferedDraw, 0);
                 Paint(editor);
                 MarginBackground(editor);
                 std::puts("PASS: buffered and unbuffered native margin backgrounds cover the full control height");
+                editor->Send(SetFoldMarginColour, 0);
+                editor->Send(SetFoldMarginHiColour, 0);
+                Paint(editor);
                 MarginClick(editor, 0);
                 MarginClick(editor, 0);
                 const auto brace = source.find('{');
