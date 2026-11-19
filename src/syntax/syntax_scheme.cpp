@@ -42,8 +42,10 @@ void InstallFolding(EditorControl& editor, bool fold) {
                                static_cast<uintptr_t>(std::to_underlying(Scintilla::AutomaticFold::Click)) |
                                static_cast<uintptr_t>(std::to_underlying(Scintilla::AutomaticFold::Change));
     editor.Send(SetAutomaticFold, fold ? automatic : 0);
-    editor.Send(SetFoldMarginColour, 1, Colour(0xFFFFFF));
-    editor.Send(SetFoldMarginHiColour, 1, Colour(0xFFFFFF));
+    // Retain Scintilla/wxSTC's native chrome pattern instead of forcing a
+    // white strip beside the native line-number margin in Dark/High Contrast.
+    editor.Send(SetFoldMarginColour, 0);
+    editor.Send(SetFoldMarginHiColour, 0);
     const std::array<Scintilla::MarkerSymbol, 7> folders = {
         BoxPlusConnected, BoxMinusConnected, TCorner, LCorner, VLine, BoxPlus, BoxMinus};
     for (size_t index = 0; index < std::size(folders); ++index) {

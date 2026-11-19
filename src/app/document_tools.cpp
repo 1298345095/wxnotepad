@@ -45,6 +45,7 @@ wxString DefaultProgramDirectory() {
 class OpenWithDialog final : public wxDialog {
 public:
     OpenWithDialog(wxWindow* parent, wxString& directory)
+        // TRANSLATORS: IDD_OPENWITH title; choose a program to open the current document.
         : wxDialog(parent, wxID_ANY, _("Open Document With"), wxDefaultPosition, wxDefaultSize,
                    wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
           directory_(directory) {
@@ -56,6 +57,7 @@ public:
         programs_ = new wxListBox(this, wxID_ANY);
         programs_->SetName("open-with-programs");
         layout->Add(programs_, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(8));
+        // TRANSLATORS: IDD_OPENWITH button selecting the directory containing available programs.
         auto* browse = new wxButton(this, wxID_ANY, _("&Browse Directory..."));
         browse->SetName("open-with-browse");
         layout->Add(browse, 0, wxALL, FromDIP(8));
@@ -65,6 +67,7 @@ public:
         SetSize(FromDIP(wxSize(480, 380)));
         Fill();
         browse->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+            // TRANSLATORS: IDD_OPENWITH directory browser title.
             wxDirDialog chooser(this, _("Open Document With"), directory_, wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
             if (chooser.ShowModal() == wxID_OK) {
                 // The original updates OpenWithDir immediately, including on later Cancel.
@@ -98,6 +101,7 @@ private:
         paths_.clear();
         wxDir directory(directory_);
         if (!directory.IsOpened()) {
+            // TRANSLATORS: IDD_OPENWITH failure reading the selected program directory; no parameters.
             wxMessageBox(_("Could not read the program directory."), _("Open Document With"), wxOK | wxICON_ERROR,
                          this);
             UpdateSelection();
@@ -189,6 +193,7 @@ bool LaunchProgram(wxWindow* parent, const wxString& program, const wxString& do
     if (wxFileName(program).GetExt() == "desktop") {
         GDesktopAppInfo* application = g_desktop_app_info_new_from_filename(program.utf8_str());
         if (!application) {
+            // TRANSLATORS: Linux IDM_FILE_OPENWITH error loading a native .desktop program entry; no parameters.
             error = _("Could not load the desktop application entry.");
             return false;
         }
@@ -205,6 +210,7 @@ bool LaunchProgram(wxWindow* parent, const wxString& program, const wxString& do
 
 void EditorFrame::AppendDocumentTools(wxMenu* tools) {
     const int save = wxWindow::NewControlId();
+    // TRANSLATORS: SaveBeforeRunningTools preference; ask about unsaved changes before external tool commands.
     tools->AppendCheckItem(save, _("&Save Before Running Tools"));
     Bind(
         wxEVT_UPDATE_UI,
@@ -221,10 +227,12 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
         save);
     tools->AppendSeparator();
     const int execute = wxWindow::NewControlId();
+    // TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
     tools->Append(execute, _("Execute &Document\tCtrl+L"));
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, execute);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ExecuteDocument(); }, execute);
     const int openWith = wxWindow::NewControlId();
+    // TRANSLATORS: IDM_FILE_OPENWITH menu command; choose a program for the current document.
     tools->Append(openWith, _("O&pen Document With..."));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenDocumentWith(); }, openWith);
 }
@@ -232,16 +240,19 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
 bool EditorFrame::ExecuteDocument() {
     if (document_.Path().empty()) return false;
     const auto& preferences = settings_ ? settings_->values : defaults_;
+    // TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before running tools?")))
         return false;
     wxString error;
     if (LaunchDesktopTarget(this, document_.Path(), wxFileName(document_.Path()).GetPath(), error)) return true;
+    // TRANSLATORS: IDM_FILE_LAUNCH error title; the message body contains the native launch error.
     wxMessageBox(error, _("Could not execute document"), wxOK | wxICON_ERROR, this);
     return false;
 }
 
 bool EditorFrame::OpenDocumentWith() {
     auto& preferences = settings_ ? settings_->values : defaults_;
+    // TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before running tools?")))
         return false;
     if (preferences.openWithDirectory.empty()) preferences.openWithDirectory = DefaultProgramDirectory();
@@ -250,6 +261,7 @@ bool EditorFrame::OpenDocumentWith() {
     const auto directory = document_.Path().empty() ? wxString{} : wxFileName(document_.Path()).GetPath();
     wxString error;
     if (LaunchProgram(this, chooser.SelectedProgram(), document_.Path(), directory, error)) return true;
+    // TRANSLATORS: IDM_FILE_OPENWITH error title; the message body contains the native launch error.
     wxMessageBox(error, _("Could not open document with program"), wxOK | wxICON_ERROR, this);
     return false;
 }

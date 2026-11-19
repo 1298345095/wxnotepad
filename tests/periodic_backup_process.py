@@ -1,9 +1,6 @@
 """Exercise periodic backup and per-process retention in an actual development bundle."""
 from english_settings import english_settings
 import argparse
-from contextlib import contextmanager
-import ctypes
-from ctypes import wintypes
 import sys
 import os
 from pathlib import Path
@@ -12,7 +9,7 @@ import time
 
 from localization_package import Process, bundle_application, menu_id
 from localization_native import Dialogs, plain
-from localization_layout import capture_and_check
+from localization_layout import capture_and_check, owned_topmost
 from resource_process import native_edit, wait_state
 from settings_process import Application
 
@@ -24,27 +21,6 @@ def wait_for(check, message):
             return
         time.sleep(.01)
     raise AssertionError(message)
-
-
-@contextmanager
-def owned_topmost(dialogs, process, window):
-    if sys.platform != 'win32':
-        yield
-        return
-    user = dialogs.user
-    owner = wintypes.DWORD()
-    user.GetWindowThreadProcessId(window, ctypes.byref(owner))
-    assert owner.value == process.pid, 'Screenshot window belongs to the owned packaged process'
-    user.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
-    user.GetWindowLongPtrW.restype = wintypes.LPARAM
-    user.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
-                                 ctypes.c_int, ctypes.c_int, wintypes.UINT]
-    was_topmost = bool(user.GetWindowLongPtrW(window, -20) & 8)
-    assert user.SetWindowPos(window, wintypes.HWND(-1), 0, 0, 0, 0, 0x13)
-    try:
-        yield
-    finally:
-        assert user.SetWindowPos(window, wintypes.HWND(-1 if was_topmost else -2), 0, 0, 0, 0, 0x13)
 
 
 def localized_dialogs(executable, root, environment):

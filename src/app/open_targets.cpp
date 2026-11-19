@@ -267,12 +267,14 @@ void EditorFrame::AppendOpenTargetCommands(wxMenu* menu) {
         int& id = folder ? selectionFolderId_ : openSelectionId_;
         const bool alreadyBound = id != wxID_NONE;
         if (!alreadyBound) id = wxWindow::NewControlId();
+        // TRANSLATORS: Original Action on Selection commands; open the target or its containing directory.
         menu->Append(id, folder ? _("Open Containing &Folder") : _("&Open File, Folder, Link, etc."));
         if (alreadyBound) continue;
         Bind(
             wxEVT_MENU,
             [this, folder](wxCommandEvent&) {
                 if (!OpenSelection(folder))
+                    // TRANSLATORS: Selected file/folder/link launch failure and dialog title; no parameters.
                     wxMessageBox(_("Could not open the selected target."), _("Could not open target"),
                                  wxOK | wxICON_ERROR, this);
             },

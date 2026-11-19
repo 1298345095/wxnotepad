@@ -64,6 +64,7 @@ msgstr " (唯讀檔案)"
 msgid " (Read Only Mode)"
 msgstr " (唯讀模式)"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT syntax-name suffix for a manually selected scheme, including its space.
 #: src/app/editor_frame_status.cpp
 msgid " (override)"
 msgstr " (覆寫)"
@@ -85,10 +86,12 @@ msgstr "「%s」是唯讀的。是否儲存到另一個檔案？"
 msgid "%s - wxnotepad"
 msgstr "%s - wxnotepad"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT document size; %s is the locale-formatted byte count.
 #: src/app/editor_frame_status.cpp
 #, c-format
-msgid "%s bytes"
-msgstr "%s 位元組"
+msgid "%s byte"
+msgid_plural "%s bytes"
+msgstr[0] "%s 位元組"
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 #, c-format
@@ -167,10 +170,12 @@ msgstr "為符合的行新增書籤(&B)"
 msgid "&Boundary:"
 msgstr "長度(&B)："
 
+#. TRANSLATORS: IDD_OPENWITH button selecting the directory containing available programs.
 #: src/app/document_tools.cpp
 msgid "&Browse Directory..."
 msgstr "瀏覽目錄(&B)..."
 
+#. TRANSLATORS: IDD_RUN button opening the native program chooser.
 #: src/app/run_command.cpp
 msgid "&Browse..."
 msgstr "瀏覽(&B)..."
@@ -206,10 +211,13 @@ msgstr "欄（留空或 1 - %lld）(&C)："
 msgid "&Column sort (rectangular selection)."
 msgstr "按欄排序（矩形選取範圍）(&C)。"
 
+#. TRANSLATORS: IDD_RUN command input label; the field accepts a program and its arguments.
+#. TRANSLATORS: IDD_RUN command input accessible name, matching its visible label.
 #: src/app/run_command.cpp
 msgid "&Command:"
 msgstr "命令(&C)："
 
+#. TRANSLATORS: IDR_POPUPMENU copy selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
 msgid "&Copy"
 msgstr "複製(&C)"
@@ -258,6 +266,7 @@ msgstr "預設換行模式(&D)："
 msgid "&Default..."
 msgstr "預設(&D)..."
 
+#. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
 #: src/app/editor_frame_commands.cpp
 msgid "&Delete"
 msgstr "刪除(&D)"
@@ -420,6 +429,7 @@ msgstr "長行標記(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小寫(&L)\tCtrl+U"
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_MANUALLYDELETE checkbox; retain old backups for manual deletion.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "&Manually delete backups."
 msgstr "手動刪除備份(&M)。"
@@ -504,6 +514,7 @@ msgstr "舊版 Visual Studio(&O)"
 msgid "&One Page"
 msgstr "一頁(&O)"
 
+#. TRANSLATORS: IDR_POPUPMENU open the selected or caret-local file, folder or link.
 #: src/app/editor_frame_commands.cpp
 msgid "&Open"
 msgstr "開啟(&O)"
@@ -532,6 +543,7 @@ msgstr "其他時間戳(&O)"
 msgid "&Pad With Spaces\tAlt+P"
 msgstr "用空白補齊(&P)\tAlt+P"
 
+#. TRANSLATORS: IDR_POPUPMENU paste clipboard text.
 #: src/app/editor_frame_commands.cpp
 msgid "&Paste"
 msgstr "貼上(&P)"
@@ -556,6 +568,7 @@ msgstr "列印(&P)...\tCtrl+P"
 msgid "&Read Only Mode\tF10"
 msgstr "唯讀模式(&R)\tF10"
 
+#. TRANSLATORS: IDR_POPUPMENU redo editing command.
 #: src/app/editor_frame_commands.cpp
 msgid "&Redo"
 msgstr "重做(&R)"
@@ -610,10 +623,12 @@ msgstr "回復(&V)\tF5"
 msgid "&Right."
 msgstr "靠右(&R)。"
 
+#. TRANSLATORS: IDD_RUN affirmative button that launches the entered command.
 #: src/app/run_command.cpp
 msgid "&Run"
 msgstr "執行(&R)"
 
+#. TRANSLATORS: IDD_RUN menu command; retain the tab-separated keyboard shortcut.
 #: src/app/run_command.cpp
 msgid "&Run Command...\tCtrl+R"
 msgstr "執行命令(&R)...\tCtrl+R"
@@ -628,6 +643,7 @@ msgstr "儲存(&S)"
 msgid "&Save\tCtrl+S"
 msgstr "儲存(&S)\tCtrl+S"
 
+#. TRANSLATORS: SaveBeforeRunningTools preference; ask about unsaved changes before external tool commands.
 #: src/app/document_tools.cpp
 msgid "&Save Before Running Tools"
 msgstr "執行工具前儲存(&S)"
@@ -701,6 +717,7 @@ msgstr "工具(&T)"
 msgid "&UTC Date Time"
 msgstr "&UTC 日期與時間"
 
+#. TRANSLATORS: IDR_POPUPMENU undo editing command.
 #: src/app/editor_frame_commands.cpp
 msgid "&Undo"
 msgstr "復原(&U)"
@@ -820,6 +837,7 @@ msgstr "ASP.NET VB"
 msgid "ASS — Activate &symmetric swapping"
 msgstr "ASS — 啟用對稱字元交換(&S)"
 
+#. TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
 #: src/app/editor_frame_commands.cpp
 msgid "Action on &Selection"
 msgstr "對選取內容執行動作(&S)"
@@ -839,6 +857,7 @@ msgstr "行對齊"
 msgid "All Files (*)"
 msgstr "所有檔案 (*)"
 
+#. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有檔案 (*)|*"
@@ -910,10 +929,12 @@ msgstr "自動補上 HTML 與 XML 結束標籤"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自動縮短水平捲軸"
 
+#. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "AutoSave Settings"
 msgstr "自動儲存設定"
 
+#. TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
 #: src/app/editor_frame_commands.cpp
 msgid "AutoSave Settings..."
 msgstr "自動儲存設定..."
@@ -946,10 +967,12 @@ msgstr "在縮排處按 Backspace 鍵刪除至 Tab 定位點"
 msgid "Backticks"
 msgstr "反引號"
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD label; the numeric interval is measured in seconds.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Backup period (in &seconds):"
 msgstr "備份間隔（秒）(&S)："
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD accessible input name; units are seconds.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Backup period in seconds"
 msgstr "備份間隔（秒）"
@@ -1049,6 +1072,7 @@ msgstr "忽略大小寫(&I)。"
 msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
 msgstr "目前文字中的某些字元不受所選編碼支援，儲存時可能會被取代為預設字元。建議選擇其他檔案編碼。要繼續嗎？"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based character position / line Unicode character count.
 #: src/app/editor_frame_status.cpp
 #, c-format
 msgid "Ch %s / %s"
@@ -1064,10 +1088,12 @@ msgstr "變更歷程標記(&H)"
 msgid "Change &background color."
 msgstr "變更背景顏色(&B)。"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
 #: src/app/editor_frame_commands.cpp
 msgid "Change the disk file's read-only attribute. F10 controls editing only."
 msgstr "變更磁碟檔案的唯讀屬性。F10 僅控制編輯保護。"
 
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE help; owner-write changes affect the owner's other processes.
 #: src/app/editor_frame_commands.cpp
 msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
 msgstr "變更檔案擁有者的寫入權限，也會影響該使用者的其他程式。F10 僅控制編輯保護。"
@@ -1101,6 +1127,7 @@ msgstr "儲存前請先選擇檔案名稱。"
 msgid "Choose an existing file to open."
 msgstr "選擇要開啟的現有檔案。"
 
+#. TRANSLATORS: IDD_RUN Browse action; title of the native executable chooser.
 #: src/app/run_command.cpp
 msgid "Choose program"
 msgstr "選擇程式"
@@ -1139,6 +1166,7 @@ msgstr "關閉"
 msgid "Code page %d (unavailable)"
 msgstr "字碼頁 %d（無法使用）"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based visual column / line columns, including tab expansion.
 #: src/app/editor_frame_status.cpp
 #, c-format
 msgid "Col %s / %s"
@@ -1236,20 +1264,24 @@ msgstr "將選取範圍複製為搜尋文字"
 msgid "Copy as &RTF"
 msgstr "複製為富文字(&R)"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
 #: src/document/document_session.cpp
 #, c-format
 msgid "Could not change file attributes: %s"
 msgstr "無法變更檔案屬性：%s"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE error-dialog title.
 #: src/app/editor_frame_commands.cpp
 msgid "Could not change file protection"
 msgstr "無法變更檔案保護"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE failure; first %s is the path, second %s is the native error.
 #: src/app/editor_frame_commands.cpp
 #, c-format
 msgid "Could not change read-only protection for %s. %s"
 msgstr "無法變更 %s 的唯讀保護。%s"
 
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
 #: src/document/document_session.cpp
 #, c-format
 msgid "Could not change the file owner's write permission: %s"
@@ -1267,14 +1299,18 @@ msgstr "無法在目的檔案旁建立暫存檔案。請檢查資料夾及存取
 msgid "Could not determine the file size."
 msgstr "無法判斷檔案大小。"
 
+#. TRANSLATORS: IDM_FILE_LAUNCH error title; the message body contains the native launch error.
 #: src/app/document_tools.cpp
 msgid "Could not execute document"
 msgstr "無法執行文件"
 
+#. TRANSLATORS: Linux IDM_FILE_LAUNCH/OPENWITH error loading a native .desktop entry; no parameters.
+#. TRANSLATORS: Linux IDM_FILE_OPENWITH error loading a native .desktop program entry; no parameters.
 #: src/app/desktop_launch.cpp src/app/document_tools.cpp
 msgid "Could not load the desktop application entry."
 msgstr "無法載入桌面應用程式項目。"
 
+#. TRANSLATORS: IDM_FILE_OPENWITH error title; the message body contains the native launch error.
 #: src/app/document_tools.cpp
 msgid "Could not open document with program"
 msgstr "無法使用所選程式開啟文件"
@@ -1292,6 +1328,7 @@ msgstr "無法開啟新視窗"
 msgid "Could not open target"
 msgstr "無法開啟目標"
 
+#. TRANSLATORS: Native containing-folder launch error and its dialog title; no parameters.
 #: src/app/editor_frame_commands.cpp
 msgid "Could not open the containing folder."
 msgstr "無法開啟所在資料夾。"
@@ -1304,6 +1341,7 @@ msgstr "無法開啟目的檔案進行寫入。"
 msgid "Could not open the file for reading."
 msgstr "無法開啟檔案進行讀取。"
 
+#. TRANSLATORS: Selected file/folder/link launch failure and dialog title; no parameters.
 #: src/app/open_targets.cpp
 msgid "Could not open the selected target."
 msgstr "無法開啟選取的目標。"
@@ -1314,11 +1352,13 @@ msgstr "無法開啟選取的目標。"
 msgid "Could not print \"%s\"."
 msgstr "無法列印「%s」。"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
 #: src/document/document_session.cpp
 #, c-format
 msgid "Could not read file attributes: %s"
 msgstr "無法讀取檔案屬性：%s"
 
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
 #: src/document/document_session.cpp
 #, c-format
 msgid "Could not read file permissions: %s"
@@ -1328,6 +1368,7 @@ msgstr "無法讀取檔案權限：%s"
 msgid "Could not read the complete file."
 msgstr "無法讀取完整檔案。"
 
+#. TRANSLATORS: IDD_OPENWITH failure reading the selected program directory; no parameters.
 #: src/app/document_tools.cpp
 msgid "Could not read the program directory."
 msgstr "無法讀取程式目錄。"
@@ -1345,6 +1386,7 @@ msgstr "無法取代目的檔案：%s"
 msgid "Could not restart wxnotepad."
 msgstr "無法重新啟動 wxnotepad。"
 
+#. TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
 #: src/app/run_command.cpp
 #, c-format
 msgid "Could not run command: %s"
@@ -1372,6 +1414,7 @@ msgstr "無法寫入 %s"
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "無法寫入完整檔案。請檢查可用空間及存取權限。"
 
+#. TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
 msgid "Cu&t"
 msgstr "剪下(&T)"
@@ -1487,6 +1530,7 @@ msgstr "在選取範圍內繪製方塊游標(&S)"
 msgid "Enable &Multiple Selection"
 msgstr "啟用多重選取(&M)"
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_ENABLE checkbox; enable timed backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Enable &periodic backup."
 msgstr "啟用定期備份(&P)。"
@@ -1531,6 +1575,7 @@ msgstr "轉義 C 字元(&P)\tCtrl+Alt+E"
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
 
+#. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
 #: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "執行文件(&D)\tCtrl+L"
@@ -1632,6 +1677,7 @@ msgstr "搜尋字串"
 msgid "Finish completion (Esc cancels)"
 msgstr "確認完成（Esc 取消）"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; match count followed by " ..." while occurrence marking is pending.
 #: src/app/editor_frame_status.cpp
 #, c-format
 msgid "Fnd %s%s"
@@ -1973,6 +2019,7 @@ msgstr "換行字元轉換"
 msgid "Ln %llu, Col %llu"
 msgstr "行 %llu，欄 %llu"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based line / total document lines, both formatted numbers.
 #: src/app/editor_frame_status.cpp
 #, c-format
 msgid "Ln %s / %s"
@@ -2143,6 +2190,7 @@ msgstr "無"
 msgid "Normal"
 msgstr "正常"
 
+#. TRANSLATORS: IDM_FILE_OPENWITH menu command; choose a program for the current document.
 #: src/app/document_tools.cpp
 msgid "O&pen Document With..."
 msgstr "開啟文件方式(&P)..."
@@ -2156,6 +2204,7 @@ msgstr "OEM United States (DOS-437)"
 msgid "On &Startup"
 msgstr "啟動時進入全螢幕(&S)"
 
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
 #: src/document/document_session.cpp
 msgid "Only the file owner can change the owner's write permission."
 msgstr "只有檔案擁有者才能變更擁有者的寫入權限。"
@@ -2164,6 +2213,7 @@ msgstr "只有檔案擁有者才能變更擁有者的寫入權限。"
 msgid "Only words in document"
 msgstr "僅使用文件內的單詞"
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Open &Folder"
 msgstr "開啟資料夾(&F)"
@@ -2199,10 +2249,14 @@ msgstr "作為 UTF-16LE 開啟..."
 msgid "Open As Windows-1252..."
 msgstr "作為 Windows-1252 開啟..."
 
+#. TRANSLATORS: Open the current document's containing directory in the native file manager.
+#. TRANSLATORS: Original Action on Selection commands; open the target or its containing directory.
 #: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
 msgid "Open Containing &Folder"
 msgstr "開啟所在資料夾(&F)"
 
+#. TRANSLATORS: IDD_OPENWITH title; choose a program to open the current document.
+#. TRANSLATORS: IDD_OPENWITH directory browser title.
 #: src/app/document_tools.cpp
 msgid "Open Document With"
 msgstr "開啟文件方式"
@@ -2308,6 +2362,7 @@ msgstr "列印縮放比例"
 msgid "Print zoom (%d%% to %d%%):"
 msgstr "列印縮放（%d%% 至 %d%%）："
 
+#. TRANSLATORS: IDD_RUN program browser filter; preserve wildcard patterns and vertical-bar separators.
 #: src/app/run_command.cpp
 msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
 msgstr "程式 (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|所有檔案 (*.*)|*.*"
@@ -2359,6 +2414,7 @@ msgstr "已到達文件開頭，從結尾重新搜尋。"
 msgid "Reached the end of the document, restarting search at the beginning."
 msgstr "已到達文件結尾，從開頭重新搜尋。"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE menu item; changes disk-file protection.
 #: src/app/editor_frame_commands.cpp
 msgid "Read Only &File"
 msgstr "唯讀檔案(&F)"
@@ -2483,6 +2539,7 @@ msgstr "右邊界"
 msgid "Right:"
 msgstr "右："
 
+#. TRANSLATORS: IDD_RUN dialog title.
 #: src/app/run_command.cpp
 msgid "Run Command"
 msgstr "執行命令"
@@ -2585,6 +2642,9 @@ msgstr "重新載入前是否儲存對 %s 的變更？"
 msgid "Save changes to %s before restarting?"
 msgstr "重新啟動前是否儲存對 %s 的變更？"
 
+#. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
+#. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
+#. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
 #: src/app/document_tools.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
@@ -2599,6 +2659,7 @@ msgstr "儲存變更？"
 msgid "Save file"
 msgstr "儲存檔案"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
 #: src/document/document_session.cpp
 msgid "Save the document before changing file permissions."
 msgstr "請先儲存文件，再變更檔案權限。"
@@ -2643,16 +2704,19 @@ msgstr "捲動超出最後一行(&L)"
 msgid "Search wrapped"
 msgstr "循環搜尋"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
 #: src/app/editor_frame_status.cpp
 #, c-format
 msgid "Sel %s / %s"
 msgstr "選取 %s / %s"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; %s is the formatted number of selected logical lines.
 #: src/app/editor_frame_status.cpp
 #, c-format
 msgid "SelLn %s"
 msgstr "選取行 %s"
 
+#. TRANSLATORS: IDR_POPUPMENU select the complete document.
 #: src/app/editor_frame_commands.cpp
 msgid "Select &All"
 msgstr "全選(&A)"
@@ -2955,10 +3019,12 @@ msgstr "Tab 轉為空白"
 msgid "Text files (*.txt)"
 msgstr "文字檔案 (*.txt)"
 
+#. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
 msgid "The command contains an unfinished quote."
 msgstr "命令中有未閉合的引號。"
 
+#. TRANSLATORS: Linux IDD_RUN parser error; a trailing backslash has no following character.
 #: src/app/run_command.cpp
 msgid "The command ends with an unfinished escape."
 msgstr "命令以未完成的跳脫字元結尾。"
@@ -3019,6 +3085,8 @@ msgstr "所選編碼（字碼頁 %u）尚未移植。文件未變更。"
 msgid "The specified text was not found."
 msgstr "找不到指定的文字。"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
+#. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
 #: src/document/document_session.cpp
 msgid "This command changes a file, not a directory."
 msgstr "此命令只能變更檔案，不能變更目錄。"
@@ -3079,6 +3147,7 @@ msgstr "轉十六進位(&H)\tCtrl+Alt+H"
 msgid "To &Octet"
 msgstr "轉八進位(&O)"
 
+#. TRANSLATORS: IDR_POPUPMENU toggle the current fold block.
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle &Fold"
 msgstr "切換摺疊(&F)"
@@ -3394,6 +3463,10 @@ msgstr "縮放比例（%d%% 至 %d%%）："
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+#, c-format
+#~ msgid "%s bytes"
+#~ msgstr "%s 位元組"
 
 #, c-format
 #~ msgid "%s%s | %s%s | EOL: %s"

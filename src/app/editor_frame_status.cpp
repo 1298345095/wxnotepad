@@ -62,7 +62,9 @@ intptr_t SelectionBytes(EditorControl& editor) {
     return bytes;
 }
 wxString DocumentSize(intptr_t bytes) {
-    if (bytes < 1024) return wxString::Format(_("%s bytes"), Number(bytes));
+    if (bytes < 1024)
+        // TRANSLATORS: IDS_STATUSITEM_FORMAT document size; %s is the locale-formatted byte count.
+        return wxString::Format(wxPLURAL("%s byte", "%s bytes", static_cast<unsigned>(bytes)), Number(bytes));
     constexpr std::array units{"KB", "MB", "GB", "TB"};
     double size = static_cast<double>(bytes) / 1024;
     size_t unit = 0;
@@ -100,8 +102,11 @@ void EditorFrame::UpdatePositionStatus() {
         statusRevision_ = revision;
         statusTabWidth_ = tabWidth;
     }
+    // TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based line / total document lines, both formatted numbers.
     set(StatusField::Line, wxString::Format(_("Ln %s / %s"), Number(line + 1), Number(editor_->Send(GetLineCount))));
+    // TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based visual column / line columns, including tab expansion.
     set(StatusField::Column, wxString::Format(_("Col %s / %s"), Number(column), Number(statusLineColumns_)));
+    // TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based character position / line Unicode character count.
     set(StatusField::Character, wxString::Format(_("Ch %s / %s"), Number(character), Number(statusLineCharacters_)));
     const auto selectionStart = editor_->Send(GetSelectionStart);
     const auto selectionEnd = editor_->Send(GetSelectionEnd);
@@ -109,15 +114,19 @@ void EditorFrame::UpdatePositionStatus() {
     const bool rectangle = editor_->Send(SelectionIsRectangle) != 0;
     const wxString characters = selected && rectangle ? wxString("--") : Number(editor_->SelectionCharacterCount());
     const wxString bytes = selected && rectangle ? wxString("--") : Number(selected ? SelectionBytes(*editor_) : 0);
+    // TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
     set(StatusField::Selection, wxString::Format(_("Sel %s / %s"), characters, bytes));
     const auto first = editor_->Send(LineFromPosition, selectionStart);
     const auto last = editor_->Send(LineFromPosition, selectionEnd);
     const auto lines = selected ? last - first + (editor_->Send(PositionFromLine, last) != selectionEnd) : 0;
+    // TRANSLATORS: IDS_STATUSITEM_FORMAT; %s is the formatted number of selected logical lines.
     set(StatusField::SelectedLines, wxString::Format(_("SelLn %s"), Number(lines)));
     const auto& marking = editor_->Occurrences();
+    // TRANSLATORS: IDS_STATUSITEM_FORMAT; match count followed by " ..." while occurrence marking is pending.
     set(StatusField::Matches, wxString::Format(_("Fnd %s%s"), Number(static_cast<intptr_t>(marking.MatchCount())),
                                                marking.Pending() ? " ..." : ""));
     set(StatusField::Scheme,
+        // TRANSLATORS: IDS_STATUSITEM_FORMAT syntax-name suffix for a manually selected scheme, including its space.
         LanguageName(document_.EffectiveLanguage()) + (document_.LanguageOverride() ? _(" (override)") : wxString{}));
     const auto eol = static_cast<Scintilla::EndOfLine>(editor_->Send(GetEOLMode));
     set(StatusField::Eol, eol == Scintilla::EndOfLine::CrLf ? "CR+LF" : eol == Scintilla::EndOfLine::Cr ? "CR" : "LF");

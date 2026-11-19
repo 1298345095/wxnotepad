@@ -217,6 +217,52 @@ void BrowseProgram(EditorFrame* frame) {
     driver.Check();
     std::puts("PASS: native executable browser accept/cancel and remaining arguments");
 }
+#ifndef __WXMSW__
+void LiteralNamedPrograms(EditorFrame* frame) {
+    const auto directory = TestFiles::TemporaryDirectory("literal-run-paths");
+    std::filesystem::create_directories(directory);
+    wxFileName child(wxStandardPaths::Get().GetExecutablePath());
+    child.SetFullName("run_command_child");
+    const auto id = frame->GetMenuBar()->FindMenuItem("Tools", "Run Command...");
+    for (const auto* name : {"$HOME", "double\"quote", "back\\slash", "single'quote"}) {
+        const auto program = directory / name;
+        const auto script = "#!/bin/sh\nexec \"" + child.GetFullPath().utf8_string() + "\" \"$0\" \"$@\"\n";
+        TestFiles::WriteBytes(program, script);
+        std::filesystem::permissions(program, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
+        // Open's existing environment expansion supplies the literal filename once;
+        // the document identity must not expand it again when Run is initialized.
+        wxSetEnv("WXNOTEPAD_RUN_NAMED_PATH", TestFiles::Filename(program));
+        Require(frame->Open(wxString("$WXNOTEPAD_RUN_NAMED_PATH")).status == OpenStatus::Opened &&
+                    frame->DocumentPath() == TestFiles::Filename(program),
+                "open a real named executable with literal filename punctuation");
+        const auto record = directory / (std::string(name) + ".record");
+        wxSetEnv("WXNOTEPAD_RUN_RECORD", TestFiles::Filename(record));
+        wxSetEnv("WXNOTEPAD_RUN_DOCUMENT", frame->DocumentPath());
+        DialogDriver driver([](wxDialog* dialog) {
+            auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
+            input->SetValue(input->GetValue() + " 'literal argument'");
+            NativeSearch::Click(dialog, wxID_OK);
+            if (dialog->IsModal()) {
+                NativeSearch::Click(dialog, wxID_CANCEL);
+                throw std::runtime_error("named-document prefill launches its literal executable path");
+            }
+        });
+        NativeSearch::Command(frame, id);
+        driver.Check();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (!std::filesystem::exists(record) && std::chrono::steady_clock::now() < deadline) {
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Require(std::filesystem::exists(record) &&
+                    TestFiles::Bytes(record) == directory.string() + "\n" + program.string() + "\nliteral argument\n",
+                "actual child argv retains dollar, quote and backslash characters from the named document");
+        Require(TestFiles::Bytes(record.string() + ".disk") == script,
+                "recording child reads the literal document on disk");
+    }
+    std::puts("PASS: real named-document prefills preserve literal Linux executable filenames and child argv");
+}
+#endif
 void NamedAndFailure(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("named-tools") / TestFiles::Utf8Path("folder 中文");
     std::filesystem::create_directories(directory);
@@ -230,8 +276,12 @@ void NamedAndFailure(EditorFrame* frame) {
             try {
                 Require(presented, "compositor presents Ctrl+R dialog");
                 auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
-                Require(input->GetValue() == "\"" + frame->DocumentPath() + "\"",
-                        "named command starts with quoted full path");
+#ifdef __WXMSW__
+                const auto expected = "\"" + frame->DocumentPath() + "\"";
+#else
+                const auto expected = "'" + frame->DocumentPath() + "'";
+#endif
+                Require(input->GetValue() == expected, "named command starts with quoted full path");
                 input->SetValue("wxnotepad-no-such-program-245");
                 NativeSearch::Click(dialog, wxID_OK);
                 Require(dialog->IsModal() && input->IsEditable(), "failed ordinary launch keeps editable modal dialog");
@@ -458,6 +508,9 @@ public:
                 LaunchArguments(frame);
                 WidthPersistence(frame, *settings_);
                 BrowseProgram(frame);
+#ifndef __WXMSW__
+                LiteralNamedPrograms(frame);
+#endif
                 NamedAndFailure(frame);
                 LaunchArguments(frame);
                 SaveBeforeTools(frame, *settings_);

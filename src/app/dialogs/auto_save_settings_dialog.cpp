@@ -17,13 +17,16 @@
 #include "document/document_session.h"
 
 bool ShowAutoSaveSettingsDialog(wxWindow* parent, AutoSaveOptions& options) {
+    // TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
     wxDialog dialog(parent, wxID_ANY, _("AutoSave Settings"));
     auto* layout = new wxBoxSizer(wxVERTICAL);
+    // TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_ENABLE checkbox; enable timed backup copies.
     auto* enabled = new wxCheckBox(&dialog, wxID_ANY, _("Enable &periodic backup."));
     enabled->SetName("Periodic backup");
     enabled->SetValue(options.flags & AutoSaveOption::Periodic);
     layout->Add(enabled, 0, wxALL, dialog.FromDIP(10));
     auto* row = new wxBoxSizer(wxHORIZONTAL);
+    // TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD label; the numeric interval is measured in seconds.
     row->Add(new wxStaticText(&dialog, wxID_ANY, _("Backup period (in &seconds):")), 0,
              wxALIGN_CENTER_VERTICAL | wxRIGHT, dialog.FromDIP(10));
     const auto period = options.periodMilliseconds;
@@ -31,14 +34,17 @@ bool ShowAutoSaveSettingsDialog(wxWindow* parent, AutoSaveOptions& options) {
                                     : wxString::Format("%u.0", period / 1000);
     auto* input = new wxTextCtrl(&dialog, wxID_ANY, text);
     input->SetName("AutoSave period");
+    // TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD accessible input name; units are seconds.
     AppLocalization::SetAccessibleName(*input, _("Backup period in seconds"));
     input->SetMaxLength(31);
     row->Add(input, 1);
     layout->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
+    // TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_MANUALLYDELETE checkbox; retain old backups for manual deletion.
     auto* retain = new wxCheckBox(&dialog, wxID_ANY, _("&Manually delete backups."));
     retain->SetName("Manually delete backups");
     retain->SetValue(options.flags & AutoSaveOption::ManuallyDelete);
     layout->Add(retain, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
+    // TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
     auto* folder = new wxButton(&dialog, wxID_ANY, _("Open &Folder"));
     folder->SetName("Open backup folder");
     folder->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {

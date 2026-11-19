@@ -3,6 +3,7 @@
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include "editor/occurrence_marking.h"
+#include "editor/editor_ids.h"
 #include <wx/toolbar.h>
 #include <wx/statusbr.h>
 #include <memory>
@@ -49,6 +50,23 @@ void NativeSelectionColours(EditorControl* editor) {
         std::printf("Selection element %d: expected=%08x actual=%08x\n", static_cast<int>(element), native, colour);
         Require(colour == native, "default selected text uses the native highlight foreground/background pair");
     }
+}
+void NativeFoldMargin(EditorControl* editor) {
+    using enum Scintilla::Message;
+    int left = 0;
+    for (int margin = 0; margin < EditorMargin::Folding; ++margin)
+        left += static_cast<int>(editor->Send(GetMarginWidthN, margin));
+    const auto width = editor->Send(GetMarginWidthN, EditorMargin::Folding);
+    Require(width >= 2, "default folding margin is visible");
+    // wxSTC's native chrome pattern is used without fold-color overrides.
+    const auto chrome = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    const auto highlight = wxSystemSettings::GetColour(wxSYS_COLOUR_3DHIGHLIGHT);
+    const auto fill = highlight == *wxWHITE ? chrome : highlight;
+    const auto pixels =
+        NativePaint::Read(editor, wxRect(left + static_cast<int>(width) / 2, editor->GetClientSize().y / 2, 2, 2));
+    Require(std::count(pixels.begin(), pixels.end(), fill) >= 2 &&
+                std::count(pixels.begin(), pixels.end(), highlight) >= 2,
+            "painted folding margin follows the native wxSTC chrome colors");
 }
 void DisabledArtworkColours(wxToolBar* toolbar) {
     if (!wxSystemSettings::GetAppearance().IsDark()) return;
@@ -141,6 +159,14 @@ public:
                 using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 NativeSelectionColours(editor);
+                NativeFoldMargin(editor);
+                for (const auto [text, size] :
+                     {std::pair{"", "0 bytes"}, std::pair{"a", "1 byte"}, std::pair{"ab", "2 bytes"}}) {
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+                    NativePaint::Complete(editor);
+                    Require(frame->GetStatusBar()->GetStatusText(StatusField::DocumentSize) == size,
+                            "document byte count uses singular only for one byte");
+                }
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one\r\n\t中😀"));
                 editor->Send(SetTabWidth, 4);
                 editor->Send(GotoPos, 13);
@@ -154,6 +180,13 @@ public:
                 NativePaint::Complete(editor);
                 Require(status->GetStatusText(3) == "Sel 8 / 13" && status->GetStatusText(4) == "SelLn 2",
                         "original selection reports separate scalar and byte counts and selected lines");
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Lines)));
+                NativePaint::Complete(editor);
+                Require(status->GetStatusText(3) == "Sel 8 / 13" && status->GetStatusText(4) == "SelLn 2",
+                        "line selection reports original nonrectangular Unicode character and byte counts");
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
                 Require(frame->GetTitle().StartsWith("* "), "original modified title prefix includes its space");
                 frame->SetSize(wxSize(1000, 700));
                 editor->Send(GotoPos, 0);

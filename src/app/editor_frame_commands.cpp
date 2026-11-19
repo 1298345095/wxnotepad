@@ -118,18 +118,27 @@ void EditorFrame::ShowEditorContextMenu(wxContextMenuEvent& event) {
             editor_->Send(GotoPos, editor_->Send(PositionFromPoint, point.x, point.y));
     }
     wxMenu menu;
+    // TRANSLATORS: IDR_POPUPMENU undo editing command.
     menu.Append(wxID_UNDO, _("&Undo"));
+    // TRANSLATORS: IDR_POPUPMENU redo editing command.
     menu.Append(wxID_REDO, _("&Redo"));
     menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
     menu.Append(wxID_CUT, _("Cu&t"));
+    // TRANSLATORS: IDR_POPUPMENU copy selection to the clipboard.
     menu.Append(wxID_COPY, _("&Copy"));
+    // TRANSLATORS: IDR_POPUPMENU paste clipboard text.
     menu.Append(wxID_PASTE, _("&Paste"));
+    // TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
     menu.Append(wxID_DELETE, _("&Delete"));
     menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU select the complete document.
     menu.Append(wxID_SELECTALL, _("Select &All"));
     menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU toggle the current fold block.
     menu.Append(currentBlockFoldId_, _("Toggle &Fold"));
     menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU open the selected or caret-local file, folder or link.
     menu.Append(openSelectionId_, _("&Open"));
     // Keep the editor as the native popup's invoking window and focus owner.
     auto screen = editor_->ClientToScreen(point + wxPoint(1, 1));
@@ -155,6 +164,7 @@ wxMenu* EditorFrame::CreateToolsMenu() {
     tools->AppendSeparator();
     auto* selection = new wxMenu;
     AppendOpenTargetCommands(selection);
+    // TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
     tools->AppendSubMenu(selection, _("Action on &Selection"));
     auto* base64 = new wxMenu;
     for (const auto& [label, command] :
@@ -317,11 +327,14 @@ wxMenu* EditorFrame::CreateFileMenu() {
     auto* mode = new wxMenu;
     const int readOnlyFile = wxWindow::NewControlId();
 #ifdef __WXMSW__
+    // TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
     const wxString fileProtectionHelp = _("Change the disk file's read-only attribute. F10 controls editing only.");
 #else
     const wxString fileProtectionHelp =
+        // TRANSLATORS: Linux IDM_FILE_READONLY_FILE help; owner-write changes affect the owner's other processes.
         _("Change the file owner's write permission for this user's other programs too. F10 controls editing only.");
 #endif
+    // TRANSLATORS: IDM_FILE_READONLY_FILE menu item; changes disk-file protection.
     auto* readOnlyFileItem = mode->AppendCheckItem(readOnlyFile, _("Read Only &File"), fileProtectionHelp);
     Bind(
         wxEVT_MENU,
@@ -331,7 +344,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
             UpdateWindowUI(wxUPDATE_UI_RECURSE);
             if (!error.empty())
                 wxMessageBox(
+                    // TRANSLATORS: IDM_FILE_READONLY_FILE failure; first %s is the path, second %s is the native error.
                     wxString::Format(_("Could not change read-only protection for %s. %s"), document_.Path(), error),
+                    // TRANSLATORS: IDM_FILE_READONLY_FILE error-dialog title.
                     _("Could not change file protection"), wxOK | wxICON_ERROR, this);
         },
         readOnlyFile);
@@ -445,11 +460,13 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->AppendSeparator();
     file->Append(updateTime, _("Update File Time"));
     const int containingFolder = wxWindow::NewControlId();
+    // TRANSLATORS: Open the current document's containing directory in the native file manager.
     file->Append(containingFolder, _("Open Containing &Folder"));
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
             if (!OpenContainingFolder())
+                // TRANSLATORS: Native containing-folder launch error and its dialog title; no parameters.
                 wxMessageBox(_("Could not open the containing folder."), _("Could not open target"),
                              wxOK | wxICON_ERROR, this);
         },
@@ -2257,6 +2274,7 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
     const int autoSave = wxWindow::NewControlId();
+    // TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
     view->Append(autoSave, _("AutoSave Settings..."));
     Bind(
         wxEVT_MENU,

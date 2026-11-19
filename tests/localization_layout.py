@@ -1,5 +1,6 @@
 """Inspect and capture the actual visible native dialog layout externally."""
 import ctypes
+from contextlib import contextmanager
 from ctypes import wintypes
 import json
 import os
@@ -10,6 +11,36 @@ import time
 import zlib
 
 TEXT_ROUNDING_PIXELS = 2
+
+
+@contextmanager
+def owned_topmost(dialogs, process, window):
+    """Temporarily expose only an owned capture window, restoring its native state."""
+    if sys.platform != 'win32':
+        yield
+        return
+    user = dialogs.user
+    owner = wintypes.DWORD()
+    user.GetWindowThreadProcessId(window, ctypes.byref(owner))
+    assert owner.value == process.pid, 'Screenshot window belongs to the owned packaged process'
+    extended_style_index = -20  # GWL_EXSTYLE
+    topmost_style = 0x00000008  # WS_EX_TOPMOST
+    topmost_window = wintypes.HWND(-1)  # HWND_TOPMOST
+    not_topmost_window = wintypes.HWND(-2)  # HWND_NOTOPMOST
+    no_size, no_move, no_activate = 0x0001, 0x0002, 0x0010  # SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+    positioning_flags = no_size | no_move | no_activate
+    user.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
+    user.GetWindowLongPtrW.restype = wintypes.LPARAM
+    user.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+                                 ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user.SetWindowPos.restype = wintypes.BOOL
+    was_topmost = bool(user.GetWindowLongPtrW(window, extended_style_index) & topmost_style)
+    assert user.SetWindowPos(window, topmost_window, 0, 0, 0, 0, positioning_flags)
+    try:
+        yield
+    finally:
+        placement = topmost_window if was_topmost else not_topmost_window
+        assert user.SetWindowPos(window, placement, 0, 0, 0, 0, positioning_flags)
 CAPTURE_STABLE_SECONDS = .1
 CAPTURE_POLL_SECONDS = .03
 CAPTURE_TIMEOUT_SECONDS = 10
