@@ -134,10 +134,9 @@ def main():
                 assert menus(app.state)[ids[save_tools]]['checked'] == '1'
                 app.begin('menu', str(ids[open_with]))
                 window = fixture.dialogs.wait(app.process, title)
-                capture(fixture, app, window, fixture.logs / f'open-with-{code}.png')
                 if code == 'en':
                     change_directory(fixture, app, window, browse, changed)
-                    capture(fixture, app, window, fixture.logs / 'open-with-changed-directory.png')
+                capture(fixture, app, window, fixture.logs / f'open-with-{code}.png')
                 fixture.dialogs.cancel(window)
                 app.finish()
                 app.close()

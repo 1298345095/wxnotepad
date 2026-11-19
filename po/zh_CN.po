@@ -1065,7 +1065,7 @@ msgstr "无法确定文件大小。"
 msgid "Could not execute document"
 msgstr "无法执行文档"
 
-#: src/app/document_tools.cpp
+#: src/app/desktop_launch.cpp src/app/document_tools.cpp
 msgid "Could not load the desktop application entry."
 msgstr "无法加载桌面应用程序条目。"
 

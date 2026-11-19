@@ -972,7 +972,7 @@ msgstr ""
 msgid "Could not execute document"
 msgstr ""
 
-#: src/app/document_tools.cpp
+#: src/app/desktop_launch.cpp src/app/document_tools.cpp
 msgid "Could not load the desktop application entry."
 msgstr ""
 
