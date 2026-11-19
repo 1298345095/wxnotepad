@@ -51,6 +51,9 @@ public:
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
     bool NewWindow();
+    bool OpenSelection(bool containingFolder = false);
+    bool OpenContainingFolder();
+    void AppendOpenTargetCommands(wxMenu* menu);
     bool Restart();
     OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                    std::optional<SyntaxLanguage> language, bool readOnly, Scintilla::Position line,
@@ -80,6 +83,8 @@ private:
     int saveCopyId_;
     OpenResult ReloadQuickEncoding(QuickReloadEncoding encoding);
     int recentFilesId_;
+    int openSelectionId_ = wxID_NONE;
+    int selectionFolderId_ = wxID_NONE;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();
     int revertId_;

@@ -424,6 +424,10 @@ msgstr "旧版 Visual Studio(&O)"
 msgid "&One Page"
 msgstr "一页(&O)"
 
+#: src/app/open_targets.cpp
+msgid "&Open File, Folder, Link, etc."
+msgstr "打开文件、文件夹、链接等(&O)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_OPEN.
 #: src/app/editor_frame_commands.cpp
 msgid "&Open...\tCtrl+O"
@@ -693,6 +697,10 @@ msgstr "ASP.NET VB"
 #: src/editor/special_insert.h
 msgid "ASS — Activate &symmetric swapping"
 msgstr "ASS — 启用对称交换(&S)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Action on &Selection"
+msgstr "对选中内容执行操作(&S)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ALIGN.
 #: src/app/editor_frame_commands.cpp
@@ -1053,6 +1061,10 @@ msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问
 msgid "Could not determine the file size."
 msgstr "无法确定文件大小。"
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr "无法加载桌面应用程序条目。"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -1062,6 +1074,14 @@ msgstr "无法打开文件"
 msgid "Could not open new window"
 msgstr "无法打开新窗口"
 
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Could not open target"
+msgstr "无法打开目标"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not open the containing folder."
+msgstr "无法打开所在文件夹。"
+
 #: src/document/document_session.cpp
 msgid "Could not open the destination for writing."
 msgstr "无法打开目标文件以写入。"
@@ -1069,6 +1089,10 @@ msgstr "无法打开目标文件以写入。"
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr "无法打开文件以读取。"
+
+#: src/app/open_targets.cpp
+msgid "Could not open the selected target."
+msgstr "无法打开选中的目标。"
 
 #. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
 #: src/app/editor_print_job.cpp
@@ -1865,6 +1889,10 @@ msgstr "作为 UTF-16LE 打开..."
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
 msgstr "作为 Windows-1252 打开..."
+
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Open Containing &Folder"
+msgstr "打开所在文件夹(&F)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"

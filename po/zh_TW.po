@@ -482,6 +482,10 @@ msgstr "舊版 Visual Studio(&O)"
 msgid "&One Page"
 msgstr "一頁(&O)"
 
+#: src/app/open_targets.cpp
+msgid "&Open File, Folder, Link, etc."
+msgstr "開啟檔案、資料夾、連結等(&O)"
+
 # Original Notepad4 zh-Hant: IDM_FILE_OPEN; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Open...\tCtrl+O"
@@ -765,6 +769,10 @@ msgstr "ASP.NET VB"
 #: src/editor/special_insert.h
 msgid "ASS — Activate &symmetric swapping"
 msgstr "ASS — 啟用對稱字元交換(&S)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Action on &Selection"
+msgstr "對選取內容執行動作(&S)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_ALIGN; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1148,6 +1156,10 @@ msgstr "無法在目的檔案旁建立暫存檔案。請檢查資料夾及存取
 msgid "Could not determine the file size."
 msgstr "無法判斷檔案大小。"
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr "無法載入桌面應用程式項目。"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -1157,6 +1169,14 @@ msgstr "無法開啟檔案"
 msgid "Could not open new window"
 msgstr "無法開啟新視窗"
 
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Could not open target"
+msgstr "無法開啟目標"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not open the containing folder."
+msgstr "無法開啟所在資料夾。"
+
 #: src/document/document_session.cpp
 msgid "Could not open the destination for writing."
 msgstr "無法開啟目的檔案進行寫入。"
@@ -1164,6 +1184,10 @@ msgstr "無法開啟目的檔案進行寫入。"
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr "無法開啟檔案進行讀取。"
+
+#: src/app/open_targets.cpp
+msgid "Could not open the selected target."
+msgstr "無法開啟選取的目標。"
 
 #. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
 #: src/app/editor_print_job.cpp
@@ -2002,6 +2026,10 @@ msgstr "作為 UTF-16LE 開啟..."
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
 msgstr "作為 Windows-1252 開啟..."
+
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Open Containing &Folder"
+msgstr "開啟所在資料夾(&F)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"

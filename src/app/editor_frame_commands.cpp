@@ -91,6 +91,9 @@ void EditorFrame::CreateMenus() {
 
 wxMenu* EditorFrame::CreateToolsMenu() {
     auto* tools = new wxMenu;
+    auto* selection = new wxMenu;
+    AppendOpenTargetCommands(selection);
+    tools->AppendSubMenu(selection, _("Action on &Selection"));
     auto* base64 = new wxMenu;
     for (const auto& [label, command] :
          {std::pair{wxTRANSLATE("Standard &Encode"), Base64Conversion::Encode},
@@ -347,6 +350,18 @@ wxMenu* EditorFrame::CreateFileMenu() {
         wxID_PRINT);
     file->AppendSeparator();
     file->Append(updateTime, _("Update File Time"));
+    const int containingFolder = wxWindow::NewControlId();
+    file->Append(containingFolder, _("Open Containing &Folder"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!OpenContainingFolder())
+                wxMessageBox(_("Could not open the containing folder."), _("Could not open target"),
+                             wxOK | wxICON_ERROR, this);
+        },
+        containingFolder);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, containingFolder);
     AppendRecentFilesCommand(file);
     return file;
 }
