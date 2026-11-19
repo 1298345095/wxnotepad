@@ -1,12 +1,14 @@
+#include "status_helpers.h"
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include <memory>
 #include <wx/statusbr.h>
+#include <wx/toolbar.h>
 
 namespace {
-constexpr int LifecycleArgumentCount = 5;
+constexpr int LifecycleArgumentCount = 6;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -52,7 +54,7 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
     };
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativeKeys::Shortcut(frame, WXK_F11, true);
-    Require(MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "plain and Ctrl F11 toggle neither bar");
+    Require(MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "plain and Ctrl F11 preserve menu and status");
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativeKeys::Shortcut(frame, WXK_F11, false, true);
     Require(!MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "Alt F11 hides menu only");
@@ -91,9 +93,8 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
     NativeSearch::Command(frame, menus->FindMenuItem("Scheme", "Python"));
     editor->Send(GotoPos, text.size());
     NativeKeys::Shortcut(frame, WXK_F11, false, false, true);
-    Require(frame->GetStatusBar()->IsShown() && frame->GetStatusBar()->GetStatusText().Contains("Python") &&
-                frame->GetStatusBar()->GetStatusText().Contains("UTF-8") &&
-                frame->GetStatusBar()->GetStatusText(1) == "Ln 2, Col 7",
+    Require(frame->GetStatusBar()->IsShown() && StatusMetadata(frame).Contains("Python") &&
+                StatusMetadata(frame).Contains("UTF-8") && StatusPosition(frame) == "Ln 2, Col 7",
             "restored status immediately shows language, encoding and position changed while hidden");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(menus->IsChecked(menu) && menus->IsChecked(status), "restored bars have checked commands");
@@ -141,16 +142,19 @@ public:
                     Require(argc == LifecycleArgumentCount,
                             "lifecycle requires expected menu/status, action and save policy");
                     Require(MenuVisible(frame) == (argv[1] == "1") &&
-                                frame->GetStatusBar()->IsShown() == (argv[2] == "1"),
-                            "original menu and status INI values apply to restarted native window");
-                    if (argv[3] == "toggle") {
+                                frame->GetStatusBar()->IsShown() == (argv[2] == "1") &&
+                                frame->GetToolBar()->IsShown() == (argv[3] == "1"),
+                            "original menu, status and toolbar INI values apply to restarted native window");
+                    if (argv[4] == "toggle") {
                         NativeKeys::Shortcut(frame, WXK_F11, false, true);
                         NativeKeys::Shortcut(frame, WXK_F11, false, false, true);
+                        NativeKeys::Shortcut(frame, WXK_F11, true);
                         Require(MenuVisible(frame) != (argv[1] == "1") &&
-                                    frame->GetStatusBar()->IsShown() != (argv[2] == "1"),
+                                    frame->GetStatusBar()->IsShown() != (argv[2] == "1") &&
+                                    frame->GetToolBar()->IsShown() != (argv[3] == "1"),
                                 "original gestures restore bars even on a restarted hidden-menu window");
                     }
-                    if (argv[4] == "explicit")
+                    if (argv[5] == "explicit")
                         NativeSearch::Command(frame, menus->FindMenuItem("Settings", "Save Settings Now"));
                     result_ = 0;
                     frame->Close();

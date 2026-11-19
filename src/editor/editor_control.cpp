@@ -62,7 +62,7 @@ void EditorControl::BindCoreEvent(const wxEventTypeTag<Event>& type, Handler han
 
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
+                wxBORDER_NONE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
       caretTimer_(this), scrollTimer_(this), widenTimer_(this), dwellTimer_(this) {
     // The native Notepad4 host initializes these tables before any document
     // copies its ASCII word classes. The wx host must do the same.

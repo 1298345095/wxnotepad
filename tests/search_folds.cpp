@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
@@ -95,7 +96,7 @@ FoldSearchControls FindFoldedMatches(EditorFrame* frame) {
     Collapse(editor);
     Click(dialog, wxID_BACKWARD);
     Selection(editor, 0, 0, "original backward line search cannot find the multiline regex");
-    Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+    Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
             "original backward multiline failure remains distinct from wrap success");
     Require(!editor->Send(GetLineVisible, 2) && !editor->Send(GetLineVisible, 5),
             "unsuccessful original backward search preserves collapsed folds");
@@ -113,7 +114,8 @@ FoldSearchControls FindFoldedMatches(EditorFrame* frame) {
         Require(editor->Send(GetLineVisible, 13), "second match must be revealed");
         Click(dialog, wxID_FORWARD);
         Selection(editor, 33, 39, "Next must wrap across folded document text");
-        Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Next must report wrap");
+        Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Search wrapped",
+                "Next must report wrap");
         Collapse(editor);
         Click(dialog, wxID_BACKWARD);
         Selection(editor, 139, 145, "Previous must wrap to the final hidden match");

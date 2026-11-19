@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "syntax_test_helpers.h"
@@ -36,7 +37,7 @@ void Language(EditorFrame* frame, bool cpp, bool explicitChoice) {
     Paint(frame);
     Require(frame->Editor()->Send(Message::GetStyleIndexAt, 0) == (cpp ? SCE_C_WORD2 : 0),
             "language choice must immediately change existing text styles");
-    const auto status = frame->GetStatusBar()->GetStatusText();
+    const auto status = StatusMetadata(frame);
     Require(status.Contains(cpp ? "C/C++" : "Plain Text") && status.Contains("UTF-8") &&
                 status.Contains("override") == explicitChoice,
             "status must retain encoding and identify effective language and explicit override");
@@ -253,8 +254,7 @@ public:
                 FileCommand(frame, wxID_OPEN);
                 Language(frame, true, true);
                 auto* fresh = new EditorFrame;
-                Require(fresh->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
-                            !fresh->GetStatusBar()->GetStatusText().Contains("override"),
+                Require(StatusMetadata(fresh).Contains("Plain Text") && !StatusMetadata(fresh).Contains("override"),
                         "a fresh editor session must start in Automatic without inheriting an override");
                 fresh->Destroy();
                 std::puts("PASS: successful New/Open reset override; failed/cancelled operations retain it");

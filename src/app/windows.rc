@@ -1,4 +1,5 @@
 // Use wxWidgets' native resources and Per-Monitor V2 application manifest.
 #define wxUSE_RC_MANIFEST 1
 #define wxUSE_DPI_AWARE_MANIFEST 2
+APP_ICON ICON "app/artwork/wxnotepad.ico"
 #include <wx/msw/wx.rc>

@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "syntax_test_helpers.h"
@@ -70,7 +71,7 @@ public:
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "Python fixture must open");
                 Paint(frame);
                 Style(frame->Editor(), 0, SCE_PY_WORD);
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python | EOL: CRLF",
+                Require(StatusMetadata(frame) == "UTF-8 | Python | EOL: CRLF",
                         "Open must select Python and retain encoding status");
                 std::puts("PASS: Open selects Python and styles keywords");
                 auto* editor = frame->Editor();
@@ -153,14 +154,14 @@ public:
                 Style(editor, 0, SCE_PY_WORD);
                 Require(Text(editor) == originalText && editor->Send(GetAnchor) == 2 &&
                             editor->Send(GetCurrentPos) == 5 && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: LF",
+                            StatusMetadata(frame) == "UTF-8 | Python (override) | EOL: LF",
                         "manual Python choice preserves document state and displays override");
                 Require(frame->SaveAs(Filename(directory / "manual.txt"), {}, SaveType::AllFiles).status ==
                             SaveStatus::Saved,
                         "manual Python must save as differently named text");
                 Paint(frame);
                 Style(editor, 0, 0);
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text | EOL: LF" &&
+                Require(StatusMetadata(frame) == "UTF-8 | Plain Text | EOL: LF" &&
                             frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic")),
                         "Save As must clear manual Python and identify the .txt filename");
                 Choose(frame, "Automatic");
@@ -176,12 +177,12 @@ public:
                 Style(editor, 0, SCE_PY_WORD);
                 Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                             frame->Open(Filename(directory / "missing.py")).status == OpenStatus::Failed &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: LF",
+                            StatusMetadata(frame) == "UTF-8 | Python (override) | EOL: LF",
                         "failed and cancelled Open must preserve Python override");
                 Command(frame, wxID_NEW);
                 Character(editor, 'r');
                 Choose(frame, "Python");
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: CRLF",
+                Require(StatusMetadata(frame) == "UTF-8 | Python (override) | EOL: CRLF",
                         "unnamed text must support manual Python selection");
                 Command(frame, wxID_UNDO);
                 Require(frame->NewDocument(), "clean unnamed document must reset");

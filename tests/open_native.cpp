@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -318,7 +319,7 @@ void NativeUtf16OpenAs(EditorFrame* frame, const std::filesystem::path& director
     Require(utf16Pick.choosers == 1 && Text(frame) == "A中😀\r\n" &&
                 frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom(),
             "native explicit Open As must decode no-BOM UTF-16LE");
-    Require(frame->GetStatusBar() && frame->GetStatusBar()->GetStatusText().Contains("UTF-16LE"),
+    Require(frame->GetStatusBar() && StatusMetadata(frame).Contains("UTF-16LE"),
             "status must identify current UTF-16LE encoding");
     FileCommandDriver utf16Cancel(FileDialogProfile::Open, wxID_CANCEL, {}, TraceFileCommand);
     frame->GetEventHandler()->ProcessEvent(utf16Open);

@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -119,7 +120,7 @@ void Pickers(EditorFrame* frame, bool native) {
         Require(driver.shown == 1 && frame->DocumentEncoding() == FileEncoding::Dos437 && !frame->DocumentIsModified(),
                 "F9 Cancel preserves current codec and saved state");
     }
-    Require(frame->GetStatusBar()->GetStatusText().Contains("DOS-437"), "status reports DOS-437");
+    Require(StatusMetadata(frame).Contains("DOS-437"), "status reports DOS-437");
     std::puts("PASS: native F9/F8 codec choices, cancellation and disk bytes");
 }
 void NativeOem(EditorFrame* frame) {

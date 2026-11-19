@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -39,8 +40,8 @@ void FormatOnly(EditorFrame* frame) {
     editor->Send(SetSel, 3, 1);
     Command(frame, "UTF-8 BOM");
     Require(frame->DocumentHasBom() && frame->GetTitle().StartsWith("*") && frame->GetMenuBar()->IsEnabled(wxID_SAVE) &&
-                frame->GetStatusBar()->GetStatusText().Contains("UTF-8 (BOM)") && !editor->Send(GetModify) &&
-                editor->Send(CanRedo) && editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 1 &&
+                StatusMetadata(frame).Contains("UTF-8 (BOM)") && !editor->Send(GetModify) && editor->Send(CanRedo) &&
+                editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 1 &&
                 TestEditor::Text(frame) == "a\r\nb\n" && TestFiles::Bytes(path) == "a\r\nb\n",
             "encoding-only change must enable Save and retain live text, selection, redo and disk");
     Command(frame, "UTF-8");
@@ -129,8 +130,8 @@ void BigEndian(EditorFrame* frame, bool native) {
     frame->Editor()->Send(Message::Undo);
     Command(frame, "UTF-16BE BOM");
     Require(frame->DocumentEncoding() == FileEncoding::Utf16Be && frame->DocumentHasBom() &&
-                frame->GetStatusBar()->GetStatusText().Contains("UTF-16BE (BOM)") &&
-                frame->GetTitle().StartsWith("*") && frame->Editor()->Send(Message::CanRedo),
+                StatusMetadata(frame).Contains("UTF-16BE (BOM)") && frame->GetTitle().StartsWith("*") &&
+                frame->Editor()->Send(Message::CanRedo),
             "direct UTF-16BE BOM choice updates live identity and preserves redo");
     Require(frame->SaveCopy(TestFiles::Filename(copy)).status == SaveStatus::Saved &&
                 TestFiles::Bytes(copy) == "\x{fe}\x{ff}" + bytes && TestFiles::Bytes(path) == utf8 &&
@@ -340,8 +341,8 @@ void AnsiTransitionAfterModalEdit(EditorFrame* frame) {
         const bool retained = native->encoding == FileEncoding::Utf8;
         Require(changed && driver.shown == 1 && TestEditor::Text(frame) == edit.after &&
                     frame->DocumentEncoding() == native->encoding && !frame->DocumentHasBom() &&
-                    frame->GetStatusBar()->GetStatusText().Contains("ANSI") &&
-                    frame->DocumentIsModified() == modified && frame->GetTitle().StartsWith("*") == modified &&
+                    StatusMetadata(frame).Contains("ANSI") && frame->DocumentIsModified() == modified &&
+                    frame->GetTitle().StartsWith("*") == modified &&
                     frame->GetMenuBar()->IsEnabled(wxID_SAVE) == modified,
                 "accepted modal encoding choice uses replacement text length and refreshes encoding and dirty UI");
         Require(bool(editor->Send(GetUndoActions)) == retained && bool(editor->Send(GetReadOnly)) == retained &&
@@ -489,8 +490,7 @@ void FormatOnlyDecisions(EditorFrame* frame) {
     Require(identifier != wxNOT_FOUND, "Encoding Identifier command is delivered");
     wxCommandEvent insert(wxEVT_MENU, identifier);
     frame->GetEventHandler()->ProcessEvent(insert);
-    Require(TestEditor::Text(frame) == "UTF-16LE BOM" &&
-                frame->GetStatusBar()->GetStatusText().Contains("UTF-16LE (BOM)"),
+    Require(TestEditor::Text(frame) == "UTF-16LE BOM" && StatusMetadata(frame).Contains("UTF-16LE (BOM)"),
             "Encoding Identifier and status report the chosen live encoding and BOM");
     std::puts("PASS: Open, Close and automatic file watching use effective format-only modification");
 }

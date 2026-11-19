@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/app_icon.h"
 #include <utility>
 #include "syntax/syntax_scheme.h"
 #include "editor/editor_control.h"
@@ -11,6 +12,8 @@
 #include "settings/recent_files.h"
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
+#include <wx/toolbar.h>
+#include "app/status_fields.h"
 #include <wx/fontdlg.h>
 #ifdef __WXGTK__
 #include <wx/display.h>
@@ -169,7 +172,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     }
     document_.New();
     CreateMenus();
-    CreateStatusBar(3);
+    CreateDefaultToolbar();
+    SetIcons(ApplicationIcons());
+    CreatePositionStatus();
     ApplyBarVisibility();
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
@@ -344,6 +349,7 @@ void EditorFrame::ApplyBarVisibility() {
     // Keep the GTK menu's accelerator group attached when its widget is hidden.
     GetMenuBar()->Show(preferences.showMenu);
 #endif
+    GetToolBar()->Show(preferences.showToolbar);
     GetStatusBar()->Show(preferences.showStatusbar);
     SendSizeEvent();
     Layout();
@@ -453,14 +459,14 @@ void EditorFrame::ReportFind(const FindResult& result) {
     switch (result.status) {
         using enum FindStatus;
     case Found:
-        SetStatusText(result.wrapped ? _("Search wrapped") : _("Match found"), 2);
+        SetStatusText(result.wrapped ? _("Search wrapped") : _("Match found"), StatusField::Feedback);
         break;
     case NotFound:
-        SetStatusText(_("No match found"), 2);
+        SetStatusText(_("No match found"), StatusField::Feedback);
         ShowSearchMessage("MsgNotFound", _("The specified text was not found."), false);
         break;
     case InvalidPattern:
-        SetStatusText(_("Invalid regular expression"), 2);
+        SetStatusText(_("Invalid regular expression"), StatusField::Feedback);
         break;
     case EmptyQuery:
         ShowSearchMessage("MsgNotFound", _("The specified text was not found."), false);
@@ -468,6 +474,7 @@ void EditorFrame::ReportFind(const FindResult& result) {
     case Cancelled:
         break;
     }
+    UpdateStatusWidths();
 }
 
 bool EditorFrame::SearchMessage(SearchDirection direction) {
@@ -499,41 +506,17 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 
 void EditorFrame::UpdateDocumentState() {
     ApplyUnicodeControlCharacter();
-    const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
+    const wxFileName path(document_.Path());
+    const wxString name = document_.Path().empty() ? _("Untitled") : path.GetFullName() + " [" + path.GetPath() + "]";
     const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")
                                                                                  : wxString{};
-    // TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+    // TRANSLATORS: Window title arguments: modified marker ("* " or empty), document name/path or untitled name,
     // and optional read-only file/mode annotation.
-    SetTitle(wxString::Format(_("%s%s%s - wxnotepad"), document_.IsModified() ? "*" : "", name, protection));
+    SetTitle(wxString::Format(_("%s%s%s - wxnotepad"), document_.IsModified() ? "* " : "", name, protection));
     const wxString encoding = DocumentEncodingLabel(document_);
-    const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-    const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
-                         : eolMode == Scintilla::EndOfLine::Cr ? "CR"
-                                                               : "LF";
-    // TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
-    // optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
-    SetStatusText(wxString::Format(_("%s%s | %s%s | EOL: %s"), encoding, document_.HasBom() ? " (BOM)" : "",
-                                   LanguageName(document_.EffectiveLanguage()),
-                                   document_.LanguageOverride() ? _(" (override)") : wxString{}, eol));
+    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : ""), StatusField::Encoding);
     UpdatePositionStatus();
-}
-
-void EditorFrame::UpdatePositionStatus() {
-    const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
-    const auto line = editor_->Send(Scintilla::Message::LineFromPosition, caret);
-    const auto column = editor_->Send(Scintilla::Message::GetColumn, caret, line);
-    wxString position = wxString::Format(_("Ln %llu, Col %llu"), static_cast<unsigned long long>(line) + 1,
-                                         static_cast<unsigned long long>(column) + 1);
-    const auto selected = editor_->SelectionCharacterCount();
-    if (selected) position += wxString::Format(_(" | Sel %lld"), static_cast<long long>(selected));
-    SetStatusText(position, 1);
-    auto* status = GetStatusBar();
-    const int metadataWidth = status->GetTextExtent(status->GetStatusText()).x + FromDIP(20);
-    const int positionWidth = status->GetTextExtent(position).x + FromDIP(20);
-    const std::array widths{metadataWidth, positionWidth, -1};
-    if (status->GetStatusWidth(0) != metadataWidth || status->GetStatusWidth(1) != positionWidth)
-        status->SetStatusWidths(static_cast<int>(widths.size()), widths.data());
 }
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
@@ -806,7 +789,8 @@ bool EditorFrame::NewDocument() {
 bool EditorFrame::ConfirmDiscardChanges(const wxString& prompt) {
     if (!document_.IsModified()) return true;
     if (CanDiscardUntitledWhitespace()) return true;
-    const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
+    const wxFileName path(document_.Path());
+    const wxString name = document_.Path().empty() ? _("Untitled") : path.GetFullName() + " [" + path.GetPath() + "]";
     wxMessageDialog dialog(this, wxString::Format(prompt, name), _("Save changes?"),
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
     dialog.SetYesNoCancelLabels(_("&Save"), _("&Discard"), _("&Cancel"));

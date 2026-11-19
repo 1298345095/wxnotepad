@@ -29,11 +29,11 @@ msgstr " (只读文件)"
 msgid " (Read Only Mode)"
 msgstr " (只读模式)"
 
-#: src/app/editor_frame.cpp
+#: src/app/editor_frame_status.cpp
 msgid " (override)"
 msgstr " (手动指定)"
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid " | Sel %lld"
 msgstr " | 选中 %lld"
@@ -48,6 +48,11 @@ msgstr "“%s”是只读的。是否保存到另一个文件？"
 #, c-format
 msgid "%s - wxnotepad"
 msgstr "%s - wxnotepad"
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "%s bytes"
+msgstr "%s 字节"
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 #, c-format
@@ -64,14 +69,7 @@ msgstr "%s 制表符宽度"
 msgid "%s tabs as spaces"
 msgstr "%s 插入制表符为空格"
 
-#. TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
-#. optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
-#: src/app/editor_frame.cpp
-#, c-format
-msgid "%s%s | %s%s | EOL: %s"
-msgstr "%s%s | %s%s | 换行符: %s"
-
-#. TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+#. TRANSLATORS: Window title arguments: modified marker ("* " or empty), document name/path or untitled name,
 #. and optional read-only file/mode annotation.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -163,7 +161,7 @@ msgid "&Column sort (rectangular selection)."
 msgstr "行列排序(矩形选择)(&C)。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
 msgstr "复制(&C)\tCtrl+C"
 
@@ -187,7 +185,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr "默认编码(&D)\tCtrl+Alt+F"
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr "默认级别(&D)\tShift+Alt+D"
 
@@ -271,7 +269,7 @@ msgid "&Find All"
 msgstr "查找全部(&F)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FIND.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Find...\tCtrl+F"
 msgstr "查找(&F)...\tCtrl+F"
 
@@ -280,7 +278,7 @@ msgid "&Goto"
 msgstr "跳转(&G)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTOLINE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr "跳转到行(&G)...\tCtrl+G"
 
@@ -374,7 +372,7 @@ msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr "监听连续更新的文件(比如日志文件)(&M)。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_ENCODING_SELECT.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&More...\tF9"
 msgstr "更多(&M)...\tF9"
 
@@ -383,7 +381,7 @@ msgid "&Nanosecond (ns)"
 msgstr "纳秒(&n) (ns)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEW.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&New\tCtrl+N"
 msgstr "新建(&N)\tCtrl+N"
 
@@ -425,7 +423,7 @@ msgid "&One Page"
 msgstr "一页(&O)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_OPEN.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Open...\tCtrl+O"
 msgstr "打开(&O)...\tCtrl+O"
 
@@ -444,7 +442,7 @@ msgid "&Pad With Spaces\tAlt+P"
 msgstr "填充空格(&P)\tAlt+P"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PASTE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
 msgstr "粘贴(&P)\tCtrl+V"
 
@@ -464,7 +462,7 @@ msgid "&Read Only Mode\tF10"
 msgstr "只读模式(&R)\tF10"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REDO.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr "重做(&R)\tCtrl+Y"
 
@@ -516,7 +514,7 @@ msgid "&Save"
 msgstr "保存(&S)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Save\tCtrl+S"
 msgstr "保存(&S)\tCtrl+S"
 
@@ -588,7 +586,7 @@ msgid "&UTC Date Time"
 msgstr "UTC 日期和时间(&U)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNDO.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr "撤销(&U)\tCtrl+Z"
 
@@ -602,7 +600,7 @@ msgstr "反转义 C 字符(&U)\tCtrl+Alt+R"
 msgid "&Unindent"
 msgstr "减少缩进(&U)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Unix/macOS (LF)"
 msgstr "&Unix/macOS (LF)"
 
@@ -624,7 +622,7 @@ msgstr "&Visual Studio"
 msgid "&Wildcard search"
 msgstr "通配符搜索(&I)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Windows (CR+LF)"
 msgstr "&Windows (CR+LF)"
 
@@ -634,7 +632,7 @@ msgid "&With...\tAlt+Q"
 msgstr "自定义(&W)...\tAlt+Q"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAP.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr "自动换行(&R)\tCtrl+Shift+W"
 
@@ -881,6 +879,11 @@ msgstr "不区分大小写(&I)。"
 msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
 msgstr "当前文本中的某些字符在所选编码中不支持，如果保存将可能被替换为默认的占位字符。推荐选择其他文件编码。要继续吗？"
 
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ch %s / %s"
+msgstr "字符 %s / %s"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Change &History Marker"
 msgstr "修改历史标记(&H)"
@@ -918,7 +921,7 @@ msgstr "请先选择文件名再保存。"
 msgid "Choose an existing file to open."
 msgstr "选择要打开的现有文件。"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr "经典 &Mac OS (CR)"
 
@@ -949,6 +952,11 @@ msgstr "关闭"
 #, c-format
 msgid "Code page %d (unavailable)"
 msgstr "代码页 %d (不可用)"
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Col %s / %s"
+msgstr "列 %s / %s"
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1116,7 +1124,7 @@ msgid "Could not write the complete file. Check free space and access permission
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUT.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr "剪切(&T)\tCtrl+X"
 
@@ -1347,6 +1355,11 @@ msgstr "搜索字符串"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Finish completion (Esc cancels)"
 msgstr "用于执行自动完成的按键(使用 Esc 键取消)"
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Fnd %s%s"
+msgstr "匹配 %s%s"
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1665,10 +1678,15 @@ msgstr "竖线(宽度 &3)"
 msgid "Line ending conversion"
 msgstr "换行符转换"
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
 msgstr "行 %llu, 列 %llu"
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ln %s / %s"
+msgstr "行 %s / %s"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_LOGICAL_NUMBER.
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1791,7 +1809,7 @@ msgid "New &GUID"
 msgstr "新的 &GUID"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEWWINDOW.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "New &Window\tAlt+N"
 msgstr "新建窗口(&W)\tAlt+N"
 
@@ -1979,7 +1997,7 @@ msgid "Python"
 msgstr "Python"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REPLACE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr "替换(&E)...\tCtrl+H"
 
@@ -2150,7 +2168,7 @@ msgid "Sa&ve Find Text\tAlt+F3"
 msgstr "保存查找文本(&V)\tAlt+F3"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEAS.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save &As...\tF6"
 msgstr "另存为(&A)...\tF6"
 
@@ -2164,7 +2182,7 @@ msgid "Save Back&up"
 msgstr "保存备份(&U)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVECOPY.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr "保存副本(&Y)...\tCtrl+F6"
 
@@ -2256,6 +2274,16 @@ msgstr "滚动超出末行(&L)"
 msgid "Search wrapped"
 msgstr "搜索已循环"
 
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Sel %s / %s"
+msgstr "选区 %s / %s"
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "SelLn %s"
+msgstr "选中行 %s"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select &All\tCtrl+A"
 msgstr "全选(&A)\tCtrl+A"
@@ -2331,6 +2359,10 @@ msgstr "当前程序设置已被保存"
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
 msgstr "显示菜单(&M)\tAlt+F11"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Toolbar\tCtrl+F11"
+msgstr "显示工具栏(&T)\tCtrl+F11"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWWHITESPACE.
 #: src/app/editor_frame_commands.cpp
@@ -2919,17 +2951,17 @@ msgid "ZWSP — &Zero width space"
 msgstr "ZWSP — 零宽空格(&Z)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMIN.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr "放大(&I)\tCtrl++"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOM_LEVEL.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Zoom &Level..."
 msgstr "缩放级别(&L)..."
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMOUT.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr "缩小(&O)\tCtrl+-"
 
@@ -2949,6 +2981,10 @@ msgstr "缩放级别 (%d%% 到 %d%%):"
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+#, c-format
+#~ msgid "%s%s | %s%s | EOL: %s"
+#~ msgstr "%s%s | %s%s | 换行符: %s"
 
 #~ msgid "&Collapse All"
 #~ msgstr "全部折叠(&C)"

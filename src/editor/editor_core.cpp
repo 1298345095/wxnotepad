@@ -389,8 +389,7 @@ uint64_t EditorControl::Core::SelectionRevision() const noexcept {
 
 intptr_t EditorControl::Core::SelectionCharacterCount() {
     if (WndProc(Message::GetSelectionMode, 0, 0) !=
-            static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)) ||
-        WndProc(Message::GetSelections, 0, 0) != 1)
+        static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)))
         return 0;
     const auto start = WndProc(Message::GetSelectionStart, 0, 0);
     const auto end = WndProc(Message::GetSelectionEnd, 0, 0);

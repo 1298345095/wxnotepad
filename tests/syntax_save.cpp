@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "syntax_test_helpers.h"
@@ -131,19 +132,18 @@ void Language(EditorFrame* frame, bool cpp) {
     Paint(frame);
     Require(frame->Editor()->Send(Message::GetStyleIndexAt, 0) == (cpp ? SCE_C_WORD2 : 0),
             "saved extension must select the expected public syntax style");
-    Require(frame->GetStatusBar()->GetStatusText().Contains(cpp ? "C/C++" : "Plain Text"),
-            "status must follow the effective language");
+    Require(StatusMetadata(frame).Contains(cpp ? "C/C++" : "Plain Text"), "status must follow the effective language");
 }
 void Choose(EditorFrame* frame, const char* label) {
     const auto id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "supported language choice must exist");
     Command(frame, id);
-    Require(frame->GetMenuBar()->IsChecked(id) && frame->GetStatusBar()->GetStatusText().Contains("override"),
+    Require(frame->GetMenuBar()->IsChecked(id) && StatusMetadata(frame).Contains("override"),
             "manual language command must check its item and display the override");
 }
 void Automatic(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);
-    const auto status = frame->GetStatusBar()->GetStatusText();
+    const auto status = StatusMetadata(frame);
     Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic")) &&
                 status.Contains(language) && !status.Contains("override") &&
                 frame->Editor()->Send(Message::GetLexer) == lexer &&
@@ -153,7 +153,7 @@ void Automatic(EditorFrame* frame, const char* language, int lexer) {
 void Selected(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);
     Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language)) &&
-                frame->GetStatusBar()->GetStatusText().Contains(wxString(language) + " (override)") &&
+                StatusMetadata(frame).Contains(wxString(language) + " (override)") &&
                 frame->Editor()->Send(Message::GetLexer) == lexer,
             "specific save type must install its language and reflect the explicit choice in menu and status");
 }
@@ -202,7 +202,7 @@ public:
                 Require(frame->SaveAs(Filename(directory / "default.txt")).status == SaveStatus::Saved,
                         "default Save As must save using the current scheme");
                 Language(frame, true);
-                Require(frame->GetStatusBar()->GetStatusText().Contains("override"),
+                Require(StatusMetadata(frame).Contains("override"),
                         "named C++ default Save As to .txt must explicitly retain C++");
                 Require(frame->Open(Filename(cpp)).status == OpenStatus::Opened, "BOM fixture must reopen");
                 editor->Send(GotoPos, source.size());

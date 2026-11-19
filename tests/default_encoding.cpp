@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -261,7 +262,7 @@ void NativeDefaultPromotion(SettingsStore& settings) {
         const auto check = [&] {
             Require(frame->DocumentEncoding() == native->encoding && !frame->DocumentIsModified() &&
                         !frame->Editor()->Send(Scintilla::Message::CanUndo) &&
-                        frame->GetStatusBar()->GetStatusText().Contains("ANSI (") != explicitEncoding,
+                        StatusMetadata(frame).Contains("ANSI (") != explicitEncoding,
                     "fresh native default resolves original ANSI identity independently of scheme override");
         };
         check();

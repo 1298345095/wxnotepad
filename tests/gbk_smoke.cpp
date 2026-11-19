@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include <array>
 #include "app/editor_frame.h"
@@ -96,8 +97,7 @@ void LossChoiceFailures(SettingsStore* settings, const std::filesystem::path& di
                 "loss branch must cancel or report replacement failure");
         Require(Text(failure) == before && failure->DocumentPath() == Filename(source) &&
                     failure->DocumentEncoding() == FileEncoding::Gbk && !failure->DocumentHasBom() &&
-                    !failure->GetStatusBar()->GetStatusText().Contains("override") &&
-                    failure->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
+                    !StatusMetadata(failure).Contains("override") && StatusMetadata(failure).Contains("Plain Text") &&
                     failure->Editor()->Send(Scintilla::Message::GetModify),
                 "loss cancellation/failure must preserve rich document, identity, format and dirty state");
         Require(Bytes(source) == original + "\x{d6}\x{d0}\x{ce}\x{c4}" && Bytes(blocked / "sentinel") == "keep",

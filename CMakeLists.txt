@@ -146,6 +146,7 @@ target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPA
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/app_icon.cpp
     src/app/dialogs/auto_completion_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
@@ -164,6 +165,8 @@ add_library(app_shell STATIC
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
     src/app/dialogs/tab_settings_dialog.cpp
+    src/app/editor_frame_status.cpp
+    src/app/editor_frame_toolbar.cpp
     src/app/editor_frame.cpp
     src/app/file_change_monitor.cpp
     src/app/editor_frame_file_watching.cpp
@@ -176,6 +179,10 @@ add_library(app_shell STATIC
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)
+string(REGEX REPLACE "(..)" "0x\\1," WXNOTEPAD_ICON_DATA "${WXNOTEPAD_ICON_HEX}")
+configure_file(src/app/app_icon_data.h.in generated/app_icon_data.h @ONLY)
+target_include_directories(app_shell PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 if(WIN32)
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
     set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
@@ -808,6 +815,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_wrap_process.py" "$<TARGET_FILE:search_wrap>")
     set_tests_properties(original_search_message_settings PROPERTIES TIMEOUT 60)
     add_editor_test(goto_line go_to_logical_line 30)
+    add_editor_test(shell_appearance original_shell_appearance 60)
     add_editor_test(position_status live_position_selection_status 60)
     add_editor_test(search_regex find_regular_expression 30)
     add_editor_test(replace_regex replace_regular_expression 30)
