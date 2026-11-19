@@ -365,6 +365,23 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     Require(reloaded.values.saveBeforeRunningTools &&
                 reloaded.values.openWithDirectory == settings.values.openWithDirectory,
             "Settings SaveBeforeRunningTools and OpenWithDir round trip");
+    const auto browsedDirectory = settings.values.openWithDirectory;
+    const auto documentsDirectory = wxStandardPaths::Get().GetDocumentsDir();
+    settings.values.openWithDirectory = documentsDirectory;
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
+    {
+        wxFFile config(settings.Path(), "rb");
+        wxString text;
+        Require(config.ReadAll(&text, wxMBConvUTF16LE()) && config.Close(), "independently read saved settings");
+        Require(text.Contains("OpenWithDir=%CSIDL:MYDOCUMENTS%"),
+                "portable Documents directory uses the original token for the directory root itself");
+    }
+    SettingsStore documentsReloaded(settings.Path());
+    Require(
+        wxFileName::DirName(documentsReloaded.values.openWithDirectory).SameAs(wxFileName::DirName(documentsDirectory)),
+        "portable Documents directory resolves to the native directory after reload");
+    settings.values.openWithDirectory = browsedDirectory;
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
     {
         NativeDialogs::FileCommandDriver decision(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
         ProgramDriver chooser(program, true);

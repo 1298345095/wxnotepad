@@ -17,7 +17,7 @@ def main():
         if sys.platform != "win32":
             (root / "home" / "Desktop").mkdir(parents=True)
             environment["HOME"] = str(root / "home")
-        (root / "Notepad4.ini").write_text("[Settings]\nSaveBeforeRunningTools=0\nWarnLineEndings=0\n[Settings2]\nUILanguage=1033\n",
+        (root / "Notepad4.ini").write_text("[Settings]\nSaveBeforeRunningTools=0\nWarnLineEndings=0\n[Settings2]\nUILanguage=1033\nPortableMyDocs=1\n",
                                           encoding="utf-16")
         try:
             subprocess.run([str(executable), "--fixture"], env=environment, check=True, timeout=55)
