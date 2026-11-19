@@ -172,6 +172,10 @@ msgstr "行列排序(矩形选择)(&C)。"
 msgid "&Command:"
 msgstr "命令(&C)："
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Copy"
+msgstr "复制(&C)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
@@ -213,6 +217,10 @@ msgstr "默认换行模式(&D):"
 #: src/app/editor_frame_commands.cpp
 msgid "&Default..."
 msgstr "默认(&D)..."
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Delete"
+msgstr "删除(&D)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Direct2D"
@@ -438,6 +446,10 @@ msgstr "旧版 Visual Studio(&O)"
 msgid "&One Page"
 msgstr "一页(&O)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Open"
+msgstr "打开(&O)"
+
 #: src/app/open_targets.cpp
 msgid "&Open File, Folder, Link, etc."
 msgstr "打开文件、文件夹、链接等(&O)"
@@ -461,6 +473,10 @@ msgstr "其他时间戳(&O)"
 msgid "&Pad With Spaces\tAlt+P"
 msgstr "填充空格(&P)\tAlt+P"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Paste"
+msgstr "粘贴(&P)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PASTE.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
@@ -480,6 +496,10 @@ msgstr "打印(&P)...\tCtrl+P"
 #: src/app/editor_frame_commands.cpp
 msgid "&Read Only Mode\tF10"
 msgstr "只读模式(&R)\tF10"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Redo"
+msgstr "重做(&R)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REDO.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -616,6 +636,10 @@ msgstr "工具(&T)"
 #: src/app/editor_frame_commands.cpp
 msgid "&UTC Date Time"
 msgstr "UTC 日期和时间(&U)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Undo"
+msgstr "撤销(&U)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNDO.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -1252,6 +1276,10 @@ msgstr "无法写入 %s"
 #: src/document/document_session.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Cu&t"
+msgstr "剪切(&T)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUT.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -2464,6 +2492,10 @@ msgid "SelLn %s"
 msgstr "选中行 %s"
 
 #: src/app/editor_frame_commands.cpp
+msgid "Select &All"
+msgstr "全选(&A)"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Select &All\tCtrl+A"
 msgstr "全选(&A)\tCtrl+A"
 
@@ -2875,6 +2907,10 @@ msgstr "转十六进制(&H)\tCtrl+Alt+H"
 #: src/app/editor_frame_commands.cpp
 msgid "To &Octet"
 msgstr "转八进制(&O)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle &Fold"
+msgstr "切换折叠(&F)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STREAMCOMMENT.
 #: src/app/editor_frame_commands.cpp

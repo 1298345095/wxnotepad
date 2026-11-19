@@ -158,6 +158,10 @@ msgstr ""
 msgid "&Command:"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Copy"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
 msgstr ""
@@ -195,6 +199,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Default..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Delete"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -395,6 +403,10 @@ msgstr ""
 msgid "&One Page"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Open"
+msgstr ""
+
 #: src/app/open_targets.cpp
 msgid "&Open File, Folder, Link, etc."
 msgstr ""
@@ -415,6 +427,10 @@ msgstr ""
 msgid "&Pad With Spaces\tAlt+P"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Paste"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
 msgstr ""
@@ -430,6 +446,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Read Only Mode\tF10"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Redo"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -547,6 +567,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&UTC Date Time"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Undo"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -1158,6 +1182,10 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Cu&t"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -2307,6 +2335,10 @@ msgid "SelLn %s"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Select &All"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Select &All\tCtrl+A"
 msgstr ""
 
@@ -2677,6 +2709,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "To &Octet"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle &Fold"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp

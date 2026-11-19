@@ -16,6 +16,7 @@
 #include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
+#include "editor/platform/popup_placement.h"
 #include "app/dialogs/document_dialogs.h"
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
@@ -37,6 +38,10 @@
 #include <wx/strconv.h>
 #include <cstdlib>
 #include "app/dialogs/modify_lines_dialog.h"
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#include <gdk/gdkwayland.h>
+#endif
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -89,6 +94,58 @@ void EditorFrame::CreateMenus() {
     menus->Append(CreateSettingsMenu(), _("Sett&ings"));
     menus->Append(CreateToolsMenu(), _("&Tools"));
     SetMenuBar(menus);
+    // As in Notepad4.cpp::WM_CONTEXTMENU, the application owns the popup.
+    editor_->Bind(wxEVT_CONTEXT_MENU, &EditorFrame::ShowEditorContextMenu, this);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Clear); }, wxID_DELETE);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        wxID_DELETE);
+}
+
+void EditorFrame::ShowEditorContextMenu(wxContextMenuEvent& event) {
+    // Original Notepad4 89b8b36 IDR_POPUPMENU: preserve the command groups,
+    // hit-test only an empty selection, and anchor keyboard invocation at caret.
+    using enum Scintilla::Message;
+    auto point = event.GetPosition();
+    if (point == wxDefaultPosition) {
+        const auto caret = editor_->Send(GetCurrentPos);
+        point = wxPoint(static_cast<int>(editor_->Send(PointXFromPosition, 0, caret)),
+                        static_cast<int>(editor_->Send(PointYFromPosition, 0, caret)));
+    } else {
+        point = editor_->ScreenToClient(point);
+        if (editor_->Send(GetSelectionEmpty))
+            editor_->Send(GotoPos, editor_->Send(PositionFromPoint, point.x, point.y));
+    }
+    wxMenu menu;
+    menu.Append(wxID_UNDO, _("&Undo"));
+    menu.Append(wxID_REDO, _("&Redo"));
+    menu.AppendSeparator();
+    menu.Append(wxID_CUT, _("Cu&t"));
+    menu.Append(wxID_COPY, _("&Copy"));
+    menu.Append(wxID_PASTE, _("&Paste"));
+    menu.Append(wxID_DELETE, _("&Delete"));
+    menu.AppendSeparator();
+    menu.Append(wxID_SELECTALL, _("Select &All"));
+    menu.AppendSeparator();
+    menu.Append(currentBlockFoldId_, _("Toggle &Fold"));
+    menu.AppendSeparator();
+    menu.Append(openSelectionId_, _("&Open"));
+    // Keep the editor as the native popup's invoking window and focus owner.
+    auto screen = editor_->ClientToScreen(point + wxPoint(1, 1));
+#ifdef __WXGTK__
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(menu.m_menu))) {
+        // Some compositors leave even constrained xdg_popups beyond the edge.
+        // Measure the native menu inside its unmapped GTK parent, then reuse
+        // the completion/CallTip work-area placement. No popup is mapped here.
+        gtk_widget_show(menu.m_menu);
+        GtkRequisition natural{};
+        gtk_widget_get_preferred_size(menu.m_menu, nullptr, &natural);
+        gtk_widget_hide(menu.m_menu);
+        screen = NativePopup::FitToWorkArea(*this, screen, wxSize(natural.width, natural.height)).GetPosition();
+    }
+#endif
+    editor_->PopupMenu(&menu, editor_->ScreenToClient(screen));
 }
 
 wxMenu* EditorFrame::CreateToolsMenu() {
@@ -1448,6 +1505,7 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     auto* folds = new wxMenu;
     const auto addFoldCommand = [this, folds](const wxString& label, FoldCommand command, int level = 0) {
         const int id = wxWindow::NewControlId();
+        if (command == FoldCommand::CurrentBlock) currentBlockFoldId_ = id;
         folds->Append(id, label);
         Bind(
             wxEVT_MENU,
@@ -2015,6 +2073,8 @@ bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
         return true;
     }
     if (event.GetKeyCode() == WXK_F10) {
+        // Leave the native context-menu gesture to wx/GTK/DefWindowProc.
+        if (event.GetModifiers() == wxMOD_SHIFT) return false;
         if (!event.HasAnyModifiers()) ToggleReadOnlyMode();
         return true;
     }
