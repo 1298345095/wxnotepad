@@ -35,10 +35,32 @@ public:
         frame_ = new EditorFrame(&settings_);
         observer_ = std::make_unique<ProcessObserver>(*frame_, TestFiles::Filename(directory_.Path()));
         frame_->Show();
+        Bind(wxEVT_IDLE, [this](wxIdleEvent& event) {
+            event.Skip();
+            if (!waitingForInitialState_) return;
+            if (Sequence("sequence\t0\n")) {
+                waitingForInitialState_ = false;
+                try {
+                    Run();
+                } catch (const std::exception& error) {
+                    std::fprintf(stderr, "FAIL: %s\n", error.what());
+                    Finish(1);
+                }
+            } else if (std::chrono::steady_clock::now() >= initialDeadline_) {
+                waitingForInitialState_ = false;
+                std::fprintf(stderr, "FAIL: initial native observation is published\n");
+                Finish(1);
+            } else {
+                event.RequestMore();
+            }
+        });
         NativeKeys::AfterPresentation(frame_, [this](bool ready) {
             try {
                 Require(ready, "owned observer frame is natively presented");
-                Run();
+                // Let the observer's own CallAfter initialize publication and
+                // its timer in the normal event loop before a synchronous wait.
+                initialDeadline_ = std::chrono::steady_clock::now() + std::chrono::seconds(15);
+                waitingForInitialState_ = true;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 Finish(1);
@@ -64,11 +86,10 @@ private:
         return std::filesystem::exists(path) && TestFiles::Bytes(path).starts_with(sequence);
     }
     void Run() {
-        Await([this] { return Sequence("sequence\t0\n"); }, "initial native observation is published");
         auto* editor = frame_->Editor();
 #ifdef __WXGTK__
         wxString focusFile;
-        NativeKeys::FocusEditor(frame_, "unchanged observer acknowledgement", focusFile);
+        NativeKeys::FocusEditor(frame_, "wxnotepad", focusFile);
 #else
         NativeKeys::Shortcut(frame_, 'A', true);
 #endif
@@ -141,6 +162,8 @@ private:
     uint64_t selection_ = 0;
     wxSize size_;
     bool active_ = false;
+    bool waitingForInitialState_ = false;
+    std::chrono::steady_clock::time_point initialDeadline_;
     int result_ = 1;
 };
 } // namespace
