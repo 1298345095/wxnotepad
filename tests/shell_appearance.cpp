@@ -50,6 +50,23 @@ void NativeSelectionColours(EditorControl* editor) {
         Require(colour == native, "default selected text uses the native highlight foreground/background pair");
     }
 }
+void NativeFoldMargin(EditorControl* editor) {
+    using enum Scintilla::Message;
+    int left = 0;
+    for (int margin = 0; margin < EditorMargin::Folding; ++margin)
+        left += static_cast<int>(editor->Send(GetMarginWidthN, margin));
+    const auto width = editor->Send(GetMarginWidthN, EditorMargin::Folding);
+    Require(width >= 2, "default folding margin is visible");
+    // wxSTC's native chrome pattern is used without fold-color overrides.
+    const auto chrome = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    const auto highlight = wxSystemSettings::GetColour(wxSYS_COLOUR_3DHIGHLIGHT);
+    const auto fill = highlight == *wxWHITE ? chrome : highlight;
+    const auto pixels = NativePaint::Read(editor, wxRect(left + static_cast<int>(width) / 2,
+                                                       editor->GetClientSize().y / 2, 2, 2));
+    Require(std::count(pixels.begin(), pixels.end(), fill) >= 2 &&
+                std::count(pixels.begin(), pixels.end(), highlight) >= 2,
+            "painted folding margin follows the native wxSTC chrome colors");
+}
 void DisabledArtworkColours(wxToolBar* toolbar) {
     if (!wxSystemSettings::GetAppearance().IsDark()) return;
     const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
@@ -141,6 +158,7 @@ public:
                 using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 NativeSelectionColours(editor);
+                NativeFoldMargin(editor);
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one\r\n\t中😀"));
                 editor->Send(SetTabWidth, 4);
                 editor->Send(GotoPos, 13);
