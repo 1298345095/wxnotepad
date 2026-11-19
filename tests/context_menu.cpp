@@ -15,6 +15,7 @@
 #include <fstream>
 #include <chrono>
 #include <functional>
+#include <set>
 
 namespace {
 using enum Scintilla::Message;
@@ -153,8 +154,19 @@ public:
         frame_->Bind(wxEVT_MENU_OPEN, &Popup::Opened, this);
         frame_->Bind(wxEVT_MENU, &Popup::Command, this);
         frame_->Editor()->Bind(wxEVT_RIGHT_DCLICK, &Popup::RightDouble, this);
+#ifdef __WXGTK__
+        frame_->Editor()->Bind(wxEVT_KEY_UP, &Popup::EditorKeyReleased, this);
+#endif
     }
     ~Popup() override {
+#ifdef __WXGTK__
+        try {
+            CleanupInvocationKey();
+        } catch (const std::exception& error) {
+            std::fprintf(stderr, "Owned popup key release failed: %s\n", error.what());
+        }
+        frame_->Editor()->Unbind(wxEVT_KEY_UP, &Popup::EditorKeyReleased, this);
+#endif
         frame_->Unbind(wxEVT_MENU_OPEN, &Popup::Opened, this);
         frame_->Unbind(wxEVT_MENU, &Popup::Command, this);
         frame_->Editor()->Unbind(wxEVT_RIGHT_DCLICK, &Popup::RightDouble, this);
@@ -173,6 +185,11 @@ public:
         openedState_.clear();
         drivenState_.clear();
         keyState_.clear();
+        lifecycle_.clear();
+        heldInvocationKey_.clear();
+        invocationReleases_.clear();
+        invocationReleaseRequested_ = false;
+        nativeMenuOpen_ = false;
 #endif
         auto* editor = frame_->Editor();
         if (key) {
@@ -200,12 +217,26 @@ public:
             }
             Require(SendInput(count, input, sizeof(INPUT)) == count, "native keyboard invokes context menu");
 #else
-            NativeRequest(key == WXK_MENU ? "key:Menu" : "key:shift+F10");
+            const wxString gesture = key == WXK_MENU ? "Menu" : "shift+F10";
+            if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(static_cast<GtkWidget*>(editor->GetHandle())))) {
+                // A release can invalidate the press serial while GTK creates
+                // its native popup. Complete this one physical gesture only
+                // after the popup is ready, then observe its real key-up(s).
+                heldInvocationKey_ = gesture;
+                invocationReleases_.insert(key);
+                if (key == WXK_F10) invocationReleases_.insert(WXK_SHIFT);
+                NativeRequest("keydown:" + gesture);
+            } else {
+                NativeRequest("key:" + gesture);
+            }
 #endif
         } else {
             NativeClick(frame_, screen, 3);
         }
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+#ifdef __WXGTK__
+        invocationDeadline_ = deadline;
+#endif
         do {
             wxYield();
             wxMilliSleep(10);
@@ -217,12 +248,16 @@ public:
 #ifdef __WXGTK__
             std::fprintf(stderr, "Native popup observations: opened=[%s] drive=[%s] key=[%s]\n", openedState_.c_str(),
                          drivenState_.c_str(), keyState_.c_str());
+            std::fprintf(stderr, "Native popup lifecycle: %s\n", lifecycle_.c_str());
 #endif
         }
         Require(observed_ == 1, "one native editor popup opens for each invocation");
         if (action != wxID_NONE && dispatches_ != 1)
             std::fprintf(stderr, "Native command id=%d dispatch count=%d\n", action, dispatches_);
         Require(action == wxID_NONE || dispatches_ == 1, "native popup dispatches selected command exactly once");
+#ifdef __WXGTK__
+        CleanupInvocationKey();
+#endif
     }
     std::function<void(wxMenu&)> inspect;
     int action = wxID_NONE;
@@ -257,6 +292,16 @@ private:
         ++observed_;
 #ifdef __WXGTK__
         openedState_ = NativeMenuState(menu->m_menu);
+        nativeMenuOpen_ = true;
+        ObserveLifecycle(menu->m_menu, "opened");
+        for (const char* signal : {"hide", "unmap", "deactivate"}) {
+            g_signal_connect(menu->m_menu, signal, G_CALLBACK(+[](GtkWidget* widget, gpointer data) {
+                                 auto* popup = static_cast<Popup*>(data);
+                                 popup->ObserveLifecycle(widget, "closed");
+                                 popup->nativeMenuOpen_ = false;
+                             }),
+                             this);
+        }
         g_signal_connect(menu->m_menu, "key-press-event",
                          G_CALLBACK(+[](GtkWidget* widget, GdkEventKey* key, gpointer data) -> gboolean {
                              auto* popup = static_cast<Popup*>(data);
@@ -266,6 +311,20 @@ private:
                              return FALSE;
                          }),
                          this);
+        g_signal_connect(
+            menu->m_menu, "key-release-event",
+            G_CALLBACK(+[](GtkWidget* widget, GdkEventKey* key, gpointer data) -> gboolean {
+                auto* popup = static_cast<Popup*>(data);
+                if (!popup->invocationReleases_.empty() &&
+                    (key->keyval == GDK_KEY_Menu || key->keyval == GDK_KEY_F10 || key->keyval == GDK_KEY_Shift_L)) {
+                    popup->ObserveLifecycle(widget, "invocation-release");
+                    popup->InvocationKeyReleased(key->keyval == GDK_KEY_Menu  ? WXK_MENU
+                                                 : key->keyval == GDK_KEY_F10 ? WXK_F10
+                                                                              : WXK_SHIFT);
+                }
+                return FALSE;
+            }),
+            this);
 #endif
         try {
             const char* const english[] = {"&Undo", "&Redo",       "", "Cu&t",         "&Copy", "&Paste", "&Delete",
@@ -300,6 +359,7 @@ private:
                              G_CALLBACK(+[](GtkMenu* nativeMenu, const GdkRectangle*, const GdkRectangle* finalRect,
                                             gboolean, gboolean, gpointer data) {
                                  auto* popup = static_cast<Popup*>(data);
+                                 popup->ObserveLifecycle(GTK_WIDGET(nativeMenu), "popped-up");
                                  if (finalRect)
                                      popup->nativeBounds_ =
                                          wxRect(finalRect->x, finalRect->y, finalRect->width, finalRect->height);
@@ -311,7 +371,16 @@ private:
                                      GTK_WIDGET(nativeMenu),
                                      +[](GtkWidget*, GdkFrameClock*, gpointer data) -> gboolean {
                                          auto* popup = static_cast<Popup*>(data);
-                                         wxTheApp->CallAfter([popup] { popup->Drive(popup->activeMenu_); });
+                                         popup->ObserveLifecycle(popup->activeMenu_->m_menu, "tick");
+                                         wxTheApp->CallAfter([popup] {
+                                             if (!popup->nativeMenuOpen_) return;
+                                             popup->ObserveLifecycle(popup->activeMenu_->m_menu, "call-after");
+                                             if (popup->heldInvocationKey_.empty()) {
+                                                 popup->Drive(popup->activeMenu_);
+                                             } else {
+                                                 popup->ReleaseInvocationKey();
+                                             }
+                                         });
                                          return G_SOURCE_REMOVE;
                                      },
                                      popup, nullptr);
@@ -324,7 +393,48 @@ private:
         wxTheApp->CallAfter([this, menu] { Drive(menu); });
     }
 #ifdef __WXGTK__
-    std::string openedState_, drivenState_, keyState_;
+    std::string openedState_, drivenState_, keyState_, lifecycle_;
+    wxString heldInvocationKey_;
+    std::set<int> invocationReleases_;
+    bool invocationReleaseRequested_ = false;
+    bool nativeMenuOpen_ = false;
+    std::chrono::steady_clock::time_point invocationDeadline_;
+    void CleanupInvocationKey() {
+        if (heldInvocationKey_.empty()) return;
+        std::fprintf(stderr, "Held popup-key cleanup: keys=%s remaining=%zu opened=[%s] drive=[%s] key=[%s]\n",
+                     heldInvocationKey_.utf8_string().c_str(), invocationReleases_.size(), openedState_.c_str(),
+                     drivenState_.c_str(), keyState_.c_str());
+        ReleaseInvocationKey();
+        while (!invocationReleases_.empty() && std::chrono::steady_clock::now() < invocationDeadline_) {
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Require(invocationReleases_.empty(), "owned popup key release arrives before existing invocation deadline");
+    }
+    void ReleaseInvocationKey() {
+        if (!invocationReleaseRequested_) {
+            NativeRequest("keyup:" + heldInvocationKey_);
+            invocationReleaseRequested_ = true;
+        }
+    }
+    void InvocationKeyReleased(int key) {
+        // GTK can propagate the same native release through this menu twice.
+        if (invocationReleases_.erase(key) && invocationReleases_.empty()) {
+            heldInvocationKey_.clear();
+            if (nativeMenuOpen_)
+                wxTheApp->CallAfter([this] {
+                    if (nativeMenuOpen_) Drive(activeMenu_);
+                });
+        }
+    }
+    void EditorKeyReleased(wxKeyEvent& event) {
+        InvocationKeyReleased(event.GetKeyCode());
+        event.Skip();
+    }
+    void ObserveLifecycle(GtkWidget* widget, const char* phase) {
+        lifecycle_ += std::string(phase) + " [scheduled=" + std::to_string(nativeReadyScheduled_) +
+                      " driven=" + std::to_string(driven_) + " " + NativeMenuState(widget) + "] ";
+    }
     std::string NativeMenuState(GtkWidget* widget) const {
         auto* top = gtk_widget_get_toplevel(widget);
         auto* selected = gtk_menu_get_active(GTK_MENU(widget));
