@@ -213,11 +213,33 @@ class Dialogs:
                     self.user.SendMessageW(child, 0x00F5, 0, 0)  # BM_CLICK
                     return
         else:
-            for child in self.children(window):
-                if child.get_role() in (self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX) and plain(child.get_name()) == caption:
-                    action = child.get_action_iface()
+            from gi.repository import GLib
+            deadline = time.monotonic() + 10
+            observed = []
+            while time.monotonic() < deadline:
+                # A removed descendant can leave children() with a partial tree.
+                # Refresh native roles/names before deciding the button is absent.
+                window.clear_cache()
+                observed = []
+                for child in self.children(window):
+                    try:
+                        role = child.get_role()
+                        if role not in (self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX):
+                            continue
+                        name = plain(child.get_name())
+                        observed.append((str(role), name))
+                        if name != caption:
+                            continue
+                        action = child.get_action_iface()
+                    except GLib.GError as error:
+                        if 'does not exist' not in str(error):
+                            raise
+                        continue
+                    # Lookup waits for publication; activation is attempted once.
                     assert action and action.do_action(0), caption
                     return
+                time.sleep(.03)
+            raise AssertionError(f'Native button {caption!r} not ready; observed button roles/names: {observed}')
         raise AssertionError(f'Native button {caption!r} not present: {self.texts(window)}')
 
     def wait_text(self, window, text):
