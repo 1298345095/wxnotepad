@@ -97,7 +97,7 @@ void EditorFrame::CreateDefaultToolbar() {
     // its new geometry. Idle toolbar updates consume the asynchronous offer.
     auto clipboardHasText = std::make_shared<bool>(false);
     toolbar->Bind(wxEVT_CLIPBOARD_CHANGED, [clipboardHasText](wxClipboardEvent& event) {
-        *clipboardHasText = event.SupportsFormat(wxDF_UNICODETEXT);
+        *clipboardHasText = event.SupportsFormat(wxDF_UNICODETEXT) || event.SupportsFormat(wxDF_TEXT);
     });
     toolbar->Bind(
         wxEVT_UPDATE_UI,

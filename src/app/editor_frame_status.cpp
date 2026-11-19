@@ -149,6 +149,10 @@ void EditorFrame::UpdateStatusWidths() {
     // One measured character provides its extra text margin without a fixed
     // device-pixel assumption or charging every metadata pane for it.
     widths[StatusField::DocumentSize] += status->GetCharWidth();
+#elif defined(__WXGTK__)
+    // wxGTK reserves the native size-grip width again when drawing the last
+    // field text, after allocating its field rectangle.
+    widths[StatusField::DocumentSize] += status->GetClientSize().y;
 #endif
     const int feedbackWidth = status->GetTextExtent(status->GetStatusText(StatusField::Feedback)).x;
     if (statusPreferredWidths_ == widths && statusMeasuredSize_ == status->GetClientSize() &&

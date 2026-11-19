@@ -33,11 +33,9 @@ void AwaitPaste(wxToolBar* toolbar, bool enabled) {
 
 void ClipboardOffer(wxDataObject* data) {
     wxClipboardLocker lock;
-    Require(static_cast<bool>(lock), "private clipboard opens for a native toolbar offer");
-    if (data)
-        Require(wxTheClipboard->SetData(data), "private clipboard accepts the offered native data");
-    else
-        wxTheClipboard->Clear();
+    if (!lock) throw std::runtime_error("private clipboard opens for a native toolbar offer");
+    wxTheClipboard->Clear();
+    if (data) Require(wxTheClipboard->SetData(data), "private clipboard accepts the offered native data");
 }
 #endif
 class AppearanceApp final : public wxApp {
@@ -94,6 +92,11 @@ public:
 #ifdef __WXMSW__
                 Require(frame->GetToolBar()->GetToolBitmapSize() == frame->FromDIP(wxSize(16, 16)),
                         "native toolbar uses the original physical bitmap resolution at fractional DPI");
+#endif
+#ifdef __WXGTK__
+                status->Update();
+                Require(!status->GetField(StatusField::DocumentSize).IsEllipsized(),
+                        "native status painting displays the complete size beside its sizing grip");
 #endif
                 auto* toolbar = frame->GetToolBar();
 #ifdef __WXGTK__
