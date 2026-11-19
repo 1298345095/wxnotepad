@@ -4,6 +4,7 @@
 #include "app/native_launch.h"
 #include "app/desktop_launch.h"
 #include "syntax/syntax_catalog.h"
+#include "diagnostics/trace.h"
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/msgdlg.h>
@@ -227,6 +228,21 @@ bool ShowContainingFolder(wxWindow* parent, const wxString& path) {
     // this complete item PIDL. Keep native association opening as the fallback.
     auto* item = ILCreateFromPathW(path.wc_str());
     const HRESULT result = item ? SHOpenFolderAndSelectItems(item, 0, nullptr, 0) : E_FAIL;
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    // HRESULT is authoritative; tracing preserves the thread's last-error state.
+    const auto nativeError = GetLastError();
+    if (DiagnosticTrace::Enabled()) {
+        constexpr size_t NativePathCharacters = 32768;
+        wchar_t nativePath[NativePathCharacters]{};
+        const bool decoded = item && SHGetPathFromIDListEx(item, nativePath, NativePathCharacters, GPFIDL_DEFAULT);
+        DiagnosticTrace::Write(
+            "shell.select-item",
+            "\texpected=%s\tnative=%s\tdecoded=%d\tpidl_bytes=%u\tcidl=0\tflags=0\thresult=%08lx\tlast_error=%lu",
+            path.utf8_str().data(), wxString(nativePath).utf8_str().data(), decoded, item ? ILGetSize(item) : 0,
+            static_cast<unsigned long>(result), nativeError);
+    }
+    SetLastError(nativeError);
+#endif
     CoTaskMemFree(item);
     if (SUCCEEDED(result)) return true;
 #elif defined(__WXGTK__)

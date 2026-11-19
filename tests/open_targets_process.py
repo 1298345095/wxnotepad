@@ -25,6 +25,10 @@ def main():
         (folder / "parent.txt").write_bytes(b"parent fixture\n")
         environment = dict(os.environ, WXNOTEPAD_OPEN_TARGET_ROOT=str(folder),
                            PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
+        if sys.platform == "win32":
+            # Ordinary builds compile tracing out; the existing diagnostic build
+            # records the actual shell result without replacing the native call.
+            environment.update(WXNOTEPAD_DIAGNOSTICS="1", WXNOTEPAD_DIAGNOSTIC_LOG="stderr")
         failure_output = Path(os.environ.get("WXNOTEPAD_OPEN_TARGET_FAILURE_DIR",
                               Path(__file__).resolve().parents[1] / ".ci/reports/open-targets")) / folder.name
         if sys.platform != "win32":
@@ -82,6 +86,10 @@ def main():
                     app.wait(timeout=10)
             if sys.platform == "win32":
                 assert manager.wait(timeout=10) == 0, "actual Explorer folder/item observations must succeed"
+                for diagnostic in sorted(folder.glob("native-*.stderr.log")):
+                    for line in diagnostic.read_text(encoding="utf-8", errors="replace").splitlines():
+                        if "\tevent=shell.select-item\t" in line:
+                            print("Native shell diagnostic:", line, flush=True)
             for received in sorted(folder.glob("received-*.txt")):
                 print("PASS: recorded desktop target " + json.dumps(received.read_text(encoding="utf-8")), flush=True)
         finally:

@@ -1,4 +1,4 @@
-param([string]$Root, [string]$Evidence, [string]$Directory, [string]$Item, [int]$Request,
+param([string]$Root, [string]$Evidence, [string]$Directory, [string]$Item, [int]$Request, [uint32]$CallerPid = 0,
       [object]$Shell, [hashtable]$Existing)
 $ErrorActionPreference = 'Stop'
 [System.IO.Directory]::CreateDirectory($Evidence) > $null
@@ -29,8 +29,75 @@ public static class OpenTargetExplorerNative {
     [DllImport("user32.dll", SetLastError=true)] public static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     [DllImport("dwmapi.dll")] public static extern int DwmFlush();
+    [DllImport("kernel32.dll", SetLastError=true)] private static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+    [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll")] private static extern IntPtr LocalFree(IntPtr memory);
+    [DllImport("advapi32.dll", SetLastError=true)] private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError=true)] private static extern bool GetTokenInformation(IntPtr token, int information, IntPtr buffer, uint length, out uint needed);
+    [DllImport("advapi32.dll", SetLastError=true)] private static extern bool ConvertSidToStringSidW(IntPtr sid, out IntPtr text);
+    private enum TokenInformation { User = 1, ElevationType = 18, Elevation = 20, IntegrityLevel = 25 }
+    private static IntPtr Information(IntPtr token, TokenInformation kind) {
+        uint length;
+        GetTokenInformation(token, (int)kind, IntPtr.Zero, 0, out length);
+        if (length == 0) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        IntPtr buffer = Marshal.AllocHGlobal((int)length);
+        if (!GetTokenInformation(token, (int)kind, buffer, length, out length)) {
+            int error = Marshal.GetLastWin32Error();
+            Marshal.FreeHGlobal(buffer);
+            throw new System.ComponentModel.Win32Exception(error);
+        }
+        return buffer;
+    }
+    private static string Sid(IntPtr token, TokenInformation kind) {
+        IntPtr buffer = Information(token, kind);
+        try {
+            IntPtr text;
+            if (!ConvertSidToStringSidW(Marshal.ReadIntPtr(buffer), out text))
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            try { return Marshal.PtrToStringUni(text); }
+            finally { LocalFree(text); }
+        } finally { Marshal.FreeHGlobal(buffer); }
+    }
+    private static int Integer(IntPtr token, TokenInformation kind) {
+        IntPtr buffer = Information(token, kind);
+        try { return Marshal.ReadInt32(buffer); }
+        finally { Marshal.FreeHGlobal(buffer); }
+    }
+    public static string[] TokenContext(uint pid) {
+        const uint ProcessQueryLimitedInformation = 0x1000;
+        const uint TokenQuery = 0x0008;
+        IntPtr process = OpenProcess(ProcessQueryLimitedInformation, false, pid);
+        if (process == IntPtr.Zero) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        try {
+            IntPtr token;
+            if (!OpenProcessToken(process, TokenQuery, out token))
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            try {
+                return new string[] { Sid(token, TokenInformation.User), Sid(token, TokenInformation.IntegrityLevel),
+                    Integer(token, TokenInformation.ElevationType).ToString(), Integer(token, TokenInformation.Elevation).ToString() };
+            } finally { CloseHandle(token); }
+        } finally { CloseHandle(process); }
+    }
 }
 '@
+    function Get-OpenTargetTokenContext([uint32]$TaskProcessId) {
+        $taskToken = [OpenTargetExplorerNative]::TokenContext($TaskProcessId)
+        return [ordered]@{ user_sid = $taskToken[0]; integrity_sid = $taskToken[1];
+            elevation_type = [int]$taskToken[2]; elevated = $taskToken[3] -ne '0' }
+    }
+    try { $taskSnapshot.observer_token = Get-OpenTargetTokenContext ([System.Diagnostics.Process]::GetCurrentProcess().Id) }
+    catch { $taskSnapshot.observer_token_error = $_.Exception.Message }
+    if ($CallerPid -ne 0) {
+        try {
+            $taskCallerProcess = Get-Process -Id $CallerPid
+            if ([System.IO.Path]::GetDirectoryName($taskCallerProcess.Path) -ine [System.IO.Path]::GetFullPath($Root)) {
+                throw 'Caller token collection must remain with the executable in the owned fixture root'
+            }
+            $taskSnapshot.caller_pid = $CallerPid
+            $taskSnapshot.caller_session = $taskCallerProcess.SessionId
+            $taskSnapshot.caller_token = Get-OpenTargetTokenContext $CallerPid
+        } catch { $taskSnapshot.caller_token_error = $_.Exception.Message }
+    }
     $taskSnapshot.foreground = [string][OpenTargetExplorerNative]::GetForegroundWindow()
     foreach ($taskWindow in $Shell.Windows()) {
         try {
@@ -50,6 +117,8 @@ public static class OpenTargetExplorerNative {
             [OpenTargetExplorerNative]::GetWindowThreadProcessId([IntPtr]$taskWindow.HWND, [ref]$taskOwner) > $null
             $taskRecord.pid = $taskOwner
             $taskRecord.session = (Get-Process -Id $taskOwner).SessionId
+            try { $taskRecord.token = Get-OpenTargetTokenContext $taskOwner }
+            catch { $taskRecord.token_error = $_.Exception.Message }
             $taskRecord.explorer_version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo([string]$taskWindow.FullName).FileVersion
             $taskSnapshot.windows += $taskRecord
             [System.IO.File]::WriteAllText((Join-Path $Evidence "explorer-$Request.json"), ($taskSnapshot | ConvertTo-Json -Depth 8))
