@@ -7,6 +7,7 @@
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #include <wx/wupdlock.h>
+#include <wx/settings.h>
 #include <cmath>
 #include <type_traits>
 #include <utility>
@@ -72,6 +73,14 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    // wxSTC initializes selection colors from the native text-control palette;
+    // the core's light-grey selection cannot pair with a dark-theme foreground.
+    for (const auto [element, systemColour] : {std::pair{Scintilla::Element::SelectionText, wxSYS_COLOUR_HIGHLIGHTTEXT},
+                                               std::pair{Scintilla::Element::SelectionBack, wxSYS_COLOUR_HIGHLIGHT}}) {
+        const auto colour = wxSystemSettings::GetColour(systemColour);
+        Send(Message::SetElementColour, static_cast<uintptr_t>(element),
+             0xFF000000U | colour.Red() | (colour.Green() << 8U) | (colour.Blue() << 16U));
+    }
 #ifdef __WXMSW__
     // A top-level move can change monitor calibration without changing DPI.
     // The wx member-function binding disconnects when this editor is destroyed.

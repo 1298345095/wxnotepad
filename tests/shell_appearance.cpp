@@ -10,6 +10,7 @@
 #include <wx/dialog.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/settings.h>
 #ifdef __WXMSW__
 #include <commctrl.h>
 #endif
@@ -37,6 +38,89 @@ void ClipboardOffer(wxDataObject* data) {
     if (data) Require(wxTheClipboard->SetData(data), "private clipboard accepts the offered native data");
 }
 #endif
+void NativeSelectionColours(EditorControl* editor) {
+    const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+    for (const auto [element, expected] : {std::pair{Scintilla::Element::SelectionText, foreground},
+                                           std::pair{Scintilla::Element::SelectionBack, background}}) {
+        const auto colour =
+            static_cast<uint32_t>(editor->Send(Scintilla::Message::GetElementColour, static_cast<uintptr_t>(element)));
+        const uint32_t native = 0xFF000000U | expected.Red() | (expected.Green() << 8U) | (expected.Blue() << 16U);
+        std::printf("Selection element %d: expected=%08x actual=%08x\n", static_cast<int>(element), native, colour);
+        Require(colour == native, "default selected text uses the native highlight foreground/background pair");
+    }
+}
+void DisabledArtworkColours(wxToolBar* toolbar) {
+    if (!wxSystemSettings::GetAppearance().IsDark()) return;
+    const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    Require(foreground != background, "native Dark theme exposes a distinct disabled foreground");
+    for (const int command : {wxID_SAVE, wxID_PASTE, wxID_UNDO, wxID_REDO, wxID_CUT}) {
+        const auto* tool = toolbar->FindById(command);
+        for (const int size : {16, 24, 32, 40, 48}) {
+            const auto normal = tool->GetNormalBitmapBundle().GetBitmap(wxSize(size, size)).ConvertToImage();
+            const auto luminance = normal.ConvertToGreyscale();
+            const auto disabled = tool->GetDisabledBitmapBundle().GetBitmap(wxSize(size, size)).ConvertToImage();
+            int visiblePixels = 0;
+            unsigned darkest = 255;
+            unsigned lightest = 0;
+            wxPoint darkPoint;
+            wxPoint lightPoint;
+            for (int y = 0; y < disabled.GetHeight(); ++y) {
+                for (int x = 0; x < disabled.GetWidth(); ++x) {
+                    Require(normal.GetAlpha(x, y) == disabled.GetAlpha(x, y),
+                            "disabled Dark artwork preserves the supplied shape and edge transparency");
+                    if (disabled.GetAlpha(x, y) != wxALPHA_OPAQUE) continue;
+                    ++visiblePixels;
+                    const unsigned shade = luminance.GetRed(x, y);
+                    if (shade < darkest) {
+                        darkest = shade;
+                        darkPoint = wxPoint(x, y);
+                    }
+                    if (shade > lightest) {
+                        lightest = shade;
+                        lightPoint = wxPoint(x, y);
+                    }
+                }
+            }
+            Require(visiblePixels > 0, "disabled Dark artwork contains visible native foreground strokes");
+            const auto pixel = [&disabled](wxPoint point) {
+                return wxColour(disabled.GetRed(point.x, point.y), disabled.GetGreen(point.x, point.y),
+                                disabled.GetBlue(point.x, point.y));
+            };
+            if (command == wxID_SAVE || command == wxID_PASTE) {
+                Require(darkest < lightest, "supplied Save/Paste artwork has opaque interior luminance detail");
+                Require(pixel(darkPoint).GetLuminance() > pixel(lightPoint).GetLuminance(),
+                        "disabled Dark Save/Paste preserve opaque interior detail instead of a solid silhouette");
+            }
+            Require(pixel(darkPoint).GetLuminance() > background.GetLuminance(),
+                    "disabled Dark artwork retains visible foreground contrast against native chrome");
+        }
+    }
+    std::printf("PASS: native Dark disabled artwork foreground #%02x%02x%02x on #%02x%02x%02x\n", foreground.Red(),
+                foreground.Green(), foreground.Blue(), background.Red(), background.Green(), background.Blue());
+}
+#ifdef __WXMSW__
+void DumpStatusLayout(wxStatusBar* status, const char* stage) {
+    const auto window = static_cast<HWND>(status->GetHandle());
+    const auto client = status->GetClientSize();
+    std::fprintf(stderr, "Status %s: client=%dx%d DPI=%dx%d font=%s char=%dx%d grip=%d\n", stage, client.x, client.y,
+                 status->GetDPI().x, status->GetDPI().y, status->GetFont().GetNativeFontInfoDesc().ToUTF8().data(),
+                 status->GetCharWidth(), status->GetCharHeight(),
+                 wxSystemSettings::GetMetric(wxSYS_HSCROLL_ARROW_X, status));
+    for (int field = 0; field < StatusField::Count; ++field) {
+        wxRect rectangle;
+        const bool valid = status->GetFieldRect(field, rectangle);
+        std::array<wchar_t, 512> rendered{};
+        SendMessageW(window, SB_GETTEXTW, field, reinterpret_cast<LPARAM>(rendered.data()));
+        std::fprintf(stderr,
+                     "Status field %d: width=%d rect=%d,%d,%d,%d valid=%d textWidth=%d logical='%s' native='%s'\n",
+                     field, status->GetStatusWidth(field), rectangle.x, rectangle.y, rectangle.width, rectangle.height,
+                     valid, status->GetTextExtent(status->GetStatusText(field)).x,
+                     status->GetStatusText(field).ToUTF8().data(), wxString(rendered.data()).ToUTF8().data());
+    }
+}
+#endif
 class AppearanceApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -56,6 +140,7 @@ public:
                 Require(frame->GetStatusBar()->GetFieldsCount() == 13, "status exposes the original thirteen fields");
                 using enum Scintilla::Message;
                 auto* editor = frame->Editor();
+                NativeSelectionColours(editor);
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one\r\n\t中😀"));
                 editor->Send(SetTabWidth, 4);
                 editor->Send(GotoPos, 13);
@@ -98,6 +183,7 @@ public:
                         "native status painting displays the complete size beside its sizing grip");
 #endif
                 auto* toolbar = frame->GetToolBar();
+                DisabledArtworkColours(toolbar);
 #if defined(__WXGTK__) || defined(__WXMSW__)
                 ClipboardOffer(new wxTextDataObject("native toolbar text"));
                 AwaitPaste(toolbar, true);
@@ -126,7 +212,7 @@ public:
                         "native toolbar buttons are actually disabled for no-edit history");
 #endif
                 Require(toolbar->FindById(wxID_UNDO)->GetDisabledBitmap().IsOk(),
-                        "disabled history commands use the original blended artwork");
+                        "disabled history commands have native themed artwork");
                 editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(toolbar->GetToolEnabled(wxID_UNDO), "editing enables the same toolbar Undo command");
@@ -259,6 +345,7 @@ public:
                     std::array<wchar_t, 512> rendered{};
                     SendMessageW(static_cast<HWND>(status->GetHandle()), SB_GETTEXTW, field,
                                  reinterpret_cast<LPARAM>(rendered.data()));
+                    if (rendered[0] != 0) DumpStatusLayout(status, "narrow metadata caption failure");
                     Require(rendered[0] == 0, "narrow native panes do not paint fragments of hidden metadata");
                 }
                 frame->SetSize(wxSize(1000, 700));

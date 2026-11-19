@@ -13,19 +13,27 @@
 
 namespace {
 wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& background) {
-    // Notepad4 CreateBars/BitmapAlphaBlend, 89b8b36: retain the original colors
-    // with 0x60 opacity against the current native toolbar background.
+    // Notepad4 CreateBars/BitmapAlphaBlend, 89b8b36, for light chrome. Its dark
+    // strokes disappear on dark chrome. Map source luminance between native
+    // disabled text and background to retain interior detail as well as alpha.
     constexpr unsigned OriginalDisabledOpacity = 0x60;
     constexpr unsigned ChannelMaximum = 255;
+    const bool dark = wxSystemSettings::GetAppearance().IsDark();
+    const auto disabled = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+    const std::array<unsigned, 3> foreground{disabled.Red(), disabled.Green(), disabled.Blue()};
     const std::array<unsigned, 3> backdrop{background.Red(), background.Green(), background.Blue()};
     wxVector<wxBitmap> images;
     for (const int size : {16, 24, 32, 40, 48}) {
         auto image = normal.GetBitmap(wxSize(size, size)).ConvertToImage();
+        if (dark) image = image.ConvertToGreyscale();
         auto* data = image.GetData();
         for (int byte = 0; byte < image.GetWidth() * image.GetHeight() * 3; ++byte)
-            data[byte] = static_cast<unsigned char>((data[byte] * OriginalDisabledOpacity +
-                                                     backdrop[byte % 3] * (ChannelMaximum - OriginalDisabledOpacity)) /
-                                                    ChannelMaximum);
+            data[byte] = static_cast<unsigned char>(
+                dark ? (foreground[byte % 3] * (ChannelMaximum - data[byte]) + backdrop[byte % 3] * data[byte]) /
+                           ChannelMaximum
+                     : (data[byte] * OriginalDisabledOpacity +
+                        backdrop[byte % 3] * (ChannelMaximum - OriginalDisabledOpacity)) /
+                           ChannelMaximum);
         images.emplace_back(image);
     }
     return wxBitmapBundle::FromBitmaps(images);
