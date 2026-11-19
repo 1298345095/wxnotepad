@@ -171,7 +171,10 @@ add_library(app_shell STATIC
     src/app/editor_frame_commands.cpp
     src/app/editor_printing.cpp
     src/app/editor_print_job.cpp
+    src/app/native_launch.cpp
+    src/app/desktop_launch.cpp
     src/app/new_window.cpp
+    src/app/run_command.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
@@ -207,6 +210,8 @@ if(UNIX AND NOT APPLE)
     target_sources(editor_runtime PRIVATE src/editor/platform/text_measurement_gtk.cpp)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+    pkg_check_modules(GIO_UNIX REQUIRED IMPORTED_TARGET gio-unix-2.0)
+    target_link_libraries(app_shell PRIVATE PkgConfig::GIO_UNIX)
     pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
     target_link_libraries(editor_runtime PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
 endif()
@@ -229,6 +234,12 @@ include(cmake/Localization.cmake)
 
 include(CTest)
 if(BUILD_TESTING)
+    add_gui_program(run_command tests/run_command.cpp app_shell)
+    add_executable(run_command_child tests/run_command_child.cpp)
+    target_link_libraries(run_command_child PRIVATE wx::base)
+    add_dependencies(run_command run_command_child)
+    add_test(NAME original_run_command COMMAND run_command)
+    set_tests_properties(original_run_command PROPERTIES TIMEOUT 90)
     add_executable(date_time_format tests/date_time_format.cpp)
     target_link_libraries(date_time_format PRIVATE editor_runtime)
     if(MSVC)

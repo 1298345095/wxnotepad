@@ -92,6 +92,7 @@ void EditorFrame::CreateMenus() {
 
 wxMenu* EditorFrame::CreateToolsMenu() {
     auto* tools = new wxMenu;
+    AppendRunCommand(tools);
     auto* base64 = new wxMenu;
     for (const auto& [label, command] :
          {std::pair{wxTRANSLATE("Standard &Encode"), Base64Conversion::Encode},

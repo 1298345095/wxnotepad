@@ -30,6 +30,7 @@ struct OriginalSettings {
     FontSettings fonts;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
+    int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
     bool showStatusbar = true;

@@ -132,6 +132,10 @@ msgstr "为匹配的行添加书签(&M)"
 msgid "&Boundary:"
 msgstr "边界(&B):"
 
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr "浏览(&B)..."
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -161,6 +165,10 @@ msgstr "列(留空或 1 - %lld)(&C):"
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
 msgstr "行列排序(矩形选择)(&C)。"
+
+#: src/app/run_command.cpp
+msgid "&Command:"
+msgstr "命令(&C)："
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
 #: src/app/editor_frame_commands.cpp
@@ -515,6 +523,14 @@ msgstr "还原(&V)\tF5"
 msgid "&Right."
 msgstr "右对齐(&R)。"
 
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr "运行(&R)"
+
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
+msgstr "运行命令(&R)...\tCtrl+R"
+
 #: src/app/editor_frame.cpp
 msgid "&Save"
 msgstr "保存(&S)"
@@ -711,6 +727,10 @@ msgstr "行对齐"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All Files (*)"
 msgstr "所有文件 (*)"
+
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
+msgstr "所有文件 (*)|*"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All files (*.*)"
@@ -946,6 +966,10 @@ msgstr "请先选择文件名再保存。"
 msgid "Choose an existing file to open."
 msgstr "选择要打开的现有文件。"
 
+#: src/app/run_command.cpp
+msgid "Choose program"
+msgstr "选择程序"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr "经典 &Mac OS (CR)"
@@ -1100,6 +1124,10 @@ msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问
 msgid "Could not determine the file size."
 msgstr "无法确定文件大小。"
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr "无法加载桌面应用程序条目。"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -1149,6 +1177,11 @@ msgstr "无法替换目标文件: %s"
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
 msgstr "无法重新启动 wxnotepad。"
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
+msgstr "无法运行命令：%s"
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
@@ -2035,6 +2068,10 @@ msgstr "打印缩放比例"
 msgid "Print zoom (%d%% to %d%%):"
 msgstr "打印缩放（%d%% 至 %d%%）："
 
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr "程序 (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|所有文件 (*.*)|*.*"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr "Property List"
@@ -2195,6 +2232,10 @@ msgstr "右页边距"
 msgid "Right:"
 msgstr "右："
 
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr "运行命令"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
@@ -2282,6 +2323,11 @@ msgstr "重新加载前保存对 %s 的修改？"
 #, c-format
 msgid "Save changes to %s before restarting?"
 msgstr "重新启动前保存对 %s 的修改？"
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
+msgstr "运行工具前保存对 %s 的修改？"
 
 #: src/app/editor_frame.cpp
 msgid "Save changes?"
@@ -2615,6 +2661,14 @@ msgstr "插入制表符为空格"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Text files (*.txt)"
 msgstr "文本文件 (*.txt)"
+
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr "命令中有未闭合的引号。"
+
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
+msgstr "命令以未完成的转义字符结尾。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY2.
 #: src/app/editor_frame_file_watching.cpp
