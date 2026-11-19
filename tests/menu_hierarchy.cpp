@@ -112,7 +112,7 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
     Order(bar->GetMenu(6),
-          {"Run...", "Execute Document", "Open Document With...", "Save Before Running Tools", "Base64"});
+          {"Run Command...", "Execute Document", "Open Document With...", "Save Before Running Tools", "Base64"});
     const int execute = bar->FindMenuItem("Tools", "Execute Document");
     const int openWith = bar->FindMenuItem("Tools", "Open Document With...");
     const int saveTools = bar->FindMenuItem("Tools", "Save Before Running Tools");
