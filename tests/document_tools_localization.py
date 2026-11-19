@@ -69,7 +69,7 @@ def main():
                 app.begin('menu', str(ids[open_with]))
                 window = fixture.dialogs.wait(app.process, title)
                 capture(fixture, app, window, fixture.logs / f'open-with-{code}.png')
-                fixture.dialogs.cancel(window)
+                fixture.dialogs.click(window, 'Cancel' if sys.platform != 'win32' or code == 'en' else '取消')
                 app.finish()
                 app.close()
                 config = read_settings(fixture.config)

@@ -64,6 +64,16 @@ public:
                 if (IsWindowVisible(window) && (wxString(title) == "Could not execute document" ||
                                                 wxString(title) == "Could not open document with program")) {
                     ++reinterpret_cast<LaunchErrors*>(data)->errors;
+                    EnumChildWindows(
+                        window,
+                        [](HWND child, LPARAM) -> BOOL {
+                            wchar_t text[1024]{};
+                            GetWindowTextW(child, text, static_cast<int>(std::size(text)));
+                            std::fprintf(stderr, "Native launch error control: %s\n", wxString(text).utf8_str().data());
+                            std::fflush(stderr);
+                            return TRUE;
+                        },
+                        0);
                     SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
                 }
                 return TRUE;
@@ -258,6 +268,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(execute), "named document enables Execute");
     NativeSearch::Command(frame, execute);
+    Require(launchErrors.errors == 0, "direct Execute menu starts the registered native handler without an error");
     WaitForChild("disk bytes", Name(path), Name(Root()));
     int executeEvents = 0;
     frame->Bind(
