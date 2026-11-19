@@ -119,6 +119,8 @@ private:
     wxMenu* CreateSettingsMenu();
     wxMenu* CreateToolsMenu();
     void AppendDocumentTools(wxMenu* tools);
+    void AppendRunCommand(wxMenu* tools);
+    void ShowRunCommand();
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);

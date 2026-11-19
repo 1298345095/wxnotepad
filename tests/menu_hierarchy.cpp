@@ -111,7 +111,8 @@ void CheckMenu(EditorFrame* frame) {
            "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
-    Order(bar->GetMenu(6), {"Execute Document", "Open Document With...", "Save Before Running Tools", "Base64"});
+    Order(bar->GetMenu(6),
+          {"Run...", "Execute Document", "Open Document With...", "Save Before Running Tools", "Base64"});
     const int execute = bar->FindMenuItem("Tools", "Execute Document");
     const int openWith = bar->FindMenuItem("Tools", "Open Document With...");
     const int saveTools = bar->FindMenuItem("Tools", "Save Before Running Tools");

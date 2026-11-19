@@ -147,6 +147,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/app/dialogs/auto_completion_settings_dialog.cpp
+    src/app/dialogs/auto_save_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/word_wrap_settings_dialog.cpp
@@ -174,6 +175,7 @@ add_library(app_shell STATIC
     src/app/desktop_launch.cpp
     src/app/document_tools.cpp
     src/app/new_window.cpp
+    src/app/run_command.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
@@ -233,6 +235,12 @@ include(cmake/Localization.cmake)
 
 include(CTest)
 if(BUILD_TESTING)
+    add_gui_program(run_command tests/run_command.cpp app_shell)
+    add_executable(run_command_child tests/run_command_child.cpp)
+    target_link_libraries(run_command_child PRIVATE wx::base)
+    add_dependencies(run_command run_command_child)
+    add_test(NAME original_run_command COMMAND run_command)
+    set_tests_properties(original_run_command PROPERTIES TIMEOUT 90)
     add_executable(date_time_format tests/date_time_format.cpp)
     target_link_libraries(date_time_format PRIVATE editor_runtime)
     if(MSVC)
@@ -422,6 +430,11 @@ if(BUILD_TESTING)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
     add_editor_test(save_backup original_save_backup 30)
+    add_editor_test(periodic_backup original_periodic_backup 90)
+    add_test(NAME original_periodic_backup_process COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/periodic_backup_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}")
+    set_tests_properties(original_periodic_backup_process PROPERTIES TIMEOUT 180)
     add_editor_test(current_encoding original_current_encoding 90)
     add_test(NAME original_current_encoding_native_keys COMMAND current_encoding)
     set_tests_properties(original_current_encoding_native_keys PROPERTIES TIMEOUT 90

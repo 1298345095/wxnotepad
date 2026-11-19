@@ -136,6 +136,10 @@ msgstr "边界(&B):"
 msgid "&Browse Directory..."
 msgstr "浏览目录(&B)..."
 
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr "浏览(&B)..."
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -165,6 +169,10 @@ msgstr "列(留空或 1 - %lld)(&C):"
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
 msgstr "行列排序(矩形选择)(&C)。"
+
+#: src/app/run_command.cpp
+msgid "&Command:"
+msgstr "命令(&C)："
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
 #: src/app/editor_frame_commands.cpp
@@ -358,6 +366,10 @@ msgstr "长行标记(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小写(&L)\tCtrl+U"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr "手动删除备份(&M)。"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_MERGE_DUP.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
@@ -514,6 +526,14 @@ msgstr "还原(&V)\tF5"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Right."
 msgstr "右对齐(&R)。"
+
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr "运行(&R)"
+
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
+msgstr "运行命令(&R)...\tCtrl+R"
 
 #: src/app/editor_frame.cpp
 msgid "&Save"
@@ -716,6 +736,10 @@ msgstr "行对齐"
 msgid "All Files (*)"
 msgstr "所有文件 (*)"
 
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
+msgstr "所有文件 (*)|*"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All files (*.*)"
 msgstr "所有文件 (*.*)"
@@ -777,6 +801,14 @@ msgstr "自动闭合 HTML 和 XML 标签"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自动收缩水平滚动条"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr "自动保存设置"
+
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr "自动保存设置..."
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr "自动"
@@ -801,6 +833,14 @@ msgstr "退格键在缩进处删除到制表位"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
 msgstr "反引号"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr "备份间隔（秒）(&S)："
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
+msgstr "备份间隔（秒）"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
@@ -933,6 +973,10 @@ msgstr "请先选择文件名再保存。"
 #: src/document/document_session.cpp
 msgid "Choose an existing file to open."
 msgstr "选择要打开的现有文件。"
+
+#: src/app/run_command.cpp
+msgid "Choose program"
+msgstr "选择程序"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Classic &Mac OS (CR)"
@@ -1154,6 +1198,11 @@ msgstr "无法替换目标文件: %s"
 msgid "Could not restart wxnotepad."
 msgstr "无法重新启动 wxnotepad。"
 
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
+msgstr "无法运行命令：%s"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not save file"
@@ -1280,6 +1329,10 @@ msgstr "在选区内绘制块状光标(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr "启用多选(&M)"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
+msgstr "启用定期备份(&P)。"
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Enclose Selection"
@@ -1911,6 +1964,10 @@ msgstr "只有文件所有者才能更改所有者的写入权限。"
 msgid "Only words in document"
 msgstr "仅使用当前文档中的单词"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
+msgstr "打开文件夹(&F)"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
 msgstr "以 UTF-8 模式打开 7 位 ASCII 文件(&A)。"
@@ -2042,6 +2099,10 @@ msgstr "打印缩放比例"
 #, c-format
 msgid "Print zoom (%d%% to %d%%):"
 msgstr "打印缩放（%d%% 至 %d%%）："
+
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr "程序 (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|所有文件 (*.*)|*.*"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
@@ -2203,6 +2264,10 @@ msgstr "右页边距"
 msgid "Right:"
 msgstr "右："
 
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr "运行命令"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
@@ -2291,7 +2356,7 @@ msgstr "重新加载前保存对 %s 的修改？"
 msgid "Save changes to %s before restarting?"
 msgstr "重新启动前保存对 %s 的修改？"
 
-#: src/app/document_tools.cpp
+#: src/app/document_tools.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr "运行工具前保存对 %s 的更改吗？"
@@ -2628,6 +2693,14 @@ msgstr "插入制表符为空格"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Text files (*.txt)"
 msgstr "文本文件 (*.txt)"
+
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr "命令中有未闭合的引号。"
+
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
+msgstr "命令以未完成的转义字符结尾。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY2.
 #: src/app/editor_frame_file_watching.cpp

@@ -89,15 +89,34 @@ wxString ParseDateTimeFormat(wxString value) {
 SettingsStore::SettingsStore() : SettingsStore(ConfigurationPath()) {
 }
 
+int SettingsStore::OriginalRunCommandWidth(int screenWidth, int screenHeight) const {
+    const auto section = wxString::Format("Window Position %dx%d", screenWidth, screenHeight);
+    const int matching = ReadInt("RunDlgSizeX", 0, section);
+    if (matching > 0) return matching;
+    // Imported Windows monitor dimensions may not exist on the current desktop.
+    // Reuse the first saved original width without creating a new monitor schema.
+    for (auto line : lines_) {
+        line = line.Strip(wxString::both);
+        if (!line.StartsWith("[Window Position ") || !line.EndsWith("]")) continue;
+        const int width = ReadInt("RunDlgSizeX", 0, line.Mid(1, line.length() - 2));
+        if (width > 0) return width;
+    }
+    return 0;
+}
+
 SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const OriginalSettings defaults;
     LoadLines();
     values.fonts.codeStyle = ReadString("Default Code Style", defaults.fonts.codeStyle, "Global Styles");
     values.fonts.textStyle = ReadString("Default Text Style", defaults.fonts.textStyle, "Global Styles");
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
+    values.autoSave.flags = ReadInt("AutoSaveOption", defaults.autoSave.flags);
+    values.autoSave.periodMilliseconds =
+        static_cast<uint32_t>(ReadInt("AutoSavePeriod", defaults.autoSave.periodMilliseconds));
     values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
     const auto openWith = ReadString("OpenWithDir", {});
     if (!openWith.empty()) values.openWithDirectory = RecentFiles::ExpandPath(openWith);
+    values.runCommandWidthDIP = std::max(0, ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
     auto& print = values.printing;
     print.header = static_cast<PrintHeader>(std::clamp(ReadInt("PrintHeader", std::to_underlying(print.header)),
                                                        std::to_underlying(PrintHeader::FilenameAndDateTime),
@@ -497,12 +516,16 @@ bool SettingsStore::Save(bool explicitSave) {
             WriteBool("UseDefaultCodeStyle", style.useCode, defaults.fonts.Scheme(scheme.language).useCode, section);
             WriteString("Default", style.defaultStyle, {}, section);
         }
+        WriteInt("AutoSaveOption", values.autoSave.flags, defaults.autoSave.flags);
+        WriteInt("AutoSavePeriod", static_cast<int32_t>(values.autoSave.periodMilliseconds),
+                 defaults.autoSave.periodMilliseconds);
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
         WriteString("OpenWithDir",
                     values.openWithDirectory.empty()
                         ? wxString{}
                         : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs),
                     {});
+        WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;
         WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
