@@ -152,6 +152,11 @@ public:
         }
         const auto* path = dynamic_cast<wxTextCtrl*>(dialog_->FindWindowByName("open-with-directory", dialog_));
         if (path && path->GetValue() == directory_) {
+#ifndef __WXMSW__
+            const auto* programs = dynamic_cast<wxListBox*>(dialog_->FindWindowByName("open-with-programs", dialog_));
+            Require(programs && programs->FindString("Windows.EXE") == wxNOT_FOUND,
+                    "Linux excludes imported Windows programs even with executable permission");
+#endif
             changed = true;
             Stop();
             wxCommandEvent cancel(wxEVT_BUTTON, wxID_CANCEL);
@@ -303,6 +308,11 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     Require(!std::filesystem::exists(Root() / "record.txt"), "Cancel launches no program");
     const auto changedDirectory = Root() / "changed-programs";
     std::filesystem::create_directory(changedDirectory);
+#ifndef __WXMSW__
+    const auto windowsProgram = changedDirectory / "Windows.EXE";
+    TestFiles::WriteBytes(windowsProgram, "Windows program placeholder");
+    std::filesystem::permissions(windowsProgram, std::filesystem::perms::owner_all);
+#endif
     {
         DirectoryDriver directory(Name(changedDirectory));
         Require(!frame->OpenDocumentWith(), "Browse followed by Cancel does not launch");
