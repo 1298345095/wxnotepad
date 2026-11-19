@@ -17,7 +17,7 @@ void SetChildDirectory(gpointer directory) {
     // GIO performs this setup in the child before its exec-confirmed launch.
     if (directory && chdir(static_cast<const char*>(directory)) != 0) _exit(127);
 }
-}
+} // namespace
 bool LaunchDesktopApplication(GAppInfo* application, const wxString& target, const wxString& workingDirectory,
                               wxString& error) {
     GError* failure = nullptr;
@@ -27,10 +27,10 @@ bool LaunchDesktopApplication(GAppInfo* application, const wxString& target, con
     const auto directory = workingDirectory.utf8_string();
     bool launched = false;
     if (G_IS_DESKTOP_APP_INFO(application)) {
-        launched = g_desktop_app_info_launch_uris_as_manager(G_DESKTOP_APP_INFO(application), uris, nullptr,
-                                                            G_SPAWN_SEARCH_PATH, SetChildDirectory,
-                                                            directory.empty() ? nullptr : const_cast<char*>(directory.c_str()),
-                                                            nullptr, nullptr, &failure) != FALSE;
+        launched = g_desktop_app_info_launch_uris_as_manager(
+                       G_DESKTOP_APP_INFO(application), uris, nullptr, G_SPAWN_SEARCH_PATH, SetChildDirectory,
+                       directory.empty() ? nullptr : const_cast<char*>(directory.c_str()), nullptr, nullptr,
+                       &failure) != FALSE;
     } else {
         GList* files = file ? g_list_append(nullptr, file) : nullptr;
         launched = g_app_info_launch(application, files, nullptr, &failure) != FALSE;
