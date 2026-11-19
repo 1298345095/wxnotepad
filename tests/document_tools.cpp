@@ -260,7 +260,6 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     LaunchErrors launchErrors;
     std::fprintf(stderr, "phase: Ctrl+L\n");
     std::fflush(stderr);
-    wxSetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD", "1");
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "open named document");
     auto* editor = frame->Editor();
     TestEditor::Append(frame, " unsaved");
@@ -400,7 +399,6 @@ Exec=/missing-wxnotepad-owned-program-244 %f
         Require(frame->OpenDocumentWith(), "untitled Open With launches chosen program with no document argument");
     }
     WaitForChild("", "", startupDirectory);
-    wxUnsetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD");
     std::puts("PASS: menu, Ctrl+L, owned native handler argv/cwd/disk, save policy and untitled Open With");
 }
 class ToolsApp final : public wxApp {
@@ -414,7 +412,7 @@ public:
 #endif
         std::fprintf(stderr, "phase: init argc=%d\n", argc);
         std::fflush(stderr);
-        if (wxGetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD", nullptr)) {
+        if (argc != 2 || wxString(argv[1]) != "--fixture") {
             const auto argument = argc > 1 ? wxString(argv[1]) : wxString{};
             std::string disk;
             if (!argument.empty()) disk = TestFiles::Bytes(TestFiles::Utf8Path(argument.utf8_string()));
@@ -444,7 +442,6 @@ public:
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
-            wxUnsetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD");
             frame->Destroy();
             ExitMainLoop();
         });
