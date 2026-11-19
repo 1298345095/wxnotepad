@@ -306,7 +306,8 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
         selected = ['ctest', '--test-dir', workspace, '-C', 'Release', '--parallel', '1',
                     '--output-on-failure', '--no-tests=error', '-R', selection,
                     '--output-junit', workspace / 'tests.xml']
-        environment = dict(os.environ, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
+        environment = dict(os.environ, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'),
+                           GIO_LAUNCH_DESKTOP=str(linux_gio_helper(_cmake_cache(cmake_dir))))
         isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
@@ -346,18 +347,31 @@ def split_linux_symbols(binary, symbols):
 
 
 def bundle_linux_runtime(executable, destination, symbols, installed, reports):
-    split_linux_symbols(destination / executable.name, symbols)
-    dependencies = subprocess.check_output(['ldd', str(executable)], text=True)
-    (reports / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
     libraries = destination / 'lib'
     libraries.mkdir(exist_ok=True)
-    for line in dependencies.splitlines():
-        if '=> ' not in line:
-            continue
-        name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
-        if name.is_absolute() and name.resolve().is_relative_to(installed):
-            shutil.copy2(name, libraries / name.name)
-            split_linux_symbols(libraries / name.name, symbols / 'lib')
+    for relative, report in ((Path(executable.name), 'runtime-libraries.txt'),
+                             (Path('libexec/gio-launch-desktop'), 'gio-launch-desktop-libraries.txt')):
+        binary = destination / relative
+        split_linux_symbols(binary, symbols / relative.parent)
+        dependencies = subprocess.check_output(['ldd', str(binary)], text=True)
+        (reports / report).write_text(dependencies, encoding='utf-8')
+        for line in dependencies.splitlines():
+            if '=> ' not in line:
+                continue
+            name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
+            target = libraries / name.name
+            if name.is_absolute() and name.resolve().is_relative_to(installed) and not target.exists():
+                shutil.copy2(name, target)
+                split_linux_symbols(target, symbols / 'lib')
+
+
+def linux_gio_helper(cache):
+    # GLib's compiled libexec prefix points into vcpkg's disposable package
+    # staging tree. Select the helper from this build's actual installed SDK.
+    helper = Path(cache['VCPKG_INSTALLED_DIR']) / cache['VCPKG_TARGET_TRIPLET'] / 'libexec/gio-launch-desktop'
+    if not helper.is_file() or not os.access(helper, os.X_OK):
+        raise FileNotFoundError(f'Required executable GLib desktop launch helper: {helper}')
+    return helper.resolve()
 
 
 def _cmake_cache(directory):
@@ -390,6 +404,9 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         for library in directory.glob('*.dll'):
             shutil.copy2(library, destination / library.name)
     else:
+        helper = destination / 'libexec/gio-launch-desktop'
+        helper.parent.mkdir(exist_ok=True)
+        shutil.copy2(linux_gio_helper(cache), helper)
         bundle_linux_runtime(executable, destination, symbols, installed, reports)
     languages = json.loads((source_root / 'po/languages.json').read_text(encoding='utf-8'))
     for language in languages['languages']:
@@ -419,9 +436,10 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         'See build.json for the tested source and executable checksum.\n'
         'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
         'Linux: Ubuntu 24.04 x64 desktop libraries are required; run from this directory with\n'
+        'GIO_LAUNCH_DESKTOP="$PWD/libexec/gio-launch-desktop" \\\n'
         'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'
         'The matching Linux symbols/ directory is retained with the build evidence.\n'
-        'Copy its .debug/ and lib/.debug/ directories here for GDB.\n',
+        'Copy its .debug/, lib/.debug/ and libexec/.debug/ directories here for GDB.\n',
         encoding='utf-8')
     return destination / executable.name
 
