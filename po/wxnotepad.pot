@@ -816,6 +816,14 @@ msgstr ""
 msgid "Change &background color."
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Change the disk file's read-only attribute. F10 controls editing only."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
+msgstr ""
+
 #: src/app/language_commands.cpp
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
 msgstr ""
@@ -957,6 +965,25 @@ msgid "Copy as &RTF"
 msgstr ""
 
 #: src/document/document_session.cpp
+#, c-format
+msgid "Could not change file attributes: %s"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not change file protection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Could not change read-only protection for %s. %s"
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change the file owner's write permission: %s"
+msgstr ""
+
+#: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr ""
 
@@ -1005,6 +1032,16 @@ msgstr ""
 #: src/app/editor_print_job.cpp
 #, c-format
 msgid "Could not print \"%s\"."
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file attributes: %s"
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file permissions: %s"
 msgstr ""
 
 #: src/document/document_session.cpp
@@ -1717,6 +1754,10 @@ msgstr ""
 msgid "On &Startup"
 msgstr ""
 
+#: src/document/document_session.cpp
+msgid "Only the file owner can change the owner's write permission."
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr ""
@@ -1894,6 +1935,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Read Only &File"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -2089,6 +2134,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Save file"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Save the document before changing file permissions."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2435,6 +2484,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "The specified text was not found."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "This command changes a file, not a directory."
 msgstr ""
 
 #: src/document/document_session.cpp
