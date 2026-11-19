@@ -294,6 +294,15 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
                 shutil.copytree(temporary, reports / f'{report}-ctest', dirs_exist_ok=True)
         return
 
+    environment = dict(os.environ)
+    # CTest-only display probes have no application SDK. A cache selecting the
+    # application or either SDK field must still validate its complete helper path.
+    if (cmake_dir / 'CMakeCache.txt').exists():
+        cache = _cmake_cache(cmake_dir)
+        if (cache.get('CMAKE_PROJECT_NAME') == 'wxnotepad' or
+                'VCPKG_INSTALLED_DIR' in cache or 'VCPKG_TARGET_TRIPLET' in cache):
+            environment['GIO_LAUNCH_DESKTOP'] = str(linux_gio_helper(cache))
+
     shards = test_shards(cmake_dir.resolve(), expression, jobs, reports / report)
     print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
           f'{len(shards)} concurrent sessions', flush=True)
@@ -306,12 +315,11 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
         selected = ['ctest', '--test-dir', workspace, '-C', 'Release', '--parallel', '1',
                     '--output-on-failure', '--no-tests=error', '-R', selection,
                     '--output-junit', workspace / 'tests.xml']
-        environment = dict(os.environ, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'),
-                           GIO_LAUNCH_DESKTOP=str(linux_gio_helper(_cmake_cache(cmake_dir))))
+        child_environment = dict(environment, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
         isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
-        return run(isolated, reports / f'{report}-shard-{index}-ctest.log', environment, check=False)
+        return run(isolated, reports / f'{report}-shard-{index}-ctest.log', child_environment, check=False)
 
     with ThreadPoolExecutor(max_workers=len(shards)) as workers:
         results = list(workers.map(run_shard, enumerate(shards, 1)))

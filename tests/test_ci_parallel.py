@@ -117,6 +117,37 @@ class ParallelCTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, 'No CTest tests match'):
             CI.test_shards(self.build, '^missing-test$', 4, self.directory / 'reports')
 
+    @unittest.skipUnless(sys.platform == 'linux', 'Private Linux sessions')
+    def test_non_sdk_cmake_probe_runs_without_a_glib_helper(self):
+        reports = self.directory / 'non-sdk evidence'
+        CI.test('x11', self.build, '^owned-custom$', 1, report_directory=reports)
+        self.assertEqual((self.results / '2.done').read_text(encoding='utf-8'), '2')
+        self.assertIn('100% tests passed', (reports / 'x11-shard-1-ctest.log').read_text(encoding='utf-8'))
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux GLib runtime provisioning')
+    def test_selected_sdk_missing_helper_fails_before_starting_any_session(self):
+        with (self.build / 'CMakeCache.txt').open('a', encoding='utf-8') as output:
+            output.write(f'\nVCPKG_INSTALLED_DIR:PATH={self.directory / "missing SDK"}\n'
+                         'VCPKG_TARGET_TRIPLET:STRING=x64-linux-ci\n')
+        reports = self.directory / 'missing-helper evidence'
+        with self.assertRaisesRegex(FileNotFoundError, 'Required executable GLib desktop launch helper'):
+            CI.test('x11', self.build, '^owned-custom$', 1, report_directory=reports)
+        self.assertFalse((self.results / '2.done').exists())
+        self.assertFalse((reports / 'x11-shard-1-ctest.log').exists())
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux GLib runtime provisioning')
+    def test_incomplete_sdk_or_application_cache_is_not_treated_as_ctest_only(self):
+        cache = self.build / 'CMakeCache.txt'
+        original = cache.read_text(encoding='utf-8')
+        for name, metadata in (('partial-sdk', 'VCPKG_INSTALLED_DIR:PATH=/missing-sdk'),
+                               ('application', 'CMAKE_PROJECT_NAME:STATIC=wxnotepad')):
+            with self.subTest(name=name):
+                cache.write_text(original + '\n' + metadata + '\n', encoding='utf-8')
+                with self.assertRaises(KeyError):
+                    CI.test('x11', self.build, '^owned-custom$', 1,
+                            report_directory=self.directory / (name + ' evidence'))
+                self.assertFalse((self.results / '2.done').exists())
+
     def test_windows_run_retains_reports_and_refuses_to_overwrite_a_previous_attempt(self):
         reports = self.directory / 'windows evidence'
         with mock.patch.object(CI, 'WINDOWS', True), mock.patch.object(
