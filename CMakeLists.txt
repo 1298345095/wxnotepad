@@ -390,6 +390,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv")
     set_tests_properties(original_special_insertion_process PROPERTIES TIMEOUT 90)
     add_editor_test(path_text original_path_text_insertion 90)
+    add_editor_test(read_only_file original_read_only_file 120)
     add_editor_test(read_only original_read_only_mode 120)
     target_compile_definitions(read_only PRIVATE
         "READ_ONLY_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/read_only_reference.tsv\"")
