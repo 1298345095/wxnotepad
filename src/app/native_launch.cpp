@@ -1,6 +1,7 @@
 #include "app/native_launch.h"
 #include <wx/log.h>
 #include <wx/utils.h>
+#include <wx/log.h>
 #ifdef __WXGTK__
 #include <glib.h>
 #endif

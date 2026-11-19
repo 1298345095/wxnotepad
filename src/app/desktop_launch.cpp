@@ -2,6 +2,7 @@
 #include <wx/window.h>
 #include <wx/uri.h>
 #include <wx/utils.h>
+#include <wx/log.h>
 #ifdef __WXMSW__
 #include <windows.h>
 #include <shellapi.h>
@@ -53,7 +54,7 @@ bool LaunchDesktopTarget(wxWindow* parent, const wxString& target, const wxStrin
     launch.fMask = SEE_MASK_FLAG_NO_UI;
     launch.hwnd = parent ? static_cast<HWND>(parent->GetHandle()) : nullptr;
     launch.lpFile = target.wc_str();
-    launch.lpDirectory = workingDirectory.empty() ? nullptr : workingDirectory.wc_str().data();
+    launch.lpDirectory = workingDirectory.empty() ? nullptr : workingDirectory.wc_str();
     launch.nShow = SW_SHOWNORMAL;
     if (ShellExecuteExW(&launch)) return true;
     error = wxSysErrorMsg();
