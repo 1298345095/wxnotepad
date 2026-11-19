@@ -276,7 +276,12 @@ void NamedAndFailure(EditorFrame* frame) {
             try {
                 Require(presented, "compositor presents Ctrl+R dialog");
                 auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
-                Require(input->GetValue() == "\"" + frame->DocumentPath() + "\"",
+#ifdef __WXMSW__
+                const auto expected = "\"" + frame->DocumentPath() + "\"";
+#else
+                const auto expected = "'" + frame->DocumentPath() + "'";
+#endif
+                Require(input->GetValue() == expected,
                         "named command starts with quoted full path");
                 input->SetValue("wxnotepad-no-such-program-245");
                 NativeSearch::Click(dialog, wxID_OK);

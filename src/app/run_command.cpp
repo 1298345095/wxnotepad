@@ -93,6 +93,7 @@ NativeCommand ParseNativeCommand(const wxString& command) {
         }
         if (ch == '\\' && quote != '\'') {
             if (index + 1 == command.length()) {
+                // TRANSLATORS: Linux IDD_RUN parser error; a trailing backslash has no following character.
                 result.error = _("The command ends with an unfinished escape.");
                 return result;
             }
@@ -120,6 +121,7 @@ NativeCommand ParseNativeCommand(const wxString& command) {
         }
         argument += ch;
     }
+    // TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
     if (quote)
         result.error = _("The command contains an unfinished quote.");
     else if (started)
@@ -142,15 +144,18 @@ void BrowseCommand(wxDialog& parent, wxTextCtrl& input) {
     const auto parts = SplitProgram(input.GetValue());
     program = ExpandEnvironment(parts.program);
     arguments = ExpandEnvironment(parts.arguments);
+    // TRANSLATORS: IDD_RUN program browser filter; preserve wildcard patterns and vertical-bar separators.
     const wxString filter = _("Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*");
 #else
     const auto parsed = ParseNativeCommand(input.GetValue());
     if (!parsed.arguments.empty()) program = parsed.arguments.front();
     if (parsed.programEnd != wxString::npos)
         arguments = input.GetValue().Mid(parsed.programEnd).Strip(wxString::leading);
+    // TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
     const wxString filter = _("All files (*)|*");
 #endif
     const wxFileName initial(program);
+    // TRANSLATORS: IDD_RUN Browse action; title of the native executable chooser.
     wxFileDialog browser(&parent, _("Choose program"), initial.GetPath(), initial.GetFullName(), filter,
                          wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     if (browser.ShowModal() == wxID_OK) {
@@ -214,24 +219,30 @@ bool LaunchCommand(wxDialog& dialog, const wxString& command, const wxString& di
 
 void EditorFrame::AppendRunCommand(wxMenu* tools) {
     const int id = wxWindow::NewControlId();
+    // TRANSLATORS: IDD_RUN menu command; retain the tab-separated keyboard shortcut.
     tools->Append(id, _("&Run Command...\tCtrl+R"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowRunCommand(); }, id);
 }
 
 void EditorFrame::ShowRunCommand() {
     auto& preferences = settings_ ? settings_->values : defaults_;
+    // TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before running tools?")))
         return;
+    // TRANSLATORS: IDD_RUN dialog title.
     wxDialog dialog(this, wxID_ANY, _("Run Command"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
+    // TRANSLATORS: IDD_RUN command input label; the field accepts a program and its arguments.
     contents->Add(new wxStaticText(&dialog, wxID_ANY, _("&Command:")), 0, wxALL, dialog.FromDIP(10));
-    const wxString initial = document_.Path().empty() ? wxString{} : "\"" + document_.Path() + "\"";
+    const wxString initial = document_.Path().empty() ? wxString{} : QuoteProgram(document_.Path());
     auto* input = new wxTextCtrl(&dialog, wxID_ANY, initial, wxDefaultPosition, dialog.FromDIP(wxSize(430, -1)));
     input->SetName("Command");
+    // TRANSLATORS: IDD_RUN command input accessible name, matching its visible label.
     AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(_("&Command:")));
     auto* commandRow = new wxBoxSizer(wxHORIZONTAL);
     commandRow->Add(input, 1, wxEXPAND);
+    // TRANSLATORS: IDD_RUN button opening the native program chooser.
     auto* browse = new wxButton(&dialog, wxID_ANY, _("&Browse..."));
     browse->SetName("Browse programs");
     commandRow->Add(browse, 0, wxLEFT, dialog.FromDIP(8));
@@ -239,6 +250,7 @@ void EditorFrame::ShowRunCommand() {
     contents->Add(commandRow, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     auto* run = wxDynamicCast(dialog.FindWindow(wxID_OK), wxButton);
+    // TRANSLATORS: IDD_RUN affirmative button that launches the entered command.
     run->SetLabel(_("&Run"));
     auto* feedback = new wxStaticText(&dialog, wxID_ANY, "");
     feedback->SetName("Run command feedback");
@@ -276,6 +288,7 @@ void EditorFrame::ShowRunCommand() {
             if (LaunchCommand(dialog, input->GetValue(), directory, error)) {
                 if (dialog.IsShown()) dialog.EndModal(wxID_OK);
             } else {
+                // TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
                 feedback->SetLabel(wxString::Format(_("Could not run command: %s"), error));
                 dialog.GetSizer()->Fit(&dialog);
                 input->SetFocus();
