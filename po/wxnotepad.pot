@@ -86,6 +86,11 @@ msgid_plural "%zu replacements"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
+#: src/app/editor_frame_commands.cpp
+msgid "&All Levels\tShift+Alt+A"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Always show this dialog."
 msgstr ""
@@ -134,10 +139,6 @@ msgstr ""
 msgid "&Closing tag (can be edited):"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
-msgid "&Collapse All"
-msgstr ""
-
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
 msgid "&Column (empty or 1 - %lld):"
@@ -155,8 +156,23 @@ msgstr ""
 msgid "&Copy Line\tCtrl+Shift+C"
 msgstr ""
 
+#. TRANSLATORS: Toggle the fold block surrounding the caret (IDM_VIEW_FOLD_CURRENT_BLOCK).
+#: src/app/editor_frame_commands.cpp
+msgid "&Current Block\tAlt+C"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
+msgstr ""
+
+#. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr ""
+
+#. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Levels\tShift+Alt+D"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -213,10 +229,6 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
-msgstr ""
-
-#: src/app/editor_frame_commands.cpp
-msgid "&Expand All"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -356,6 +368,7 @@ msgstr ""
 msgid "&Normal"
 msgstr ""
 
+#. TRANSLATORS: Disable hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_OFF).
 #: src/app/editor_frame_commands.cpp
 msgid "&Off"
 msgstr ""
@@ -390,6 +403,11 @@ msgstr ""
 
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "&Prefix text to lines:"
+msgstr ""
+
+#. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
+#: src/app/editor_frame_commands.cpp
+msgid "&Print...\tCtrl+P"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -488,6 +506,7 @@ msgstr ""
 msgid "&Toggle\tCtrl+F2"
 msgstr ""
 
+#. TRANSLATORS: View submenu for expanding or collapsing code folds (IDM_VIEW_FOLD_*).
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle Folds"
 msgstr ""
@@ -628,6 +647,17 @@ msgstr ""
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr ""
 
+#. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
+#: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr ""
+
+#. TRANSLATORS: Reopen the file with the system OEM source encoding (CMD_RELOADOEM).
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
+msgstr ""
+
+#. TRANSLATORS: Reopen the file with UTF-8 as the source encoding (CMD_RELOADUTF8).
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
 msgstr ""
@@ -688,6 +718,11 @@ msgstr ""
 msgid "Bash"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Black on white"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Block (&INS Mode)"
 msgstr ""
@@ -702,6 +737,16 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
+msgstr ""
+
+#. TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Bottom margin"
+msgstr ""
+
+#. TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Bottom:"
 msgstr ""
 
 #: src/app/dialogs/column_wrap_dialog.cpp
@@ -820,6 +865,16 @@ msgstr ""
 msgid "Code page %d (unavailable)"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Color on white"
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_COLOR choice: use white backgrounds except in the line number margin.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Color on white (except line numbers)"
+msgstr ""
+
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Column"
 msgstr ""
@@ -888,6 +943,11 @@ msgstr ""
 msgid "Copy Selection As Find Text"
 msgstr ""
 
+#. TRANSLATORS: Copies styled text to the clipboard in Rich Text Format (IDM_EDIT_COPYRTF).
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr ""
@@ -915,6 +975,12 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Could not print \"%s\"."
 msgstr ""
 
 #: src/document/document_session.cpp
@@ -968,12 +1034,22 @@ msgstr ""
 msgid "Current &Date"
 msgstr ""
 
+#. TRANSLATORS: Toggle all blocks at the caret's fold depth (IDM_VIEW_FOLD_CURRENT_LEVEL).
+#: src/app/editor_frame_commands.cpp
+msgid "Current &Level"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Current Date &Time"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Current encoding"
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print with the current editor theme colors.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Current screen color (WYSIWYG)"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1109,6 +1185,21 @@ msgstr ""
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Filename"
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and current date without the time.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Filename, Current Date"
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and the current date and time.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Filename, Current Date and Time"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Fill-up punctuation"
 msgstr ""
@@ -1149,12 +1240,22 @@ msgstr ""
 msgid "Finish completion (Esc cancels)"
 msgstr ""
 
+#. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Footer:"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tCtrl+Shift+F9"
+msgstr ""
+
+#. TRANSLATORS: Appearance submenu for full screen preferences (IDM_VIEW_FULLSCREEN_*).
+#: src/app/editor_frame_commands.cpp
+msgid "Full Scree&n Mode"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1221,8 +1322,18 @@ msgstr ""
 msgid "Group by file &type."
 msgstr ""
 
+#. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Header:"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
+msgstr ""
+
+#. TRANSLATORS: Hide the title bar in full screen (IDM_VIEW_FULLSCREEN_HIDE_TITLE).
+#: src/app/editor_frame_commands.cpp
+msgid "Hide &Title"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1293,6 +1404,11 @@ msgstr ""
 msgid "Invalid regular expression"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: invert lightness when printing a dark theme.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Invert light (dark background)"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSON"
 msgstr ""
@@ -1350,6 +1466,32 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_HEADER and IDS_PRINT_FOOTER choice to omit the header or footer.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Leave blank"
+msgstr ""
+
+#. TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Left margin"
+msgstr ""
+
+#. TRANSLATORS: Left paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Left:"
+msgstr ""
+
+#. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Level &%d\tAlt+%d"
+msgstr ""
+
+#. TRANSLATORS: The tenth fold depth, with 0 as the menu mnemonic (IDM_VIEW_FOLD_LEVEL10).
+#: src/app/editor_frame_commands.cpp
+msgid "Level 1&0"
 msgstr ""
 
 #: src/app/dialogs/long_line_settings_dialog.cpp
@@ -1415,6 +1557,16 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
+msgstr ""
+
+#. TRANSLATORS: IDD_PAGESETUP margin group in a U.S. measurement locale.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Margins (inches)"
+msgstr ""
+
+#. TRANSLATORS: IDD_PAGESETUP margin group in a metric measurement locale.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Margins (millimeters)"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1527,8 +1679,18 @@ msgstr ""
 msgid "None"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: normal print color mapping.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Normal"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
+msgstr ""
+
+#. TRANSLATORS: Enter full screen when starting the editor (IDM_VIEW_FULLSCREEN_ON_START).
+#: src/app/editor_frame_commands.cpp
+msgid "On &Startup"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1587,8 +1749,34 @@ msgstr ""
 msgid "PS — Para&graph Separator"
 msgstr ""
 
+#. TRANSLATORS: IDS_PRINT_PAGENUM footer; %s is the already localized page number.
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Page %s"
+msgstr ""
+
+#. TRANSLATORS: IDS_PRINT_FOOTER choice: show the page number at the bottom of each page.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Page Number"
+msgstr ""
+
+#. TRANSLATORS: Opens paper, margin and print style settings (IDM_FILE_PAGESETUP).
+#: src/app/editor_frame_commands.cpp
+msgid "Page Se&tup..."
+msgstr ""
+
+#. TRANSLATORS: Title of the printing configuration dialog (IDD_PAGESETUP).
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Page Setup"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Pandoc"
+msgstr ""
+
+#. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Paper and &Orientation..."
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1598,6 +1786,42 @@ msgstr ""
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
+msgstr ""
+
+#. TRANSLATORS: Title of the print failure message.
+#: src/app/editor_print_job.cpp
+msgid "Print"
+msgstr ""
+
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print color mode"
+msgstr ""
+
+#. TRANSLATORS: Caption for IDC_PAGESETUP_COLOR_MODE_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print color mode:"
+msgstr ""
+
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_FOOTER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print footer"
+msgstr ""
+
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_HEADER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print header"
+msgstr ""
+
+#. TRANSLATORS: Screen reader name for the IDC_PAGESETUP_ZOOMLEVEL percentage field.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print zoom"
+msgstr ""
+
+#. TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+#, c-format
+msgid "Print zoom (%d%% to %d%%):"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1704,6 +1928,11 @@ msgstr ""
 msgid "Ren&dering Technology"
 msgstr ""
 
+#. TRANSLATORS: Replace the next match with the initialized replacement (IDM_EDIT_REPLACENEXT).
+#: src/app/editor_frame_commands.cpp
+msgid "Repl&ace Next\tF4"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Replace"
 msgstr ""
@@ -1732,6 +1961,16 @@ msgstr ""
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr ""
 
+#. TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Right margin"
+msgstr ""
+
+#. TRANSLATORS: Right paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Right:"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr ""
@@ -1752,12 +1991,22 @@ msgstr ""
 msgid "SVG"
 msgstr ""
 
+#. TRANSLATORS: Store the selection as the next search term (IDM_EDIT_SAVEFIND).
+#: src/app/editor_frame_commands.cpp
+msgid "Sa&ve Find Text\tAlt+F3"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Save &As...\tF6"
 msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Save As"
+msgstr ""
+
+#. TRANSLATORS: Saves a separate backup without changing the current file (IDM_FILE_SAVEBACKUP).
+#: src/app/editor_frame_commands.cpp
+msgid "Save Back&up"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1924,6 +2173,11 @@ msgstr ""
 
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Show &edge line."
+msgstr ""
+
+#. TRANSLATORS: View submenu for hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_*).
+#: src/app/editor_frame_commands.cpp
+msgid "Show CallTip"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2206,6 +2460,26 @@ msgstr ""
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr ""
 
+#. TRANSLATORS: Toggle full screen; Esc exits it (IDM_VIEW_TOGGLE_FULLSCREEN).
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen\tF11 [Esc]"
+msgstr ""
+
+#. TRANSLATORS: Linux menu displays Esc in the caption because only F11 is an accelerator.
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen [Esc]\tF11"
+msgstr ""
+
+#. TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Top margin"
+msgstr ""
+
+#. TRANSLATORS: Top paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Top:"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
 msgstr ""
@@ -2350,6 +2624,7 @@ msgstr ""
 msgid "Windows (CR+LF)"
 msgstr ""
 
+#. TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).
 #: src/app/editor_frame_commands.cpp
 msgid "With &Encoding...\tF8"
 msgstr ""

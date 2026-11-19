@@ -81,7 +81,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         Choose(frame, dialect.name);
         Require(TestEditor::Text(editor) == text && !editor->Send(CanUndo) && !frame->DocumentIsModified(),
                 "dialect changes and highlight resume preserve document bytes and history");
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
         Require(!editor->Send(GetLineVisible, 1), "Markdown heading collapse hides the body");
         Choose(frame, "Plain Text");
         Require(editor->Send(GetLineVisible, 1) &&
@@ -89,8 +89,8 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                       static_cast<unsigned>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))),
                 "highlight suspension clears obsolete heading folds and reveals their hidden text");
         Choose(frame, dialect.name);
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
+        NativeSearch::RevealAllFolds(frame);
         Require(editor->Send(GetLineVisible, 1), "Markdown heading expand restores the body");
         TestEditor::ResetStream(editor, "text\n");
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
@@ -213,7 +213,7 @@ void NativeStylesAndFoldSearch(EditorFrame* frame) {
         }
         Require(image.SaveFile(samplePath, wxBITMAP_TYPE_PNG), "native Markdown style sample must save");
     }
-    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(GetLineVisible, 8), "Markdown search target starts folded");
     editor->Send(GotoPos, 0);
     TestSyntax::Command(frame, wxID_FIND);

@@ -7,9 +7,14 @@
 #include <wx/clipbrd.h>
 #include <wx/stattext.h>
 #include <wx/modalhook.h>
+#include <memory>
 
 namespace {
 using enum Scintilla::Message;
+void Progress(const char* phase, const char* fixture = "suite") {
+    std::fprintf(stderr, "Character Info [%s]: %s\n", fixture, phase);
+    std::fflush(stderr);
+}
 void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
 }
@@ -148,9 +153,10 @@ public:
         }
     }
 };
-void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured) {
+void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const char* fixture) {
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
     Require(id != wxNOT_FOUND, "Edit Special exposes original Show Character Info");
+    Progress("publish prior clipboard offer", fixture);
     {
         wxClipboardLocker lock;
         if (!lock) throw TestEditor::Failure("open native clipboard for owned fixture");
@@ -158,12 +164,14 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured) {
                 "own a distinct native clipboard offer before the command");
     }
     Feedback feedback;
+    Progress("dispatch menu command and accept native feedback", fixture);
     NativeSearch::Command(frame, id);
     if (wxGetEnv("WXNOTEPAD_EXPECT_NO_CHARACTER_METADATA", nullptr))
         captured = captured.substr(0, captured.find("\nName:"));
     const auto expected = wxString::FromUTF8(captured.data(), captured.size());
     Require(feedback.shown == 1 && feedback.payload == expected,
             "visible native feedback matches independently captured original technical payload");
+    Progress("read copied payload from native clipboard", fixture);
     wxTextDataObject clipboard;
     {
         wxClipboardLocker lock;
@@ -179,7 +187,7 @@ void CharacterInfo(EditorFrame* frame, const CharacterInfoFixture& fixture, bool
     editor->Send(SetReadOnly, readonly);
     if (rectangle) editor->Send(SetSelectionMode, std::to_underlying(Scintilla::SelectionMode::Rectangle));
     const auto selections = editor->Send(GetSelections);
-    DisplayCharacterInfo(frame, fixture.payload);
+    DisplayCharacterInfo(frame, fixture.payload, fixture.name);
     Require(TestEditor::Text(editor) == fixture.text && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "Character Info leaves original document, save point and history unchanged");
     TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret, "Character Info preserves selection direction");
@@ -216,8 +224,9 @@ void EncodedDocuments(EditorFrame* frame) {
         constexpr std::string_view acuteInformation =
             "Unicode: U+00E9\nUTF-16: 00E9\nUTF-8: C3 A9\nHTML: &#233;\n"
             "Name: LATIN SMALL LETTER E WITH ACUTE\nCategory: Ll Lowercase_Letter";
-        DisplayCharacterInfo(frame, fixture.encoding == FileEncoding::Windows1252 ? acuteInformation
-                                                                                  : CharacterInfoFixtures[1].payload);
+        DisplayCharacterInfo(
+            frame, fixture.encoding == FileEncoding::Windows1252 ? acuteInformation : CharacterInfoFixtures[1].payload,
+            fixture.name);
         Require(TestEditor::Text(editor) == text && !editor->Send(GetModify),
                 "Character Info reports original decoded scalar without changing explicit-encoding document");
         TestEditor::RequireSelection(editor, 0, text.size(), "encoded Character Info preserves selection");
@@ -251,14 +260,24 @@ void EncodedDocuments(EditorFrame* frame) {
 class CharacterInformationApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        // A clipboard error queued by wxLogGui can open a second modal
+        // dialog at shutdown. Keep the original error in the CTest output.
+        std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
+        previousLog.reset();
+#endif
+        Progress("create and present native frame");
         auto* frame = new EditorFrame;
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "native frame presentation completed");
+                Progress("Show Hex fixtures");
                 ShowHex(frame);
                 HexSamples(frame);
+                Progress("accept native rectangle warning");
                 Rectangles(frame);
+                Progress("prepare native clipboard input");
                 // A native modifier gesture establishes the private Wayland
                 // input serial before changing system clipboard ownership.
                 NativeKeys::Shortcut(frame, WXK_F10, false);
@@ -272,7 +291,7 @@ public:
                 frame->Editor()->Send(InsertText, 1, reinterpret_cast<intptr_t>("!"));
                 frame->Editor()->Send(Undo);
                 frame->Editor()->Send(SetSel, 1, 0);
-                DisplayCharacterInfo(frame, CharacterInfoFixtures.front().payload);
+                DisplayCharacterInfo(frame, CharacterInfoFixtures.front().payload, "pending redo");
                 Require(frame->Editor()->Send(CanRedo) && !frame->Editor()->Send(CanUndo) &&
                             !frame->Editor()->Send(GetModify),
                         "Character Info preserves pending redo and save point");
@@ -283,6 +302,7 @@ public:
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
+            Progress("destroy native frame");
             frame->Destroy();
             ExitMainLoop();
         });

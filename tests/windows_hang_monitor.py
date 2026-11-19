@@ -144,7 +144,7 @@ def run(command, directory, after_seconds):
             except Exception as error:
                 print(f'FAIL: Character Info hang capture: {error}', file=sys.stderr, flush=True)
                 capture_failed = True
-            # Do not replace the original CTest 60-second timeout or alter input.
+            # Let CTest enforce the existing timeout without altering the child input.
             result = process.wait()
             return result if result else int(capture_failed)
     finally:

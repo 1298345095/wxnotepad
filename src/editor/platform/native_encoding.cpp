@@ -45,14 +45,15 @@ std::string NativeDefaultEncodingBytes(std::string_view text) {
     return std::string(text);
 }
 
-std::string NativeDefaultEncodingBuffer(std::string_view bytes, [[maybe_unused]] NativeByteRanges* raw) {
+std::string NativeDefaultEncodingBuffer(std::string_view bytes, NativeByteRanges* raw,
+                                        [[maybe_unused]] std::optional<unsigned> codePage) {
     if (raw) raw->clear();
 #ifdef __WXMSW__
-    if (GetACP() != CP_UTF8) {
+    if (const auto native = codePage.value_or(GetACP()); native != CP_UTF8) {
         // Most buffers take the bulk conversion. Check round-trip identity too:
         // distinct native byte sequences can name the same Unicode character.
-        if (const auto text = Convert(bytes, CP_ACP, CP_UTF8, MB_ERR_INVALID_CHARS);
-            text && NativeDefaultEncodingBytes(*text) == bytes)
+        if (const auto text = Convert(bytes, native, CP_UTF8, MB_ERR_INVALID_CHARS);
+            text && Convert(*text, CP_UTF8, native, 0) == bytes)
             return *text;
         constexpr size_t maxLegacyCharacterBytes = 4; // GB18030 is the widest supported legacy encoding.
         std::string result;
@@ -72,8 +73,8 @@ std::string NativeDefaultEncodingBuffer(std::string_view bytes, [[maybe_unused]]
             const auto maximum = std::min(maxLegacyCharacterBytes, bytes.size() - offset);
             for (size_t width = 1; width <= maximum; ++width) {
                 const auto part = bytes.substr(offset, width);
-                if (const auto text = Convert(part, CP_ACP, CP_UTF8, MB_ERR_INVALID_CHARS)) {
-                    if (NativeDefaultEncodingBytes(*text) == part)
+                if (const auto text = Convert(part, native, CP_UTF8, MB_ERR_INVALID_CHARS)) {
+                    if (Convert(*text, CP_UTF8, native, 0) == part)
                         result += *text;
                     else
                         appendRaw(part);

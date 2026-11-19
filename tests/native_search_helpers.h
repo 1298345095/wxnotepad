@@ -53,10 +53,7 @@ inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std
     return handled;
 }
 #endif
-inline void Command(EditorFrame* frame, int id) {
-    // Opening a native menu refreshes command enablement before dispatch. Do
-    // the same when sending a command directly to this test's owned frame.
-    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+inline void ActivateCommand(EditorFrame* frame, int id) {
     auto* item = frame->GetMenuBar()->FindItem(id);
     if (!item) throw std::runtime_error("native menu command must exist");
 #ifdef __WXMSW__
@@ -67,7 +64,26 @@ inline void Command(EditorFrame* frame, int id) {
     wxCommandEvent command(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(command);
 #endif
+}
+inline void Command(EditorFrame* frame, int id) {
+    // Opening a native menu refreshes command enablement before dispatch. Do
+    // the same when sending a command directly to this test's owned frame.
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    ActivateCommand(frame, id);
     wxYield();
+}
+inline void RevealAllFolds(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    const auto* bar = frame->GetMenuBar();
+    const int id = bar->FindMenuItem("View", "All Levels");
+    const auto allExpanded = [editor = frame->Editor()] {
+        for (intptr_t line = 0; line < editor->Send(GetLineCount); ++line)
+            if (!editor->Send(GetFoldExpanded, line) || !editor->Send(GetLineVisible, line)) return false;
+        return true;
+    };
+    Command(frame, id);
+    if (!allExpanded()) Command(frame, id);
+    if (!allExpanded()) throw std::runtime_error("native All Levels must reveal all folds within two toggles");
 }
 inline void Toggle(wxCheckBox* option, bool checked) {
     if (option->GetValue() == checked) return;

@@ -482,6 +482,35 @@ bool IsUtf8(std::string_view bytes) {
     return true;
 }
 
+DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEncoding source,
+                                           const EncodingOptions& options) {
+    const auto native = NativeCodePage();
+    return DetectQuickReloadEncoding(bytes, source, options, {native, LegacyCodePage(native), OemCodePage(native)});
+}
+
+DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEncoding source,
+                                           const EncodingOptions& options, NativeSourceCodePages pages) {
+    using enum QuickReloadEncoding;
+    const int index = source == Ansi ? CPI_DEFAULT : source == Oem ? CPI_OEM : DefaultEncoding(options.defaultEncoding);
+    const bool ansi = index == CPI_DEFAULT;
+    auto detected = Choice(index, pages.ansi, pages.oem, ansi);
+    if (detected.encoding && !ansi && index != CPI_OEM)
+        return DetectSignatureEncoding(bytes, detected.encoding, pages.legacyAnsi, pages.oem).value_or(detected);
+    const bool utf8Ansi = pages.ansi == catalog[CPI_UTF8].codePage;
+    const bool ascii = ansi && std::ranges::all_of(bytes, [](unsigned char ch) { return ch < 128; });
+    constexpr size_t legacyRecodeLimit = (size_t{1} << 30) - 16;
+    if (ansi && !ascii && utf8Ansi && pages.legacyAnsi != pages.ansi && bytes.size() < legacyRecodeLimit) {
+        auto legacy = Choice(CPI_DEFAULT, pages.legacyAnsi, pages.oem);
+        if (legacy.encoding && !ValidLegacy(pages.legacyAnsi, bytes)) {
+            legacy.systemDefault = true;
+            legacy.nativeAnsiCodePage = pages.legacyAnsi;
+        }
+        return legacy;
+    }
+    if (ascii && (utf8Ansi || options.loadANSIasUTF8 || options.loadASCIIasUTF8)) detected.systemDefault = false;
+    return detected;
+}
+
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<FileEncoding> explicitEncoding, const EncodingOptions& options,
                                 std::optional<EncodingChoice> weakEncoding) {

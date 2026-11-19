@@ -8,18 +8,19 @@ bindings; relocating an item retains its handler and update-UI state.
 ```text
 File
   New; New Window; Open; Open As GBK; Open As UTF-16LE
-  Save; Save As; Save Copy; Save with Original Time
+  Save; Save As; Save Backup; Save Copy; Save with Original Time
   File Mode > Read Only Mode
   Revert (F5)
-  Reload > As UTF-8; separator; With Encoding
+  Reload > As UTF-8 (Shift+F8); As ANSI (Ctrl+Shift+A); As OEM (Ctrl+Shift+O); separator; Default Encoding (Ctrl+Alt+F); With Encoding (F8)
   Line Endings > Windows (CR+LF); Unix/macOS (LF); Classic Mac OS (CR); Default
+  Page Setup; Print (Ctrl+P)
   Update File Time
   Recent (History) (Alt+H)
 Edit
   Undo; Redo
   Cut; Copy; Paste; Swap
   Clear Clipboard
-  Copy to Clipboard > File Name; File Name and Ext.; Full Path Name; Copy All; Copy Add
+  Copy to Clipboard > File Name; File Name and Ext.; Full Path Name; Copy All; Copy Add; Copy as RTF
   Selection
     Duplicate
     Toggle Line Comment; Toggle Block Comment; Indent; Unindent
@@ -47,7 +48,7 @@ Edit
     Encoding Identifier; Script Shebang Line
   Special > Complete Word (Alt+/); Character to Hex; Hex to Character; Escape C Chars; Unescape C Chars
 Search
-  Find; Find Next; Find Previous; Replace
+  Find; Save Find Text (Alt+F3); Find Next; Find Previous; Replace; Replace Next (F4)
   Find Matching Brace; Select to Matching Brace; Select Lines in Current Block
   Select to Next; Select to Previous
   Bookmarks > Toggle; Goto Next; Goto Previous; Select All; Clear All
@@ -60,10 +61,13 @@ View
   Caret Style
   Word Wrap; Long Line Marker; Indentation Guides
   Show Whitespace; Show Line Endings; Show Wrap Symbols
+  Show CallTip > Off; RGBA; ARGB; BGRA; ABGR
   Visual Brace Matching; Highlight Current Block; Highlight Current Line; Mark Occurrences
   Line Numbers; Bookmark Margin; Change History Marker
-  Show Code Folding; Toggle Folds > Collapse All; Expand All
+  Show Code Folding
+  Toggle Folds > Default Levels; All Levels; Current Block; Current Level; Levels 1–10
   Zoom > Zoom In; Zoom Out; Zoom Level; Reset Zoom
+  Toggle Full Screen (F11; Esc exits after dismissing any active completion list or CallTip)
 Scheme
   Automatic; delivered syntax schemes
 Settings
@@ -72,7 +76,10 @@ Settings
     Enable Multiple Selection; Copy Selection As Find Text; Copy Paste Buffer As Find Text
     Undo Redo Remember Selection
     Line Selection Mode > None; Visual Studio; Old Visual Studio; Normal
-  Appearance > Auto-Shrink Horizontal Scrollbar
+  Appearance
+    Show Menu (Alt+F11); Show Statusbar (Shift+F11)
+    Full Screen Mode > On Startup; Hide Title
+    Scroll Past Last Line; Auto-Shrink Horizontal Scrollbar
   File Change Notification (Alt+F5)
   Other Settings > Remember Search Options; Remember Recent Files
   Advanced Settings > Rendering Technology > Legacy GDI; Direct2D (Windows)
@@ -91,6 +98,7 @@ wxnotepad retains these specific placements:
 - Automatic and the currently delivered syntax choices occupy Scheme directly.
 - Auto Indent stays next to tab and long-line preferences in Settings.
 - Auto-Shrink Horizontal Scrollbar occupies Settings > Appearance.
-- The delivered Collapse All and Expand All actions occupy View > Toggle Folds.
+- View > Toggle Folds retains Shift+Alt+D for Default Levels, Shift+Alt+A for
+  All Levels, Alt+C for Current Block, and Alt+1 through Alt+9 for those levels.
 - Goto Selection Start/End now have visible entries at the original Goto positions,
   retaining Ctrl+Shift+Comma and Ctrl+Shift+Period.

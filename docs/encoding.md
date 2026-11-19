@@ -134,9 +134,25 @@ then the encoding picker can be accepted or cancelled. Reloading reads disk
 without saving live text. As UTF-8 (Shift+F8) instead uses the ordinary
 Save/Discard/Cancel decision before reading the source. Save writes first and
 the reload decodes those newly saved bytes, restoring the view captured before
-Save cleanup. Both commands retain the existing
-same-file scheme, selection, viewport and read-only rules, refresh actual
-encoding/BOM metadata, and are disabled for Untitled documents.
+Save cleanup. As ANSI (Ctrl+Shift+A), As OEM (Ctrl+Shift+O), and Default
+Encoding (Ctrl+Alt+F) use that same decision and target the current named file.
+ANSI and OEM select the native mappings. A leading UTF-8 signature is data
+when read as native ANSI or OEM. Under the original ASCII load options, a
+quick ANSI reload of ASCII bytes can result in the explicit native codec
+identity. When Windows uses UTF-8 as its system ANSI code page, quick ANSI
+reload tries the legacy ANSI code page for non-ASCII input below the original
+legacy conversion size limit. A successful conversion records that explicit codec;
+if strict conversion fails, the document retains native ANSI identity and Save
+preserves the original bytes. ASCII remains explicit UTF-8. An unsupported native
+code page reports a reload error.
+
+Default Encoding selects the configured encoding as the source. A configured
+UTF-8, UTF-16LE, or UTF-16BE BOM variant selects its underlying codec, and the
+bytes on disk determine whether the loaded document has a BOM. None of these
+commands changes the configured default. All reloads retain the same-file
+scheme, selection, viewport and read-only rules, reapply file variables and
+indentation, refresh encoding/BOM metadata and file watching, and are disabled
+for Untitled documents.
 
 The decision/parser/catalog ports retain upstream provenance and
 [Notepad4's license](../licenses/Notepad4.txt). Native Unicode predicates were

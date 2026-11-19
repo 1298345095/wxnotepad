@@ -1,7 +1,9 @@
 #pragma once
+#include <wx/cmndata.h>
 
 #include <wx/frame.h>
 #include <array>
+#include <memory>
 #include "document/document_session.h"
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
@@ -59,15 +61,24 @@ private:
     SettingsStore* settings_;
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
+    bool FullScreenActive() const;
+    void SetFullScreen(bool active);
+    void HandleFullScreenKey(int modifiers);
+    bool HandleFullScreenEscape();
+#ifdef __WXMSW__
+    struct FullScreenPlacement;
+    std::unique_ptr<FullScreenPlacement> fullScreenPlacement_;
+    void RefreshFullScreen();
+#endif
     OriginalSettings defaults_;
+    wxPrintData printerData_;
     IndentationSettings indentation_;
     DocumentSession document_;
     FileWatchingOptions fileWatchingOptions_;
     FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
-    int reloadEncodingId_;
-    int reloadUtf8Id_;
+    OpenResult ReloadQuickEncoding(QuickReloadEncoding encoding);
     int recentFilesId_;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();
@@ -128,6 +139,7 @@ private:
     void AppendSelectionOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
+    void AppendCallTipCommands(wxMenu* view);
     void AppendMarginCommands(wxMenu* view);
     void ToggleIndentationGuides();
     void ToggleLongLineMarker();
@@ -165,6 +177,8 @@ private:
     void ShowFind(bool replace = false);
     void FindNext();
     void FindPrevious();
+    void FindSelection(SearchDirection direction);
+    void ReplaceNext();
     void Search(bool forward, bool extendSelection = false);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();

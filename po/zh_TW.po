@@ -126,6 +126,11 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "取代 %zu 處"
 
+#. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
+#: src/app/editor_frame_commands.cpp
+msgid "&All Levels\tShift+Alt+A"
+msgstr "所有層級(&A)\tShift+Alt+A"
+
 # Original Notepad4 zh-Hant: IDD_WARNLINEENDS/IDC_WARNINCONSISTENTEOLS; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Always show this dialog."
@@ -184,11 +189,6 @@ msgstr "全部清除(&C)\tAlt+F2"
 msgid "&Closing tag (can be edited):"
 msgstr "結束標籤（可編輯）(&C)："
 
-# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (collapse action); adapted where needed.
-#: src/app/editor_frame_commands.cpp
-msgid "&Collapse All"
-msgstr "全部摺疊(&C)"
-
 # Original Notepad4 zh-Hant: IDD_LINENUM/IDC_COLUMN_RANGE; adapted where needed.
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
@@ -210,9 +210,24 @@ msgstr "複製(&C)\tCtrl+C"
 msgid "&Copy Line\tCtrl+Shift+C"
 msgstr "複製行(&C)\tCtrl+Shift+C"
 
+#. TRANSLATORS: Toggle the fold block surrounding the caret (IDM_VIEW_FOLD_CURRENT_BLOCK).
+#: src/app/editor_frame_commands.cpp
+msgid "&Current Block\tAlt+C"
+msgstr "目前區塊(&C)\tAlt+C"
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr "解碼(&D)"
+
+#. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr "預設編碼(&D)\tCtrl+Alt+F"
+
+#. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Levels\tShift+Alt+D"
+msgstr "預設層級(&D)\tShift+Alt+D"
 
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -282,11 +297,6 @@ msgstr "編碼識別碼(&E)\tCtrl+F8"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
 msgstr "儲存檔案時確保換行字元一致(&E)。"
-
-# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
-#: src/app/editor_frame_commands.cpp
-msgid "&Expand All"
-msgstr "全部展開(&E)"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/File menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -458,6 +468,7 @@ msgid "&Normal"
 msgstr "一般(&M)"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_MARKOCCURRENCES_OFF; adapted where needed.
+#. TRANSLATORS: Disable hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_OFF).
 #: src/app/editor_frame_commands.cpp
 msgid "&Off"
 msgstr "關閉(&O)"
@@ -500,6 +511,11 @@ msgstr "貼上(&P)\tCtrl+V"
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "&Prefix text to lines:"
 msgstr "在各行開頭插入文字(&P)："
+
+#. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
+#: src/app/editor_frame_commands.cpp
+msgid "&Print...\tCtrl+P"
+msgstr "列印(&P)...\tCtrl+P"
 
 # Original Notepad4 zh-Hant: IDM_FILE_READONLY_MODE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -621,6 +637,7 @@ msgid "&Toggle\tCtrl+F2"
 msgstr "切換(&T)\tCtrl+F2"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_FOLD_CURRENT_BLOCK; adapted where needed.
+#. TRANSLATORS: View submenu for expanding or collapsing code folds (IDM_VIEW_FOLD_*).
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle Folds"
 msgstr "切換摺疊(&T)"
@@ -782,7 +799,18 @@ msgstr "外觀(&R)"
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "適用於一般文字搜尋。使用正規表示式時，請使用單詞邊界。"
 
+#. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
+#: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr "作為 &ANSI\tCtrl+Shift+A"
+
+#. TRANSLATORS: Reopen the file with the system OEM source encoding (CMD_RELOADOEM).
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
+msgstr "作為 &OEM\tCtrl+Shift+O"
+
 # Original Notepad4 zh-Hant: CMD_RELOADUTF8; adapted where needed.
+#. TRANSLATORS: Reopen the file with UTF-8 as the source encoding (CMD_RELOADUTF8).
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
 msgstr "作為 &UTF-8\tShift+F8"
@@ -852,6 +880,11 @@ msgstr "反引號"
 msgid "Bash"
 msgstr "Bash"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Black on white"
+msgstr "白底黑字"
+
 # Original Notepad4 zh-Hant: IDM_VIEW_CARET_STYLE_BLOCK; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Block (&INS Mode)"
@@ -871,6 +904,16 @@ msgstr "為符合的行新增書籤(&K)"
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
 msgstr "書籤(&K)"
+
+#. TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Bottom margin"
+msgstr "下邊界"
+
+#. TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Bottom:"
+msgstr "下："
 
 # Original Notepad4 zh-Hant: IDD_COLUMNWRAP (boundary label); adapted where needed.
 #: src/app/dialogs/column_wrap_dialog.cpp
@@ -1001,6 +1044,16 @@ msgstr "關閉"
 msgid "Code page %d (unavailable)"
 msgstr "字碼頁 %d（無法使用）"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Color on white"
+msgstr "白底彩色"
+
+#. TRANSLATORS: IDS_PRINT_COLOR choice: use white backgrounds except in the line number margin.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Color on white (except line numbers)"
+msgstr "白底彩色（行號除外）"
+
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Column"
 msgstr "欄"
@@ -1078,6 +1131,11 @@ msgstr "將貼上緩衝區複製為搜尋文字"
 msgid "Copy Selection As Find Text"
 msgstr "將選取範圍複製為搜尋文字"
 
+#. TRANSLATORS: Copies styled text to the clipboard in Rich Text Format (IDM_EDIT_COPYRTF).
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr "複製為富文字(&R)"
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "無法關閉已寫入完成的暫存檔案。"
@@ -1106,6 +1164,12 @@ msgstr "無法開啟目的檔案進行寫入。"
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr "無法開啟檔案進行讀取。"
+
+#. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Could not print \"%s\"."
+msgstr "無法列印「%s」。"
 
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
@@ -1161,6 +1225,11 @@ msgstr "剪下行(&T)\tCtrl+Shift+X"
 msgid "Current &Date"
 msgstr "目前日期(&D)"
 
+#. TRANSLATORS: Toggle all blocks at the caret's fold depth (IDM_VIEW_FOLD_CURRENT_LEVEL).
+#: src/app/editor_frame_commands.cpp
+msgid "Current &Level"
+msgstr "目前層級(&L)"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_INSERT_LOC_DATETIME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Current Date &Time"
@@ -1169,6 +1238,11 @@ msgstr "目前日期與時間(&T)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Current encoding"
 msgstr "目前編碼"
+
+#. TRANSLATORS: IDS_PRINT_COLOR choice: print with the current editor theme colors.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Current screen color (WYSIWYG)"
+msgstr "目前螢幕色彩（所見即所得）"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_DELETELINE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1321,6 +1395,21 @@ msgstr "檔案名與副檔名(&E)\tShift+F9"
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "檔案名與副檔名(&X)\tCtrl+F9"
 
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Filename"
+msgstr "檔名"
+
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and current date without the time.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Filename, Current Date"
+msgstr "檔名、目前日期"
+
+#. TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and the current date and time.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Filename, Current Date and Time"
+msgstr "檔名、目前日期和時間"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Fill-up punctuation"
 msgstr "觸發完成的標點符號"
@@ -1369,6 +1458,11 @@ msgstr "搜尋字串"
 msgid "Finish completion (Esc cancels)"
 msgstr "確認完成（Esc 取消）"
 
+#. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Footer:"
+msgstr "頁尾："
+
 # Original Notepad4 zh-Hant: CMD_COPYPATHNAME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
@@ -1378,6 +1472,11 @@ msgstr "完整路徑名稱(&P)\tAlt+Shift+F9"
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr "完整路徑名稱(&P)\tCtrl+Shift+F9"
+
+#. TRANSLATORS: Appearance submenu for full screen preferences (IDM_VIEW_FULLSCREEN_*).
+#: src/app/editor_frame_commands.cpp
+msgid "Full Scree&n Mode"
+msgstr "全螢幕模式(&N)"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "GitHub GFM"
@@ -1456,10 +1555,20 @@ msgstr "跳到選取範圍結尾(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "依檔案類型分組(&T)。"
 
+#. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Header:"
+msgstr "頁首："
+
 # Original Notepad4 zh-Hant: IDM_EDIT_HEX2CHAR; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr "Hex 轉字元(&R)\tCtrl+Alt+C"
+
+#. TRANSLATORS: Hide the title bar in full screen (IDM_VIEW_FULLSCREEN_HIDE_TITLE).
+#: src/app/editor_frame_commands.cpp
+msgid "Hide &Title"
+msgstr "隱藏標題列(&T)"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_HIGHLIGHTCURRENTLINE_SUBLINE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1542,6 +1651,11 @@ msgstr "插入 Tab 為空白(&S)"
 msgid "Invalid regular expression"
 msgstr "無效的正規表示式"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: invert lightness when printing a dark theme.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Invert light (dark background)"
+msgstr "反轉亮度（深色背景）"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSON"
 msgstr "JSON"
@@ -1602,6 +1716,32 @@ msgstr "LS — 行分隔符號(&I)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
 msgstr "Latin-1 (Windows-1252)"
+
+#. TRANSLATORS: IDS_PRINT_HEADER and IDS_PRINT_FOOTER choice to omit the header or footer.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Leave blank"
+msgstr "留白"
+
+#. TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Left margin"
+msgstr "左邊界"
+
+#. TRANSLATORS: Left paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Left:"
+msgstr "左："
+
+#. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Level &%d\tAlt+%d"
+msgstr "層級 &%d\tAlt+%d"
+
+#. TRANSLATORS: The tenth fold depth, with 0 as the menu mnemonic (IDM_VIEW_FOLD_LEVEL10).
+#: src/app/editor_frame_commands.cpp
+msgid "Level 1&0"
+msgstr "層級 1&0"
 
 # Original Notepad4 zh-Hant: IDD_LONGLINES (accessible limit label); adapted where needed.
 #: src/app/dialogs/long_line_settings_dialog.cpp
@@ -1676,6 +1816,16 @@ msgstr "Lua"
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr "按一下邊欄選取視覺子行(&S)"
+
+#. TRANSLATORS: IDD_PAGESETUP margin group in a U.S. measurement locale.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Margins (inches)"
+msgstr "邊界（英吋）"
+
+#. TRANSLATORS: IDD_PAGESETUP margin group in a metric measurement locale.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Margins (millimeters)"
+msgstr "邊界（公釐）"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/View/Mark Occurrences submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1804,9 +1954,19 @@ msgstr "續行不縮排"
 msgid "None"
 msgstr "無"
 
+#. TRANSLATORS: IDS_PRINT_COLOR choice: normal print color mapping.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Normal"
+msgstr "正常"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM United States (DOS-437)"
+
+#. TRANSLATORS: Enter full screen when starting the editor (IDM_VIEW_FULLSCREEN_ON_START).
+#: src/app/editor_frame_commands.cpp
+msgid "On &Startup"
+msgstr "啟動時進入全螢幕(&S)"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
@@ -1869,9 +2029,35 @@ msgstr "PDI — 結束方向隔離(&Q)"
 msgid "PS — Para&graph Separator"
 msgstr "PS — 段落分隔符號(&G)"
 
+#. TRANSLATORS: IDS_PRINT_PAGENUM footer; %s is the already localized page number.
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Page %s"
+msgstr "第 %s 頁"
+
+#. TRANSLATORS: IDS_PRINT_FOOTER choice: show the page number at the bottom of each page.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Page Number"
+msgstr "頁碼"
+
+#. TRANSLATORS: Opens paper, margin and print style settings (IDM_FILE_PAGESETUP).
+#: src/app/editor_frame_commands.cpp
+msgid "Page Se&tup..."
+msgstr "頁面設定(&T)..."
+
+#. TRANSLATORS: Title of the printing configuration dialog (IDD_PAGESETUP).
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Page Setup"
+msgstr "頁面設定"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Pandoc"
 msgstr "Pandoc"
+
+#. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Paper and &Orientation..."
+msgstr "紙張和方向(&O)..."
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Parentheses ()"
@@ -1881,6 +2067,42 @@ msgstr "圓括號 ()"
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
 msgstr "純文字"
+
+#. TRANSLATORS: Title of the print failure message.
+#: src/app/editor_print_job.cpp
+msgid "Print"
+msgstr "列印"
+
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print color mode"
+msgstr "列印色彩模式"
+
+#. TRANSLATORS: Caption for IDC_PAGESETUP_COLOR_MODE_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print color mode:"
+msgstr "列印色彩模式："
+
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_FOOTER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print footer"
+msgstr "列印頁尾"
+
+#. TRANSLATORS: Accessible name for IDC_PAGESETUP_HEADER_LIST.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print header"
+msgstr "列印頁首"
+
+#. TRANSLATORS: Screen reader name for the IDC_PAGESETUP_ZOOMLEVEL percentage field.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print zoom"
+msgstr "列印縮放比例"
+
+#. TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+#, c-format
+msgid "Print zoom (%d%% to %d%%):"
+msgstr "列印縮放（%d%% 至 %d%%）："
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
@@ -2000,6 +2222,11 @@ msgstr "移除最近檔案？"
 msgid "Ren&dering Technology"
 msgstr "繪製技術(&D)"
 
+#. TRANSLATORS: Replace the next match with the initialized replacement (IDM_EDIT_REPLACENEXT).
+#: src/app/editor_frame_commands.cpp
+msgid "Repl&ace Next\tF4"
+msgstr "取代下一個(&A)\tF4"
+
 # Original Notepad4 zh-Hant: IDD_REPLACE title (shortened); adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Replace"
@@ -2034,6 +2261,16 @@ msgstr "回復"
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr "回復檔案到上次儲存時的狀態？您的變更會遺失！"
 
+#. TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Right margin"
+msgstr "右邊界"
+
+#. TRANSLATORS: Right paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Right:"
+msgstr "右："
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
@@ -2056,6 +2293,11 @@ msgstr "SHY — 軟連字號(&X)"
 msgid "SVG"
 msgstr "SVG"
 
+#. TRANSLATORS: Store the selection as the next search term (IDM_EDIT_SAVEFIND).
+#: src/app/editor_frame_commands.cpp
+msgid "Sa&ve Find Text\tAlt+F3"
+msgstr "儲存尋找文字(&V)\tAlt+F3"
+
 # Original Notepad4 zh-Hant: IDM_FILE_SAVEAS; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Save &As...\tF6"
@@ -2065,6 +2307,11 @@ msgstr "另存為(&A)...\tF6"
 #: src/app/editor_frame.cpp
 msgid "Save As"
 msgstr "另存為"
+
+#. TRANSLATORS: Saves a separate backup without changing the current file (IDM_FILE_SAVEBACKUP).
+#: src/app/editor_frame_commands.cpp
+msgid "Save Back&up"
+msgstr "儲存備份(&U)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVECOPY; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2258,6 +2505,11 @@ msgstr "顯示空白字元(&W)\tCtrl+Shift+8"
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Show &edge line."
 msgstr "顯示邊緣線(&E)。"
+
+#. TRANSLATORS: View submenu for hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_*).
+#: src/app/editor_frame_commands.cpp
+msgid "Show CallTip"
+msgstr "顯示呼叫提示"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show Character &Info"
@@ -2577,6 +2829,26 @@ msgstr "轉八進位(&O)"
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr "切換區塊註解(&C)\tCtrl+Q"
 
+#. TRANSLATORS: Toggle full screen; Esc exits it (IDM_VIEW_TOGGLE_FULLSCREEN).
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen\tF11 [Esc]"
+msgstr "切換全螢幕(&S)\tF11 [Esc]"
+
+#. TRANSLATORS: Linux menu displays Esc in the caption because only F11 is an accelerator.
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen [Esc]\tF11"
+msgstr "切換全螢幕(&S) [Esc]\tF11"
+
+#. TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Top margin"
+msgstr "上邊界"
+
+#. TRANSLATORS: Top paper margin in IDD_PAGESETUP.
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Top:"
+msgstr "上："
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
 msgstr "繁體中文 (Big5, Big5-HKSCS)"
@@ -2743,6 +3015,7 @@ msgid "Windows (CR+LF)"
 msgstr "Windows (CR+LF)"
 
 # Original Notepad4 zh-Hant: IDM_RECODE_SELECT; adapted where needed.
+#. TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).
 #: src/app/editor_frame_commands.cpp
 msgid "With &Encoding...\tF8"
 msgstr "使用編碼(&W)...\tF8"
@@ -2862,3 +3135,11 @@ msgstr "縮放比例（%d%% 至 %d%%）："
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (collapse action); adapted where needed.
+#~ msgid "&Collapse All"
+#~ msgstr "全部摺疊(&C)"
+
+# Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
+#~ msgid "&Expand All"
+#~ msgstr "全部展開(&E)"

@@ -3,6 +3,7 @@
 #include <wx/dc.h>
 #include <wx/font.h>
 #include <wx/fontutil.h>
+#include <wx/display.h>
 #include <wx/graphics.h>
 #include <gtk/gtk.h>
 #include <pango/pangocairo.h>
@@ -21,6 +22,7 @@
 namespace Scintilla::Internal {
 namespace {
 constexpr double DefaultFontDpi = 96;
+constexpr float PointsPerInch = 72;
 constexpr size_t Utf8MaximumBytes = 6;
 template <typename T> struct ObjectUnref {
     void operator()(T* object) const { g_object_unref(object); }
@@ -197,7 +199,8 @@ struct TextMeasurement::Data {
     PangoGravityHint gravityHint{};
     gboolean rounded = true;
     PangoLanguage* language = nullptr;
-    float fontScale = 1;
+    double fontScale = 1;
+    float printerPointAdjustment = 0;
     const uint64_t serial = NextSerial();
 
     static uint64_t NextSerial() {
@@ -221,16 +224,32 @@ struct TextMeasurement::Data {
         return worker;
     }
 
+    void Snapshot(PangoContext* source) {
+        if (!source) throw NativeDrawingError("The native Pango measurement context is unavailable");
+        auto* fontMap = pango_context_get_font_map(source);
+        if (!fontMap) throw NativeDrawingError("The native Pango measurement font map is unavailable");
+        pool = MeasurementPool(fontMap);
+        resolution = pango_cairo_context_get_resolution(source);
+        if (const auto* transform = pango_context_get_matrix(source)) matrix = *transform;
+        direction = pango_context_get_base_dir(source);
+        gravity = pango_context_get_base_gravity(source);
+        gravityHint = pango_context_get_gravity_hint(source);
+        rounded = pango_context_get_round_glyph_positions(source);
+        language = pango_context_get_language(source);
+    }
+
     void SetText(WorkerState& worker, const MeasurementFont::Data& font, const Characters& characters) const {
         FontDescription scaled(nullptr, &pango_font_description_free);
         const auto* description = font.description.get();
-        if (fontScale != 1) {
+        if (fontScale != 1 || printerPointAdjustment != 0) {
             scaled.reset(pango_font_description_copy(description));
             // wxFont::Scaled(float) scales fractional points, then rounds back
             // to Pango units with wxRound(), even for an absolute-size font.
             const double points = static_cast<double>(pango_font_description_get_size(description)) / PANGO_SCALE;
-            pango_font_description_set_size(scaled.get(),
-                                            static_cast<int>(std::lround(points * fontScale * PANGO_SCALE)));
+            auto size = static_cast<int>(std::lround(points * fontScale * PANGO_SCALE));
+            // The printer DC truncates its adjustment after wxFont has rounded.
+            if (printerPointAdjustment != 0) size = static_cast<int>(static_cast<float>(size) * printerPointAdjustment);
+            pango_font_description_set_size(scaled.get(), size);
             description = scaled.get();
         }
         pango_layout_set_font_description(worker.layout.get(), description);
@@ -245,17 +264,7 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
         throw NativeDrawingError("The native Cairo measurement context is unavailable");
 
     ObjectPtr<PangoContext> source(pango_cairo_create_context(cairo));
-    if (!source) throw NativeDrawingError("The native Pango measurement context is unavailable");
-    auto* fontMap = pango_context_get_font_map(source.get());
-    if (!fontMap) throw NativeDrawingError("The native Pango measurement font map is unavailable");
-    data_->pool = MeasurementPool(fontMap);
-    data_->resolution = pango_cairo_context_get_resolution(source.get());
-    if (const auto* matrix = pango_context_get_matrix(source.get())) data_->matrix = *matrix;
-    data_->direction = pango_context_get_base_dir(source.get());
-    data_->gravity = pango_context_get_base_gravity(source.get());
-    data_->gravityHint = pango_context_get_gravity_hint(source.get());
-    data_->rounded = pango_context_get_round_glyph_positions(source.get());
-    data_->language = pango_context_get_language(source.get());
+    data_->Snapshot(source.get());
 
     // pango_cairo_context_get_font_options omits the target surface options.
     // Merge both sources exactly as pango_cairo_update_context does internally.
@@ -272,6 +281,22 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
 
     auto* screen = gdk_screen_get_default();
     data_->fontScale = screen ? static_cast<float>(gdk_screen_get_resolution(screen) / DefaultFontDpi) : 1;
+}
+
+TextMeasurement::TextMeasurement(GtkPrintContext& printer, int fontDpi) : data_(std::make_unique<Data>()) {
+    // Match wxGtkPrinterDC's Pango layout, including GTK's print resolution and
+    // disabled hint metrics. Snapshot it here, before the workers use it.
+    const ObjectPtr<PangoLayout> layout(gtk_print_context_create_pango_layout(&printer));
+    if (!layout) throw NativeDrawingError("The native Pango printer layout is unavailable");
+    auto* source = pango_layout_get_context(layout.get());
+    data_->Snapshot(source);
+    const auto* options = pango_cairo_context_get_font_options(source);
+    if (options) data_->options.reset(cairo_font_options_copy(options));
+    // FontForPrinter and wxGtkPrinterDCImpl::SetFont respectively apply these
+    // factors; capture both to reproduce their rounding on the workers.
+    const auto screenDpi = wxDisplay::GetStdPPIValue();
+    data_->fontScale = static_cast<double>(fontDpi) / screenDpi;
+    data_->printerPointAdjustment = static_cast<float>(screenDpi) / PointsPerInch;
 }
 
 TextMeasurement::~TextMeasurement() = default;

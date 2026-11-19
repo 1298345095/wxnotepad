@@ -5,6 +5,11 @@
 
 class wxDC;
 class wxFont;
+#ifdef _WIN32
+struct _devicemodeW;
+#else
+struct _GtkPrintContext;
+#endif
 
 namespace Scintilla::Internal {
 // Capture native font data on the GUI thread. Measurements never access wxFont.
@@ -26,6 +31,11 @@ private:
 class TextMeasurement final {
 public:
     explicit TextMeasurement(wxDC& dc);
+#ifdef _WIN32
+    TextMeasurement(wxDC& dc, std::wstring_view printer, const _devicemodeW& mode);
+#else
+    TextMeasurement(_GtkPrintContext& printer, int fontDpi);
+#endif
     ~TextMeasurement();
     TextMeasurement(const TextMeasurement&) = delete;
     TextMeasurement& operator=(const TextMeasurement&) = delete;
@@ -37,4 +47,5 @@ private:
     struct Data;
     std::unique_ptr<Data> data_;
 };
+
 } // namespace Scintilla::Internal

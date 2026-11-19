@@ -39,6 +39,8 @@ public:
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
 
     void Draw(wxDC& dc);
+    Scintilla::Position FormatPrintRange(const Scintilla::Internal::PrintSurface& printer, bool draw,
+                                         Scintilla::CharacterRangeFull range, Scintilla::Rectangle area);
     void OnIdle(wxIdleEvent& event);
     void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
     void Resize();
@@ -52,9 +54,11 @@ public:
     void TickCaret();
     void TickScroll();
     void TickWiden();
+    void TickDwell();
     void Scroll(wxScrollWinEvent& event);
     void Wheel(wxMouseEvent& event);
     void Mouse(wxMouseEvent& event);
+    void MouseDeparted();
     void CaptureLost();
     void SyncSystemCaret();
 #ifdef __WXMSW__
@@ -66,6 +70,8 @@ public:
 
 private:
     class TextDropTarget;
+    class CallTipPopup;
+    void DestroyCallTipWindow() noexcept;
     void ShowDropFeedback(int x, int y);
     void ClearDropFeedback();
 #ifdef __WXMSW__

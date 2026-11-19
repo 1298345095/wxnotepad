@@ -53,6 +53,7 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativeKeys::Shortcut(frame, WXK_F11, true);
     Require(MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "plain and Ctrl F11 toggle neither bar");
+    NativeKeys::Shortcut(frame, WXK_F11, false);
     NativeKeys::Shortcut(frame, WXK_F11, false, true);
     Require(!MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "Alt F11 hides menu only");
     const auto withStatus = editor->GetSize();
@@ -159,6 +160,10 @@ public:
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(menus->IsChecked(menu) && menus->IsChecked(status), "both command checks reflect visibility");
                 NativePaint::Complete(frame->Editor());
+#ifdef __WXMSW__
+                WaitForLayout([&] { return frame->Editor()->GetSize().y == frame->GetClientSize().y; },
+                              "initial editor height matches the native frame client area");
+#endif
                 const auto initial = frame->Editor()->GetSize();
                 const auto initialStatus = frame->GetStatusBar()->GetSize();
                 std::printf("Initial frame client height=%d\n", frame->GetClientSize().y);

@@ -3,6 +3,7 @@
 #include <wx/event.h>
 #include <wx/gdicmn.h>
 #include <wx/timer.h>
+#include <cstdint>
 #include <optional>
 
 class EditorFrame;
@@ -27,7 +28,7 @@ private:
     wxTimer observer_;
     bool lastDirty_ = false;
     bool lastActive_ = false;
-    long long lastCaret_ = 0;
+    uint64_t lastSelectionRevision_ = 0;
     bool lastReadOnly_ = false;
     wxString lastPositionStatus_;
     wxSize lastFrameSize_;

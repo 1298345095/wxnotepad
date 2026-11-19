@@ -13,6 +13,15 @@ catalog is unavailable. `[Settings] SaveBeforeRunningTools` defaults to `0`
 and controls the original Restart save policy. See [UI localization](localization.md)
 for the language-change outcomes, fallback and restart behavior.
 
+`[Settings] FullScreenMode` retains On Startup (`1`) and Hide Title (`2`). The
+default is `2`, so a missing setting opens a normal window and hides the title
+when entering full screen. Settings > Appearance > Full Screen Mode changes
+these options; Save Settings Now and enabled exit saving write the preference
+and omit the default. F11 and Esc change the current window without setting On
+Startup. Hide Title applies immediately on Windows. Linux window managers and
+compositors choose the decorations of a native fullscreen window. `ShowMenu`
+and `ShowStatusbar` retain their own values in either mode.
+
 `[Settings2] DateTimeShort` and `DateTimeLong` are original load-only `wcsftime`
 templates for Time/Date (Short Form) and Time/Date (Long Form). Missing or empty
 values use the host-local time without seconds, one space, and the host short or
@@ -30,6 +39,11 @@ configuration overlay. An existing INI takes precedence over a distribution's
 `Notepad4.ini-default`, which seeds a missing INI; built-in defaults fill missing
 fields. This is a partial original-settings implementation, not complete settings
 or appearance import.
+
+View → Show CallTip uses `[Settings] ShowCallTip`: `0` or absent is Off,
+`1` is RGBA, `2` is ARGB, `3` is BGRA, and `4` is ABGR. The mode changes the
+editor's dwell setting immediately and is written by Save Settings Now or
+by Save Settings On Exit when enabled. Off removes the default-valued entry.
 
 Automatic language selection also loads `[Styles] AutoSelect` (default `1`) and
 `[Settings2] NoCGIGuess` (default `0`). AutoSelect controls filename selection and

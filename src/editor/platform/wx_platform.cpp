@@ -1,8 +1,11 @@
 // wx rendering and window adapter for the pinned Notepad4 Scintilla core.
 // Basic LTR rendering and native nonactivating completion UI.
 #include "core_headers.h"
+#include "editor/editor_core.h"
 #include <utility>
 #include "editor/display_units.h"
+#include "editor/print_font.h"
+#include "print_surface.h"
 #include "text_measurement.h"
 #include "native_drawing_error.h"
 #include "diagnostics/trace.h"
@@ -65,9 +68,24 @@ class WxSurface final : public Surface {
     std::unique_ptr<wxDC> owned_;
     wxBitmap bitmap_;
     std::vector<std::unique_ptr<wxDCClipper>> clips_;
-    std::unique_ptr<TextMeasurement> measurement_;
+    std::unique_ptr<TextMeasurement> ownedMeasurement_;
+    const TextMeasurement* measurement_ = nullptr;
     bool utf8_ = true;
-    void FontSet(const Font* f) { dc_->SetFont(static_cast<const WxFont*>(f)->font); }
+    bool printing_ = false;
+    wxFont sourcePrintFont_;
+    wxFont printerFont_;
+    void FontSet(const Font* f) {
+        const auto& font = static_cast<const WxFont*>(f)->font;
+        if (!printing_) {
+            dc_->SetFont(font);
+            return;
+        }
+        if (!sourcePrintFont_.IsOk() || !sourcePrintFont_.IsSameAs(font)) {
+            sourcePrintFont_ = font;
+            printerFont_ = FontForPrinter(font, *dc_);
+        }
+        dc_->SetFont(printerFont_);
+    }
     wxString String(std::string_view s) const {
         return utf8_ ? wxString::FromUTF8(s.data(), s.size()) : wxString::From8BitData(s.data(), s.size());
     }
@@ -81,9 +99,9 @@ class WxSurface final : public Surface {
             if (window) owned = std::make_unique<wxClientDC>(window);
             auto* dc = owned ? owned.get() : borrowed;
             if (!dc || !dc->IsOk()) return;
-            auto measurement = std::make_unique<TextMeasurement>(*dc);
+            ownedMeasurement_ = std::make_unique<TextMeasurement>(*dc);
+            measurement_ = ownedMeasurement_.get();
             owned_ = std::move(owned);
-            measurement_ = std::move(measurement);
             dc_ = dc;
         } catch (const std::bad_alloc&) {
             // The no-throw Surface contract reports resource failure through Initialised().
@@ -97,6 +115,13 @@ public:
     ~WxSurface() noexcept override { Release(); }
     void Init(WindowID id) noexcept override { Initialize(Host(id), nullptr); }
     void Init(SurfaceID dc, WindowID, bool) noexcept override { Initialize(nullptr, static_cast<wxDC*>(dc)); }
+    void InitPrint(const PrintSurface& printer) noexcept {
+        Release();
+        if (!printer.dc.IsOk()) return;
+        printing_ = true;
+        dc_ = &printer.dc;
+        measurement_ = &printer.measurement;
+    }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
         // GTK logical coordinates need a full-resolution backing bitmap; MSW
@@ -109,7 +134,8 @@ public:
         if (!dc->IsOk()) throw NativeDrawingError("The native surface drawing context is unavailable");
         auto measurement = std::make_unique<TextMeasurement>(*dc);
         p->owned_ = std::move(dc);
-        p->measurement_ = std::move(measurement);
+        p->ownedMeasurement_ = std::move(measurement);
+        p->measurement_ = p->ownedMeasurement_.get();
         p->dc_ = p->owned_.get();
         return p;
     }
@@ -120,7 +146,11 @@ public:
     void Release() noexcept override {
         while (!clips_.empty())
             clips_.pop_back();
-        measurement_.reset();
+        measurement_ = nullptr;
+        ownedMeasurement_.reset();
+        printerFont_ = wxNullFont;
+        sourcePrintFont_ = wxNullFont;
+        printing_ = false;
         owned_.reset();
         bitmap_ = wxNullBitmap;
         dc_ = nullptr;
@@ -323,6 +353,11 @@ public:
         // wxDC drawing is synchronous and has no adapter-owned command buffer.
     }
 };
+std::unique_ptr<Surface> AllocatePrintSurface(const PrintSurface& printer) {
+    auto surface = std::make_unique<WxSurface>();
+    surface->InitPrint(printer);
+    return surface;
+}
 std::unique_ptr<Surface> Surface::Allocate([[maybe_unused]] Scintilla::Technology technology) {
 #ifdef __WXMSW__
     if (technology == Technology::DirectWrite) return AllocateDirectWriteSurface();
@@ -392,11 +427,9 @@ PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
 }
 // Adapted from wxWidgets 3.3.3 src/stc/PlatWX.cpp: wxSTCPopupBase,
 // wxSTCListBox. The original core retains all keyboard and completion state.
-class CompletionPopup final : public wxPopupWindow {
+class EditorPopup : public wxPopupWindow {
 public:
-    explicit CompletionPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS | wxBORDER_NONE) {
-        SetName("Word completion");
-    }
+    explicit EditorPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS | wxBORDER_NONE) {}
     bool AcceptsFocus() const override { return false; }
 #ifdef __WXMSW__
     bool Show(bool show) override {
@@ -417,6 +450,10 @@ public:
         return wxPopupWindow::MSWHandleMessage(result, message, first, second);
     }
 #endif
+};
+class CompletionPopup final : public EditorPopup {
+public:
+    explicit CompletionPopup(wxWindow* parent) : EditorPopup(parent) { SetName("Word completion"); }
 };
 class CompletionList final : public wxVListBox {
 public:
@@ -614,3 +651,56 @@ bool ShowAssertionPopUps(bool value) noexcept {
 }
 } // namespace Platform
 } // namespace Scintilla::Internal
+
+class EditorControl::Core::CallTipPopup final : public Scintilla::Internal::EditorPopup {
+public:
+    explicit CallTipPopup(Core& core) : EditorPopup(&core.window_), core_(&core) {
+        SetName("Color CallTip");
+        SetBackgroundStyle(wxBG_STYLE_PAINT);
+        Bind(wxEVT_PAINT, &CallTipPopup::Paint, this);
+        Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+            if (!core_) return;
+            core_->ct.MouseClick(Scintilla::Internal::Point(event.GetX(), event.GetY()));
+            core_->CallTipClick();
+        });
+    }
+
+    void Detach() noexcept { core_ = nullptr; }
+
+private:
+    void Paint(wxPaintEvent&) {
+        wxPaintDC dc(this);
+        if (!core_) return;
+        core_->RunNativeOperation([&] {
+            auto surface = Scintilla::Internal::Surface::Allocate(core_->technology);
+            surface->Init(&dc, this);
+            if (!surface->Initialised())
+                throw Scintilla::Internal::NativeDrawingError("CallTip drawing target unavailable");
+            surface->SetMode({Scintilla::CpUtf8});
+            core_->ct.PaintCT(surface.get());
+#ifdef __WXMSW__
+            if (core_->technology == Scintilla::Technology::DirectWrite &&
+                !Scintilla::Internal::FinishDirectWriteDrawing(*surface))
+                Refresh(false);
+#endif
+        });
+    }
+
+    Core* core_;
+};
+
+void SCICALL EditorControl::Core::CreateCallTipWindow(Scintilla::Internal::PRectangle) noexcept {
+    if (ct.wCallTip.Created()) return;
+    RunNativeOperation([&] {
+        auto* popup = new CallTipPopup(*this);
+        ct.wCallTip = popup;
+        ct.wDraw = popup;
+    });
+}
+
+void EditorControl::Core::DestroyCallTipWindow() noexcept {
+    if (!ct.wCallTip.Created()) return;
+    static_cast<CallTipPopup*>(ct.wCallTip.GetID())->Detach();
+    ct.wCallTip.Destroy();
+    ct.wDraw = nullptr;
+}

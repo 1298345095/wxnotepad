@@ -8,6 +8,8 @@
 #include <windows.h>
 #include <algorithm>
 #include <climits>
+#include <cstddef>
+#include <cstring>
 #include <cmath>
 #include <map>
 #include <mutex>
@@ -134,34 +136,70 @@ struct TextMeasurement::Data {
     int fontDpi;
     int mapMode;
     SIZE window{}, viewport{};
-    explicit Data(wxDC& source) {
+    std::wstring printer;
+    std::unique_ptr<std::byte[]> printerMode;
+    mutable std::mutex printerMutex;
+    mutable std::map<DWORD, OwnedContext> printerContexts;
+
+    Data(wxDC& source, std::wstring_view printerName = {}, const DEVMODEW* mode = nullptr) : printer(printerName) {
         if (!source.IsOk()) throw NativeDrawingError("The native measurement drawing context is unavailable");
         const auto sourceDC = static_cast<HDC>(source.GetHDC());
         if (!sourceDC) throw NativeDrawingError("The native measurement device context is unavailable");
         fontDpi = source.GetPPI().y;
-        // Capture the compatible target's format on the GUI thread. Workers
-        // create native objects from this value, without touching the source DC.
-        const OwnedBitmap bitmap(CreateCompatibleBitmap(sourceDC, 1, 1));
-        if (!bitmap) ThrowLastError("CreateCompatibleBitmap");
-        if (!GetObjectW(bitmap.get(), sizeof(target), &target)) ThrowLastError("GetObject measurement bitmap");
-        target.bmBits = nullptr;
+        if (mode) {
+            if (printer.empty()) throw NativeDrawingError("The native measurement printer name is unavailable");
+            const size_t bytes = size_t{mode->dmSize} + mode->dmDriverExtra;
+            printerMode = std::make_unique_for_overwrite<std::byte[]>(bytes);
+            std::memcpy(printerMode.get(), mode, bytes);
+        } else {
+            // Workers create objects from the snapshot without touching the drawing DC.
+            const OwnedBitmap bitmap(CreateCompatibleBitmap(sourceDC, 1, 1));
+            if (!bitmap) ThrowLastError("CreateCompatibleBitmap");
+            if (!GetObjectW(bitmap.get(), sizeof(target), &target)) ThrowLastError("GetObject measurement bitmap");
+            target.bmBits = nullptr;
+        }
         mapMode = GetMapMode(sourceDC);
         if (!mapMode) ThrowLastError("GetMapMode measurement context");
         if (!GetWindowExtEx(sourceDC, &window)) ThrowLastError("GetWindowExtEx measurement context");
         if (!GetViewportExtEx(sourceDC, &viewport)) ThrowLastError("GetViewportExtEx measurement context");
     }
+    HDC PrinterContext() const {
+        const auto thread = GetCurrentThreadId();
+        {
+            const std::lock_guard lock(printerMutex);
+            if (const auto found = printerContexts.find(thread); found != printerContexts.end())
+                return found->second.get();
+        }
+        const auto* mode = reinterpret_cast<const DEVMODEW*>(printerMode.get());
+        // An information context measures through the selected driver without
+        // starting a second spool job or mutating the GUI's drawing context.
+        OwnedContext dc(CreateICW(L"WINSPOOL", printer.c_str(), nullptr, mode));
+        if (!dc) ThrowLastError("CreateICW measurement printer");
+        ApplyMapping(dc.get());
+        const std::lock_guard lock(printerMutex);
+        return printerContexts.emplace(thread, std::move(dc)).first->second.get();
+    }
+
+    void ApplyMapping(HDC dc) const {
+        SetMapMode(dc, mapMode);
+        SetWindowExtEx(dc, window.cx, window.cy, nullptr);
+        SetViewportExtEx(dc, viewport.cx, viewport.cy, nullptr);
+    }
+
     HDC ThreadContext() const {
+        if (printerMode) return PrinterContext();
         static thread_local std::unique_ptr<WorkerContext> worker;
         if (!worker || worker->planes != target.bmPlanes || worker->bitsPerPixel != target.bmBitsPixel)
             worker = std::make_unique<WorkerContext>(target);
-        SetMapMode(worker->dc.get(), mapMode);
-        SetWindowExtEx(worker->dc.get(), window.cx, window.cy, nullptr);
-        SetViewportExtEx(worker->dc.get(), viewport.cx, viewport.cy, nullptr);
+        ApplyMapping(worker->dc.get());
         return worker->dc.get();
     }
 };
 
 TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>(dc)) {
+}
+TextMeasurement::TextMeasurement(wxDC& dc, std::wstring_view printer, const DEVMODEW& mode)
+    : data_(std::make_unique<Data>(dc, printer, &mode)) {
 }
 TextMeasurement::~TextMeasurement() = default;
 

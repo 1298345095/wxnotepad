@@ -10,15 +10,17 @@
 #include "ScintillaTypes.h"
 #include "UniConversion.h"
 #include <wx/translation.h>
+#include <wx/datetime.h>
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/log.h>
+#include <wx/stdpaths.h>
 #include <wx/utils.h>
-#include <wx/translation.h>
 #include <cstdio>
 #include <algorithm>
 #include <array>
 #ifdef __WXMSW__
+#include <shlobj.h>
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -27,6 +29,72 @@
 #endif
 
 namespace {
+wxString BackupPath(const wxString& source) {
+    // Notepad4 extracts from the first dot of the full path, then removes
+    // the automatic timestamp suffix at the last space in the constructed name.
+    const auto dot = source.find('.');
+    const auto extension = dot == wxString::npos ? wxString(".bak") : source.Mid(dot);
+    const auto time = wxDateTime::UNow();
+    auto backup = source + time.Format(" %Y%m%d %H%M%S");
+    if (const auto space = extension.rfind(' '); space != wxString::npos)
+        backup += wxString::Format(" %03u%lu", static_cast<unsigned>(time.GetMillisecond()), wxGetProcessId()) +
+                  extension.Left(space);
+    return backup + extension;
+}
+
+wxString DefaultBackupDirectory() {
+    wxFileName directory;
+#ifdef __WXMSW__
+    PWSTR local = nullptr;
+    if (SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &local) != S_OK)
+        return wxFileName(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath(), "AutoSave").GetFullPath();
+    directory = wxFileName::DirName(local);
+    CoTaskMemFree(local);
+#else
+    wxString root;
+    if (wxGetEnv("XDG_DATA_HOME", &root) && wxFileName(root).IsAbsolute()) {
+        directory = wxFileName::DirName(root);
+    } else {
+        directory = wxFileName::DirName(wxGetHomeDir());
+        directory.AppendDir(".local");
+        directory.AppendDir("share");
+    }
+#endif
+    directory.AppendDir("Notepad4");
+    directory.AppendDir("AutoSave");
+    return directory.GetPath();
+}
+
+std::string_view BackupMetadataEnding(Scintilla::EndOfLine mode) {
+    using enum Scintilla::EndOfLine;
+    if (mode == Lf) return "\n";
+    if (mode == Cr) return "\r";
+    return "\r\n";
+}
+
+enum class BackupCreation { OpenFailed, Opened };
+
+BackupCreation CreateBackup(const wxString& path, std::string_view bytes) {
+#ifdef __WXMSW__
+    const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return BackupCreation::OpenFailed;
+    DWORD written = 0;
+    const bool complete = bytes.size() <= MAXDWORD &&
+                          WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr) &&
+                          written == bytes.size();
+    CloseHandle(file);
+#else
+    wxFile file;
+    if (!file.Create(path, false)) return BackupCreation::OpenFailed;
+    const bool written = file.Write(bytes.data(), bytes.size()) == bytes.size();
+    const bool complete = file.Close() && written;
+#endif
+    // Only a failure to create the file permits the caller to try a fallback.
+    if (!complete) wxRemoveFile(path);
+    return BackupCreation::Opened;
+}
+
 // Original MAX_NON_UTF8_SIZE bounds EditConvertText's native conversion.
 constexpr intptr_t NativeConversionLimit = (intptr_t{1} << 30) - 16;
 // The original ignores query/restore failures: a successful content save stays
@@ -295,7 +363,8 @@ struct LoadedDocument {
     OriginalFileVariables variables;
 };
 
-wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& options) {
+wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& options,
+                              std::optional<unsigned> nativeAnsiCodePage) {
     using enum FileEncoding;
     auto& bytes = loaded.text;
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
@@ -304,7 +373,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     if (loaded.systemDefault && loaded.encoding != Utf8) {
         // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
         // through Unicode, just like the native Base64 Decode boundary.
-        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw);
+        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw, nativeAnsiCodePage);
     } else if (loaded.encoding == Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));
@@ -349,7 +418,9 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path,
         encoding = sourceEncoding->encoding;
     else if (const auto* codec = std::get_if<FileEncoding>(&decoding))
         encoding = *codec;
-    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    const auto* quick = std::get_if<QuickReloadEncoding>(&decoding);
+    const auto detected = quick ? DetectQuickReloadEncoding(bytes, *quick, options)
+                                : DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
     if (!detected.encoding)
         return wxString::Format(
             _("The selected encoding (code page %u) is not migrated. The document was not changed."),
@@ -358,7 +429,7 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path,
     loaded.bom = detected.bom;
     loaded.systemDefault = sourceEncoding ? sourceEncoding->systemDefault : detected.systemDefault;
     loaded.systemOem = sourceEncoding ? sourceEncoding->systemOem : detected.systemOem;
-    const auto error = DecodeLoadedDocument(loaded, options);
+    const auto error = DecodeLoadedDocument(loaded, options, detected.nativeAnsiCodePage);
     if (!error.empty()) return error;
     return loaded;
 }
@@ -388,6 +459,9 @@ struct PlanDocumentLoad {
     LoadPlan operator()(DocumentLoad::ReloadWithEncoding intent) const { return {CurrentPath(), intent.encoding, {}}; }
     LoadPlan operator()(const DocumentLoad::ReloadAsUtf8& intent) const {
         return {CurrentPath(), FileEncoding::Utf8, {}, &intent.beforeReplace, LoadDecisionTiming::BeforeRead};
+    }
+    LoadPlan operator()(const DocumentLoad::ReloadQuickEncoding& intent) const {
+        return {CurrentPath(), intent.encoding, {}, &intent.beforeReplace, LoadDecisionTiming::BeforeRead};
     }
 };
 
@@ -487,6 +561,35 @@ SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination,
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (destination->empty()) return {SaveStatus::Failed, _("Choose a file name before saving.")};
     return SaveTo(*destination, decideLoss, std::nullopt, true);
+}
+
+void DocumentSession::SaveBackup() {
+    using enum Scintilla::Message;
+    const auto length = static_cast<size_t>(editor_.Send(GetLength));
+    if (!length) return;
+    std::string bytes(length + 1, '\0');
+    editor_.Send(GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    bytes.resize(length);
+    // In Notepad4 an ANSI document is held in its native code page. Recover
+    // that buffer using the editor's preserved native bytes and current text.
+    if (systemDefaultEncoding_) bytes = NativeBytesFromRanges(bytes, 0, *editor_.RawNativeBytes());
+    const wxLogNull quiet;
+    const bool untitled = path_.empty();
+    const auto sibling = BackupPath(untitled ? wxString("Untitled") : path_);
+    if (!untitled && CreateBackup(sibling, bytes) == BackupCreation::Opened) return;
+
+    const auto directory = DefaultBackupDirectory();
+    if (!wxDirExists(directory)) wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    const auto backup = wxFileName(directory, wxFileName(sibling).GetFullName()).GetFullPath();
+    if (untitled) {
+        CreateBackup(backup, bytes);
+        return;
+    }
+    auto metadata = ("AutoSave for " + path_).utf8_string();
+    auto output = systemDefaultEncoding_ ? NativeDefaultEncodingBytes(metadata) : std::move(metadata);
+    output += BackupMetadataEnding(static_cast<Scintilla::EndOfLine>(editor_.Send(GetEOLMode)));
+    output += bytes;
+    CreateBackup(backup, output);
 }
 
 SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLossDecision& decideLoss,

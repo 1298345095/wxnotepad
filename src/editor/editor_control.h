@@ -3,6 +3,7 @@
 #include "settings/original_settings_constants.h"
 #include "editor/align_lines.h"
 #include "editor/completion_styles.h"
+#include "editor/color_calltip_mode.h"
 #include "editor/word_completion.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
@@ -25,12 +26,21 @@
 
 wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 struct SyntaxDefinition;
+struct SyntaxOriginalMetadata;
+namespace Scintilla {
+struct CharacterRangeFull;
+struct Rectangle;
+namespace Internal {
+struct PrintSurface;
+}
+} // namespace Scintilla
 
 // Original Edit.h::LineSelectionMode, including its built-in Visual Studio default.
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 // Original Styles.h::LineHighlightMode.
 enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
 enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSibling };
+enum class FoldCommand { DefaultLevels, AllLevels, CurrentBlock, CurrentLevel, NumericLevel };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -41,6 +51,9 @@ public:
     explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
+    Scintilla::Position FormatPrintRange(const Scintilla::Internal::PrintSurface& printer, bool draw,
+                                         Scintilla::CharacterRangeFull range, Scintilla::Rectangle area);
+    void SetColorCallTipMode(ColorCallTipMode mode);
     uint64_t DocumentRevision() const { return documentRevision_; }
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
@@ -63,6 +76,7 @@ public:
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
     bool ConvertBase64(Base64Conversion command, const wxString& path = {}, bool defaultEncoding = false);
+    void CopyAsRtf(bool nativeAnsi);
     NativeByteSnapshot RawNativeBytes() const;
     std::string NativeSelectedBytes(bool binary = true);
     std::string NativeBytesAfter(intptr_t position);
@@ -138,6 +152,7 @@ public:
     void ToggleChangeHistory();
     bool CodeFoldingVisible() const { return codeFoldingVisible_; }
     void SetCodeFoldingVisible(bool visible);
+    void ToggleFolds(FoldCommand command, const SyntaxOriginalMetadata& syntax, int level = 0);
     bool CurrentBlockHighlighted() const { return highlightCurrentBlock_; }
     void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
@@ -159,6 +174,17 @@ private:
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
+    wxTimer dwellTimer_;
+    ColorCallTipMode colorCallTipMode_ = ColorCallTipMode::Off;
+    struct ColorCallTipRange {
+        intptr_t start;
+        intptr_t end;
+        uint32_t color;
+    };
+    std::optional<ColorCallTipRange> colorCallTip_;
+    void ShowColorCallTip(intptr_t position);
+    void QueueColorCallTipEdit();
+    void EditColorCallTip(ColorCallTipRange range);
     std::unique_ptr<Core> core_;
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
     std::unique_ptr<OccurrenceMarking> occurrences_;
@@ -194,6 +220,8 @@ private:
     void UpdateLineNumberMargin();
     void UpdateBookmarkMargin();
     void UpdateFoldMargin();
+    void ToggleAllFolds();
+    void FinishBatchFold();
     void OnPaint(wxPaintEvent& event);
     void OnIdle(wxIdleEvent& event);
     void OnKeyDown(wxKeyEvent& event);

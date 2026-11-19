@@ -264,6 +264,8 @@ inline wxString KeyName(int key) {
         return "space";
     case WXK_TAB:
         return "Tab";
+    case WXK_ESCAPE:
+        return "Escape";
     case '/':
         return "slash";
     case WXK_NUMPAD_DIVIDE:
