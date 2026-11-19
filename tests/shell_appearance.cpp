@@ -374,6 +374,34 @@ public:
 #ifdef __WXMSW__
                 frame->SetSize(wxSize(620, 430));
                 NativePaint::Complete(editor);
+                if (status->GetStatusWidth(StatusField::Scheme) != 0) {
+                    // At smaller native fonts 620 pixels can display all metadata.
+                    // Verify this observed state before forcing the hidden state.
+                    for (int field = StatusField::Scheme; field <= StatusField::Zoom; ++field) {
+                        wxRect rectangle;
+                        std::array<wchar_t, 512> rendered{};
+                        SendMessageW(static_cast<HWND>(status->GetHandle()), SB_GETTEXTW, field,
+                                     reinterpret_cast<LPARAM>(rendered.data()));
+                        Require(status->GetFieldRect(field, rectangle) &&
+                                    rectangle.GetRight() <= status->GetClientSize().x &&
+                                    rectangle.width >= status->GetTextExtent(status->GetStatusText(field)).x &&
+                                    wxString(rendered.data()) == status->GetStatusText(field),
+                                "metadata that fits at 620 pixels retains every complete native caption");
+                    }
+                    wxRect firstMetadata;
+                    wxRect documentSize;
+                    Require(status->GetFieldRect(StatusField::Scheme, firstMetadata) &&
+                                status->GetFieldRect(StatusField::DocumentSize, documentSize),
+                            "native rectangles identify the counters and final size reservation");
+                    const int grip = wxSystemSettings::GetMetric(wxSYS_HSCROLL_ARROW_X, status);
+                    const int narrowClientWidth = firstMetadata.x + documentSize.width + grip;
+                    Require(narrowClientWidth < status->GetClientSize().x,
+                            "measured narrow geometry removes the metadata reservation");
+                    frame->SetClientSize(wxSize(narrowClientWidth, frame->GetClientSize().y));
+                    NativePaint::Complete(editor);
+                }
+                Require(status->GetStatusWidth(StatusField::Scheme) == 0,
+                        "the narrow native fixture reaches the metadata-hidden state");
                 for (int field = StatusField::Scheme; field <= StatusField::Zoom; ++field) {
                     std::array<wchar_t, 512> rendered{};
                     SendMessageW(static_cast<HWND>(status->GetHandle()), SB_GETTEXTW, field,
