@@ -25,6 +25,10 @@ using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+void Phase(const char* phase) {
+    std::fprintf(stderr, "phase: %s\n", phase);
+    std::fflush(stderr);
+}
 std::filesystem::path Root() {
     if (wxTheApp && wxTheApp->argc >= 3 && wxString(wxTheApp->argv[1]) == "--record")
         return TestFiles::Utf8Path(wxString(wxTheApp->argv[2]).utf8_string());
@@ -123,7 +127,9 @@ public:
                 list->GetEventHandler()->ProcessEvent(selection);
             }
             wxCommandEvent click(wxEVT_BUTTON, cancel_ ? wxID_CANCEL : wxID_OK);
+            if (cancel_) Phase("program chooser Cancel response enter");
             dialog->GetEventHandler()->ProcessEvent(click);
+            if (cancel_) Phase("program chooser Cancel response returned");
             return;
         }
     }
@@ -148,8 +154,10 @@ public:
                 auto* browse = candidate->FindWindowByName("open-with-browse", candidate);
                 Require(browse != nullptr, "chooser exposes its directory browse button");
                 candidate->CallAfter([candidate, browse] {
+                    Phase("directory Browse button enter");
                     wxCommandEvent click(wxEVT_BUTTON, browse->GetId());
                     browse->GetEventHandler()->ProcessEvent(click);
+                    Phase("directory Browse button returned");
                 });
                 break;
             }
@@ -164,8 +172,10 @@ public:
 #endif
             changed = true;
             Stop();
+            Phase("directory path updated; outer chooser Cancel response enter");
             wxCommandEvent cancel(wxEVT_BUTTON, wxID_CANCEL);
             dialog_->GetEventHandler()->ProcessEvent(cancel);
+            Phase("directory outer chooser Cancel response returned");
             return;
         }
 #ifdef __WXMSW__
@@ -191,11 +201,16 @@ public:
         for (auto* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            ObserveChooser(widget);
             if (!selected_) {
                 selected_ = true;
+                Phase("directory native selection request enter");
                 gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(widget), directory_.utf8_str());
+                Phase("directory native selection request returned");
             } else if (NativeDialogs::CanAcceptFile(widget, directory_)) {
+                Phase("directory native Accept response enter");
                 NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
+                Phase("directory native Accept response returned");
             }
         }
         g_list_free(windows);
@@ -203,6 +218,24 @@ public:
     }
 
 private:
+#ifdef __WXGTK__
+    void ObserveChooser(GtkWidget* widget) {
+        auto* folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+        auto* selected = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
+        auto* accept = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_ACCEPT);
+        const auto state = wxString::Format(
+            "directory native state folder='%s' selected='%s' expected='%s' mapped=%d busy=%d accept_sensitive=%d",
+            folder ? wxString::FromUTF8(folder) : wxString("<none>"),
+            selected ? wxString::FromUTF8(selected) : wxString("<none>"), directory_, gtk_widget_get_mapped(widget),
+            NativeDialogs::FileChooserBusy(widget), accept && gtk_widget_is_sensitive(accept));
+        g_free(folder);
+        g_free(selected);
+        if (state == chooserState_) return;
+        chooserState_ = state;
+        Phase(state.utf8_str().data());
+    }
+    wxString chooserState_;
+#endif
     wxString directory_;
     wxDialog* dialog_ = nullptr;
     bool selected_ = false;
@@ -338,8 +371,10 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
 #endif
     {
+        Phase("program chooser Cancel command enter");
         ProgramDriver chooser(program, true);
         Require(!frame->OpenDocumentWith(), "chooser Cancel stops launch");
+        Phase("program chooser Cancel command returned");
     }
     Require(!std::filesystem::exists(Root() / "record.txt"), "Cancel launches no program");
     const auto changedDirectory = Root() / "changed-programs";
@@ -350,8 +385,10 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     std::filesystem::permissions(windowsProgram, std::filesystem::perms::owner_all);
 #endif
     {
+        Phase("directory Browse and Cancel command enter");
         DirectoryDriver directory(Name(changedDirectory));
         Require(!frame->OpenDocumentWith(), "Browse followed by Cancel does not launch");
+        Phase("directory Browse and Cancel command returned");
         Require(directory.changed && settings.values.openWithDirectory == Name(changedDirectory),
                 "native directory selection immediately updates OpenWithDir, including after Cancel");
     }
