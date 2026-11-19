@@ -60,7 +60,10 @@ The ticket archive `next-native-file-tools-2026-11-18/240/` contains the
 controlled original/base/after Windows captures, native status geometry and
 text observations, and separate 52-case packaged X11 and Wayland matrices.
 Those matrices cover normal/narrow/selected layouts, English/Simplified
-Chinese/Traditional Chinese, scales 1/1.5/2, dark and HighContrast themes.
+Chinese/Traditional Chinese, font scales 1/1.5/2, dark and HighContrast themes.
+Separate twelve-case before/after matrices for each backend verify native
+scale 2 at observed 192 DPI: GDK scale 2 on X11 and a scale-2 Weston output
+on Wayland, with full normal/narrow/selected windows captured.
 Windows VMware V3 includes 24 static frames at 100/125/150/200 percent and
 five persistent-window OS scale transitions, with native DPI and editor metric
 observations. `vmware/handoff.md`, `dpi-analysis.md` and `wayland-analysis.md`
