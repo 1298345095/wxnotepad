@@ -36,7 +36,8 @@ wxString DefaultProgramDirectory() {
         return result;
     }
 #else
-    if (const char* desktop = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP)) return wxString::FromUTF8(desktop);
+    const auto desktop = wxStandardPaths::Get().GetUserDir(wxStandardPaths::Dir_Desktop);
+    if (!desktop.empty()) return desktop;
 #endif
     return wxGetHomeDir();
 }
