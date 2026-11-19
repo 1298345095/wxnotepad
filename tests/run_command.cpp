@@ -217,6 +217,48 @@ void BrowseProgram(EditorFrame* frame) {
     driver.Check();
     std::puts("PASS: native executable browser accept/cancel and remaining arguments");
 }
+#ifndef __WXMSW__
+void LiteralNamedPrograms(EditorFrame* frame) {
+    const auto directory = TestFiles::TemporaryDirectory("literal-run-paths");
+    std::filesystem::create_directories(directory);
+    wxFileName child(wxStandardPaths::Get().GetExecutablePath());
+    child.SetFullName("run_command_child");
+    const auto id = frame->GetMenuBar()->FindMenuItem("Tools", "Run Command...");
+    for (const auto* name : {"$HOME", "double\"quote", "back\\slash", "single'quote"}) {
+        const auto program = directory / name;
+        const auto script = "#!/bin/sh\nexec \"" + child.GetFullPath().utf8_string() + "\" \"$0\" \"$@\"\n";
+        TestFiles::WriteBytes(program, script);
+        std::filesystem::permissions(program, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
+        Require(frame->Open(TestFiles::Filename(program)).status == OpenStatus::Opened,
+                "open a real named executable with literal filename punctuation");
+        const auto record = directory / (std::string(name) + ".record");
+        wxSetEnv("WXNOTEPAD_RUN_RECORD", TestFiles::Filename(record));
+        wxSetEnv("WXNOTEPAD_RUN_DOCUMENT", frame->DocumentPath());
+        DialogDriver driver([](wxDialog* dialog) {
+            auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
+            input->SetValue(input->GetValue() + " 'literal argument'");
+            NativeSearch::Click(dialog, wxID_OK);
+            if (dialog->IsModal()) {
+                NativeSearch::Click(dialog, wxID_CANCEL);
+                throw std::runtime_error("named-document prefill launches its literal executable path");
+            }
+        });
+        NativeSearch::Command(frame, id);
+        driver.Check();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (!std::filesystem::exists(record) && std::chrono::steady_clock::now() < deadline) {
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Require(std::filesystem::exists(record) &&
+                    TestFiles::Bytes(record) == directory.string() + "\n" + program.string() + "\nliteral argument\n",
+                "actual child argv retains dollar, quote and backslash characters from the named document");
+        Require(TestFiles::Bytes(record.string() + ".disk") == script,
+                "recording child reads the literal document on disk");
+    }
+    std::puts("PASS: real named-document prefills preserve literal Linux executable filenames and child argv");
+}
+#endif
 void NamedAndFailure(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("named-tools") / TestFiles::Utf8Path("folder 中文");
     std::filesystem::create_directories(directory);
@@ -458,6 +500,9 @@ public:
                 LaunchArguments(frame);
                 WidthPersistence(frame, *settings_);
                 BrowseProgram(frame);
+#ifndef __WXMSW__
+                LiteralNamedPrograms(frame);
+#endif
                 NamedAndFailure(frame);
                 LaunchArguments(frame);
                 SaveBeforeTools(frame, *settings_);
