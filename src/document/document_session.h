@@ -78,7 +78,12 @@ public:
     const wxString& Path() const { return path_; }
     wxString FileNameText(FileNamePart part) const;
     bool IsReadOnlyFile() const { return readOnlyFile_; }
+    // Native read-only attribute / owner-write bit; non-owner Save protection
+    // still follows effective access instead of another user's owner bit.
+    bool ReadOnlyFileFlag() const { return readOnlyFileFlag_; }
     bool RefreshReadOnlyFile();
+    const wxString& ReadOnlyFileChangeError() const { return readOnlyFileChangeError_; }
+    wxString ToggleReadOnlyFile();
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme,
@@ -125,6 +130,8 @@ private:
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
     bool readOnlyFile_ = false;
+    bool readOnlyFileFlag_ = false;
+    wxString readOnlyFileChangeError_;
     SaveCleanupOptions saveCleanup_;
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;

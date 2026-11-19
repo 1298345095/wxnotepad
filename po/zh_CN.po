@@ -897,6 +897,14 @@ msgstr "修改历史标记(&H)"
 msgid "Change &background color."
 msgstr "改变背景色(&B)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Change the disk file's read-only attribute. F10 controls editing only."
+msgstr "更改磁盘文件的只读属性。F10 仅控制编辑保护。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
+msgstr "更改文件所有者的写入权限，也会影响该用户的其他程序。F10 仅控制编辑保护。"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDS_CHANGE_LANG_RESTART (application name adapted).
 #: src/app/language_commands.cpp
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
@@ -1050,6 +1058,25 @@ msgid "Copy as &RTF"
 msgstr "复制为富文本(&R)"
 
 #: src/document/document_session.cpp
+#, c-format
+msgid "Could not change file attributes: %s"
+msgstr "无法更改文件属性：%s"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not change file protection"
+msgstr "无法更改文件保护"
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Could not change read-only protection for %s. %s"
+msgstr "无法更改 %s 的只读保护。%s"
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change the file owner's write permission: %s"
+msgstr "无法更改文件所有者的写入权限：%s"
+
+#: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "无法关闭已写入完毕的临时文件。"
 
@@ -1095,6 +1122,16 @@ msgstr "无法打开文件以读取。"
 #, c-format
 msgid "Could not print \"%s\"."
 msgstr "无法打印“%s”。"
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file attributes: %s"
+msgstr "无法读取文件属性：%s"
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file permissions: %s"
+msgstr "无法读取文件权限：%s"
 
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
@@ -1866,6 +1903,10 @@ msgstr "OEM 美国 (DOS-437)"
 msgid "On &Startup"
 msgstr "启动时进入全屏(&S)"
 
+#: src/document/document_session.cpp
+msgid "Only the file owner can change the owner's write permission."
+msgstr "只有文件所有者才能更改所有者的写入权限。"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr "仅使用当前文档中的单词"
@@ -2048,6 +2089,10 @@ msgstr "已到文档开头，从文档末尾重新搜索。"
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
 msgstr "已到文档末尾，从文档开头重新搜索。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Read Only &File"
+msgstr "只读文件(&F)"
 
 #: src/app/editor_frame.cpp
 msgid "Read only file"
@@ -2258,6 +2303,10 @@ msgstr "保存修改？"
 #: src/app/editor_frame.cpp
 msgid "Save file"
 msgstr "保存文件"
+
+#: src/document/document_session.cpp
+msgid "Save the document before changing file permissions."
+msgstr "请先保存文档，再更改文件权限。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEORIGINALTIMESTAMP.
 #: src/app/editor_frame_commands.cpp
@@ -2636,6 +2685,10 @@ msgstr "所选编码(代码页 %u)尚未迁移。文档未作更改。"
 #: src/app/editor_frame.cpp
 msgid "The specified text was not found."
 msgstr "未找到指定的文本。"
+
+#: src/document/document_session.cpp
+msgid "This command changes a file, not a directory."
+msgstr "此命令只能更改文件，不能更改目录。"
 
 #: src/document/document_session.cpp
 msgid "This document already has a file name."

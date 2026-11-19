@@ -989,6 +989,14 @@ msgstr "變更歷程標記(&H)"
 msgid "Change &background color."
 msgstr "變更背景顏色(&B)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Change the disk file's read-only attribute. F10 controls editing only."
+msgstr "變更磁碟檔案的唯讀屬性。F10 僅控制編輯保護。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
+msgstr "變更檔案擁有者的寫入權限，也會影響該使用者的其他程式。F10 僅控制編輯保護。"
+
 # Original Notepad4 zh-Hant: IDS_CHANGE_LANG_RESTART (application name adapted); adapted where needed.
 #: src/app/language_commands.cpp
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
@@ -1145,6 +1153,25 @@ msgid "Copy as &RTF"
 msgstr "複製為富文字(&R)"
 
 #: src/document/document_session.cpp
+#, c-format
+msgid "Could not change file attributes: %s"
+msgstr "無法變更檔案屬性：%s"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not change file protection"
+msgstr "無法變更檔案保護"
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Could not change read-only protection for %s. %s"
+msgstr "無法變更 %s 的唯讀保護。%s"
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change the file owner's write permission: %s"
+msgstr "無法變更檔案擁有者的寫入權限：%s"
+
+#: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "無法關閉已寫入完成的暫存檔案。"
 
@@ -1190,6 +1217,16 @@ msgstr "無法開啟檔案進行讀取。"
 #, c-format
 msgid "Could not print \"%s\"."
 msgstr "無法列印「%s」。"
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file attributes: %s"
+msgstr "無法讀取檔案屬性：%s"
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file permissions: %s"
+msgstr "無法讀取檔案權限：%s"
 
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
@@ -2000,6 +2037,10 @@ msgstr "OEM United States (DOS-437)"
 msgid "On &Startup"
 msgstr "啟動時進入全螢幕(&S)"
 
+#: src/document/document_session.cpp
+msgid "Only the file owner can change the owner's write permission."
+msgstr "只有檔案擁有者才能變更擁有者的寫入權限。"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr "僅使用文件內的單詞"
@@ -2186,6 +2227,10 @@ msgstr "已到達文件開頭，從結尾重新搜尋。"
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
 msgstr "已到達文件結尾，從開頭重新搜尋。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Read Only &File"
+msgstr "唯讀檔案(&F)"
 
 #: src/app/editor_frame.cpp
 msgid "Read only file"
@@ -2418,6 +2463,10 @@ msgstr "儲存變更？"
 #: src/app/editor_frame.cpp
 msgid "Save file"
 msgstr "儲存檔案"
+
+#: src/document/document_session.cpp
+msgid "Save the document before changing file permissions."
+msgstr "請先儲存文件，再變更檔案權限。"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVEORIGINALTIMESTAMP; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2808,6 +2857,10 @@ msgstr "所選編碼（字碼頁 %u）尚未移植。文件未變更。"
 #: src/app/editor_frame.cpp
 msgid "The specified text was not found."
 msgstr "找不到指定的文字。"
+
+#: src/document/document_session.cpp
+msgid "This command changes a file, not a directory."
+msgstr "此命令只能變更檔案，不能變更目錄。"
 
 #: src/document/document_session.cpp
 msgid "This document already has a file name."
