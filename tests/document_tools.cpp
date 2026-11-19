@@ -269,11 +269,11 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     TestFiles::WriteBytes(brokenProgram, "not an executable");
 #else
     const auto brokenProgram = failedPrograms / "broken.desktop";
-    TestFiles::WriteBytes(brokenProgram, "[Desktop Entry]
+    TestFiles::WriteBytes(brokenProgram, R"([Desktop Entry]
 Type=Application
 Name=Missing owned program
 Exec=/missing-wxnotepad-owned-program-244 %f
-");
+)");
 #endif
     const auto errorsBefore = launchErrors.errors;
     settings.values.openWithDirectory = Name(failedPrograms);
