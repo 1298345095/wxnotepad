@@ -14,7 +14,7 @@ def main():
                            XDG_DATA_HOME=str(root / "data"), XDG_CONFIG_HOME=str(root / "config"))
         for name in ("data", "config"):
             (root / name).mkdir()
-        (root / "Notepad4.ini").write_text("[Settings]\nSaveBeforeRunningTools=0\n[Settings2]\nUILanguage=1033\n",
+        (root / "Notepad4.ini").write_text("[Settings]\nSaveBeforeRunningTools=0\nWarnLineEndings=0\n[Settings2]\nUILanguage=1033\n",
                                           encoding="utf-16")
         try:
             subprocess.run([str(executable), "--fixture"], env=environment, check=True, timeout=55)

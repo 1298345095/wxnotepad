@@ -13,6 +13,9 @@
 #include <wx/dialog.h>
 #include <chrono>
 #include <fstream>
+#ifdef __WXMSW__
+#include <shlobj.h>
+#endif
 #ifdef __WXGTK__
 #include <gio/gdesktopappinfo.h>
 #endif
@@ -213,6 +216,18 @@ void RegistryString(const wxString& key, const wxString& value) {
     RegCloseKey(created);
     Require(result == ERROR_SUCCESS, "register owned handler value");
 }
+void Shortcut(const std::filesystem::path& shortcut, const wxString& target) {
+    IShellLinkW* link = nullptr;
+    Require(SUCCEEDED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&link))),
+            "create owned native shell shortcut");
+    auto result = link->SetPath(target.wc_str());
+    IPersistFile* file = nullptr;
+    if (SUCCEEDED(result)) result = link->QueryInterface(IID_PPV_ARGS(&file));
+    if (SUCCEEDED(result)) result = file->Save(shortcut.c_str(), TRUE);
+    if (file) file->Release();
+    link->Release();
+    Require(SUCCEEDED(result), "save owned native shell shortcut");
+}
 #endif
 class Association final {
 public:
@@ -362,6 +377,23 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(decision.prompts == 1 && !editor->Send(Message::GetModify), "Save uses ordinary save point");
     }
     WaitForChild("disk bytes unsaved", Name(path), Name(Root()));
+#ifdef __WXMSW__
+    const auto shortcuts = Root() / "shortcuts";
+    std::filesystem::create_directory(shortcuts);
+    const auto documentShortcut = Root() / "document.lnk";
+    Shortcut(documentShortcut, Name(path));
+    Shortcut(shortcuts / "program.lnk", wxStandardPaths::Get().GetExecutablePath());
+    Require(frame->Open(Name(documentShortcut)).status == OpenStatus::Opened, "open the named shortcut document");
+    settings.values.openWithDirectory = Name(shortcuts);
+    {
+        ProgramDriver chooser("program.lnk");
+        Require(frame->OpenDocumentWith(), "Windows program shortcut remains usable in the program directory");
+    }
+    WaitForChild("disk bytes unsaved", Name(path), Name(Root()));
+    Require(frame->DocumentPath() == Name(documentShortcut) && !editor->Send(Message::GetModify),
+            "resolving the document shortcut affects only the external argument");
+    Require(frame->Open(Name(path)).status == OpenStatus::Opened, "restore the ordinary named document");
+#endif
     const auto failedPrograms = Root() / "failed-programs";
     std::filesystem::create_directory(failedPrograms);
 #ifdef __WXMSW__
