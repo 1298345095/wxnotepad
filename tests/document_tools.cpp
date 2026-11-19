@@ -109,9 +109,9 @@ public:
     int choosers = 0;
     void Notify() override {
         for (auto* window : wxTopLevelWindows) {
-            auto* dialog = dynamic_cast<wxDialog*>(window);
+            auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || !dialog->IsShown() || dialog->GetTitle() != "Open Document With") continue;
-            auto* list = dynamic_cast<wxListBox*>(dialog->FindWindowByName("open-with-programs", dialog));
+            auto* list = wxDynamicCast(dialog->FindWindowByName("open-with-programs", dialog), wxListBox);
             if (!list) continue;
             ++choosers;
             Stop();
@@ -140,7 +140,7 @@ public:
     void Notify() override {
         if (!dialog_) {
             for (auto* window : wxTopLevelWindows) {
-                auto* candidate = dynamic_cast<wxDialog*>(window);
+                auto* candidate = wxDynamicCast(window, wxDialog);
                 if (!candidate || !candidate->IsShown() ||
                     !candidate->FindWindowByName("open-with-programs", candidate))
                     continue;
@@ -155,10 +155,10 @@ public:
             }
             return;
         }
-        const auto* path = dynamic_cast<wxTextCtrl*>(dialog_->FindWindowByName("open-with-directory", dialog_));
+        const auto* path = wxDynamicCast(dialog_->FindWindowByName("open-with-directory", dialog_), wxTextCtrl);
         if (path && path->GetValue() == directory_) {
 #ifndef __WXMSW__
-            const auto* programs = dynamic_cast<wxListBox*>(dialog_->FindWindowByName("open-with-programs", dialog_));
+            const auto* programs = wxDynamicCast(dialog_->FindWindowByName("open-with-programs", dialog_), wxListBox);
             Require(programs && programs->FindString("Windows.EXE") == wxNOT_FOUND,
                     "Linux excludes imported Windows programs even with executable permission");
 #endif
@@ -450,15 +450,17 @@ Exec=/missing-wxnotepad-owned-program-244 %f
 class ToolsApp final : public wxApp {
 public:
     bool OnInit() override {
+        const bool fixture = argc == 2 && wxString(argv[1]) == "--fixture";
+        const auto log = fixture ? wxString("fixture.log") : wxString::Format("child-%lu.log", wxGetProcessId());
 #ifdef __WXMSW__
         FILE* diagnostic = nullptr;
-        _wfreopen_s(&diagnostic, Name(Root() / "fixture.log").wc_str(), L"ab", stderr);
+        _wfreopen_s(&diagnostic, Name(Root() / TestFiles::Utf8Path(log.utf8_string())).wc_str(), L"ab", stderr);
 #else
-        std::freopen(Name(Root() / "fixture.log").utf8_str(), "ab", stderr);
+        std::freopen(Name(Root() / TestFiles::Utf8Path(log.utf8_string())).utf8_str(), "ab", stderr);
 #endif
         std::fprintf(stderr, "phase: init argc=%d\n", argc);
         std::fflush(stderr);
-        if (argc != 2 || wxString(argv[1]) != "--fixture") {
+        if (!fixture) {
             const int firstArgument = argc >= 3 && wxString(argv[1]) == "--record" ? 3 : 1;
             const auto argument = argc > firstArgument ? wxString(argv[firstArgument]) : wxString{};
             std::string disk;

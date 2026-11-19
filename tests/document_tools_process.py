@@ -19,8 +19,8 @@ def main():
         try:
             subprocess.run([str(executable), "--fixture"], env=environment, check=True, timeout=55)
         finally:
-            if (root / "fixture.log").exists():
-                print((root / "fixture.log").read_text(encoding="utf-8"), file=sys.stderr)
+            for log in sorted(root.glob("*.log")):
+                print(log.name + ":\n" + log.read_text(encoding="utf-8"), file=sys.stderr)
 
 
 if __name__ == "__main__":
