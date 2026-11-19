@@ -223,17 +223,11 @@ bool ShowContainingFolder(wxWindow* parent, const wxString& path) {
     const auto directory = wxFileName(path).GetPath();
     if (!wxDirExists(directory)) return false;
 #ifdef __WXMSW__
-    // Original Helpers.cpp::OpenContainingFolder: request the actual shell item
-    // selection, with native association opening of its parent as the fallback.
-    auto* folder = ILCreateFromPathW(directory.wc_str());
+    // The shell's documented single-item form opens the parent and selects
+    // this complete item PIDL. Keep native association opening as the fallback.
     auto* item = ILCreateFromPathW(path.wc_str());
-    HRESULT result = E_FAIL;
-    if (folder && item) {
-        const auto* child = ILFindLastID(item);
-        result = SHOpenFolderAndSelectItems(folder, 1, &child, 0);
-    }
+    const HRESULT result = item ? SHOpenFolderAndSelectItems(item, 0, nullptr, 0) : E_FAIL;
     CoTaskMemFree(item);
-    CoTaskMemFree(folder);
     if (SUCCEEDED(result)) return true;
 #elif defined(__WXGTK__)
     GError* failure = nullptr;
