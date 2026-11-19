@@ -22,8 +22,8 @@ are committed only if the resulting filesystem target exists. Existing full
 names and URI ports retain their original classification.
 
 Windows checks raw candidates with `GetFileAttributesW`, as the original does,
-before constructing a normalized `wxFileName`. wxWidgets 3.3.3 `GetFullPath`
-normalizes DOS volumes: passing an unclassified relative `filename:line:column`
+and uses native `GetFullPathNameW` only after finding an existing target.
+wxWidgets 3.3.3 `GetFullPath` normalizes DOS volumes: passing an unclassified relative `filename:line:column`
 can interpret `filename` as a volume and stall. A standalone native SDK probe
 reproduced this ordering problem. Document-relative combinations and native
 variable expansion therefore stay as strings until existence is established.
@@ -47,11 +47,25 @@ compositor.
 child files and positions, controlled local desktop handlers, containing-folder
 requests, no-op shapes and failed executable startup. Its Linux file-manager
 peer runs on the private session bus and also rejects a request to exercise the
-association fallback. Windows protocol lookup uses a process-local Classes view
-whose commands resolve only to the owned recorder; personal association keys are
-not changed. Explorer observations require a newly created HWND at the exact
+association fallback. Windows registers a fresh per-run protocol and unsupported
+extension for the owned recorder, checks that both names were newly created,
+and removes those exact keys after the assertions. A process-local Classes
+override is insufficient for the actual shell dispatcher: independent native
+probes resolve its command through `AssocQueryString` but the real shell still
+reports file not found. Existing protocols and protected `UserChoice` keys are
+untouched by the ordinary host test. Explorer observations require a newly created HWND at the exact
 owned temporary folder and inspect the selected item's full path before closing
-only that window.
+only that window. Each owned Explorer HWND must finish closing before the next
+request, preventing an earlier window from consuming a new item selection.
+
+Both Linux backends record the standard explicit URL, protocol-relative, www
+and email cases through their private desktop handlers. Windows exercises the
+same common extraction path and native shell boundary with its fresh protocol,
+including ports, percent escapes, parentheses and Markdown, plus the fresh
+unsupported file extension. The explicit Windows `--desktop-standards ROOT`
+fixture mode also runs every standard case when the three native protocol
+commands already equal the exact owned recorder command; it refuses personal
+handlers. This mode supports the separately authorized Windows VM supplement.
 
 `original_open_target_startup` bundles the real application and checks English,
 Simplified Chinese and Traditional Chinese captions, menu availability, a real

@@ -13,6 +13,7 @@
 #ifdef __WXMSW__
 #include <windows.h>
 #include <shlobj.h>
+#include <shlwapi.h>
 #elif defined(__WXGTK__)
 #include <gio/gio.h>
 #endif
@@ -30,7 +31,8 @@ std::string Range(EditorControl& editor, intptr_t start, intptr_t end) {
 std::string SelectedTarget(EditorControl& editor) {
     // Adapted from Notepad4 89b8b36 EditGetStringAroundCaret/EditOpenSelection.
     // See licenses/Notepad4.txt. The native core always exposes UTF-8 bytes.
-    if (editor.Send(Message::GetSelectionEmpty)) {
+    const auto selectionLength = editor.Send(Message::GetSelText);
+    if (selectionLength == 0) {
         const auto caret = editor.Send(Message::GetCurrentPos);
         const auto line = editor.Send(Message::LineFromPosition, caret);
         auto start = editor.Send(Message::PositionFromLine, line);
@@ -80,7 +82,7 @@ std::string SelectedTarget(EditorControl& editor) {
         }
         return Range(editor, start, end);
     }
-    std::string text(static_cast<size_t>(editor.Send(Message::GetSelText)) + 1, '\0');
+    std::string text(static_cast<size_t>(selectionLength) + 1, '\0');
     editor.Send(Message::GetSelText, 0, reinterpret_cast<intptr_t>(text.data()));
     text.resize(text.find_first_of("\r\n\t\0", 0, 4));
     return text;
@@ -124,12 +126,22 @@ std::optional<wxString> ExistingPath(const wxString& target, const wxString& doc
         // wxFileName::GetFullPath normalizes DOS volumes, so doing that to an
         // unclassified "filename:line:column" or URI can stall on a fake volume.
         if (GetFileAttributesW(candidate.wc_str()) == INVALID_FILE_ATTRIBUTES) return {};
+        const auto length = GetFullPathNameW(candidate.wc_str(), 0, nullptr, nullptr);
+        if (length != 0) {
+            std::wstring absolute(length, L'\0');
+            const auto count = GetFullPathNameW(candidate.wc_str(), length, absolute.data(), nullptr);
+            if (count != 0 && count < length) {
+                absolute.resize(count);
+                return wxString(absolute);
+            }
+        }
+        return candidate;
 #else
         if (!wxFileExists(candidate) && !wxDirExists(candidate)) return {};
-#endif
         wxFileName path(candidate);
         path.MakeAbsolute();
         return path.GetFullPath();
+#endif
     };
     if (const auto path = existing(target)) return path;
     // Expand only leading native filesystem variables, preserving URL encoding.
@@ -168,6 +180,9 @@ Location FileLocation(wxString target) {
     // Pinned EditOpenSelection: trailing dot / ')' and :line[:column] or
     // (line[,column]). Only an existing resulting filename commits the suffix.
     Location result{target};
+    // The original ignores ')' only while scanning a possible location; the
+    // target itself keeps it, including balanced parentheses inside a URI.
+    if (target.EndsWith(")")) target.RemoveLast();
     auto end = target.length();
     auto position = end;
     const auto digit = [](wxUniChar ch) { return ch >= '0' && ch <= '9'; };
@@ -196,7 +211,12 @@ Location FileLocation(wxString target) {
     return result;
 }
 bool ShowContainingFolder(wxWindow* parent, const wxString& path) {
-    if (wxDirExists(path) && wxFileName::DirName(path).GetDirCount() == 0) {
+#ifdef __WXMSW__
+    const bool rootDirectory = PathIsRootW(path.wc_str()) != FALSE;
+#else
+    const bool rootDirectory = wxFileName::DirName(path).GetDirCount() == 0;
+#endif
+    if (wxDirExists(path) && rootDirectory) {
         wxString error;
         return LaunchDesktopTarget(parent, path, path, error);
     }
@@ -266,7 +286,6 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
     auto target = TrimTarget(wxString::FromUTF8(SelectedTarget(*editor_)));
     if (target.empty()) return true;
     if (target.EndsWith(".")) target.RemoveLast();
-    if (target.EndsWith(")")) target.RemoveLast();
     if (target.empty()) return true;
     // Original EditOpenSelection ignores punctuation before a scheme/drive name.
     // Preserve absolute native paths that legitimately contain a location colon.

@@ -1,5 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "SciLexer.h"
 #include "editor_test_helpers.h"
 #include "native_key_helpers.h"
 #include "file_helpers.h"
@@ -51,7 +52,7 @@ void FileTarget(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto folder = Directory();
     const std::string contents = "first\nabcd中文\nlast\n";
-    for (const auto& filename : {"target.txt", "目标 file.txt", "cwd-only.txt"})
+    for (const auto& filename : {"target.txt", "目标 file.txt", "cwd-only.txt", "target.cpp", "name)"})
         std::ofstream(folder / NativePath(wxString::FromUTF8(filename)), std::ios::binary) << contents;
     std::filesystem::create_directory(folder / "documents");
     std::ofstream(folder / "documents" / "parent.txt") << "source\n";
@@ -107,6 +108,8 @@ void FileTarget(EditorFrame* frame) {
     run("prefix target.txt(2,4): warning", 10, 10, "target.txt", 9);
     run("prefix target.txt:2:4 suffix", 10, 10, "target.txt", 9);
     run("[alt](./target.txt)", 12, 12, "target.txt", 0);
+    run("target.cpp", 0, 10, "target.cpp", 0);
+    run("name)", 0, 5, "name)", 0);
     const auto quoted = "  '" + TestFiles::Filename(folder / NativePath(wxString::FromUTF8("目标 file.txt"))) + "'  ";
     run(quoted, 0, static_cast<intptr_t>(quoted.utf8_string().size()), "目标 file.txt", 0);
     run(wxString::FromUTF8("目标 file.txt"), 3, 3, "目标 file.txt", 0, true);
@@ -146,15 +149,21 @@ void Anchor(EditorFrame* frame) {
     TestEditor::RequireSelection(editor, 33, 46, "caret-local anchor uses original target extraction");
     Require(TestEditor::Text(frame) == text && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
             "anchor action preserves all text and history");
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("#target\n<element id=\"target\">\n"));
+    editor->Send(Message::SetSel, 0, 7);
+    NativeSearch::Command(frame, open);
+    TestEditor::RequireSelection(editor, 17, 28, "id anchor is used when no name anchor exists");
+    editor->Send(Message::SetSavePoint);
     std::puts("PASS: native selection action, name/id anchor priority, source state and original menu availability");
 }
-void DesktopTarget(EditorFrame* frame) {
+void DesktopTarget(EditorFrame* frame, const wxString& scheme, const wxString& extension,
+                   bool standardSchemes = false) {
     auto* editor = frame->Editor();
-    const auto run = [&](const std::string& input, const std::string& expected) {
+    const auto run = [&](const std::string& input, const std::string& expected, intptr_t caret = -1) {
         const auto marker = Directory() / "desktop-received";
         std::filesystem::remove(marker);
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(input.c_str()));
-        editor->Send(Message::SetSel, 0, static_cast<intptr_t>(input.size()));
+        editor->Send(Message::SetSel, caret < 0 ? 0 : caret, caret < 0 ? static_cast<intptr_t>(input.size()) : caret);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Open File, Folder, Link, etc."));
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
         while (!std::filesystem::exists(marker) && std::chrono::steady_clock::now() < deadline) {
@@ -168,25 +177,37 @@ void DesktopTarget(EditorFrame* frame) {
         Require(TestFiles::Bytes(marker) == expected + "\n",
                 "desktop association receives exact independently specified target");
         Require(TestEditor::Text(frame) == input, "desktop action preserves source bytes");
-        TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(input.size()),
+        TestEditor::RequireSelection(editor, caret < 0 ? 0 : caret,
+                                     caret < 0 ? static_cast<intptr_t>(input.size()) : caret,
                                      "desktop action preserves source selection");
         std::printf("PASS: desktop input %s -> %s\n", input.c_str(), expected.c_str());
     };
-    run("wx242://host:4321/path%20name", "wx242://host:4321/path%20name");
-    run("https://example.invalid:4321/path%20name", "https://example.invalid:4321/path%20name");
-    run("prefix(https://example.invalid/target", "https://example.invalid/target");
-    run("//example.invalid/path%20name", "http://example.invalid/path%20name");
-    run("www.example.invalid/path", "http://www.example.invalid/path");
-    run("reader@example.invalid", "mailto:reader@example.invalid");
-    run("mailto:reader@example.invalid?subject=test%20value", "mailto:reader@example.invalid?subject=test%20value");
-    std::ofstream(Directory() / "external.wx242") << "owned unsupported target\n";
-    const auto file = TestFiles::Filename(Directory() / "external.wx242");
+    const auto protocol = scheme.utf8_string();
+    run(protocol + "://host:4321/path%20name", protocol + "://host:4321/path%20name");
+    run(protocol + "://host/path(one)", protocol + "://host/path(one)");
+    run("[alt](" + protocol + "://host/path(one))", protocol + "://host/path(one)", 12);
+    run("prefix(" + protocol + "://host/target", protocol + "://host/target");
+    if (standardSchemes) {
+        run("https://example.invalid:4321/path%20name", "https://example.invalid:4321/path%20name");
+        run("https://example.invalid/path(one)", "https://example.invalid/path(one)");
+        run("[alt](https://example.invalid/path(one))", "https://example.invalid/path(one)", 12);
+        run("prefix(https://example.invalid/target", "https://example.invalid/target");
+        run("//example.invalid/path%20name", "http://example.invalid/path%20name");
+        run("www.example.invalid/path", "http://www.example.invalid/path");
+        run("reader@example.invalid", "mailto:reader@example.invalid");
+        run("mailto:reader@example.invalid?subject=test%20value", "mailto:reader@example.invalid?subject=test%20value");
+        std::puts(
+            "PASS: real standard-scheme handlers preserve explicit URLs, Markdown, mail, www and relative protocols");
+    }
+    const auto unsupported = NativePath("external" + extension);
+    std::ofstream(Directory() / unsupported) << "owned unsupported target\n";
+    const auto file = TestFiles::Filename(Directory() / unsupported);
     run(file.utf8_string(), file.utf8_string());
 #ifdef __WXGTK__
     const auto directory = TestFiles::Filename(Directory() / "documents");
     run(directory.utf8_string(), directory.utf8_string());
 #endif
-    std::puts("PASS: controlled real desktop handlers preserve URI ports, encoding, mail, www and unsupported files");
+    std::puts("PASS: controlled real desktop handlers preserve URI ports, encoding and unsupported files");
 }
 void FolderTarget(EditorFrame* frame) {
     const auto root = Directory();
@@ -195,6 +216,8 @@ void FolderTarget(EditorFrame* frame) {
     const auto run = [&](const std::filesystem::path& item, const char* menu, bool openDirectory = false) {
         ++request;
         const auto target = TestFiles::Filename(item);
+        std::printf("BEGIN: native Explorer request %d directory=%d target=%s cwd=%s\n", request, openDirectory,
+                    target.utf8_str().data(), wxGetCwd().utf8_str().data());
         std::ofstream(root / ("folder-request-" + std::to_string(request)), std::ios::binary)
             << (openDirectory ? target : wxFileName(target).GetPath()).utf8_string() << '\n'
             << (openDirectory ? wxString{} : target).utf8_string() << '\n';
@@ -302,6 +325,8 @@ class OpenTargetApp final : public wxApp {
 
 public:
     bool OnInit() override {
+        const bool standard = argc == 3 && wxString(argv[1]) == "--desktop-standards";
+        if (standard) wxSetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", wxString(argv[2]));
         if (argc == 4 && wxString(argv[1]) == "--desktop-target")
             wxSetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", wxString(argv[3]));
 #ifdef __WXMSW__
@@ -318,6 +343,8 @@ public:
         }
 #endif
         if (argc >= 3 && wxString(argv[1]) == "--desktop-target") {
+            std::ofstream(Directory() / ("received-" + std::to_string(wxGetProcessId()) + ".txt"), std::ios::binary)
+                << wxString(argv[2]).utf8_string() << '\n';
             std::ofstream(Directory() / "desktop-received.tmp", std::ios::binary)
                 << wxString(argv[2]).utf8_string() << '\n';
             std::filesystem::rename(Directory() / "desktop-received.tmp", Directory() / "desktop-received");
@@ -338,29 +365,42 @@ public:
                     "child reuses ordinary startup document loading");
         }
         frame->Show();
-        NativeKeys::AfterPresentation(frame, [this, frame, child](bool ready) {
+        NativeKeys::AfterPresentation(frame, [this, frame, child, standard](bool ready) {
             try {
                 Require(ready, "native frame must be presented");
                 if (child) {
                     Require(TestEditor::Text(frame) == "first\nabcd中文\nlast\n",
                             "child independently loads exact disk bytes");
+                    if (wxFileName(frame->DocumentPath()).GetFullName() == "target.cpp")
+                        Require(frame->Editor()->Send(Message::GetLexer) == SCLEX_CPP,
+                                "ordinary startup retains delivered filename syntax classification");
                     std::ofstream(Directory() / "child-received.tmp", std::ios::binary)
                         << wxFileName(frame->DocumentPath()).GetFullName().utf8_string() << '\n'
                         << frame->Editor()->Send(Message::GetCurrentPos) << '\n';
                     std::filesystem::rename(Directory() / "child-received.tmp", Directory() / "child-received");
+#ifdef __WXMSW__
+                } else if (standard) {
+                    TargetFeedback feedback;
+                    OwnedTargetAssociations associations;
+                    associations.RequireStandardHandlers();
+                    DesktopTarget(frame, associations.Scheme(), associations.Extension(), true);
+                    Require(feedback.shown == 0, "successful standard commands must not report launch failure");
+                    Require(associations.Remove(), "fresh owned native associations must be removed");
+#endif
                 } else {
                     TargetFeedback feedback;
                     Anchor(frame);
                     FileTarget(frame);
+                    FolderTarget(frame);
 #ifdef __WXMSW__
                     {
                         OwnedTargetAssociations associations;
-                        DesktopTarget(frame);
+                        DesktopTarget(frame, associations.Scheme(), associations.Extension());
+                        Require(associations.Remove(), "fresh owned native associations must be removed");
                     }
 #else
-                    DesktopTarget(frame);
+                    DesktopTarget(frame, "wx242", ".wx242", true);
 #endif
-                    FolderTarget(frame);
                     Require(feedback.shown == 0, "successful commands must not report launch failure");
                     NoopAndFailure(frame, feedback);
                 }

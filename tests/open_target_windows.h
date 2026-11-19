@@ -6,79 +6,103 @@
 #include <wx/stdpaths.h>
 #include <stdexcept>
 
-// A process-local Classes view redirects each existing protocol ProgId to the
-// owned recorder. The live Classes/UserChoice trees are never modified.
+// Shell dispatch can resolve associations outside this process. Register only
+// fresh owned names so the real shell can reach the recorder without changing
+// any existing protocol, extension or protected UserChoice association.
 class OwnedTargetAssociations final {
-    HKEY storage_ = nullptr;
-    HKEY classes_ = nullptr;
-    std::wstring key_;
+    HKEY protocol_ = nullptr;
+    HKEY extension_ = nullptr;
+    std::wstring scheme_;
+    std::wstring protocolKey_;
+    std::wstring extensionKey_;
+    std::wstring command_;
+    bool protocolCreated_ = false;
+    bool extensionCreated_ = false;
 
-    static void Check(LSTATUS result) {
-        if (result != ERROR_SUCCESS) throw std::runtime_error("owned registry association fixture must be available");
+    static void Check(LSTATUS result, const char* operation) {
+        if (result != ERROR_SUCCESS)
+            throw std::runtime_error(std::string(operation) + " failed with Windows error " + std::to_string(result));
     }
-    void Value(const std::wstring& key, const wchar_t* name, const std::wstring& value) {
+    static void Create(const std::wstring& key, HKEY& handle, bool& created) {
+        DWORD disposition = 0;
+        Check(RegCreateKeyExW(HKEY_CURRENT_USER, key.c_str(), 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &handle,
+                              &disposition),
+              "create fresh owned association");
+        created = disposition == REG_CREATED_NEW_KEY;
+        if (!created) throw std::runtime_error("owned association name must not already exist");
+    }
+    static void Value(HKEY root, const std::wstring& key, const wchar_t* name, const std::wstring& value) {
         HKEY entry = nullptr;
-        Check(RegCreateKeyExW(classes_, key.c_str(), 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &entry, nullptr));
+        Check(RegCreateKeyExW(root, key.c_str(), 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &entry, nullptr),
+              "create association command");
         const auto result = RegSetValueExW(entry, name, 0, REG_SZ, reinterpret_cast<const BYTE*>(value.c_str()),
                                            static_cast<DWORD>((value.size() + 1) * sizeof(wchar_t)));
         RegCloseKey(entry);
-        Check(result);
+        Check(result, "set association value");
     }
 
 public:
     OwnedTargetAssociations() {
         try {
-            key_ = L"Software\\wxnotepad-open-targets-" + std::to_wstring(GetCurrentProcessId());
-            Check(RegCreateKeyExW(HKEY_CURRENT_USER, key_.c_str(), 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &storage_,
-                                  nullptr));
-            Check(RegCreateKeyExW(storage_, L"Classes", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &classes_, nullptr));
+            scheme_ = L"wxnotepadopentarget" + std::to_wstring(GetCurrentProcessId()) + L"x" +
+                      std::to_wstring(GetTickCount64());
+            protocolKey_ = LR"(Software\Classes\)" + scheme_;
+            extensionKey_ = LR"(Software\Classes\.)" + scheme_;
+            Create(protocolKey_, protocol_, protocolCreated_);
+            Create(extensionKey_, extension_, extensionCreated_);
             const std::wstring executable = wxStandardPaths::Get().GetExecutablePath().ToStdWstring();
             wxString recorderDirectory;
             if (!wxGetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", &recorderDirectory))
                 throw std::runtime_error("owned recorder directory must be configured");
-            const auto command =
-                L"\"" + executable + L"\" --desktop-target \"%1\" \"" + recorderDirectory.ToStdWstring() + L"\"";
-            for (const wchar_t* scheme : {L"http", L"https", L"mailto", L"wx242"}) {
-                Value(scheme, nullptr, L"URL:owned target recorder");
-                Value(scheme, L"URL Protocol", L"");
-                Value(std::wstring(scheme) + L"\\shell\\open\\command", nullptr, command);
-                // Known protocols resolve the user's existing protected ProgId.
-                // Read that identity and shadow its command only in this process.
-                const auto choice = L"Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\" +
-                                    std::wstring(scheme) + L"\\UserChoice";
-                wchar_t program[512]{};
-                DWORD bytes = sizeof(program);
-                if (RegGetValueW(HKEY_CURRENT_USER, choice.c_str(), L"ProgId", RRF_RT_REG_SZ, nullptr, program,
-                                 &bytes) == ERROR_SUCCESS)
-                    Value(std::wstring(program) + L"\\shell\\open\\command", nullptr, command);
-            }
-            Value(L".wx242", nullptr, L"wx242file");
-            Value(L"wx242file\\shell\\open\\command", nullptr, command);
-            Check(RegOverridePredefKey(HKEY_CLASSES_ROOT, classes_));
-            for (const wchar_t* scheme : {L"http", L"https", L"mailto", L"wx242"}) {
+            command_ = L"\"" + executable + L"\" --desktop-target \"%1\" \"" + recorderDirectory.ToStdWstring() + L"\"";
+            Value(protocol_, L"", nullptr, L"URL:owned target recorder");
+            Value(protocol_, L"", L"URL Protocol", L"");
+            Value(protocol_, LR"(shell\open\command)", nullptr, command_);
+            Value(extension_, L"", nullptr, scheme_);
+            for (const auto& association : {scheme_, L"." + scheme_}) {
                 wchar_t selected[32768]{};
                 DWORD length = std::size(selected);
                 const auto result =
-                    AssocQueryStringW(ASSOCF_IS_PROTOCOL, ASSOCSTR_COMMAND, scheme, L"open", selected, &length);
+                    AssocQueryStringW(association == scheme_ ? ASSOCF_IS_PROTOCOL : ASSOCF_NONE, ASSOCSTR_COMMAND,
+                                      association.c_str(), L"open", selected, &length);
                 if (FAILED(result) || std::wstring(selected).find(executable) == std::wstring::npos)
-                    throw std::runtime_error(
-                        "native protocol lookup must resolve the owned recorder before any launch");
+                    throw std::runtime_error("native association lookup must resolve the fresh owned recorder");
             }
         } catch (...) {
-            Restore();
+            Remove();
             throw;
         }
     }
     OwnedTargetAssociations(const OwnedTargetAssociations&) = delete;
     OwnedTargetAssociations& operator=(const OwnedTargetAssociations&) = delete;
-    ~OwnedTargetAssociations() { Restore(); }
-
-private:
-    void Restore() {
-        RegOverridePredefKey(HKEY_CLASSES_ROOT, nullptr);
-        if (classes_) RegCloseKey(classes_);
-        if (storage_) RegCloseKey(storage_);
-        RegDeleteTreeW(HKEY_CURRENT_USER, key_.c_str());
+    ~OwnedTargetAssociations() { Remove(); }
+    wxString Scheme() const { return wxString(scheme_); }
+    wxString Extension() const { return "." + Scheme(); }
+    void RequireStandardHandlers() const {
+        for (const auto* scheme : {L"http", L"https", L"mailto"}) {
+            wchar_t selected[32768]{};
+            DWORD length = std::size(selected);
+            const auto result =
+                AssocQueryStringW(ASSOCF_IS_PROTOCOL, ASSOCSTR_COMMAND, scheme, L"open", selected, &length);
+            if (FAILED(result) || std::wstring(selected) != command_)
+                throw std::runtime_error("standard schemes must already resolve to this exact owned recorder");
+        }
+    }
+    bool Remove() {
+        if (protocol_) RegCloseKey(protocol_);
+        if (extension_) RegCloseKey(extension_);
+        protocol_ = extension_ = nullptr;
+        bool removed = true;
+        if (extensionCreated_) {
+            removed = RegDeleteTreeW(HKEY_CURRENT_USER, extensionKey_.c_str()) == ERROR_SUCCESS;
+            extensionCreated_ = !removed;
+        }
+        if (protocolCreated_) {
+            const bool protocolRemoved = RegDeleteTreeW(HKEY_CURRENT_USER, protocolKey_.c_str()) == ERROR_SUCCESS;
+            protocolCreated_ = !protocolRemoved;
+            removed = removed && protocolRemoved;
+        }
+        return removed;
     }
 };
 #endif

@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 import shutil
+import json
 from resource_process import process_windows
 
 
@@ -72,6 +73,8 @@ def main():
                     app.wait(timeout=10)
             if sys.platform == "win32":
                 assert manager.wait(timeout=10) == 0, "actual Explorer folder/item observations must succeed"
+            for received in sorted(folder.glob("received-*.txt")):
+                print("PASS: recorded desktop target " + json.dumps(received.read_text(encoding="utf-8")), flush=True)
         finally:
             if manager and manager.poll() is None:
                 manager.terminate()
