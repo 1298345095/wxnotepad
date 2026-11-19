@@ -116,6 +116,76 @@ private:
     wxString program_;
     bool cancel_;
 };
+
+class DirectoryDriver final : public wxTimer {
+public:
+    explicit DirectoryDriver(wxString directory) : directory_(std::move(directory)) { Start(50); }
+    bool changed = false;
+    void Notify() override {
+        if (!dialog_) {
+            for (auto* window : wxTopLevelWindows) {
+                auto* candidate = dynamic_cast<wxDialog*>(window);
+                if (!candidate || !candidate->IsShown() ||
+                    !candidate->FindWindowByName("open-with-programs", candidate))
+                    continue;
+                dialog_ = candidate;
+                auto* browse = candidate->FindWindowByName("open-with-browse", candidate);
+                Require(browse != nullptr, "chooser exposes its directory browse button");
+                candidate->CallAfter([candidate, browse] {
+                    wxCommandEvent click(wxEVT_BUTTON, browse->GetId());
+                    browse->GetEventHandler()->ProcessEvent(click);
+                });
+                break;
+            }
+            return;
+        }
+        const auto* label = dynamic_cast<wxStaticText*>(dialog_->FindWindowByName("open-with-directory", dialog_));
+        if (label && label->GetLabel() == directory_) {
+            changed = true;
+            Stop();
+            wxCommandEvent cancel(wxEVT_BUTTON, wxID_CANCEL);
+            dialog_->GetEventHandler()->ProcessEvent(cancel);
+            return;
+        }
+#ifdef __WXMSW__
+        EnumThreadWindows(
+            GetCurrentThreadId(),
+            [](HWND window, LPARAM data) -> BOOL {
+                auto& driver = *reinterpret_cast<DirectoryDriver*>(data);
+                if (!IsWindowVisible(window) || window == driver.dialog_->GetHandle()) return TRUE;
+                wchar_t title[256]{};
+                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
+                if (wxString(title) != "Open Document With") return TRUE;
+                if (!driver.selected_) {
+                    driver.selected_ = true;
+                    NativeDialogs::ChooseFile(window, driver.directory_);
+                } else {
+                    PostMessageW(window, WM_COMMAND, IDOK, 0);
+                }
+                return TRUE;
+            },
+            reinterpret_cast<LPARAM>(this));
+#else
+        GList* windows = gtk_window_list_toplevels();
+        for (auto* item = windows; item; item = item->next) {
+            auto* widget = GTK_WIDGET(item->data);
+            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!selected_) {
+                selected_ = true;
+                gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(widget), directory_.utf8_str());
+            } else if (NativeDialogs::CanAcceptFile(widget, directory_)) {
+                NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
+            }
+        }
+        g_list_free(windows);
+#endif
+    }
+
+private:
+    wxString directory_;
+    wxDialog* dialog_ = nullptr;
+    bool selected_ = false;
+};
 #ifdef __WXMSW__
 void RegistryString(const wxString& key, const wxString& value) {
     HKEY created = nullptr;
@@ -219,6 +289,15 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(!frame->OpenDocumentWith(), "chooser Cancel stops launch");
     }
     Require(!std::filesystem::exists(Root() / "record.txt"), "Cancel launches no program");
+    const auto changedDirectory = Root() / "changed-programs";
+    std::filesystem::create_directory(changedDirectory);
+    {
+        DirectoryDriver directory(Name(changedDirectory));
+        Require(!frame->OpenDocumentWith(), "Browse followed by Cancel does not launch");
+        Require(directory.changed && settings.values.openWithDirectory == Name(changedDirectory),
+                "native directory selection immediately updates OpenWithDir, including after Cancel");
+    }
+    Require(!std::filesystem::exists(Root() / "record.txt"), "directory change and Cancel launch no child");
     std::fprintf(stderr, "phase: save policy\n");
     std::fflush(stderr);
     NativeSearch::Command(frame, preference);

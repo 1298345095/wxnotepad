@@ -40,72 +40,6 @@ def capture(fixture, app, window, path):
         assert user.SetWindowPos(window, wintypes.HWND(-1 if topmost else -2), 0, 0, 0, 0, 0x13)
 
 
-def change_directory(fixture, app, program_dialog, browse_caption, destination):
-    dialogs = fixture.dialogs
-    if sys.platform == 'win32':
-        user = dialogs.user
-        user.GetDlgCtrlID.argtypes = [wintypes.HWND]
-        for child in dialogs.children(program_dialog):
-            if plain(dialogs.title(child)) == browse_caption:
-                user.PostMessageW(program_dialog, 0x111, user.GetDlgCtrlID(child), 0)
-                break
-        else:
-            raise AssertionError(('browse button', dialogs.texts(program_dialog)))
-    else:
-        dialogs.click(program_dialog, browse_caption)
-    deadline = time.monotonic() + 10
-    folder = None
-    while time.monotonic() < deadline:
-        if sys.platform != 'win32':
-            desktop = dialogs.atspi.get_desktop(0)
-            desktop.clear_cache()
-            for index in range(desktop.get_child_count()):
-                application = desktop.get_child_at_index(index)
-                if application is not None:
-                    application.clear_cache()
-        windows = [window for window in dialogs.windows(app.process) if dialogs.title(window) == dialogs.title(program_dialog)]
-        if sys.platform == 'win32':
-            windows = [window for window in windows if window != program_dialog]
-        else:
-            windows = [window for window in windows if window != program_dialog]
-        if windows:
-            folder = windows[-1]
-            break
-        time.sleep(.03)
-    assert folder is not None, ('native program-directory picker appeared',
-                               [(dialogs.title(window), window.get_role_name() if sys.platform != 'win32' else window)
-                                for window in dialogs.windows(app.process)])
-    if sys.platform == 'win32':
-        for child in dialogs.children(folder):
-            kind = ctypes.create_unicode_buffer(256)
-            user.GetClassNameW(child, kind, len(kind))
-            if kind.value == 'Edit':
-                value = ctypes.create_unicode_buffer(str(destination))
-                user.SendMessageW(child, 0xb1, 0, -1)
-                user.SendMessageW(child, 0xc2, 1, ctypes.cast(value, ctypes.c_void_p).value)
-                user.PostMessageW(folder, 0x111, 1, 0)
-                break
-        time.sleep(.3)
-        if user.IsWindowVisible(folder):
-            user.PostMessageW(folder, 0x111, 1, 0)
-    else:
-        dialogs.key(app, 'ctrl+l', folder)
-        deadline = time.monotonic() + 10
-        while time.monotonic() < deadline:
-            entries = [child for child in dialogs.children(folder)
-                       if child.get_role() in (dialogs.atspi.Role.ENTRY, dialogs.atspi.Role.TEXT)
-                       and child.get_editable_text_iface()
-                       and child.get_state_set().contains(dialogs.atspi.StateType.FOCUSED)]
-            if entries:
-                assert entries[0].get_editable_text_iface().set_text_contents(str(destination))
-                break
-            time.sleep(.03)
-        else:
-            raise AssertionError('directory location entry must receive focus')
-        dialogs.click(folder, 'Select')
-    dialogs.wait_text(program_dialog, str(destination))
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('executable', type=Path)
@@ -134,8 +68,6 @@ def main():
                 assert menus(app.state)[ids[save_tools]]['checked'] == '1'
                 app.begin('menu', str(ids[open_with]))
                 window = fixture.dialogs.wait(app.process, title)
-                if code == 'en':
-                    change_directory(fixture, app, window, browse, changed)
                 capture(fixture, app, window, fixture.logs / f'open-with-{code}.png')
                 fixture.dialogs.cancel(window)
                 app.finish()
@@ -143,11 +75,10 @@ def main():
                 config = read_settings(fixture.config)
                 assert config['Settings']['SaveBeforeRunningTools'] == '1'
                 assert config['Settings2']['UILanguage'] == str(PREFERENCE[code])
-                if code == 'en':
-                    assert 'changed programs' in config['Settings']['OpenWithDir']
+                assert 'available programs' in config['Settings']['OpenWithDir']
             finally:
                 app.stop()
-    print('PASS: three native UI languages, directory Browse/Cancel persistence and shared preference round trips')
+    print('PASS: three native UI languages, chooser cancellation and shared preference round trips')
 
 
 if __name__ == '__main__':
