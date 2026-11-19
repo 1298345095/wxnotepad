@@ -160,6 +160,13 @@ public:
                 auto* editor = frame->Editor();
                 NativeSelectionColours(editor);
                 NativeFoldMargin(editor);
+                for (const auto [text, size] : {std::pair{"", "0 bytes"}, std::pair{"a", "1 byte"},
+                                              std::pair{"ab", "2 bytes"}}) {
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+                    NativePaint::Complete(editor);
+                    Require(frame->GetStatusBar()->GetStatusText(StatusField::DocumentSize) == size,
+                            "document byte count uses singular only for one byte");
+                }
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one\r\n\t中😀"));
                 editor->Send(SetTabWidth, 4);
                 editor->Send(GotoPos, 13);
