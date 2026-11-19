@@ -277,6 +277,14 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     TestFiles::WriteBytes(path, "disk bytes");
     Association association;
     LaunchErrors launchErrors;
+#ifndef __WXMSW__
+    {
+        ProgramDriver chooser({}, true);
+        Require(!frame->OpenDocumentWith(), "the default directory chooser can be cancelled for an untitled document");
+        Require(chooser.choosers == 1 && settings.values.openWithDirectory == Name(Root() / "home"),
+                "without an XDG Desktop configuration Open With defaults to the native home directory");
+    }
+#endif
     std::fprintf(stderr, "phase: direct Execute menu\n");
     std::fflush(stderr);
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "open named document");
