@@ -14,7 +14,8 @@ def main():
     args = parser.parse_args()
     executable = args.executable.resolve()
     with tempfile.TemporaryDirectory(prefix="wxnotepad-document-tools-") as directory:
-        root = Path(directory)
+        # Match TestFiles::TemporaryRoot: native document Open expands TEMP's 8.3 aliases.
+        root = Path(directory).resolve(strict=True)
         environment = dict(os.environ, WXNOTEPAD_DOCUMENT_TOOLS_ROOT=str(root),
                            XDG_DATA_HOME=str(root / "data"), XDG_CONFIG_HOME=str(root / "config"))
         working = None
