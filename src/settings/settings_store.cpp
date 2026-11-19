@@ -114,6 +114,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.autoSave.periodMilliseconds =
         static_cast<uint32_t>(ReadInt("AutoSavePeriod", defaults.autoSave.periodMilliseconds));
     values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
+    const auto openWith = ReadString("OpenWithDir", {});
+    if (!openWith.empty()) values.openWithDirectory = RecentFiles::ExpandPath(openWith);
     values.runCommandWidthDIP = std::max(0, ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
     auto& print = values.printing;
     print.header = static_cast<PrintHeader>(std::clamp(ReadInt("PrintHeader", std::to_underlying(print.header)),
@@ -519,6 +521,12 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("AutoSavePeriod", static_cast<int32_t>(values.autoSave.periodMilliseconds),
                  defaults.autoSave.periodMilliseconds);
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
+        WriteString("OpenWithDir",
+                    values.openWithDirectory.empty()
+                        ? wxString{}
+                        : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs,
+                                                    RecentFiles::PathKind::Directory),
+                    {});
         WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;

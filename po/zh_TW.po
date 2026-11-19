@@ -167,6 +167,10 @@ msgstr "為符合的行新增書籤(&B)"
 msgid "&Boundary:"
 msgstr "長度(&B)："
 
+#: src/app/document_tools.cpp
+msgid "&Browse Directory..."
+msgstr "瀏覽目錄(&B)..."
+
 #: src/app/run_command.cpp
 msgid "&Browse..."
 msgstr "瀏覽(&B)..."
@@ -599,6 +603,10 @@ msgstr "儲存(&S)"
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Save\tCtrl+S"
 msgstr "儲存(&S)\tCtrl+S"
+
+#: src/app/document_tools.cpp
+msgid "&Save Before Running Tools"
+msgstr "執行工具前儲存(&S)"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/Search menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1227,9 +1235,17 @@ msgstr "無法在目的檔案旁建立暫存檔案。請檢查資料夾及存取
 msgid "Could not determine the file size."
 msgstr "無法判斷檔案大小。"
 
-#: src/app/desktop_launch.cpp
+#: src/app/document_tools.cpp
+msgid "Could not execute document"
+msgstr "無法執行文件"
+
+#: src/app/desktop_launch.cpp src/app/document_tools.cpp
 msgid "Could not load the desktop application entry."
 msgstr "無法載入桌面應用程式項目。"
+
+#: src/app/document_tools.cpp
+msgid "Could not open document with program"
+msgstr "無法使用所選程式開啟文件"
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
@@ -1267,6 +1283,10 @@ msgstr "無法讀取檔案權限：%s"
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
 msgstr "無法讀取完整檔案。"
+
+#: src/app/document_tools.cpp
+msgid "Could not read the program directory."
+msgstr "無法讀取程式目錄。"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Could not reload file"
@@ -1462,6 +1482,10 @@ msgstr "轉義 C 字元(&P)\tCtrl+Alt+E"
 #: src/app/editor_frame_commands.cpp
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
+
+#: src/app/document_tools.cpp
+msgid "Execute &Document\tCtrl+L"
+msgstr "執行文件(&D)\tCtrl+L"
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
@@ -2071,6 +2095,10 @@ msgstr "無"
 msgid "Normal"
 msgstr "正常"
 
+#: src/app/document_tools.cpp
+msgid "O&pen Document With..."
+msgstr "開啟文件方式(&P)..."
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM United States (DOS-437)"
@@ -2122,6 +2150,10 @@ msgstr "作為 UTF-16LE 開啟..."
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
 msgstr "作為 Windows-1252 開啟..."
+
+#: src/app/document_tools.cpp
+msgid "Open Document With"
+msgstr "開啟文件方式"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
@@ -2501,10 +2533,10 @@ msgstr "重新載入前是否儲存對 %s 的變更？"
 msgid "Save changes to %s before restarting?"
 msgstr "重新啟動前是否儲存對 %s 的變更？"
 
-#: src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
-msgstr "執行工具前儲存對 %s 的修改？"
+msgstr "執行工具前儲存對 %s 的變更嗎？"
 
 # Original Notepad4 zh-Hant: IDS_ASK_SAVE (title); adapted where needed.
 #: src/app/editor_frame.cpp
