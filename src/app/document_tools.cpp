@@ -203,13 +203,6 @@ bool LaunchProgram(wxWindow* parent, const wxString& program, const wxString& do
 } // namespace
 
 void EditorFrame::AppendDocumentTools(wxMenu* tools) {
-    const int execute = wxWindow::NewControlId();
-    tools->Append(execute, _("Execute &Document\tCtrl+L"));
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, execute);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ExecuteDocument(); }, execute);
-    const int openWith = wxWindow::NewControlId();
-    tools->Append(openWith, _("O&pen Document With..."));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenDocumentWith(); }, openWith);
     const int save = wxWindow::NewControlId();
     tools->AppendCheckItem(save, _("&Save Before Running Tools"));
     Bind(
@@ -226,6 +219,13 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
         },
         save);
     tools->AppendSeparator();
+    const int execute = wxWindow::NewControlId();
+    tools->Append(execute, _("Execute &Document\tCtrl+L"));
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, execute);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ExecuteDocument(); }, execute);
+    const int openWith = wxWindow::NewControlId();
+    tools->Append(openWith, _("O&pen Document With..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenDocumentWith(); }, openWith);
 }
 
 bool EditorFrame::ExecuteDocument() {
