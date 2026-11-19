@@ -61,6 +61,7 @@ void LaunchArguments(EditorFrame* frame) {
     std::filesystem::create_directories(directory);
     const auto record = directory / (frame->DocumentPath().empty() ? "untitled-record.txt" : "named-record.txt");
     wxSetEnv("WXNOTEPAD_RUN_RECORD", TestFiles::Filename(record));
+    wxSetEnv("WXNOTEPAD_RUN_DOCUMENT", frame->DocumentPath());
     Require(wxSetEnv("WXNOTEPAD_RUN_VALUE", wxString::FromUTF8("expanded 中文 value")), "set native command variable");
     wxFileName child(wxStandardPaths::Get().GetExecutablePath());
 #ifdef __WXMSW__
@@ -125,6 +126,12 @@ void LaunchArguments(EditorFrame* frame) {
     if (observed != expected)
         std::fprintf(stderr, "Observed child bytes: <%s> expected <%s>\n", observed.c_str(), expected.c_str());
     Require(observed == expected, "independent child receives exact argv, empty/Unicode expansion and original cwd");
+    if (!frame->DocumentPath().empty()) {
+        const auto diskRecord = record.parent_path() / (record.filename().string() + ".disk");
+        Require(std::filesystem::exists(diskRecord) && TestFiles::Bytes(diskRecord) == "disk document",
+                "independent child observes unchanged disk bytes while the buffer contains edits");
+        std::printf("CHILD disk bytes: <%s>\n", TestFiles::Bytes(diskRecord).c_str());
+    }
     std::printf("CHILD executable=%s\nobserved cwd and argv (one entry per line, including empty entries):\n%s",
                 child.GetFullPath().utf8_string().c_str(), observed.c_str());
     std::puts("PASS: independent child argv, environment expansion and untitled startup cwd");
