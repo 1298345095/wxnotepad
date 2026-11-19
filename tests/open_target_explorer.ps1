@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Root)
+param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Evidence)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $taskShell = New-Object -ComObject Shell.Application
@@ -40,6 +40,8 @@ for ($taskIndex = 1; $taskIndex -le 4; $taskIndex++) {
     }
     if ($null -eq $taskMatched) {
         Write-Host ('Owned folder observations: ' + ($taskObserved | ConvertTo-Json -Compress))
+        & "$PSScriptRoot/open_target_explorer_capture.ps1" -Root $Root -Evidence $Evidence `
+            -Directory $taskDirectory -Item $taskItem -Request $taskIndex -Shell $taskShell -Existing $taskExisting
         throw "Native Explorer did not select the owned item: $taskItem"
     }
     $taskRecord = [ordered]@{ hwnd = [string]$taskMatched.HWND; directory = $taskDirectory; selected = $taskItem }

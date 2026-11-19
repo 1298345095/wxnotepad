@@ -25,6 +25,8 @@ def main():
         (folder / "parent.txt").write_bytes(b"parent fixture\n")
         environment = dict(os.environ, WXNOTEPAD_OPEN_TARGET_ROOT=str(folder),
                            PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
+        failure_output = Path(os.environ.get("WXNOTEPAD_OPEN_TARGET_FAILURE_DIR",
+                              Path(__file__).resolve().parents[1] / ".ci/reports/open-targets")) / folder.name
         if sys.platform != "win32":
             applications = folder / "data" / "applications"
             applications.mkdir(parents=True)
@@ -47,7 +49,7 @@ def main():
         try:
             if sys.platform == "win32":
                 manager = subprocess.Popen(["pwsh", "-NoProfile", "-File", str(Path(__file__).with_name("open_target_explorer.ps1")),
-                                            "-Root", str(folder)], env=environment)
+                                            "-Root", str(folder), "-Evidence", str(failure_output)], env=environment)
                 deadline = time.monotonic() + 10
                 while not (folder / "explorer-ready").exists() and time.monotonic() < deadline:
                     assert manager.poll() is None, "owned Explorer observer must stay running"
@@ -65,6 +67,12 @@ def main():
                 assert app.wait(timeout=45) == 0, "native target fixture must complete successfully"
             except BaseException:
                 print("Owned native windows:", process_windows(app), flush=True)
+                if sys.platform == "win32":
+                    failure_output.mkdir(parents=True, exist_ok=True)
+                    for pattern in ("native-*.log", "folder-request-*", "folder-done-*", "received-*.txt"):
+                        for retained in folder.glob(pattern):
+                            shutil.copy2(retained, failure_output / retained.name)
+                    print("Owned target failure evidence:", failure_output, flush=True)
                 for log in sorted(folder.glob("native-*.log")):
                     print(log.name + ":\n" + log.read_text(encoding="utf-8", errors="replace"), flush=True)
                 raise
