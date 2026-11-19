@@ -95,9 +95,9 @@ void CheckMenu(EditorFrame* frame) {
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
     Order(bar->GetMenu(5),
-          {"Language", "Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
-           "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
-           "Appearance", "File Change Notification...", "Other Settings",
+          {"AutoSave Settings...", "Language", "Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...",
+           "Long Line Settings...", "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent",
+           "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
 #ifdef __WXMSW__
            "Advanced Settings",
 #endif
