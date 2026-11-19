@@ -1,7 +1,6 @@
 #include "app/native_launch.h"
 #include <wx/log.h>
 #include <wx/utils.h>
-#include <wx/log.h>
 #ifdef __WXGTK__
 #include <glib.h>
 #endif
@@ -19,9 +18,9 @@ bool NativeLaunch::SpawnArguments(const std::vector<wxString>& arguments, const 
     argv.push_back(nullptr);
     GError* failure = nullptr;
     // Unlike wxExecute's async Unix fork result, GLib reports exec failures.
-    const bool launched = g_spawn_async(workingDirectory.empty() ? nullptr : workingDirectory.utf8_str().data(),
-                                       argv.data(), nullptr, G_SPAWN_SEARCH_PATH, nullptr, nullptr, nullptr,
-                                       &failure) != FALSE;
+    const bool launched =
+        g_spawn_async(workingDirectory.empty() ? nullptr : workingDirectory.utf8_str().data(), argv.data(), nullptr,
+                      G_SPAWN_SEARCH_PATH, nullptr, nullptr, nullptr, &failure) != FALSE;
     if (failure) {
         error = wxString::FromUTF8(failure->message);
         g_error_free(failure);
