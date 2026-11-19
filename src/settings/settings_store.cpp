@@ -498,8 +498,11 @@ bool SettingsStore::Save(bool explicitSave) {
             WriteString("Default", style.defaultStyle, {}, section);
         }
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
-        WriteString("OpenWithDir", values.openWithDirectory.empty() ? wxString{} :
-                        RecentFiles::PortablePath(values.openWithDirectory, true, true), {});
+        WriteString("OpenWithDir",
+                    values.openWithDirectory.empty()
+                        ? wxString{}
+                        : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs),
+                    {});
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;
         WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));

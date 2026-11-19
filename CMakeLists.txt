@@ -354,6 +354,10 @@ if(BUILD_TESTING)
     add_test(NAME original_document_tools COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>")
     set_tests_properties(original_document_tools PROPERTIES TIMEOUT 60)
+    add_test(NAME packaged_document_tools_localization COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_localization.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/document-tools-localization")
+    set_tests_properties(packaged_document_tools_localization PROPERTIES TIMEOUT 120)
     if(UNIX)
         target_link_libraries(document_tools PRIVATE PkgConfig::GIO_UNIX)
     endif()

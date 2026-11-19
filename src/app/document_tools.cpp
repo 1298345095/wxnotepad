@@ -36,8 +36,7 @@ wxString DefaultProgramDirectory() {
         return result;
     }
 #else
-    if (const char* desktop = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP))
-        return wxString::FromUTF8(desktop);
+    if (const char* desktop = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP)) return wxString::FromUTF8(desktop);
 #endif
     return wxGetHomeDir();
 }
@@ -46,7 +45,8 @@ class OpenWithDialog final : public wxDialog {
 public:
     OpenWithDialog(wxWindow* parent, wxString& directory)
         : wxDialog(parent, wxID_ANY, _("Open Document With"), wxDefaultPosition, wxDefaultSize,
-                   wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER), directory_(directory) {
+                   wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+          directory_(directory) {
         if (directory_.empty()) directory_ = DefaultProgramDirectory();
         auto* layout = new wxBoxSizer(wxVERTICAL);
         path_ = new wxStaticText(this, wxID_ANY, directory_);
@@ -75,15 +75,19 @@ public:
         programs_->Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) {
             if (programs_->GetSelection() != wxNOT_FOUND) EndModal(wxID_OK);
         });
-        Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-            if (programs_->GetSelection() != wxNOT_FOUND) EndModal(wxID_OK);
-        }, wxID_OK);
+        Bind(
+            wxEVT_BUTTON,
+            [this](wxCommandEvent&) {
+                if (programs_->GetSelection() != wxNOT_FOUND) EndModal(wxID_OK);
+            },
+            wxID_OK);
         CentreOnParent();
     }
     wxString SelectedProgram() const {
         const auto selected = programs_->GetSelection();
         return selected == wxNOT_FOUND ? wxString{} : paths_[static_cast<size_t>(selected)];
     }
+
 private:
     void UpdateSelection() { FindWindow(wxID_OK)->Enable(programs_->GetSelection() != wxNOT_FOUND); }
     void Fill() {
@@ -92,7 +96,8 @@ private:
         paths_.clear();
         wxDir directory(directory_);
         if (!directory.IsOpened()) {
-            wxMessageBox(_("Could not read the program directory."), _("Open Document With"), wxOK | wxICON_ERROR, this);
+            wxMessageBox(_("Could not read the program directory."), _("Open Document With"), wxOK | wxICON_ERROR,
+                         this);
             UpdateSelection();
             return;
         }
@@ -102,7 +107,8 @@ private:
 #ifndef __WXMSW__
             const wxFileName file(directory_, name);
             if (file.GetExt() != "desktop" && access(file.GetFullPath().utf8_str(), X_OK) != 0) continue;
-            if (file.GetExt() == "exe" || file.GetExt() == "lnk" || file.GetExt() == "bat" || file.GetExt() == "cmd") continue;
+            if (file.GetExt() == "exe" || file.GetExt() == "lnk" || file.GetExt() == "bat" || file.GetExt() == "cmd")
+                continue;
 #endif
             names.push_back(name);
         }
@@ -130,7 +136,8 @@ wxString DocumentArgument(wxString path) {
     if (SUCCEEDED(link->QueryInterface(IID_PPV_ARGS(&persistent)))) {
         if (SUCCEEDED(persistent->Load(path.wc_str(), STGM_READ))) {
             wchar_t target[32768]{};
-            if (SUCCEEDED(link->GetPath(target, static_cast<int>(std::size(target)), nullptr, SLGP_RAWPATH)) && target[0])
+            if (SUCCEEDED(link->GetPath(target, static_cast<int>(std::size(target)), nullptr, SLGP_RAWPATH)) &&
+                target[0])
                 path = target;
         }
         persistent->Release();
@@ -187,7 +194,7 @@ bool LaunchProgram(wxWindow* parent, const wxString& program, const wxString& do
     return NativeLaunch::SpawnArguments(arguments, directory, error);
 #endif
 }
-}
+} // namespace
 
 void EditorFrame::AppendDocumentTools(wxMenu* tools) {
     const int execute = wxWindow::NewControlId();
@@ -199,13 +206,19 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenDocumentWith(); }, openWith);
     const int save = wxWindow::NewControlId();
     tools->AppendCheckItem(save, _("&Save Before Running Tools"));
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) {
-        event.Check((settings_ ? settings_->values : defaults_).saveBeforeRunningTools);
-    }, save);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
-        auto& preference = (settings_ ? settings_->values : defaults_).saveBeforeRunningTools;
-        preference = !preference;
-    }, save);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Check((settings_ ? settings_->values : defaults_).saveBeforeRunningTools);
+        },
+        save);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preference = (settings_ ? settings_->values : defaults_).saveBeforeRunningTools;
+            preference = !preference;
+        },
+        save);
     tools->AppendSeparator();
 }
 

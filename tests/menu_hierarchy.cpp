@@ -117,7 +117,8 @@ void CheckMenu(EditorFrame* frame) {
     const int saveTools = bar->FindMenuItem("Tools", "Save Before Running Tools");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(!bar->IsEnabled(execute) && bar->IsEnabled(openWith), "only Execute Document requires a named file");
-    Require(bar->FindItem(saveTools)->IsCheckable() && !bar->IsChecked(saveTools), "save-before-tools is visible and defaults off");
+    Require(bar->FindItem(saveTools)->IsCheckable() && !bar->IsChecked(saveTools),
+            "save-before-tools is visible and defaults off");
     Order(Submenu(bar->GetMenu(6), "Base64"),
           {"Standard Encode", "URL Safe Encode", "Encode as HTML Embedded Image", "Decode", "Decode as Hex"});
 }

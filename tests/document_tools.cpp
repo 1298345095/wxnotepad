@@ -26,7 +26,9 @@ std::filesystem::path Root() {
     Require(wxGetEnv("WXNOTEPAD_DOCUMENT_TOOLS_ROOT", &root), "owned root must be configured");
     return TestFiles::Utf8Path(root.utf8_string());
 }
-wxString Name(const std::filesystem::path& path) { return TestFiles::Filename(path); }
+wxString Name(const std::filesystem::path& path) {
+    return TestFiles::Filename(path);
+}
 void WaitForChild(const std::string& expected, const wxString& path, const wxString& cwd) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto marker = Root() / "record.txt";
@@ -38,10 +40,11 @@ void WaitForChild(const std::string& expected, const wxString& path, const wxStr
     wxFFile file(Name(marker), "rb");
     wxString recorded;
     Require(file.ReadAll(&recorded, wxConvUTF8), "child record is readable");
-    std::fprintf(stderr, "recorded: %s\nexpected: %s | %s | %s\n", recorded.utf8_str().data(), path.utf8_str().data(), cwd.utf8_str().data(), expected.c_str());
+    std::fprintf(stderr, "recorded: %s\nexpected: %s | %s | %s\n", recorded.utf8_str().data(), path.utf8_str().data(),
+                 cwd.utf8_str().data(), expected.c_str());
     std::fflush(stderr);
-    Require(recorded == wxString::Format("%d\n%s\n%s\n%s", path.empty() ? 0 : 1, path, cwd,
-                                         wxString::FromUTF8(expected)),
+    Require(recorded ==
+                wxString::Format("%d\n%s\n%s\n%s", path.empty() ? 0 : 1, path, cwd, wxString::FromUTF8(expected)),
             "child argv, working directory and disk bytes match independent literals");
     file.Close();
     std::filesystem::remove(marker);
@@ -52,16 +55,19 @@ public:
     int errors = 0;
     void Notify() override {
 #ifdef __WXMSW__
-        EnumThreadWindows(GetCurrentThreadId(), [](HWND window, LPARAM data) -> BOOL {
-            wchar_t title[256]{};
-            GetWindowTextW(window, title, static_cast<int>(std::size(title)));
-            if (IsWindowVisible(window) && (wxString(title) == "Could not execute document" ||
-                    wxString(title) == "Could not open document with program")) {
-                ++reinterpret_cast<LaunchErrors*>(data)->errors;
-                SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
-            }
-            return TRUE;
-        }, reinterpret_cast<LPARAM>(this));
+        EnumThreadWindows(
+            GetCurrentThreadId(),
+            [](HWND window, LPARAM data) -> BOOL {
+                wchar_t title[256]{};
+                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
+                if (IsWindowVisible(window) && (wxString(title) == "Could not execute document" ||
+                                                wxString(title) == "Could not open document with program")) {
+                    ++reinterpret_cast<LaunchErrors*>(data)->errors;
+                    SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
+                }
+                return TRUE;
+            },
+            reinterpret_cast<LPARAM>(this));
 #else
         GList* windows = gtk_window_list_toplevels();
         for (auto* item = windows; item; item = item->next) {
@@ -105,6 +111,7 @@ public:
             return;
         }
     }
+
 private:
     wxString program_;
     bool cancel_;
@@ -112,10 +119,11 @@ private:
 #ifdef __WXMSW__
 void RegistryString(const wxString& key, const wxString& value) {
     HKEY created = nullptr;
-    Require(RegCreateKeyExW(HKEY_CURRENT_USER, key.wc_str(), 0, nullptr, 0, KEY_WRITE, nullptr, &created, nullptr) == ERROR_SUCCESS,
+    Require(RegCreateKeyExW(HKEY_CURRENT_USER, key.wc_str(), 0, nullptr, 0, KEY_WRITE, nullptr, &created, nullptr) ==
+                ERROR_SUCCESS,
             "create owned handler registration");
     const auto result = RegSetValueExW(created, nullptr, 0, REG_SZ, reinterpret_cast<const BYTE*>(value.wc_str()),
-                                      static_cast<DWORD>((value.length() + 1) * sizeof(wchar_t)));
+                                       static_cast<DWORD>((value.length() + 1) * sizeof(wchar_t)));
     RegCloseKey(created);
     Require(result == ERROR_SUCCESS, "register owned handler value");
 }
@@ -132,12 +140,14 @@ public:
         RegistryString(key_, "wxnotepad.launch244");
         classKey_ = "Software/Classes/wxnotepad.launch244";
         classKey_.Replace("/", wxString(wxUniChar(92)));
-        auto command = classKey_ + wxString(wxUniChar(92)) + "shell" + wxString(wxUniChar(92)) + "open" + wxString(wxUniChar(92)) + "command";
+        auto command = classKey_ + wxString(wxUniChar(92)) + "shell" + wxString(wxUniChar(92)) + "open" +
+                       wxString(wxUniChar(92)) + "command";
         RegistryString(command, "\"" + executable + "\" \"%1\"");
 #else
         const auto desktop = Root() / "data" / "applications" / "handler.desktop";
         std::filesystem::create_directories(desktop.parent_path());
-        TestFiles::WriteBytes(desktop, "[Desktop Entry]\nType=Application\nName=Owned document handler\nExec=\"" + executable.utf8_string() + "\" %f\nNoDisplay=true\n");
+        TestFiles::WriteBytes(desktop, "[Desktop Entry]\nType=Application\nName=Owned document handler\nExec=\"" +
+                                           executable.utf8_string() + "\" %f\nNoDisplay=true\n");
         auto* application = g_desktop_app_info_new_from_filename(Name(desktop).utf8_str());
         Require(application != nullptr, "native desktop entry loads");
         GError* error = nullptr;
@@ -152,6 +162,7 @@ public:
         RegDeleteTreeW(HKEY_CURRENT_USER, classKey_.wc_str());
 #endif
     }
+
 private:
     wxString key_;
     wxString classKey_;
@@ -175,11 +186,23 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     const auto preference = frame->GetMenuBar()->FindMenuItem("Tools", "Save Before Running Tools");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(execute), "named document enables Execute");
-    NativeKeys::Shortcut(frame, 'L', true);
+    NativeSearch::Command(frame, execute);
     WaitForChild("disk bytes", Name(path), Name(Root()));
-    Require(editor->DocumentRevision() == revision && editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
-                editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 6 &&
-                frame->DocumentEncoding() == encoding && TestEditor::Text(frame) == "disk bytes unsaved",
+    int executeEvents = 0;
+    frame->Bind(
+        wxEVT_MENU,
+        [&executeEvents](wxCommandEvent& event) {
+            ++executeEvents;
+            event.Skip();
+        },
+        execute);
+    NativeKeys::Shortcut(frame, 'L', true);
+    Require(executeEvents == 1, "native Ctrl+L dispatches the Execute Document menu event");
+    WaitForChild("disk bytes", Name(path), Name(Root()));
+    Require(editor->DocumentRevision() == revision && editor->Send(Message::GetModify) &&
+                editor->Send(Message::CanUndo) && editor->Send(Message::GetAnchor) == 2 &&
+                editor->Send(Message::GetCurrentPos) == 6 && frame->DocumentEncoding() == encoding &&
+                TestEditor::Text(frame) == "disk bytes unsaved",
             "Ctrl+L with preference off preserves the complete live document");
     std::fprintf(stderr, "phase: Open With\n");
     std::fflush(stderr);
@@ -202,7 +225,8 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
     Require(settings.values.saveBeforeRunningTools, "visible preference persists");
     SettingsStore reloaded(settings.Path());
-    Require(reloaded.values.saveBeforeRunningTools && reloaded.values.openWithDirectory == settings.values.openWithDirectory,
+    Require(reloaded.values.saveBeforeRunningTools &&
+                reloaded.values.openWithDirectory == settings.values.openWithDirectory,
             "Settings SaveBeforeRunningTools and OpenWithDir round trip");
     {
         NativeDialogs::FileCommandDriver decision(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
@@ -270,7 +294,8 @@ public:
             std::string disk;
             if (!argument.empty()) disk = TestFiles::Bytes(TestFiles::Utf8Path(argument.utf8_string()));
             wxFFile output(Name(Root() / "record.tmp"), "wb");
-            output.Write(wxString::Format("%d\n%s\n%s\n%s", argc - 1, argument, wxGetCwd(), wxString::FromUTF8(disk)), wxConvUTF8);
+            output.Write(wxString::Format("%d\n%s\n%s\n%s", argc - 1, argument, wxGetCwd(), wxString::FromUTF8(disk)),
+                         wxConvUTF8);
             output.Close();
             wxRenameFile(Name(Root() / "record.tmp"), Name(Root() / "record.txt"));
             result_ = 0;
@@ -300,10 +325,14 @@ public:
         });
         return true;
     }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
 private:
     std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
-}
+} // namespace
 wxIMPLEMENT_APP(ToolsApp);
