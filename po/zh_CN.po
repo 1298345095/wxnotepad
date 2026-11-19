@@ -2528,7 +2528,7 @@ msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
-msgstr "设置(&T)"
+msgstr "设置(&I)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_SAVEDSETTINGS.
 #: src/app/editor_frame_commands.cpp
