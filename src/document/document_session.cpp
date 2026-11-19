@@ -531,27 +531,33 @@ bool DocumentSession::RefreshReadOnlyFile() {
     readOnlyFileFlag_ = false;
     readOnlyFileChangeError_.clear();
     if (path_.empty()) {
+        // TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
         readOnlyFileChangeError_ = _("Save the document before changing file permissions.");
         return false;
     }
 #ifdef __WXMSW__
     const auto attributes = GetFileAttributesW(path_.wc_str());
     if (attributes == INVALID_FILE_ATTRIBUTES)
+        // TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
         readOnlyFileChangeError_ = wxString::Format(_("Could not read file attributes: %s"), wxSysErrorMsg());
     else if (attributes & FILE_ATTRIBUTE_DIRECTORY)
+        // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
         readOnlyFileChangeError_ = _("This command changes a file, not a directory.");
     else
         readOnlyFile_ = readOnlyFileFlag_ = (attributes & FILE_ATTRIBUTE_READONLY) != 0;
 #else
     struct stat state{};
     if (stat(path_.fn_str(), &state) != 0)
+        // TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
         readOnlyFileChangeError_ = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
     else if (!S_ISREG(state.st_mode))
+        // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
         readOnlyFileChangeError_ = _("This command changes a file, not a directory.");
     else {
         readOnlyFileFlag_ = (state.st_mode & S_IWUSR) == 0;
         readOnlyFile_ = state.st_uid == geteuid() ? readOnlyFileFlag_ : !wxFileName::IsFileWritable(path_);
         if (state.st_uid != geteuid())
+            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
             readOnlyFileChangeError_ = _("Only the file owner can change the owner's write permission.");
     }
 #endif
@@ -566,15 +572,19 @@ wxString DocumentSession::ToggleReadOnlyFile() {
         const auto attributes = GetFileAttributesW(path_.wc_str());
         if (attributes == INVALID_FILE_ATTRIBUTES ||
             !SetFileAttributesW(path_.wc_str(), attributes ^ FILE_ATTRIBUTE_READONLY))
+            // TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
             error = wxString::Format(_("Could not change file attributes: %s"), wxSysErrorMsg());
 #else
         struct stat state{};
         if (stat(path_.fn_str(), &state) != 0)
+            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
             error = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
         else if (state.st_uid != geteuid())
+            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
             error = _("Only the file owner can change the owner's write permission.");
         else if (chmod(path_.fn_str(),
                        (state.st_mode & (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)) ^ S_IWUSR) != 0)
+            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
             error = wxString::Format(_("Could not change the file owner's write permission: %s"), wxSysErrorMsg());
 #endif
     }

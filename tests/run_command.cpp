@@ -281,8 +281,7 @@ void NamedAndFailure(EditorFrame* frame) {
 #else
                 const auto expected = "'" + frame->DocumentPath() + "'";
 #endif
-                Require(input->GetValue() == expected,
-                        "named command starts with quoted full path");
+                Require(input->GetValue() == expected, "named command starts with quoted full path");
                 input->SetValue("wxnotepad-no-such-program-245");
                 NativeSearch::Click(dialog, wxID_OK);
                 Require(dialog->IsModal() && input->IsEditable(), "failed ordinary launch keeps editable modal dialog");

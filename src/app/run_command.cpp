@@ -121,8 +121,8 @@ NativeCommand ParseNativeCommand(const wxString& command) {
         }
         argument += ch;
     }
-    // TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
     if (quote)
+        // TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
         result.error = _("The command contains an unfinished quote.");
     else if (started)
         result.arguments.push_back(argument);

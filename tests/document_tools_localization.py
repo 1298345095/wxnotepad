@@ -1,13 +1,12 @@
 """Review document-tool captions and the directory chooser in packaged native apps."""
 import argparse
 import ctypes
-from ctypes import wintypes
 from pathlib import Path
 import sys
 import tempfile
 from localization_process import Acceptance, PREFERENCE
 from localization_package import menus, read_settings
-from localization_layout import capture_and_check
+from localization_layout import capture_and_check, owned_topmost
 from localization_native import plain
 
 CAPTIONS = {
@@ -19,23 +18,10 @@ CAPTIONS = {
 
 
 def capture(fixture, app, window, path):
-    if sys.platform != 'win32':
+    with owned_topmost(fixture.dialogs, app.process, window):
+        if sys.platform == 'win32':
+            ctypes.WinDLL('dwmapi').DwmFlush()
         capture_and_check(fixture.dialogs, app, window, path)
-        return
-    user = fixture.dialogs.user
-    pid = wintypes.DWORD()
-    user.GetWindowThreadProcessId(window, ctypes.byref(pid))
-    assert pid.value == app.process.pid
-    user.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
-    user.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                  ctypes.c_int, wintypes.UINT]
-    topmost = bool(user.GetWindowLongW(window, -20) & 8)
-    try:
-        assert user.SetWindowPos(window, wintypes.HWND(-1), 0, 0, 0, 0, 0x13)
-        ctypes.WinDLL('dwmapi').DwmFlush()
-        capture_and_check(fixture.dialogs, app, window, path)
-    finally:
-        assert user.SetWindowPos(window, wintypes.HWND(-1 if topmost else -2), 0, 0, 0, 0, 0x13)
 
 
 def main():

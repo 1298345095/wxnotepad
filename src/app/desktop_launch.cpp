@@ -38,6 +38,7 @@ bool LaunchDesktopApplication(GAppInfo* application, const wxString& target, con
                 desktop = g_desktop_app_info_new_from_keyfile(entry);
             }
             g_key_file_unref(entry);
+            // TRANSLATORS: Linux IDM_FILE_LAUNCH/OPENWITH error loading a native .desktop entry; no parameters.
             if (!desktop && !failure) error = _("Could not load the desktop application entry.");
         }
         if (desktop) {

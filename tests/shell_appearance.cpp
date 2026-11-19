@@ -62,8 +62,8 @@ void NativeFoldMargin(EditorControl* editor) {
     const auto chrome = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
     const auto highlight = wxSystemSettings::GetColour(wxSYS_COLOUR_3DHIGHLIGHT);
     const auto fill = highlight == *wxWHITE ? chrome : highlight;
-    const auto pixels = NativePaint::Read(editor, wxRect(left + static_cast<int>(width) / 2,
-                                                       editor->GetClientSize().y / 2, 2, 2));
+    const auto pixels =
+        NativePaint::Read(editor, wxRect(left + static_cast<int>(width) / 2, editor->GetClientSize().y / 2, 2, 2));
     Require(std::count(pixels.begin(), pixels.end(), fill) >= 2 &&
                 std::count(pixels.begin(), pixels.end(), highlight) >= 2,
             "painted folding margin follows the native wxSTC chrome colors");
@@ -160,8 +160,8 @@ public:
                 auto* editor = frame->Editor();
                 NativeSelectionColours(editor);
                 NativeFoldMargin(editor);
-                for (const auto [text, size] : {std::pair{"", "0 bytes"}, std::pair{"a", "1 byte"},
-                                              std::pair{"ab", "2 bytes"}}) {
+                for (const auto [text, size] :
+                     {std::pair{"", "0 bytes"}, std::pair{"a", "1 byte"}, std::pair{"ab", "2 bytes"}}) {
                     editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
                     NativePaint::Complete(editor);
                     Require(frame->GetStatusBar()->GetStatusText(StatusField::DocumentSize) == size,
