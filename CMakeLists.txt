@@ -173,6 +173,7 @@ add_library(app_shell STATIC
     src/app/editor_print_job.cpp
     src/app/native_launch.cpp
     src/app/desktop_launch.cpp
+    src/app/document_tools.cpp
     src/app/new_window.cpp
     src/app/open_targets.cpp
     src/app/run_command.cpp
@@ -358,6 +359,17 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_gui_program(document_tools tests/document_tools.cpp app_shell)
+    add_test(NAME original_document_tools COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>")
+    set_tests_properties(original_document_tools PROPERTIES TIMEOUT 60)
+    add_test(NAME packaged_document_tools_localization COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_localization.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/document-tools-localization")
+    set_tests_properties(packaged_document_tools_localization PROPERTIES TIMEOUT 120)
+    if(UNIX)
+        target_link_libraries(document_tools PRIVATE PkgConfig::GIO_UNIX)
+    endif()
     add_gui_program(new_window tests/new_window.cpp app_shell)
     add_gui_program(open_targets tests/open_targets.cpp app_shell)
     add_test(NAME original_open_targets COMMAND "${Python3_EXECUTABLE}"

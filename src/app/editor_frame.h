@@ -55,6 +55,8 @@ public:
     bool OpenContainingFolder();
     void AppendOpenTargetCommands(wxMenu* menu);
     bool Restart();
+    bool ExecuteDocument();
+    bool OpenDocumentWith();
     OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                    std::optional<SyntaxLanguage> language, bool readOnly, Scintilla::Position line,
                                    Scintilla::Position column);
@@ -121,6 +123,7 @@ private:
     wxMenu* CreateSearchMenu();
     wxMenu* CreateSettingsMenu();
     wxMenu* CreateToolsMenu();
+    void AppendDocumentTools(wxMenu* tools);
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();
     void AppendEditingCommands(wxMenu* edit);

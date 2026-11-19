@@ -92,7 +92,9 @@ void EditorFrame::CreateMenus() {
 
 wxMenu* EditorFrame::CreateToolsMenu() {
     auto* tools = new wxMenu;
+    AppendDocumentTools(tools);
     AppendRunCommand(tools);
+    tools->AppendSeparator();
     auto* selection = new wxMenu;
     AppendOpenTargetCommands(selection);
     tools->AppendSubMenu(selection, _("Action on &Selection"));
