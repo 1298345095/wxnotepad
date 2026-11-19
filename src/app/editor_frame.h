@@ -88,6 +88,7 @@ private:
     int recentFilesId_;
     int openSelectionId_ = wxID_NONE;
     int selectionFolderId_ = wxID_NONE;
+    int currentBlockFoldId_ = wxID_NONE;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();
     int revertId_;
@@ -117,6 +118,7 @@ private:
     void CreateDefaultToolbar();
     int FindMenuCommand(const wxString& label) const;
     void CreatePositionStatus();
+    void ShowEditorContextMenu(wxContextMenuEvent& event);
     void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);

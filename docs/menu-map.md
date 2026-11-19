@@ -5,6 +5,14 @@ The relative order follows Notepad4 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`,
 original command groups. Shortcut labels describe the application's existing
 bindings; relocating an item retains its handler and update-UI state.
 
+The editor popup is available by right-click, the keyboard menu key and
+Shift+F10. Its original groups are Undo / Redo; Cut / Copy / Paste / Delete;
+Select All; Toggle Fold; Open. Toggle Fold shares View → Toggle Folds → Current
+Block, and Open shares Tools → Action on Selection → Open File, Folder, Link,
+etc. An existing selection keeps its endpoints and direction on right-click,
+including a click outside that selection. An empty selection moves to the
+hit-tested position. Keyboard invocation uses the current caret.
+
 ```text
 File
   New; New Window; Open; Open As GBK; Open As UTF-16LE

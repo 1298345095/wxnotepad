@@ -665,7 +665,10 @@ void EditorControl::Core::Mouse(wxMouseEvent& event) {
     const core::Point point(event.GetX(), event.GetY());
     // Additional selection-shape payloads remain a separate migration slice.
     dragDropEnabled = sel.selType == core::Selection::SelTypes::stream && sel.Count() == 1;
-    if (event.GetEventType() == wxEVT_LEFT_DOWN) {
+    if (event.RightDown() || event.RightDClick()) {
+        window_.SetFocus();
+        RightButtonDownWithModifiers(point, MouseTime(), KeyModifiers(event));
+    } else if (event.GetEventType() == wxEVT_LEFT_DOWN) {
         window_.SetFocus();
         ButtonDownWithModifiers(point, MouseTime(), KeyModifiers(event));
         RepairFoldSelection();

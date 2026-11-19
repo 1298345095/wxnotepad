@@ -138,7 +138,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
             if request.startswith("trace:"):
                 _, identity, request = request.split(":", 2)
                 trace_gesture = identity if identity.isdecimal() else "0"
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "click:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -275,6 +275,16 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     else:
                         acknowledge(focus)
                         xdo("windowfocus", "--sync", weston_window)
+                elif request.startswith("click:"):
+                    x, y, button = map(int, request[6:].split(","))
+                    if backend == "wayland":
+                        geometry = xdo("getwindowgeometry", "--shell", weston_window)
+                        values = dict(line.split("=", 1) for line in geometry.splitlines())
+                        x += int(values["X"])
+                        y += int(values["Y"])
+                    acknowledge(focus)
+                    xdo("mousemove", str(x), str(y))
+                    xdo("click", str(button))
                 elif request.startswith("key:"):
                     acknowledge(focus)
                     driver_trace(focus, "driver.inject-begin", "key-press-release")

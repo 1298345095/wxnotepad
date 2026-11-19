@@ -210,6 +210,10 @@ msgstr "按欄排序（矩形選取範圍）(&C)。"
 msgid "&Command:"
 msgstr "命令(&C)："
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Copy"
+msgstr "複製(&C)"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_COPY; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
@@ -253,6 +257,10 @@ msgstr "預設換行模式(&D)："
 #: src/app/editor_frame_commands.cpp
 msgid "&Default..."
 msgstr "預設(&D)..."
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Delete"
+msgstr "刪除(&D)"
 
 # Original Notepad4 zh-Hant: IDM_SET_RENDER_TECH_D2D; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -496,6 +504,10 @@ msgstr "舊版 Visual Studio(&O)"
 msgid "&One Page"
 msgstr "一頁(&O)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Open"
+msgstr "開啟(&O)"
+
 #: src/app/open_targets.cpp
 msgid "&Open File, Folder, Link, etc."
 msgstr "開啟檔案、資料夾、連結等(&O)"
@@ -520,6 +532,10 @@ msgstr "其他時間戳(&O)"
 msgid "&Pad With Spaces\tAlt+P"
 msgstr "用空白補齊(&P)\tAlt+P"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Paste"
+msgstr "貼上(&P)"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_PASTE; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
@@ -539,6 +555,10 @@ msgstr "列印(&P)...\tCtrl+P"
 #: src/app/editor_frame_commands.cpp
 msgid "&Read Only Mode\tF10"
 msgstr "唯讀模式(&R)\tF10"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Redo"
+msgstr "重做(&R)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_REDO; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -680,6 +700,10 @@ msgstr "工具(&T)"
 #: src/app/editor_frame_commands.cpp
 msgid "&UTC Date Time"
 msgstr "&UTC 日期與時間"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Undo"
+msgstr "復原(&U)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_UNDO; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -1347,6 +1371,10 @@ msgstr "無法寫入 %s"
 #: src/document/document_session.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "無法寫入完整檔案。請檢查可用空間及存取權限。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Cu&t"
+msgstr "剪下(&T)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_CUT; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -2626,6 +2654,10 @@ msgid "SelLn %s"
 msgstr "選取行 %s"
 
 #: src/app/editor_frame_commands.cpp
+msgid "Select &All"
+msgstr "全選(&A)"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Select &All\tCtrl+A"
 msgstr "全選(&A)\tCtrl+A"
 
@@ -3046,6 +3078,10 @@ msgstr "轉十六進位(&H)\tCtrl+Alt+H"
 #: src/app/editor_frame_commands.cpp
 msgid "To &Octet"
 msgstr "轉八進位(&O)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle &Fold"
+msgstr "切換摺疊(&F)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_STREAMCOMMENT; adapted where needed.
 #: src/app/editor_frame_commands.cpp

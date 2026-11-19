@@ -155,6 +155,25 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickDwell(); }, dwellTimer_.GetId());
     BindCoreEvent(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    const auto rightDown = [this](wxMouseEvent& event) {
+        core_->Mouse(event);
+#ifdef __WXGTK__
+        if (event.RightDClick()) {
+            // wxGTK filters the second press into RIGHT_DCLICK and emits its
+            // context-menu event only for RIGHT_DOWN. Keep rapid right-clicks
+            // usable without emitting another event for ordinary presses.
+            wxContextMenuEvent context(wxEVT_CONTEXT_MENU, GetId(), ClientToScreen(event.GetPosition()));
+            context.SetEventObject(this);
+            ProcessWindowEvent(context);
+            return;
+        }
+#endif
+        // wxSTC OnMouseRightDown: let wx generate one native context-menu
+        // event after the original core has cancelled completion/CallTip.
+        event.Skip();
+    };
+    BindCoreEvent(wxEVT_RIGHT_DOWN, rightDown);
+    BindCoreEvent(wxEVT_RIGHT_DCLICK, rightDown);
     BindCoreEvent(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { core_->MouseDeparted(); });
     BindCoreEvent(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
