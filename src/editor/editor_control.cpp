@@ -62,7 +62,7 @@ void EditorControl::BindCoreEvent(const wxEventTypeTag<Event>& type, Handler han
 
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
+                wxBORDER_NONE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
       caretTimer_(this), scrollTimer_(this), widenTimer_(this), dwellTimer_(this) {
     // The native Notepad4 host initializes these tables before any document
     // copies its ASCII word classes. The wx host must do the same.
@@ -408,6 +408,10 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
     Send(Message::SetIndent, indentWidth);
     ApplyWrapIndent();
     core_->UpdateWrapLayout();
+}
+
+bool EditorControl::CanPasteText(bool clipboardHasText) const noexcept {
+    return core_->CanPasteText(clipboardHasText);
 }
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {

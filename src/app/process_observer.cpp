@@ -1,4 +1,5 @@
 #include "app/process_observer.h"
+#include "app/status_fields.h"
 #include "editor/editor_ids.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
@@ -8,6 +9,7 @@
 #include <wx/textfile.h>
 #include <wx/menu.h>
 #include <wx/statusbr.h>
+#include <wx/toolbar.h>
 #include <wx/log.h>
 #include <cstdio>
 #include <limits>
@@ -17,9 +19,29 @@
 #endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
+#include <gdk/gdkwayland.h>
 #endif
 
 namespace {
+#ifdef __WXGTK__
+bool NativeFramePresented(EditorFrame* frame) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return true;
+    auto* window = gtk_widget_get_window(widget);
+    auto* clock = window ? gdk_window_get_frame_clock(window) : nullptr;
+    if (!clock) return false;
+    // UpdateWindowUI can itself force native paint. Before the first Wayland
+    // frame completes, that can leave the initial view uncommitted. The normal
+    // GTK presentation path must finish before observation updates the view.
+    const auto oldest = gdk_frame_clock_get_history_start(clock);
+    for (auto counter = gdk_frame_clock_get_frame_counter(clock); counter >= oldest; --counter) {
+        auto* timing = gdk_frame_clock_get_timings(clock, counter);
+        if (timing && gdk_frame_timings_get_complete(timing)) return true;
+    }
+    return false;
+}
+#endif
+
 const char* ObservationEncodingName(FileEncoding encoding) {
     switch (encoding) {
         using enum FileEncoding;
@@ -112,9 +134,38 @@ void ProcessObserver::OnFrameDestroyed(wxWindowDestroyEvent& event) {
 
 // Opt-in external observation of this actual, shown application. No alternate
 // editor host or hidden operation path: Open/Save are the frame's commands.
+namespace {
+wxString ObservePosition(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    const auto caret = editor->Send(GetCurrentPos);
+    const auto line = editor->Send(LineFromPosition, caret);
+    wxString text = wxString::Format(_("Ln %llu, Col %llu"), static_cast<unsigned long long>(line + 1),
+                                     static_cast<unsigned long long>(editor->Send(GetColumn, caret) + 1));
+    if (const auto selected = editor->SelectionCharacterCount())
+        text += wxString::Format(_(" | Sel %lld"), static_cast<long long>(selected));
+    return text;
+}
+wxString ObserveMetadata(EditorFrame* frame) {
+    auto* status = frame->GetStatusBar();
+    auto eol = status->GetStatusText(StatusField::Eol);
+    eol.Replace("+", "");
+    return status->GetStatusText(StatusField::Encoding) + " | " + status->GetStatusText(StatusField::Scheme) +
+           " | EOL: " + eol;
+}
+} // namespace
+
 void ProcessObserver::Publish() {
     using enum Scintilla::Message;
     if (!frame_) return;
+#ifdef __WXGTK__
+    // A command can leave every tracked UI state unchanged. Keep its deferred
+    // acknowledgement pending so the normal timer retries after presentation.
+    if (!NativeFramePresented(frame_)) {
+        publishPending_ = true;
+        return;
+    }
+#endif
     frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     frame_->Update();
     frame_->Editor()->Update();
@@ -122,7 +173,7 @@ void ProcessObserver::Publish() {
     lastActive_ = frame_->IsActive();
     lastSelectionRevision_ = frame_->Editor()->SelectionRevision();
     lastReadOnly_ = frame_->Editor()->Send(GetReadOnly) != 0;
-    lastPositionStatus_ = frame_->GetStatusBar()->GetStatusText(1);
+    lastPositionStatus_ = ObservePosition(frame_);
     wxString backend = "Windows";
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
@@ -150,7 +201,7 @@ void ProcessObserver::Publish() {
             static_cast<long long>(frame_->Editor()->Send(GetTabIndents)),
             static_cast<long long>(frame_->Editor()->Send(GetBackSpaceUnIndents)),
             frame_->Editor()->AutoIndentEnabled()) +
-        "document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n" +
+        "document_status\t" + ObserveMetadata(frame_) + "\n" +
         wxString::Format(
             "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n"
             "caret_style\t%lld\ncaret_width\t%lld\ncaret_period\t%lld\n"
@@ -184,10 +235,20 @@ void ProcessObserver::Publish() {
     contents +=
         wxString::Format("frame_x\t%d\nframe_y\t%d\nframe_width\t%d\nframe_height\t%d\nmaximized\t%d\ndpi\t%d\n",
                          position.x, position.y, size.x, size.y, frame_->IsMaximized(), frame_->GetDPI().x);
-    contents += "position_status\t" + frame_->GetStatusBar()->GetStatusText(1) + "\n";
+    contents += "position_status\t" + ObservePosition(frame_) + "\n";
     contents += wxString::Format("selection_start\t%lld\nselection_end\t%lld\n",
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionStart)),
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionEnd)));
+    std::array<char, 256> font{};
+    constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+    frame_->Editor()->Send(StyleGetFont, defaultStyle, reinterpret_cast<intptr_t>(font.data()));
+    contents += "font_name\t" + wxString::FromUTF8(font.data()) + "\n";
+    contents += wxString::Format("font_size_fractional\t%lld\nline_height\t%lld\ntoolbar_shown\t%d\n",
+                                 static_cast<long long>(frame_->Editor()->Send(StyleGetSizeFractional, defaultStyle)),
+                                 static_cast<long long>(frame_->Editor()->Send(TextHeight, 0)),
+                                 frame_->GetToolBar()->IsShown());
+    for (int field = 0; field < StatusField::Count; ++field)
+        contents += wxString::Format("status.%d.text\t", field) + frame_->GetStatusBar()->GetStatusText(field) + "\n";
     const auto* menuBar = frame_->GetMenuBar();
     for (size_t index = 0; index < menuBar->GetMenuCount(); ++index) {
         contents += wxString::Format("menu_top.%zu.label\t", index) + menuBar->GetMenuLabel(index) + "\n";
@@ -283,7 +344,7 @@ void ProcessObserver::Observe() {
         if (publishPending_ || (frame_->Editor()->Send(GetModify) != 0) != lastDirty_ ||
             frame_->Editor()->SelectionRevision() != lastSelectionRevision_ ||
             (frame_->Editor()->Send(GetReadOnly) != 0) != lastReadOnly_ ||
-            frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
+            ObservePosition(frame_) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
             frame_->GetSize() != lastFrameSize_)
             Publish();
     }

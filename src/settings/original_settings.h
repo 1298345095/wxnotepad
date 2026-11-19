@@ -34,6 +34,7 @@ struct OriginalSettings {
     int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
+    bool showToolbar = true;
     bool showStatusbar = true;
     int fullScreenMode = FullScreenMode_Default;
     bool wordWrap = true;

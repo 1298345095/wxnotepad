@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include <array>
 #include "app/editor_frame.h"
@@ -64,8 +65,7 @@ public:
                 Paint(frame);
                 Require(frame->Editor()->Send(GetStyleIndexAt, 0) == SCE_C_WORD2,
                         "opening .CPP must immediately highlight int as a type keyword");
-                Require(frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
-                        "status must show effective C/C++ language");
+                Require(StatusMetadata(frame).Contains("C/C++"), "status must show effective C/C++ language");
                 std::puts("PASS: Open selects C++ and styles type keywords");
 
                 auto* editor = frame->Editor();
@@ -123,8 +123,7 @@ public:
                             "syntax must inherit the native font and point size on explicit light background");
                 }
                 Require(Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
-                            frame->DocumentHasUtf8Bom() &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 (BOM) | C/C++ | EOL: LF",
+                            frame->DocumentHasUtf8Bom() && StatusMetadata(frame) == "UTF-8 (BOM) | C/C++ | EOL: LF",
                         "styling must preserve loaded text, clean save point, encoding and BOM status");
                 Require(frame->Save().status == SaveStatus::Saved, "highlighted document must save");
                 std::ifstream input(path, std::ios::binary);
@@ -144,7 +143,7 @@ public:
                 }
                 Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                             frame->Open(Filename(directory / "missing.txt")).status == OpenStatus::Failed &&
-                            frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
+                            StatusMetadata(frame).Contains("C/C++"),
                         "Open cancellation and failure must retain previous syntax");
                 Paint(frame);
                 Style(editor, 0, SCE_C_WORD2);
@@ -153,15 +152,13 @@ public:
                 Require(frame->Open(Filename(plain)).status == OpenStatus::Opened, "unknown file must open");
                 Paint(frame);
                 Style(editor, 0, 0);
-                Require(frame->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
-                            editor->Send(StyleGetFore, SCE_C_WORD2) == 0 &&
+                Require(StatusMetadata(frame).Contains("Plain Text") && editor->Send(StyleGetFore, SCE_C_WORD2) == 0 &&
                             !editor->Send(StyleGetBold, SCE_C_INTERFACE),
                         "Plain Text must clear syntax colors and font attributes");
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "C++ must reopen");
                 Command(frame, wxID_NEW);
                 Require(Text(editor).empty() && frame->DocumentPath().empty() && !editor->Send(CanUndo) &&
-                            !editor->Send(GetModify) &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text | EOL: CRLF",
+                            !editor->Send(GetModify) && StatusMetadata(frame) == "UTF-8 | Plain Text | EOL: CRLF",
                         "real New command must reset language with the existing empty-document semantics");
                 std::puts("PASS: case-insensitive extension selection, failed/cancelled Open and real New");
 

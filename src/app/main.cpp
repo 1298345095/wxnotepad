@@ -91,6 +91,7 @@ public:
         if (!options.Parse(argc, argv)) return false;
         settings_ = std::make_unique<SettingsStore>();
         AppLocalization::Initialize(settings_->values.uiLanguage);
+        SetAppearance(Appearance::System);
         auto* frame = new EditorFrame(settings_.get());
         if (options.windowPosition && !ApplyInitialWindowPosition(*frame, *options.windowPosition)) return false;
         if (!options.startup.empty() && frame->OpenRestartDocument(options.startup, options.encoding, options.scheme,

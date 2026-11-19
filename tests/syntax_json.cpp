@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -134,9 +135,8 @@ public:
                 }
                 FileCommand(frame, wxID_OPEN, path);
                 auto* editor = frame->Editor();
-                Require(frame->GetStatusBar()->GetStatusText().Contains("JSON") &&
-                            frame->GetStatusBar()->GetStatusText().Contains("UTF-8") &&
-                            !frame->GetStatusBar()->GetStatusText().Contains("override"),
+                Require(StatusMetadata(frame).Contains("JSON") && StatusMetadata(frame).Contains("UTF-8") &&
+                            !StatusMetadata(frame).Contains("override"),
                         "mixed-case .json Open must select JSON automatically and retain encoding status");
                 Style(frame, source, "name", SCE_JSON_PROPERTYNAME);
                 Style(frame, source, "中文", SCE_JSON_STRING_DQ);
@@ -177,21 +177,20 @@ public:
                 Style(frame, source, "name", SCE_JSON_PROPERTYNAME);
                 const auto plain = directory / "manual.txt";
                 FileCommand(frame, wxID_SAVEAS, plain);
-                Require(Bytes(plain) == source && frame->GetStatusBar()->GetStatusText().Contains("JSON (override)") &&
+                Require(Bytes(plain) == source && StatusMetadata(frame).Contains("JSON (override)") &&
                             frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "JSON")),
                         "native Save As current JSON type must retain JSON despite .txt and preserve exact bytes");
                 Choose(frame, "Automatic");
                 Require(editor->Send(GetLexer) == SCLEX_NULL, "Automatic must follow the .txt path immediately");
                 const auto automatic = directory / "automatic.JSON";
                 FileCommand(frame, wxID_SAVEAS, automatic);
-                Require(editor->Send(GetLexer) == SCLEX_NULL &&
-                            frame->GetStatusBar()->GetStatusText().Contains("Plain Text (override)"),
+                Require(editor->Send(GetLexer) == SCLEX_NULL && StatusMetadata(frame).Contains("Plain Text (override)"),
                         "named Plain Text default type must force Plain Text despite .JSON");
                 Require(frame->SaveAs(Filename(automatic), {}, SaveType::AllFiles).status == SaveStatus::Saved,
                         "explicit All Files on the same pathname must use filename classification");
                 Paint(frame);
                 Style(frame, source, "name", SCE_JSON_PROPERTYNAME);
-                Require(Bytes(automatic) == source && !frame->GetStatusBar()->GetStatusText().Contains("override"),
+                Require(Bytes(automatic) == source && !StatusMetadata(frame).Contains("override"),
                         "Automatic Save As must adopt JSON without creating an override");
                 Command(frame, wxID_NEW);
                 Require(editor->Send(GetLexer) == SCLEX_NULL, "New must reset JSON to automatic Plain Text");

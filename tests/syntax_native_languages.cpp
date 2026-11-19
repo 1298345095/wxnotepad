@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor/editor_control.h"
@@ -35,8 +36,7 @@ void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFix
     TestFiles::WriteBytes(path, fixture.text);
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "language workflow must Open");
     TestSyntax::Paint(frame);
-    Require(editor->Send(Message::GetLexer) == fixture.lexer &&
-                frame->GetStatusBar()->GetStatusText().Contains(fixture.name),
+    Require(editor->Send(Message::GetLexer) == fixture.lexer && StatusMetadata(frame).Contains(fixture.name),
             "Open must install original dedicated lexer and report its language");
     Require(editor->Send(Message::GetTabWidth) == 7 && editor->Send(Message::GetIndent) == 3 &&
                 !editor->Send(Message::GetUseTabs),

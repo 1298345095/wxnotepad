@@ -9,6 +9,7 @@
 #include "editor/indentation_settings.h"
 #include "editor/align_lines.h"
 #include "app/file_change_monitor.h"
+#include "app/status_fields.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -113,6 +114,9 @@ private:
     void ShowWordWrapSettings();
     void ApplyWrapSymbols();
     void CreateMenus();
+    void CreateDefaultToolbar();
+    int FindMenuCommand(const wxString& label) const;
+    void CreatePositionStatus();
     void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
@@ -193,6 +197,15 @@ private:
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     void UpdatePositionStatus();
+    void UpdateStatusWidths();
+    intptr_t statusLine_ = -1;
+    uint64_t statusRevision_ = 0;
+    intptr_t statusTabWidth_ = 0;
+    intptr_t statusLineCharacters_ = 0;
+    intptr_t statusLineColumns_ = 0;
+    std::array<int, StatusField::Count> statusPreferredWidths_{};
+    wxSize statusMeasuredSize_;
+    int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);

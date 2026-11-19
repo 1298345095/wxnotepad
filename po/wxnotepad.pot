@@ -24,11 +24,11 @@ msgstr ""
 msgid " (Read Only Mode)"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#: src/app/editor_frame_status.cpp
 msgid " (override)"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid " | Sel %lld"
 msgstr ""
@@ -41,6 +41,11 @@ msgstr ""
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s - wxnotepad"
+msgstr ""
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "%s bytes"
 msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
@@ -58,14 +63,7 @@ msgstr ""
 msgid "%s tabs as spaces"
 msgstr ""
 
-#. TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
-#. optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
-#: src/app/editor_frame.cpp
-#, c-format
-msgid "%s%s | %s%s | EOL: %s"
-msgstr ""
-
-#. TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+#. TRANSLATORS: Window title arguments: modified marker ("* " or empty), document name/path or untitled name,
 #. and optional read-only file/mode annotation.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -160,7 +158,7 @@ msgstr ""
 msgid "&Command:"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
 msgstr ""
 
@@ -183,7 +181,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr ""
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr ""
 
@@ -255,7 +253,7 @@ msgstr ""
 msgid "&Find All"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Find...\tCtrl+F"
 msgstr ""
 
@@ -263,7 +261,7 @@ msgstr ""
 msgid "&Goto"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr ""
 
@@ -348,7 +346,7 @@ msgstr ""
 msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&More...\tF9"
 msgstr ""
 
@@ -356,7 +354,7 @@ msgstr ""
 msgid "&Nanosecond (ns)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&New\tCtrl+N"
 msgstr ""
 
@@ -401,7 +399,7 @@ msgstr ""
 msgid "&Open File, Folder, Link, etc."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Open...\tCtrl+O"
 msgstr ""
 
@@ -417,7 +415,7 @@ msgstr ""
 msgid "&Pad With Spaces\tAlt+P"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
 msgstr ""
 
@@ -434,7 +432,7 @@ msgstr ""
 msgid "&Read Only Mode\tF10"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr ""
 
@@ -486,7 +484,7 @@ msgstr ""
 msgid "&Save"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Save\tCtrl+S"
 msgstr ""
 
@@ -551,7 +549,7 @@ msgstr ""
 msgid "&UTC Date Time"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr ""
 
@@ -563,7 +561,7 @@ msgstr ""
 msgid "&Unindent"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Unix/macOS (LF)"
 msgstr ""
 
@@ -583,7 +581,7 @@ msgstr ""
 msgid "&Wildcard search"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Windows (CR+LF)"
 msgstr ""
 
@@ -591,7 +589,7 @@ msgstr ""
 msgid "&With...\tAlt+Q"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr ""
 
@@ -856,6 +854,11 @@ msgstr ""
 msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
 msgstr ""
 
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ch %s / %s"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Change &History Marker"
 msgstr ""
@@ -904,7 +907,7 @@ msgstr ""
 msgid "Choose program"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr ""
 
@@ -931,6 +934,11 @@ msgstr ""
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format
 msgid "Code page %d (unavailable)"
+msgstr ""
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Col %s / %s"
 msgstr ""
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
@@ -1152,7 +1160,7 @@ msgstr ""
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr ""
 
@@ -1376,6 +1384,11 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Finish completion (Esc cancels)"
+msgstr ""
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Fnd %s%s"
 msgstr ""
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
@@ -1672,9 +1685,14 @@ msgstr ""
 msgid "Line ending conversion"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
+msgstr ""
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ln %s / %s"
 msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1791,7 +1809,7 @@ msgstr ""
 msgid "New &GUID"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "New &Window\tAlt+N"
 msgstr ""
 
@@ -1998,7 +2016,7 @@ msgstr ""
 msgid "Python"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr ""
 
@@ -2166,7 +2184,7 @@ msgstr ""
 msgid "Sa&ve Find Text\tAlt+F3"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save &As...\tF6"
 msgstr ""
 
@@ -2179,7 +2197,7 @@ msgstr ""
 msgid "Save Back&up"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr ""
 
@@ -2278,6 +2296,16 @@ msgstr ""
 msgid "Search wrapped"
 msgstr ""
 
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Sel %s / %s"
+msgstr ""
+
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "SelLn %s"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select &All\tCtrl+A"
 msgstr ""
@@ -2344,6 +2372,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Toolbar\tCtrl+F11"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2900,15 +2932,15 @@ msgstr ""
 msgid "ZWSP — &Zero width space"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Zoom &Level..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr ""
 

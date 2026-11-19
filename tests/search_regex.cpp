@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include <array>
 #include "app/editor_frame.h"
@@ -56,7 +57,7 @@ public:
                 Selection(editor, 8, 15, "Next must find the second cross-line regex");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 8, 15, "original backward line search cannot select a cross-line match");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
                         "original Previous reports no cross-line match");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 8, 15, "backward wrap still uses the original line-by-line matcher");
@@ -64,12 +65,12 @@ public:
                 query->SetValue("[");
                 editor->Send(SetSel, 15, 8);
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Invalid regular expression",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Invalid regular expression",
                         "invalid regex must be distinct from an exhausted search");
                 Require(editor->Send(GetAnchor) == 15 && editor->Send(GetCurrentPos) == 8,
                         "invalid regex must preserve a reversed selection");
                 Click(dialog, wxID_BACKWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Invalid regular expression",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Invalid regular expression",
                         "Previous must also report an invalid expression");
                 query->SetValue(wxString::FromUTF8("(?<=中)\\n文"));
                 editor->Send(GotoPos, 0);
@@ -97,7 +98,8 @@ public:
                 Toggle(wrap, true);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 3, 3, "a successful empty match does not trigger wrapping");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found", "empty success is not wrap");
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Match found",
+                        "empty success is not wrap");
                 std::puts("PASS: original empty selection resumption in both directions");
                 Toggle(wrap, false);
                 // Pinned MatchOnLines, Boost ECMAScript, no DotAll. Backward
@@ -129,7 +131,8 @@ public:
                         Selection(editor, start, end, example.name);
                     }
                     Click(dialog, wxID_FORWARD);
-                    Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "frozen corpus must exhaust");
+                    Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
+                            "frozen corpus must exhaust");
                     // A fresh query makes the end caret an initial search position.
                     query->Clear();
                     query->SetValue(wxString::FromUTF8(example.pattern));
@@ -139,7 +142,7 @@ public:
                         Selection(editor, range->first, range->second, example.name);
                     }
                     Click(dialog, wxID_BACKWARD);
-                    Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                    Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
                             "backward corpus must exhaust");
                     Require(Text(editor) == example.text && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
                                 editor->Send(CanRedo),
@@ -161,7 +164,7 @@ public:
                 Toggle(matchCase, true);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 4, 7, "Match case must reject Axb in regex mode immediately");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
                         "case-sensitive regex must exhaust");
                 Toggle(regex, false);
                 Require(wholeWord->IsEnabled() && matchCase->GetValue(),
@@ -170,7 +173,7 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "turning regex off must immediately interpret a.b literally");
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
                         "literal punctuation must reject aXb");
                 Toggle(wholeWord, true);
                 Toggle(regex, true);
@@ -184,7 +187,7 @@ public:
                 Require(wholeWord->GetValue() && wholeWord->IsEnabled(), "literal mode must restore Whole word");
                 editor->Send(GotoPos, 15);
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
                         "restored literal Whole word must reject scatter");
                 Command(frame, wxID_REPLACE);
                 // Original Ctrl+H seeds selection and restores committed flags.
@@ -212,13 +215,14 @@ public:
                 Selection(editor, 0, 2, "alternation must first consume aa");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 2, "original continuation leaves aa selected when lookbehind loses its base");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
                         "target-local continuation exhausts");
                 query->SetValue("(?<=aa)b");
                 editor->Send(GotoPos, 2);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 2, 2, "original lookbehind cannot inspect before an arbitrary target start");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "caret lookbehind exhausts");
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
+                        "caret lookbehind exhausts");
                 editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 2, 3, "the same lookbehind succeeds when target context starts at zero");
@@ -228,12 +232,13 @@ public:
                 query->SetValue("a(?=b)");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 1, 1, "original Previous clips lookahead at the caret");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "clipped lookahead exhausts");
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "No match found",
+                        "clipped lookahead exhausts");
                 editor->Send(GotoPos, 1);
                 Toggle(wrap, true);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 1, "forward wrap must retain lookahead beyond the wrap boundary");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Search wrapped",
                         "context-sensitive Next must report wrap");
                 Toggle(wrap, false);
                 editor->Send(GotoPos, 1);
@@ -300,7 +305,7 @@ public:
                 Selection(editor, 0, 0, "New must search the current empty document");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "single empty match must finish a wrapped pass");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Match found",
                         "original repeated empty match succeeds without wrap");
                 std::puts(
                     "PASS: document anchors, final newline, edit/undo invalidation, invalid-pattern history and New");

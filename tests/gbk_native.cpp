@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -179,7 +180,7 @@ public:
                 Command(frame, openGbk);
                 opening.Stop();
                 Require(opening.choosers == 1 && frame->DocumentEncoding() == FileEncoding::Gbk &&
-                            frame->GetStatusBar()->GetStatusText().Contains("GBK"),
+                            StatusMetadata(frame).Contains("GBK"),
                         "native explicit open must record and display GBK");
                 Append(frame, "¥☃😀𝄞");
                 const auto python = frame->GetMenuBar()->FindMenuItem("Scheme", "Python");
@@ -201,17 +202,16 @@ public:
                     NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)) &&
                     frame->DocumentEncoding() == FileEncoding::Gbk && Bytes(source) == original &&
                     Text(frame) == rich && frame->GetMenuBar()->IsChecked(python) &&
-                    frame->GetStatusBar()->GetStatusText().Contains("Python (override)");
+                    StatusMetadata(frame).Contains("Python (override)");
                 if (!lossCancelled) {
-                    std::fprintf(stderr,
-                                 "GBK loss cancellation: choosers=%d losses=%d errors=%d exists=%d pathEqual=%d "
-                                 "encoding=%d diskEqual=%d textEqual=%d pythonChecked=%d status='%s'\n",
-                                 cancelLoss.choosers, cancelLoss.losses, cancelLoss.errors,
-                                 std::filesystem::exists(cancelled),
-                                 NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)),
-                                 static_cast<int>(frame->DocumentEncoding()), Bytes(source) == original,
-                                 Text(frame) == rich, frame->GetMenuBar()->IsChecked(python),
-                                 frame->GetStatusBar()->GetStatusText().utf8_str().data());
+                    std::fprintf(
+                        stderr,
+                        "GBK loss cancellation: choosers=%d losses=%d errors=%d exists=%d pathEqual=%d "
+                        "encoding=%d diskEqual=%d textEqual=%d pythonChecked=%d status='%s'\n",
+                        cancelLoss.choosers, cancelLoss.losses, cancelLoss.errors, std::filesystem::exists(cancelled),
+                        NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)),
+                        static_cast<int>(frame->DocumentEncoding()), Bytes(source) == original, Text(frame) == rich,
+                        frame->GetMenuBar()->IsChecked(python), StatusMetadata(frame).utf8_str().data());
                     std::fflush(stderr);
                 }
                 Require(lossCancelled,
@@ -242,7 +242,7 @@ public:
                             Text(frame) == rich && frame->DocumentEncoding() == FileEncoding::Gbk &&
                             !frame->DocumentHasBom() && !frame->Editor()->Send(Scintilla::Message::GetModify) &&
                             frame->GetMenuBar()->IsChecked(python) &&
-                            frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),
+                            StatusMetadata(frame).Contains("Python (override)"),
                         "native lossy Save As must preserve rich text/GBK and apply current Python despite .CPP");
                 const auto invalid = directory / "invalid.txt";
                 {

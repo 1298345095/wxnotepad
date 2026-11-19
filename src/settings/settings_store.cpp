@@ -139,6 +139,7 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.portableMyDocs = ReadBool("PortableMyDocs", values.relativeFileMRU, "Settings2");
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.showMenu = ReadBool("ShowMenu", defaults.showMenu);
+    values.showToolbar = ReadBool("ShowToolbar", defaults.showToolbar);
     values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
     values.fullScreenMode = ReadInt("FullScreenMode", defaults.fullScreenMode);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
@@ -540,6 +541,7 @@ bool SettingsStore::Save(bool explicitSave) {
                                   static_cast<unsigned>(values.saveRecentFiles)),
                  RecentFiles::MinimumCapacity << 1);
         WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
+        WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
         WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
         WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);

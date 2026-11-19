@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -212,7 +213,7 @@ public:
                 };
                 const auto hasOverride = [frame](const char* language) {
                     return frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language)) &&
-                           frame->GetStatusBar()->GetStatusText().Contains("override");
+                           StatusMetadata(frame).Contains("override");
                 };
                 choose("C/C++");
                 Append(frame, "pending");

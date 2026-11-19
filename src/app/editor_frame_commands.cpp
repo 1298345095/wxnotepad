@@ -26,6 +26,7 @@
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
+#include "app/status_fields.h"
 #include <wx/translation.h>
 #include <wx/combobox.h>
 #include <wx/dialog.h>
@@ -1596,9 +1597,10 @@ void EditorFrame::AppendSettingsCommands(wxMenu* view) {
         Bind(
             wxEVT_MENU,
             [this](wxCommandEvent&) {
-                if (SaveSettings(true))
-                    SetStatusText(_("Settings saved"));
-                else
+                if (SaveSettings(true)) {
+                    SetStatusText(_("Settings saved"), StatusField::Feedback);
+                    UpdateStatusWidths();
+                } else
                     wxMessageBox(wxString::Format(_("Could not write %s"), settings_->Path()),
                                  _("Could not save settings"), wxOK | wxICON_ERROR, this);
             },
@@ -1927,6 +1929,10 @@ void EditorFrame::HandleFullScreenKey(int modifiers) {
         preferences.showMenu = !preferences.showMenu;
         ApplyBarVisibility();
         break;
+    case wxMOD_CONTROL:
+        preferences.showToolbar = !preferences.showToolbar;
+        ApplyBarVisibility();
+        break;
     case wxMOD_SHIFT:
         preferences.showStatusbar = !preferences.showStatusbar;
         ApplyBarVisibility();
@@ -2240,6 +2246,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* appearance = new wxMenu;
     for (const auto& [label, member] :
          {std::pair{wxTRANSLATE("Show &Menu	Alt+F11"), &OriginalSettings::showMenu},
+          std::pair{wxTRANSLATE("Show &Toolbar	Ctrl+F11"), &OriginalSettings::showToolbar},
           std::pair{wxTRANSLATE("Show Stat&usbar	Shift+F11"), &OriginalSettings::showStatusbar}}) {
         const int id = wxWindow::NewControlId();
         appearance->AppendCheckItem(id, wxGetTranslation(label));
