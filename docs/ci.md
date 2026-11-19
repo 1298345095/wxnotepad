@@ -380,11 +380,22 @@ output includes non-system vcpkg shared libraries and a README describing its
 Ubuntu 24.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
 
-Linux packaging strips only the distribution copies of the executable and
+Linux packaging also copies the selected SDK's `libexec/gio-launch-desktop`,
+which GLib uses to launch desktop entries. The vcpkg GLib binary's compiled
+helper prefix names its disposable package staging tree, so it cannot locate
+the installed or relocated helper by that prefix after dependency cleanup.
+The canonical Linux test runner sets `GIO_LAUNCH_DESKTOP` to the selected
+CMake SDK's helper. Packaged checks instead select the artifact's own helper.
+The artifact's `README.txt` supplies the explicit `GIO_LAUNCH_DESKTOP` and
+`LD_LIBRARY_PATH` command; running the bare ELF does not set these paths.
+
+Linux packaging strips only the distribution copies of the executable, helper and
 bundled shared libraries. Their matching separate debug files are retained under
 `.ci/symbols/` in the evidence artifact, with GNU debug links in the distributed
 binaries. Copy `.ci/symbols/.debug/` beside the executable and `.ci/symbols/lib/.debug/`
-inside its `lib/` directory for GDB to find them. The ordinary unstripped
+inside its `lib/` directory for GDB to find them; the helper's symbols use
+`libexec/.debug/`. Both ELF dependency inventories are retained, and SDK libraries
+needed by either binary are included. The ordinary unstripped
 executable is also retained under `.ci/build/cmake/wxnotepad` in the evidence artifact;
 the separately compiled diagnostic executable remains preserved as before.
 The ordinary test binaries keep their debug information, and build.json records

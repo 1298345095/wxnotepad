@@ -13,7 +13,8 @@ from resource_process import process_windows
 def main():
     source = Path(sys.argv[1]).resolve()
     with tempfile.TemporaryDirectory(prefix="wxnotepad-open-targets-") as name:
-        folder = Path(name)
+        # Match native Document Open and Explorer's expansion of TEMP's 8.3 aliases.
+        folder = Path(name).resolve(strict=True)
         executable = folder / source.name
         shutil.copy2(source, executable)
         if sys.platform == "win32":

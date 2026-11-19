@@ -377,6 +377,10 @@ if(BUILD_TESTING)
     set_tests_properties(packaged_document_tools_localization PROPERTIES TIMEOUT 120)
     if(UNIX)
         target_link_libraries(document_tools PRIVATE PkgConfig::GIO_UNIX)
+        add_test(NAME packaged_document_tools_runtime COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>"
+            --cmake-dir "${CMAKE_BINARY_DIR}")
+        set_tests_properties(packaged_document_tools_runtime PROPERTIES TIMEOUT 60)
     endif()
     add_gui_program(new_window tests/new_window.cpp app_shell)
     add_gui_program(open_targets tests/open_targets.cpp app_shell)
