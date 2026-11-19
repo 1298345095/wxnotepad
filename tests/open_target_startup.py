@@ -18,7 +18,8 @@ def main():
     parser.add_argument("--cmake-dir", type=Path, required=True)
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="wxnotepad-target-startup-") as name:
-        root = Path(name)
+        # Match native Document Open and Explorer's expansion of TEMP's 8.3 aliases.
+        root = Path(name).resolve(strict=True)
         executable = bundle_application(args.executable.resolve(), args.cmake_dir.resolve(), root / "bundle")
         target = root / "目标.txt"
         target_bytes = "first\nabcd中文\nlast\n".encode("utf-8")
