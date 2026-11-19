@@ -170,6 +170,8 @@ add_library(app_shell STATIC
     src/app/editor_frame_commands.cpp
     src/app/editor_printing.cpp
     src/app/editor_print_job.cpp
+    src/app/native_launch.cpp
+    src/app/desktop_launch.cpp
     src/app/new_window.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
@@ -206,6 +208,8 @@ if(UNIX AND NOT APPLE)
     target_sources(editor_runtime PRIVATE src/editor/platform/text_measurement_gtk.cpp)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+    pkg_check_modules(GIO_UNIX REQUIRED IMPORTED_TARGET gio-unix-2.0)
+    target_link_libraries(app_shell PRIVATE PkgConfig::GIO_UNIX)
     pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
     target_link_libraries(editor_runtime PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
 endif()
