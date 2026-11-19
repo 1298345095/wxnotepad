@@ -3,6 +3,7 @@
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include "editor/occurrence_marking.h"
+#include "editor/editor_ids.h"
 #include <wx/toolbar.h>
 #include <wx/statusbr.h>
 #include <memory>
