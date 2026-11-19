@@ -19,6 +19,13 @@ class OwnedTargetAssociations final {
     bool protocolCreated_ = false;
     bool extensionCreated_ = false;
 
+    static std::wstring RecorderCommand() {
+        const std::wstring executable = wxStandardPaths::Get().GetExecutablePath().ToStdWstring();
+        wxString recorderDirectory;
+        if (!wxGetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", &recorderDirectory))
+            throw std::runtime_error("owned recorder directory must be configured");
+        return L"\"" + executable + L"\" --desktop-target \"%1\" \"" + recorderDirectory.ToStdWstring() + L"\"";
+    }
     static void Check(LSTATUS result, const char* operation) {
         if (result != ERROR_SUCCESS)
             throw std::runtime_error(std::string(operation) + " failed with Windows error " + std::to_string(result));
@@ -51,10 +58,7 @@ public:
             Create(protocolKey_, protocol_, protocolCreated_);
             Create(extensionKey_, extension_, extensionCreated_);
             const std::wstring executable = wxStandardPaths::Get().GetExecutablePath().ToStdWstring();
-            wxString recorderDirectory;
-            if (!wxGetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", &recorderDirectory))
-                throw std::runtime_error("owned recorder directory must be configured");
-            command_ = L"\"" + executable + L"\" --desktop-target \"%1\" \"" + recorderDirectory.ToStdWstring() + L"\"";
+            command_ = RecorderCommand();
             Value(protocol_, L"", nullptr, L"URL:owned target recorder");
             Value(protocol_, L"", L"URL Protocol", L"");
             Value(protocol_, LR"(shell\open\command)", nullptr, command_);
@@ -78,6 +82,14 @@ public:
     ~OwnedTargetAssociations() { Remove(); }
     wxString Scheme() const { return wxString(scheme_); }
     wxString Extension() const { return "." + Scheme(); }
+    static void RequireMailHandler() {
+        wchar_t selected[32768]{};
+        DWORD length = std::size(selected);
+        const auto result =
+            AssocQueryStringW(ASSOCF_IS_PROTOCOL, ASSOCSTR_COMMAND, L"mailto", L"open", selected, &length);
+        if (FAILED(result) || std::wstring(selected) != RecorderCommand())
+            throw std::runtime_error("mailto must already resolve to this exact owned recorder");
+    }
     void RequireStandardHandlers() const {
         for (const auto* scheme : {L"http", L"https", L"mailto"}) {
             wchar_t selected[32768]{};
