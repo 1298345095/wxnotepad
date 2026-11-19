@@ -38,9 +38,7 @@ void WaitForChild(const std::string& expected, const wxString& path, const wxStr
     wxFFile file(Name(marker), "rb");
     wxString recorded;
     Require(file.ReadAll(&recorded, wxConvUTF8), "child record is readable");
-    std::fprintf(stderr, "recorded: %s
-expected: %s | %s | %s
-", recorded.utf8_str().data(), path.utf8_str().data(), cwd.utf8_str().data(), expected.c_str());
+    std::fprintf(stderr, "recorded: %s\nexpected: %s | %s | %s\n", recorded.utf8_str().data(), path.utf8_str().data(), cwd.utf8_str().data(), expected.c_str());
     std::fflush(stderr);
     Require(recorded == wxString::Format("%d\n%s\n%s\n%s", path.empty() ? 0 : 1, path, cwd,
                                          wxString::FromUTF8(expected)),
@@ -73,8 +71,7 @@ public:
             if (title == "Could not execute document" || title == "Could not open document with program") {
                 gchar* text = nullptr;
                 g_object_get(widget, "text", &text, nullptr);
-                std::fprintf(stderr, "Native launch error: %s
-", text ? text : "");
+                std::fprintf(stderr, "Native launch error: %s\n", text ? text : "");
                 g_free(text);
                 ++errors;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_OK);
@@ -126,8 +123,7 @@ void RegistryString(const wxString& key, const wxString& value) {
 class Association final {
 public:
     Association() {
-        std::fprintf(stderr, "phase: registering association
-");
+        std::fprintf(stderr, "phase: registering association\n");
         std::fflush(stderr);
         const auto executable = wxStandardPaths::Get().GetExecutablePath();
 #ifdef __WXMSW__
@@ -139,7 +135,8 @@ public:
         auto command = classKey_ + wxString(wxUniChar(92)) + "shell" + wxString(wxUniChar(92)) + "open" + wxString(wxUniChar(92)) + "command";
         RegistryString(command, "\"" + executable + "\" \"%1\"");
 #else
-        const auto desktop = Root() / "handler.desktop";
+        const auto desktop = Root() / "data" / "applications" / "handler.desktop";
+        std::filesystem::create_directories(desktop.parent_path());
         TestFiles::WriteBytes(desktop, "[Desktop Entry]\nType=Application\nName=Owned document handler\nExec=\"" + executable.utf8_string() + "\" %f\nNoDisplay=true\n");
         auto* application = g_desktop_app_info_new_from_filename(Name(desktop).utf8_str());
         Require(application != nullptr, "native desktop entry loads");
@@ -164,8 +161,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     TestFiles::WriteBytes(path, "disk bytes");
     Association association;
     LaunchErrors launchErrors;
-    std::fprintf(stderr, "phase: Ctrl+L
-");
+    std::fprintf(stderr, "phase: Ctrl+L\n");
     std::fflush(stderr);
     wxSetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD", "1");
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "open named document");
@@ -185,8 +181,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
                 editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 6 &&
                 frame->DocumentEncoding() == encoding && TestEditor::Text(frame) == "disk bytes unsaved",
             "Ctrl+L with preference off preserves the complete live document");
-    std::fprintf(stderr, "phase: Open With
-");
+    std::fprintf(stderr, "phase: Open With\n");
     std::fflush(stderr);
     const auto program = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetFullName();
     settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
@@ -201,8 +196,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(!frame->OpenDocumentWith(), "chooser Cancel stops launch");
     }
     Require(!std::filesystem::exists(Root() / "record.txt"), "Cancel launches no program");
-    std::fprintf(stderr, "phase: save policy
-");
+    std::fprintf(stderr, "phase: save policy\n");
     std::fflush(stderr);
     NativeSearch::Command(frame, preference);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
@@ -224,8 +218,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     WaitForChild("disk bytes", Name(path), Name(Root()));
     // Replacing the backing file with a directory makes the ordinary required
     // Save fail on both platforms, without changing editor identity.
-    std::fprintf(stderr, "phase: failed save
-");
+    std::fprintf(stderr, "phase: failed save\n");
     std::fflush(stderr);
     std::filesystem::remove(path);
     std::filesystem::create_directory(path);
@@ -245,8 +238,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(decision.prompts == 1 && !editor->Send(Message::GetModify), "Save uses ordinary save point");
     }
     WaitForChild("disk bytes unsaved", Name(path), Name(Root()));
-    std::fprintf(stderr, "phase: untitled
-");
+    std::fprintf(stderr, "phase: untitled\n");
     std::fflush(stderr);
     Require(frame->NewDocument(), "clean named document becomes untitled");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -271,8 +263,7 @@ public:
 #else
         std::freopen(Name(Root() / "fixture.log").utf8_str(), "ab", stderr);
 #endif
-        std::fprintf(stderr, "phase: init argc=%d
-", argc);
+        std::fprintf(stderr, "phase: init argc=%d\n", argc);
         std::fflush(stderr);
         if (wxGetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD", nullptr)) {
             const auto argument = argc > 1 ? wxString(argv[1]) : wxString{};
@@ -287,17 +278,14 @@ public:
             return true;
         }
         settings_ = std::make_unique<SettingsStore>(Name(Root() / "Notepad4.ini"));
-        std::fprintf(stderr, "phase: constructing frame
-");
+        std::fprintf(stderr, "phase: constructing frame\n");
         std::fflush(stderr);
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
-        std::fprintf(stderr, "phase: awaiting presentation
-");
+        std::fprintf(stderr, "phase: awaiting presentation\n");
         std::fflush(stderr);
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
-            std::fprintf(stderr, "phase: presented=%d
-", ready);
+            std::fprintf(stderr, "phase: presented=%d\n", ready);
             std::fflush(stderr);
             try {
                 Require(ready, "owned editor must be presented");
