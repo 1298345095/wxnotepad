@@ -53,6 +53,11 @@ The process observer waits for a completed initial native GTK frame before
 querying UI state or forcing painting. Its existing timer retries without
 publishing partial startup observations. This preserves Wayland presentation
 and the original fixture deadlines and concurrency.
+Readiness deferral also retains a pending acknowledgement: a cancelled command
+can leave every tracked editor/window state unchanged, so state-change polling
+alone cannot guarantee a retry. The native regression recreates the GTK surface
+and verifies an unchanged Select All command is acknowledged after presentation,
+with identical document, selection, active state and outer geometry.
 
 ## Evidence
 

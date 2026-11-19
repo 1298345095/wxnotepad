@@ -159,8 +159,12 @@ void ProcessObserver::Publish() {
     using enum Scintilla::Message;
     if (!frame_) return;
 #ifdef __WXGTK__
-    // The unchanged observer timer retries without publishing partial state.
-    if (!NativeFramePresented(frame_)) return;
+    // A command can leave every tracked UI state unchanged. Keep its deferred
+    // acknowledgement pending so the normal timer retries after presentation.
+    if (!NativeFramePresented(frame_)) {
+        publishPending_ = true;
+        return;
+    }
 #endif
     frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     frame_->Update();

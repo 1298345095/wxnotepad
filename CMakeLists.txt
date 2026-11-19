@@ -1001,6 +1001,7 @@ if(BUILD_TESTING)
     endif()
 
     add_editor_test(bar_visibility original_bar_visibility 60)
+    add_editor_test(observer_acknowledgement native_observer_unchanged_acknowledgement 45)
     add_editor_test(file_change_monitor native_file_watcher_lifetime 30)
     add_test(NAME original_bar_visibility_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/bar_visibility_process.py" "$<TARGET_FILE:bar_visibility>")
