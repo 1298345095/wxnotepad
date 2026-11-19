@@ -38,6 +38,10 @@ void WaitForChild(const std::string& expected, const wxString& path, const wxStr
     wxFFile file(Name(marker), "rb");
     wxString recorded;
     Require(file.ReadAll(&recorded, wxConvUTF8), "child record is readable");
+    std::fprintf(stderr, "recorded: %s
+expected: %s | %s | %s
+", recorded.utf8_str().data(), path.utf8_str().data(), cwd.utf8_str().data(), expected.c_str());
+    std::fflush(stderr);
     Require(recorded == wxString::Format("%d\n%s\n%s\n%s", path.empty() ? 0 : 1, path, cwd,
                                          wxString::FromUTF8(expected)),
             "child argv, working directory and disk bytes match independent literals");
@@ -122,6 +126,9 @@ void RegistryString(const wxString& key, const wxString& value) {
 class Association final {
 public:
     Association() {
+        std::fprintf(stderr, "phase: registering association
+");
+        std::fflush(stderr);
         const auto executable = wxStandardPaths::Get().GetExecutablePath();
 #ifdef __WXMSW__
         key_ = "Software/Classes/.wxlaunch244";
@@ -258,6 +265,15 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
 class ToolsApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        FILE* diagnostic = nullptr;
+        _wfreopen_s(&diagnostic, Name(Root() / "fixture.log").wc_str(), L"ab", stderr);
+#else
+        std::freopen(Name(Root() / "fixture.log").utf8_str(), "ab", stderr);
+#endif
+        std::fprintf(stderr, "phase: init argc=%d
+", argc);
+        std::fflush(stderr);
         if (wxGetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD", nullptr)) {
             const auto argument = argc > 1 ? wxString(argv[1]) : wxString{};
             std::string disk;
@@ -271,9 +287,18 @@ public:
             return true;
         }
         settings_ = std::make_unique<SettingsStore>(Name(Root() / "Notepad4.ini"));
+        std::fprintf(stderr, "phase: constructing frame
+");
+        std::fflush(stderr);
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
+        std::fprintf(stderr, "phase: awaiting presentation
+");
+        std::fflush(stderr);
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
+            std::fprintf(stderr, "phase: presented=%d
+", ready);
+            std::fflush(stderr);
             try {
                 Require(ready, "owned editor must be presented");
                 Actions(frame, *settings_);
