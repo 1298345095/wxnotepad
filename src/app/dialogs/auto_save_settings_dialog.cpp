@@ -57,7 +57,8 @@ bool ShowAutoSaveSettingsDialog(wxWindow* parent, AutoSaveOptions& options) {
             // float precision before truncating milliseconds to a signed int.
             const float seconds = std::wcstof(input->GetValue().wc_str(), nullptr);
             const float milliseconds = seconds * 1000;
-            if (!std::isfinite(milliseconds) || milliseconds < std::numeric_limits<int32_t>::min() ||
+            if (!std::isfinite(milliseconds) ||
+                static_cast<double>(milliseconds) < std::numeric_limits<int32_t>::min() ||
                 static_cast<double>(milliseconds) > std::numeric_limits<int32_t>::max()) {
                 input->SetFocus();
                 input->SelectAll();

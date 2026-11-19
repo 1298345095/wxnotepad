@@ -219,10 +219,10 @@ void RetentionAndBoundaries(EditorFrame& frame, SettingsStore& store, const fs::
     Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "opens retention fixture");
     SetOptions(frame, true, true);
     std::string expected = "retain";
-    for (int index = 0; index < 8; ++index) {
+    for (size_t index = 0; index < 8; ++index) {
         expected += '!';
         TestEditor::Append(&frame, "!");
-        Wait([&] { return Backups(folder).size() == static_cast<size_t>(index + 1); }, "retention keeps rotated files");
+        Wait([&] { return Backups(folder).size() == index + 1; }, "retention keeps rotated files");
     }
     Require(frame.Save().status == SaveStatus::Saved && Backups(folder).size() == 8,
             "manual retention keeps tracked and previously rotated files on Save");
@@ -479,7 +479,7 @@ class PeriodicBackupApp final : public wxApp {
 public:
     bool OnInit() override {
         static const PeriodicFixtureRoot fixture;
-        const auto root = fixture.Path();
+        const auto& root = fixture.Path();
         const auto ini = root / "Notepad4.ini";
 #ifndef __WXMSW__
         wxSetEnv("XDG_DATA_HOME", TestFiles::Filename(root / "xdg"));
