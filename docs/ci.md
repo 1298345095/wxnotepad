@@ -86,7 +86,9 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   clang-tidy, and `gui` for the build/test matrix. GUI display tools and fonts
   are installed by the `gui` profile, also used by coverage; the analyzer is installed by `tidy`.
 - Linux jobs use Ubuntu's official HTTPS archive in place of the Azure archive
-  mirror. APT uses finite connection/read timeouts and retries. Downloaded `.deb`
+  mirror or the runner's `/etc/apt/apt-mirrors.txt` mirror-list URI in legacy
+  `.list` and Deb822 `.sources` files. Suites, components and signing keys are
+  preserved. APT uses finite connection/read timeouts and retries. Downloaded `.deb`
   archives are cached with the existing official cache action, while APT installs
   the packages and runs their configuration scripts on each fresh runner. The
   cache excludes installed system files, package database state and partial downloads.
