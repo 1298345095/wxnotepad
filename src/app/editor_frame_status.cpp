@@ -143,6 +143,11 @@ void EditorFrame::UpdateStatusWidths() {
 #ifdef __WXMSW__
     // wxMSW adds the native pane border and its own text margins.
     constexpr int padding = 0;
+#elif defined(__WXGTK__)
+    // wxStatusBarGeneric subtracts both borders and two fixed text margins
+    // when painting. Small rendered fonts still need these native insets.
+    constexpr int NativeFieldTextMargin = 2;
+    const int padding = std::max(status->GetCharHeight() / 2, 2 * (status->GetBorderX() + NativeFieldTextMargin));
 #else
     const int padding = status->GetCharHeight() / 2;
 #endif

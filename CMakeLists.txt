@@ -1046,6 +1046,13 @@ if(BUILD_TESTING)
     add_editor_test(search_continuation original_search_continuation 60)
     add_test(NAME original_rtf_clipboard COMMAND clipboard_smoke)
     set_tests_properties(original_rtf_clipboard PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=rtf")
+    if(UNIX AND NOT APPLE)
+        # Retain existing registration order; cover native borders with small
+        # rendered status text at GTK scale 2 using the same full-paint checks.
+        add_test(NAME original_shell_appearance_scale2 COMMAND shell_appearance)
+        set_tests_properties(original_shell_appearance_scale2 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=0.5")
+    endif()
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised
