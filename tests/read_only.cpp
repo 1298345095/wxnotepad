@@ -229,7 +229,10 @@ public:
         deadline_ = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         Start(10);
         Request("keydown:shift+F10");
-        while ((!closed_ || !f10Released_ || !shiftReleased_) && !expired_) {
+        // Native menu hide can precede the compositor's keyboard focus return.
+        // Observe that return within this gesture's existing deadline.
+        while ((!closed_ || !f10Released_ || !shiftReleased_ || !frame_->IsActive() || !frame_->Editor()->HasFocus()) &&
+               !expired_) {
             wxYield();
             wxMilliSleep(10);
         }
