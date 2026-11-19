@@ -10,12 +10,36 @@
 #include <wx/dialog.h>
 #ifdef __WXMSW__
 #include <commctrl.h>
+#elif defined(__WXGTK__)
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 #endif
 
 namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+#ifdef __WXGTK__
+void AwaitPaste(wxToolBar* toolbar, bool enabled) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+    do {
+        toolbar->UpdateWindowUI();
+        wxYield();
+        if (toolbar->GetToolEnabled(wxID_PASTE) == enabled) return;
+        wxMilliSleep(10);
+    } while (std::chrono::steady_clock::now() < deadline);
+    Require(false, "native toolbar Paste follows asynchronous clipboard offers and document protection");
+}
+
+void ClipboardOffer(wxDataObject* data) {
+    wxClipboardLocker lock;
+    Require(static_cast<bool>(lock), "private clipboard opens for a native toolbar offer");
+    if (data)
+        Require(wxTheClipboard->SetData(data), "private clipboard accepts the offered native data");
+    else
+        wxTheClipboard->Clear();
+}
+#endif
 class AppearanceApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -72,6 +96,22 @@ public:
                         "native toolbar uses the original physical bitmap resolution at fractional DPI");
 #endif
                 auto* toolbar = frame->GetToolBar();
+#ifdef __WXGTK__
+                ClipboardOffer(new wxTextDataObject("native toolbar text"));
+                AwaitPaste(toolbar, true);
+                editor->Send(SetReadOnly, 1);
+                AwaitPaste(toolbar, false);
+                editor->Send(SetReadOnly, 0);
+                AwaitPaste(toolbar, true);
+                auto* custom = new wxCustomDataObject(wxDataFormat("application/x-wxnotepad-appearance"));
+                custom->SetData(3, "art");
+                ClipboardOffer(custom);
+                AwaitPaste(toolbar, false);
+                ClipboardOffer(new wxTextDataObject("second native text offer"));
+                AwaitPaste(toolbar, true);
+                ClipboardOffer(nullptr);
+                AwaitPaste(toolbar, false);
+#endif
                 editor->Send(EmptyUndoBuffer);
                 editor->Send(SetSavePoint);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -132,6 +172,43 @@ public:
                             editor->Send(CanRedo),
                         "cancelling status encoding action preserves current encoding and history");
                 Require(toolbar->FindById(wxID_REPLACE), "default toolbar includes the delivered Replace command");
+                const auto command = [frame](const char* menu, const char* label) {
+                    return frame->GetMenuBar()->FindMenuItem(menu, label);
+                };
+                // Frozen from the pinned default toolbar order, with commands
+                // without a delivered host menu action omitted.
+                const auto expectedOrder = std::to_array<int>({wxID_NEW,
+                                                               command("File", "New Window"),
+                                                               wxID_OPEN,
+                                                               wxID_SEPARATOR,
+                                                               wxID_SAVE,
+                                                               wxID_SAVEAS,
+                                                               command("File", "Save Copy..."),
+                                                               wxID_SEPARATOR,
+                                                               wxID_UNDO,
+                                                               wxID_REDO,
+                                                               wxID_SEPARATOR,
+                                                               wxID_CUT,
+                                                               wxID_COPY,
+                                                               wxID_PASTE,
+                                                               wxID_SEPARATOR,
+                                                               wxID_FIND,
+                                                               wxID_REPLACE,
+                                                               wxID_SEPARATOR,
+                                                               command("View", "Word Wrap"),
+                                                               wxID_SEPARATOR,
+                                                               command("View", "Default Levels"),
+                                                               wxID_SEPARATOR,
+                                                               command("View", "Zoom In"),
+                                                               command("View", "Zoom Out")});
+                Require(toolbar->GetToolsCount() == expectedOrder.size(),
+                        "default toolbar retains original delivered groups");
+                for (size_t index = 0; index < expectedOrder.size(); ++index) {
+                    const auto* tool = toolbar->GetToolByPos(static_cast<int>(index));
+                    Require(expectedOrder[index] != wxNOT_FOUND &&
+                                (tool->IsSeparator() ? wxID_SEPARATOR : tool->GetId()) == expectedOrder[index],
+                            "native toolbar order and separators match the delivered original commands");
+                }
                 for (size_t index = 0; index < toolbar->GetToolsCount(); ++index) {
                     auto* tool = toolbar->GetToolByPos(static_cast<int>(index));
                     if (tool->IsSeparator()) continue;
@@ -167,6 +244,29 @@ public:
                 NativePaint::Complete(editor);
                 Require(status->GetStatusText(3) == "Sel 1 / 6", "multiple selection combines selected bytes and CRLF "
                                                                  "separator with original main-range scalar count");
+                editor->Send(SetCopySeparator, 0, reinterpret_cast<intptr_t>(" / "));
+                editor->Send(SetSelectionNCaret, 1, 13);
+                NativePaint::Complete(editor);
+                Require(status->GetStatusText(3) == "Sel 2 / 11",
+                        "multiple selection byte count follows the configured copy separator");
+                editor->Send(SetCopySeparator, 0, reinterpret_cast<intptr_t>(""));
+#ifdef __WXMSW__
+                frame->SetSize(wxSize(620, 430));
+                NativePaint::Complete(editor);
+                for (int field = StatusField::Scheme; field <= StatusField::Zoom; ++field) {
+                    std::array<wchar_t, 512> rendered{};
+                    SendMessageW(static_cast<HWND>(status->GetHandle()), SB_GETTEXTW, field,
+                                 reinterpret_cast<LPARAM>(rendered.data()));
+                    Require(rendered[0] == 0, "narrow native panes do not paint fragments of hidden metadata");
+                }
+                frame->SetSize(wxSize(1000, 700));
+                editor->Send(GotoPos, 0);
+                NativePaint::Complete(editor);
+                std::array<wchar_t, 512> restored{};
+                SendMessageW(static_cast<HWND>(status->GetHandle()), SB_GETTEXTW, StatusField::Encoding,
+                             reinterpret_cast<LPARAM>(restored.data()));
+                Require(wxString(restored.data()) == "UTF-8", "normal resize restores the native encoding text");
+#endif
                 result_ = 0;
                 std::puts("PASS: native default toolbar");
             } catch (const std::exception& error) {

@@ -10,10 +10,56 @@
 #include <wx/translation.h>
 #include <algorithm>
 #include <array>
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#include <commctrl.h>
+#include <wx/settings.h>
+#endif
 
 namespace {
+constexpr size_t SchemeMenuIndex = 4;
+void ApplyNarrowNativeLayout(wxStatusBar* status) {
+#ifdef __WXMSW__
+    // Notepad4's native SB_SETPARTS path permits coincident pane edges. wxMSW
+    // otherwise adds a margin even to each width-zero pane, showing fragments
+    // and charging the size field for five hidden metadata panes.
+    const auto window = static_cast<HWND>(status->GetHandle());
+    std::array<int, StatusField::Count> edges{};
+    ::SendMessageW(window, SB_GETPARTS, edges.size(), reinterpret_cast<LPARAM>(edges.data()));
+    const int grip = wxSystemSettings::GetMetric(wxSYS_HSCROLL_ARROW_X, status);
+    const int sizeWidth =
+        status->GetTextExtent(status->GetStatusText(StatusField::DocumentSize)).x + status->GetCharHeight() / 2 + grip;
+    const int sizeLeft = std::max(edges[StatusField::Matches], status->GetClientSize().x - sizeWidth);
+    for (int field = StatusField::Feedback; field <= StatusField::Zoom; ++field)
+        edges[field] = sizeLeft;
+    edges[StatusField::DocumentSize] = status->GetClientSize().x;
+    ::SendMessageW(window, SB_SETPARTS, edges.size(), reinterpret_cast<LPARAM>(edges.data()));
+    // Keep wx's complete metadata: its normal width update restores it when
+    // the window grows. Only the hidden native captions are suppressed.
+    for (int field = StatusField::Scheme; field <= StatusField::Zoom; ++field)
+        ::SendMessageW(window, SB_SETTEXTW, field, reinterpret_cast<LPARAM>(L""));
+    for (const int field : {StatusField::Feedback, StatusField::DocumentSize})
+        ::SendMessageW(window, SB_SETTEXTW, field, reinterpret_cast<LPARAM>(status->GetStatusText(field).wc_str()));
+#else
+    (void)status;
+#endif
+}
 wxString Number(intptr_t value) {
     return wxNumberFormatter::ToString(static_cast<wxLongLong_t>(value), wxNumberFormatter::Style_WithThousandsSep);
+}
+intptr_t SelectionBytes(EditorControl& editor) {
+    using enum Scintilla::Message;
+    const auto selections = editor.Send(GetSelections);
+    intptr_t bytes = 0;
+    for (intptr_t selection = 0; selection < selections; ++selection)
+        bytes += editor.Send(GetSelectionNEnd, selection) - editor.Send(GetSelectionNStart, selection);
+    if (selections > 1) {
+        auto separatorBytes = editor.Send(GetCopySeparator);
+        if (!separatorBytes)
+            separatorBytes = editor.Send(GetEOLMode) == std::to_underlying(Scintilla::EndOfLine::CrLf) ? 2 : 1;
+        bytes += (selections - 1) * separatorBytes;
+    }
+    return bytes;
 }
 wxString DocumentSize(intptr_t bytes) {
     if (bytes < 1024) return wxString::Format(_("%s bytes"), Number(bytes));
@@ -62,7 +108,7 @@ void EditorFrame::UpdatePositionStatus() {
     const bool selected = selectionStart != selectionEnd;
     const bool rectangle = editor_->Send(SelectionIsRectangle) != 0;
     const wxString characters = selected && rectangle ? wxString("--") : Number(editor_->SelectionCharacterCount());
-    const wxString bytes = selected && rectangle ? wxString("--") : Number(selected ? editor_->Send(GetSelText) : 0);
+    const wxString bytes = selected && rectangle ? wxString("--") : Number(selected ? SelectionBytes(*editor_) : 0);
     set(StatusField::Selection, wxString::Format(_("Sel %s / %s"), characters, bytes));
     const auto first = editor_->Send(LineFromPosition, selectionStart);
     const auto last = editor_->Send(LineFromPosition, selectionEnd);
@@ -106,8 +152,10 @@ void EditorFrame::UpdateStatusWidths() {
 #endif
     const int feedbackWidth = status->GetTextExtent(status->GetStatusText(StatusField::Feedback)).x;
     if (statusPreferredWidths_ == widths && statusMeasuredSize_ == status->GetClientSize() &&
-        statusFeedbackWidth_ == feedbackWidth)
+        statusFeedbackWidth_ == feedbackWidth) {
+        if (status->GetStatusWidth(StatusField::Scheme) == 0) ApplyNarrowNativeLayout(status);
         return;
+    }
     statusPreferredWidths_ = widths;
     statusMeasuredSize_ = status->GetClientSize();
     statusFeedbackWidth_ = feedbackWidth;
@@ -128,6 +176,7 @@ void EditorFrame::UpdateStatusWidths() {
     for (int field = 0; field < StatusField::Count; ++field)
         changed |= status->GetStatusWidth(field) != widths[field];
     if (changed) status->SetStatusWidths(StatusField::Count, widths.data());
+    if (!fits) ApplyNarrowNativeLayout(status);
 }
 
 void EditorFrame::CreatePositionStatus() {
@@ -153,7 +202,7 @@ void EditorFrame::CreatePositionStatus() {
                 id = FindMenuCommand(_("&More...\tF9"));
                 break;
             case StatusField::Scheme:
-                PopupMenu(GetMenuBar()->GetMenu(4));
+                PopupMenu(GetMenuBar()->GetMenu(SchemeMenuIndex));
                 break;
             case StatusField::Overtype:
                 editor_->Send(Scintilla::Message::EditToggleOvertype);

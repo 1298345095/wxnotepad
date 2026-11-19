@@ -19,9 +19,29 @@
 #endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
+#include <gdk/gdkwayland.h>
 #endif
 
 namespace {
+#ifdef __WXGTK__
+bool NativeFramePresented(EditorFrame* frame) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return true;
+    auto* window = gtk_widget_get_window(widget);
+    auto* clock = window ? gdk_window_get_frame_clock(window) : nullptr;
+    if (!clock) return false;
+    // UpdateWindowUI can itself force native paint. Before the first Wayland
+    // frame completes, that can leave the initial view uncommitted. The normal
+    // GTK presentation path must finish before observation updates the view.
+    const auto oldest = gdk_frame_clock_get_history_start(clock);
+    for (auto counter = gdk_frame_clock_get_frame_counter(clock); counter >= oldest; --counter) {
+        auto* timing = gdk_frame_clock_get_timings(clock, counter);
+        if (timing && gdk_frame_timings_get_complete(timing)) return true;
+    }
+    return false;
+}
+#endif
+
 const char* ObservationEncodingName(FileEncoding encoding) {
     switch (encoding) {
         using enum FileEncoding;
@@ -138,6 +158,10 @@ wxString ObserveMetadata(EditorFrame* frame) {
 void ProcessObserver::Publish() {
     using enum Scintilla::Message;
     if (!frame_) return;
+#ifdef __WXGTK__
+    // The unchanged observer timer retries without publishing partial state.
+    if (!NativeFramePresented(frame_)) return;
+#endif
     frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     frame_->Update();
     frame_->Editor()->Update();

@@ -7,6 +7,9 @@
 #include <wx/toolbar.h>
 #include <wx/translation.h>
 #include <wx/settings.h>
+#ifdef __WXGTK__
+#include <wx/clipbrd.h>
+#endif
 
 namespace {
 wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& background) {
@@ -88,6 +91,25 @@ void EditorFrame::CreateDefaultToolbar() {
     add(12, _("Zoom &In\tCtrl++"));
     add(13, _("Zoom &Out\tCtrl+-"));
     toolbar->Realize();
+#ifdef __WXGTK__
+    // A synchronous clipboard query yields inside GTK frame-clock dispatch:
+    // a pending Wayland configure can then be committed before GTK allocates
+    // its new geometry. Idle toolbar updates consume the asynchronous offer.
+    auto clipboardHasText = std::make_shared<bool>(false);
+    toolbar->Bind(wxEVT_CLIPBOARD_CHANGED, [clipboardHasText](wxClipboardEvent& event) {
+        *clipboardHasText = event.SupportsFormat(wxDF_UNICODETEXT);
+    });
+    toolbar->Bind(
+        wxEVT_UPDATE_UI,
+        [this, toolbar, clipboardHasText](wxUpdateUIEvent& event) {
+            event.Enable(editor_->CanPasteText(*clipboardHasText));
+            if (!wxTheClipboard->IsOpened()) {
+                wxTheClipboard->UsePrimarySelection(false);
+                wxTheClipboard->IsSupportedAsync(toolbar);
+            }
+        },
+        wxID_PASTE);
+#endif
     toolbar->Bind(wxEVT_SYS_COLOUR_CHANGED, [toolbar](wxSysColourChangedEvent& event) {
         for (size_t index = 0; index < toolbar->GetToolsCount(); ++index) {
             auto* tool = toolbar->GetToolByPos(static_cast<int>(index));
@@ -101,8 +123,10 @@ void EditorFrame::CreateDefaultToolbar() {
     });
     // The shared IDs let wx's native toolbar route activation and UpdateUI to
     // the same command handlers as the menu. Return keyboard input to the editor.
-    Bind(wxEVT_TOOL, [this](wxCommandEvent& event) {
-        editor_->SetFocus();
+    Bind(wxEVT_TOOL, [this, toolbar](wxCommandEvent& event) {
+        // wxEVT_TOOL and wxEVT_MENU share an event type. Menu commands from a
+        // modeless Find dialog must retain their existing focus/seeding rules.
+        if (event.GetEventObject() == toolbar) editor_->SetFocus();
         event.Skip();
     });
 }

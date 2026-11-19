@@ -513,6 +513,9 @@ void EditorControl::Core::DpiChanged() {
     for (int marker = std::to_underlying(Scintilla::MarkerOutline::FolderEnd);
          marker <= std::to_underlying(Scintilla::MarkerOutline::FolderOpen); ++marker)
         WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
+    // Match ScintillaWin's DPI transition: style invalidation alone retains
+    // the native fonts realized at the previous monitor's resolution.
+    vs.fontsValid = false;
     InvalidateStyleRedraw();
     window_.lineNumberWidthDirty_ = true;
     window_.foldMarginWidthDirty_ = true;
@@ -820,6 +823,10 @@ void EditorControl::Core::Cut(bool, bool lineCopy) {
 
 bool EditorControl::Core::CanPaste() const noexcept {
     return core::Editor::CanPaste() && EditorClipboard::HasText();
+}
+
+bool EditorControl::Core::CanPasteText(bool clipboardHasText) const noexcept {
+    return core::Editor::CanPaste() && clipboardHasText;
 }
 
 void EditorControl::Core::Paste(bool) {

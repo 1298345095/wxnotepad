@@ -51,6 +51,8 @@ public:
     explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
+    // Use an already obtained clipboard offer without dispatching native events.
+    bool CanPasteText(bool clipboardHasText) const noexcept;
     Scintilla::Position FormatPrintRange(const Scintilla::Internal::PrintSurface& printer, bool draw,
                                          Scintilla::CharacterRangeFull range, Scintilla::Rectangle area);
     void SetColorCallTipMode(ColorCallTipMode mode);

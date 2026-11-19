@@ -56,7 +56,7 @@ void TogglePreservesDocument(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n!" && editor->Send(GetModify),
             "pending Redo remains executable after toggling off");
     Toggle(frame);
-    Require(editor->Send(GetModify) && frame->GetTitle() == "*Untitled (Read Only Mode) - wxnotepad",
+    Require(editor->Send(GetModify) && frame->GetTitle() == "* Untitled (Read Only Mode) - wxnotepad",
             "dirty untitled mode preserves modification state and its title feedback");
     Toggle(frame);
     std::puts("PASS: native menu/F10, title and unchanged text, selection, save point and history");

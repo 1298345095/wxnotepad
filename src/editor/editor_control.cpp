@@ -410,6 +410,10 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
     core_->UpdateWrapLayout();
 }
 
+bool EditorControl::CanPasteText(bool clipboardHasText) const noexcept {
+    return core_->CanPasteText(clipboardHasText);
+}
+
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     if (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer) {
         core_->WndProc(Message::AutoCCancel, 0, 0);
