@@ -56,6 +56,13 @@ def change_directory(fixture, app, program_dialog, browse_caption, destination):
     deadline = time.monotonic() + 10
     folder = None
     while time.monotonic() < deadline:
+        if sys.platform != 'win32':
+            desktop = dialogs.atspi.get_desktop(0)
+            desktop.clear_cache()
+            for index in range(desktop.get_child_count()):
+                application = desktop.get_child_at_index(index)
+                if application is not None:
+                    application.clear_cache()
         windows = [window for window in dialogs.windows(app.process) if dialogs.title(window) == dialogs.title(program_dialog)]
         if sys.platform == 'win32':
             windows = [window for window in windows if window != program_dialog]
