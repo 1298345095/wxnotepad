@@ -14,8 +14,8 @@
 namespace {
 wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& background) {
     // Notepad4 CreateBars/BitmapAlphaBlend, 89b8b36, for light chrome. Its dark
-    // strokes disappear on dark chrome, where native disabled text supplies
-    // the foreground while the source alpha retains the original shape.
+    // strokes disappear on dark chrome. Map source luminance between native
+    // disabled text and background to retain interior detail as well as alpha.
     constexpr unsigned OriginalDisabledOpacity = 0x60;
     constexpr unsigned ChannelMaximum = 255;
     const bool dark = wxSystemSettings::GetAppearance().IsDark();
@@ -25,13 +25,15 @@ wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& bac
     wxVector<wxBitmap> images;
     for (const int size : {16, 24, 32, 40, 48}) {
         auto image = normal.GetBitmap(wxSize(size, size)).ConvertToImage();
+        if (dark) image = image.ConvertToGreyscale();
         auto* data = image.GetData();
         for (int byte = 0; byte < image.GetWidth() * image.GetHeight() * 3; ++byte)
-            data[byte] =
-                static_cast<unsigned char>(dark ? foreground[byte % 3]
-                                                : (data[byte] * OriginalDisabledOpacity +
-                                                   backdrop[byte % 3] * (ChannelMaximum - OriginalDisabledOpacity)) /
-                                                      ChannelMaximum);
+            data[byte] = static_cast<unsigned char>(
+                dark ? (foreground[byte % 3] * (ChannelMaximum - data[byte]) + backdrop[byte % 3] * data[byte]) /
+                           ChannelMaximum
+                     : (data[byte] * OriginalDisabledOpacity +
+                        backdrop[byte % 3] * (ChannelMaximum - OriginalDisabledOpacity)) /
+                           ChannelMaximum);
         images.emplace_back(image);
     }
     return wxBitmapBundle::FromBitmaps(images);
