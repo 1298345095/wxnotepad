@@ -110,6 +110,9 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.fonts.codeStyle = ReadString("Default Code Style", defaults.fonts.codeStyle, "Global Styles");
     values.fonts.textStyle = ReadString("Default Text Style", defaults.fonts.textStyle, "Global Styles");
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
+    values.autoSave.flags = ReadInt("AutoSaveOption", defaults.autoSave.flags);
+    values.autoSave.periodMilliseconds =
+        static_cast<uint32_t>(ReadInt("AutoSavePeriod", defaults.autoSave.periodMilliseconds));
     values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
     values.runCommandWidthDIP = std::max(0, ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
     auto& print = values.printing;
@@ -511,6 +514,9 @@ bool SettingsStore::Save(bool explicitSave) {
             WriteBool("UseDefaultCodeStyle", style.useCode, defaults.fonts.Scheme(scheme.language).useCode, section);
             WriteString("Default", style.defaultStyle, {}, section);
         }
+        WriteInt("AutoSaveOption", values.autoSave.flags, defaults.autoSave.flags);
+        WriteInt("AutoSavePeriod", static_cast<int32_t>(values.autoSave.periodMilliseconds),
+                 defaults.autoSave.periodMilliseconds);
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
         WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
         const auto& print = values.printing;

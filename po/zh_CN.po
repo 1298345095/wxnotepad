@@ -362,6 +362,10 @@ msgstr "长行标记(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小写(&L)\tCtrl+U"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr "手动删除备份(&M)。"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_MERGE_DUP.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
@@ -789,6 +793,14 @@ msgstr "自动闭合 HTML 和 XML 标签"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自动收缩水平滚动条"
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr "自动保存设置"
+
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr "自动保存设置..."
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr "自动"
@@ -813,6 +825,14 @@ msgstr "退格键在缩进处删除到制表位"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
 msgstr "反引号"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr "备份间隔（秒）(&S)："
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
+msgstr "备份间隔（秒）"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
@@ -1289,6 +1309,10 @@ msgstr "在选区内绘制块状光标(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr "启用多选(&M)"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
+msgstr "启用定期备份(&P)。"
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Enclose Selection"
@@ -1911,6 +1935,10 @@ msgstr "只有文件所有者才能更改所有者的写入权限。"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr "仅使用当前文档中的单词"
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
+msgstr "打开文件夹(&F)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
