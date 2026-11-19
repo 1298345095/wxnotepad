@@ -172,6 +172,7 @@ add_library(app_shell STATIC
     src/app/editor_print_job.cpp
     src/app/native_launch.cpp
     src/app/desktop_launch.cpp
+    src/app/document_tools.cpp
     src/app/new_window.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
@@ -349,6 +350,13 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_gui_program(document_tools tests/document_tools.cpp app_shell)
+    add_test(NAME original_document_tools COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>")
+    set_tests_properties(original_document_tools PROPERTIES TIMEOUT 60)
+    if(UNIX)
+        target_link_libraries(document_tools PRIVATE PkgConfig::GIO_UNIX)
+    endif()
     add_gui_program(new_window tests/new_window.cpp app_shell)
     add_test(NAME original_new_window COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario normal)

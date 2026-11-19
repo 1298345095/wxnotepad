@@ -29,6 +29,7 @@ struct OriginalSettings {
     FontSettings fonts;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
+    wxString openWithDirectory;
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
     bool showStatusbar = true;

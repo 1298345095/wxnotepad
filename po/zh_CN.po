@@ -132,6 +132,10 @@ msgstr "为匹配的行添加书签(&M)"
 msgid "&Boundary:"
 msgstr "边界(&B):"
 
+#: src/app/document_tools.cpp
+msgid "&Browse Directory..."
+msgstr "浏览目录(&B)..."
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -519,6 +523,10 @@ msgstr "保存(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "&Save\tCtrl+S"
 msgstr "保存(&S)\tCtrl+S"
+
+#: src/app/document_tools.cpp
+msgid "&Save Before Running Tools"
+msgstr "运行工具前保存(&S)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Search menu.
 #: src/app/editor_frame_commands.cpp
@@ -1053,6 +1061,18 @@ msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问
 msgid "Could not determine the file size."
 msgstr "无法确定文件大小。"
 
+#: src/app/document_tools.cpp
+msgid "Could not execute document"
+msgstr "无法执行文档"
+
+#: src/app/document_tools.cpp
+msgid "Could not load the desktop application entry."
+msgstr "无法加载桌面应用程序条目。"
+
+#: src/app/document_tools.cpp
+msgid "Could not open document with program"
+msgstr "无法使用所选程序打开文档"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -1079,6 +1099,10 @@ msgstr "无法打印“%s”。"
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
 msgstr "无法完整读取文件。"
+
+#: src/app/document_tools.cpp
+msgid "Could not read the program directory."
+msgstr "无法读取程序目录。"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Could not reload file"
@@ -1256,6 +1280,10 @@ msgstr "转义 C 字符(&P)\tCtrl+Alt+E"
 #: src/app/editor_frame_commands.cpp
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "转义 HTML/XML 字符(&M)\tAlt+Shift+X"
+
+#: src/app/document_tools.cpp
+msgid "Execute &Document\tCtrl+L"
+msgstr "执行文档(&D)\tCtrl+L"
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
@@ -1825,6 +1853,10 @@ msgstr "无"
 msgid "Normal"
 msgstr "正常"
 
+#: src/app/document_tools.cpp
+msgid "O&pen Document With..."
+msgstr "打开文档方式(&P)..."
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM 美国 (DOS-437)"
@@ -1865,6 +1897,10 @@ msgstr "作为 UTF-16LE 打开..."
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
 msgstr "作为 Windows-1252 打开..."
+
+#: src/app/document_tools.cpp
+msgid "Open Document With"
+msgstr "打开文档方式"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
@@ -2209,6 +2245,11 @@ msgstr "重新加载前保存对 %s 的修改？"
 #, c-format
 msgid "Save changes to %s before restarting?"
 msgstr "重新启动前保存对 %s 的修改？"
+
+#: src/app/document_tools.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
+msgstr "运行工具前保存对 %s 的更改吗？"
 
 #: src/app/editor_frame.cpp
 msgid "Save changes?"

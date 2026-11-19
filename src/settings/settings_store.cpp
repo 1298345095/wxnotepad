@@ -96,6 +96,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.fonts.textStyle = ReadString("Default Text Style", defaults.fonts.textStyle, "Global Styles");
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
+    const auto openWith = ReadString("OpenWithDir", {});
+    if (!openWith.empty()) values.openWithDirectory = RecentFiles::ExpandPath(openWith);
     auto& print = values.printing;
     print.header = static_cast<PrintHeader>(std::clamp(ReadInt("PrintHeader", std::to_underlying(print.header)),
                                                        std::to_underlying(PrintHeader::FilenameAndDateTime),
@@ -496,6 +498,8 @@ bool SettingsStore::Save(bool explicitSave) {
             WriteString("Default", style.defaultStyle, {}, section);
         }
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
+        WriteString("OpenWithDir", values.openWithDirectory.empty() ? wxString{} :
+                        RecentFiles::PortablePath(values.openWithDirectory, true, true), {});
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;
         WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
