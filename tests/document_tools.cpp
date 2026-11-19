@@ -132,7 +132,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     const auto preference = frame->GetMenuBar()->FindMenuItem("Tools", "Save Before Running Tools");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(execute), "named document enables Execute");
-    NativeKeys::Shortcut(frame, 'L');
+    NativeKeys::Shortcut(frame, 'L', true);
     WaitForChild("disk bytes", Name(path), Name(Root()));
     Require(editor->DocumentRevision() == revision && editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
                 editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 6 &&
@@ -169,6 +169,20 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(decision.prompts == 1 && editor->Send(Message::GetModify), "Discard keeps in-memory edits");
     }
     WaitForChild("disk bytes", Name(path), Name(Root()));
+    // Replacing the backing file with a directory makes the ordinary required
+    // Save fail on both platforms, without changing editor identity.
+    std::filesystem::remove(path);
+    std::filesystem::create_directory(path);
+    {
+        NativeDialogs::FileCommandDriver decision(NativeDialogs::FileDialogProfile::Save, wxID_YES);
+        ProgramDriver chooser(program, true);
+        Require(!frame->OpenDocumentWith(), "failed required save stops before chooser");
+        Require(decision.prompts == 1 && decision.errors == 1 && chooser.choosers == 0 &&
+                    editor->Send(Message::GetModify) && !std::filesystem::exists(Root() / "record.txt"),
+                "failed Save retains edits and prevents chooser and child");
+    }
+    std::filesystem::remove(path);
+    TestFiles::WriteBytes(path, "disk bytes");
     {
         NativeDialogs::FileCommandDriver decision(NativeDialogs::FileDialogProfile::Save, wxID_YES);
         Require(frame->ExecuteDocument(), "Save permits Execute");
