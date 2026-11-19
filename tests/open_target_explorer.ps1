@@ -18,6 +18,7 @@ for ($taskIndex = 1; $taskIndex -le 4; $taskIndex++) {
     $taskDirectory = $taskLines[0]
     $taskRequested[$taskDirectory] = $true
     $taskItem = $taskLines[1]
+    $taskCaller = if ($taskLines.Length -gt 2) { [uint32]$taskLines[2] } else { 0 }
     if (-not ([System.IO.Path]::GetFullPath($taskDirectory).StartsWith([System.IO.Path]::GetFullPath($Root), [StringComparison]::OrdinalIgnoreCase))) {
         throw 'Folder observation must remain inside the owned fixture root'
     }
@@ -41,7 +42,7 @@ for ($taskIndex = 1; $taskIndex -le 4; $taskIndex++) {
     if ($null -eq $taskMatched) {
         Write-Host ('Owned folder observations: ' + ($taskObserved | ConvertTo-Json -Compress))
         & "$PSScriptRoot/open_target_explorer_capture.ps1" -Root $Root -Evidence $Evidence `
-            -Directory $taskDirectory -Item $taskItem -Request $taskIndex -Shell $taskShell -Existing $taskExisting
+            -Directory $taskDirectory -Item $taskItem -Request $taskIndex -CallerPid $taskCaller -Shell $taskShell -Existing $taskExisting
         throw "Native Explorer did not select the owned item: $taskItem"
     }
     $taskRecord = [ordered]@{ hwnd = [string]$taskMatched.HWND; directory = $taskDirectory; selected = $taskItem }

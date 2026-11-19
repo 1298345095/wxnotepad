@@ -340,8 +340,11 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
                        '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
                        *compiler_launcher_arguments(compiler_cache)]), 'diagnostic-configure.log')
+    targets = ['wxnotepad', 'editing_keys', 'close_smoke']
+    if WINDOWS:
+        targets.append('open_targets')
     run(cmake_command(['--build', directory, '--config', 'Release', '--parallel', str(jobs),
-                       '--target', 'wxnotepad', 'editing_keys', 'close_smoke']), 'diagnostic-build.log')
+                       '--target', *targets]), 'diagnostic-build.log')
 
 
 def split_linux_symbols(binary, symbols):
@@ -527,7 +530,10 @@ def main():
         configure(False, coverage=True)
         build(False, arguments.jobs, coverage=True)
     elif arguments.command == 'diagnostic-test':
-        test(arguments.backend, (BUILD / 'diagnostic-cmake').resolve(), '^native_diagnostic_', 1, 'diagnostic-')
+        expression = '^native_diagnostic_'
+        if arguments.backend == 'windows':
+            expression = '(^native_diagnostic_|^original_open_targets$)'
+        test(arguments.backend, (BUILD / 'diagnostic-cmake').resolve(), expression, 1, 'diagnostic-')
     else:
         globals()[arguments.command]()
 

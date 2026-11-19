@@ -237,7 +237,8 @@ void FolderTarget(EditorFrame* frame) {
             static_cast<int>(apartment), static_cast<int>(qualifier), GetFileAttributesW(target.wc_str()));
         std::ofstream(root / ("folder-request-" + std::to_string(request)), std::ios::binary)
             << (openDirectory ? target : wxFileName(target).GetPath()).utf8_string() << '\n'
-            << (openDirectory ? wxString{} : target).utf8_string() << '\n';
+            << (openDirectory ? wxString{} : target).utf8_string() << '\n'
+            << GetCurrentProcessId() << '\n';
         NativeSearch::Command(frame,
                               frame->GetMenuBar()->FindMenuItem(menu, openDirectory ? "Open File, Folder, Link, etc."
                                                                                     : "Open Containing Folder"));
