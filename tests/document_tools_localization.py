@@ -60,12 +60,14 @@ def change_directory(fixture, app, program_dialog, browse_caption, destination):
         if sys.platform == 'win32':
             windows = [window for window in windows if window != program_dialog]
         else:
-            windows = [window for window in windows if window.get_role() == dialogs.atspi.Role.FILE_CHOOSER]
+            windows = [window for window in windows if window != program_dialog]
         if windows:
             folder = windows[-1]
             break
         time.sleep(.03)
-    assert folder is not None, 'native program-directory picker appeared'
+    assert folder is not None, ('native program-directory picker appeared',
+                               [(dialogs.title(window), window.get_role_name() if sys.platform != 'win32' else window)
+                                for window in dialogs.windows(app.process)])
     if sys.platform == 'win32':
         for child in dialogs.children(folder):
             kind = ctypes.create_unicode_buffer(256)

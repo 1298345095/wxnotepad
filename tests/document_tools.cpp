@@ -262,6 +262,30 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(decision.prompts == 1 && !editor->Send(Message::GetModify), "Save uses ordinary save point");
     }
     WaitForChild("disk bytes unsaved", Name(path), Name(Root()));
+    const auto failedPrograms = Root() / "failed-programs";
+    std::filesystem::create_directory(failedPrograms);
+#ifdef __WXMSW__
+    const auto brokenProgram = failedPrograms / "broken.exe";
+    TestFiles::WriteBytes(brokenProgram, "not an executable");
+#else
+    const auto brokenProgram = failedPrograms / "broken.desktop";
+    TestFiles::WriteBytes(brokenProgram, "[Desktop Entry]
+Type=Application
+Name=Missing owned program
+Exec=/missing-wxnotepad-owned-program-244 %f
+");
+#endif
+    const auto errorsBefore = launchErrors.errors;
+    settings.values.openWithDirectory = Name(failedPrograms);
+    {
+        ProgramDriver chooser(Name(brokenProgram.filename()));
+        Require(!frame->OpenDocumentWith(), "native program start failure is reported");
+    }
+    Require(launchErrors.errors == errorsBefore + 1 && frame->DocumentPath() == Name(path) &&
+                TestEditor::Text(frame) == "disk bytes unsaved" && !editor->Send(Message::GetModify) &&
+                !std::filesystem::exists(Root() / "record.txt"),
+            "failed launch retains the current document and reports one recoverable error");
+    settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
     std::fprintf(stderr, "phase: untitled\n");
     std::fflush(stderr);
     Require(frame->NewDocument(), "clean named document becomes untitled");
