@@ -24,6 +24,43 @@ int Command(EditorFrame* frame, const char* label) {
     return id;
 }
 #ifdef __WXMSW__
+// Elevated runners may enable SeRestorePrivilege, which lets SetFileAttributesW
+// bypass the fixture DACL. Disable only that privilege on an owned thread token
+// so the command still exercises a real native access-denied failure.
+class WithoutRestorePrivilege final {
+public:
+    WithoutRestorePrivilege() {
+        HANDLE source = nullptr;
+        Token process(nullptr, CloseHandle);
+        if (OpenThreadToken(GetCurrentThread(), TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE, TRUE, &source)) {
+            previous_.reset(source);
+        } else {
+            Require(GetLastError() == ERROR_NO_TOKEN, "read original thread token");
+            Require(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE, &source),
+                    "read fixture process token");
+            process.reset(source);
+        }
+        HANDLE duplicate = nullptr;
+        Require(DuplicateTokenEx(source, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES | TOKEN_IMPERSONATE, nullptr,
+                                 SecurityImpersonation, TokenImpersonation, &duplicate),
+                "duplicate fixture token without changing process privileges");
+        token_.reset(duplicate);
+        TOKEN_PRIVILEGES privilege{};
+        privilege.PrivilegeCount = 1;
+        Require(LookupPrivilegeValueW(nullptr, SE_RESTORE_NAME, &privilege.Privileges[0].Luid),
+                "locate native restore privilege");
+        // A token without this privilege already has the required access policy.
+        Require(AdjustTokenPrivileges(token_.get(), FALSE, &privilege, 0, nullptr, nullptr),
+                "disable attribute-write bypass on the duplicate token");
+        Require(SetThreadToken(nullptr, token_.get()), "scope attribute-denial token to the test thread");
+    }
+    ~WithoutRestorePrivilege() { SetThreadToken(nullptr, previous_.get()); }
+
+private:
+    using Token = std::unique_ptr<void, decltype(&CloseHandle)>;
+    Token previous_{nullptr, CloseHandle};
+    Token token_{nullptr, CloseHandle};
+};
 class AttributeWriteDenied final {
 public:
     explicit AttributeWriteDenied(const std::filesystem::path& path) : path_(path) {
@@ -43,6 +80,7 @@ public:
     ~AttributeWriteDenied() { SetFileSecurityW(path_.c_str(), DACL_SECURITY_INFORMATION, original_.data()); }
 
 private:
+    WithoutRestorePrivilege token_;
     std::filesystem::path path_;
     std::vector<unsigned char> original_;
 };
@@ -135,6 +173,12 @@ void OwnedFile(EditorFrame* frame, SettingsStore& settings) {
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, wxID_OK);
         NativeSearch::Command(frame, disk);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        std::fprintf(stderr,
+                     "native attribute denial: errors=%d choosers=%d attributes=0x%lx diskCheck=%d editing=%lld "
+                     "title=%s\n",
+                     driver.errors, driver.choosers, GetFileAttributesW(path.c_str()),
+                     frame->GetMenuBar()->IsChecked(disk), static_cast<long long>(editor->Send(Message::GetReadOnly)),
+                     frame->GetTitle().ToUTF8().data());
         Require(driver.errors == 1 && driver.choosers == 0 &&
                     (GetFileAttributesW(path.c_str()) & FILE_ATTRIBUTE_READONLY) &&
                     frame->GetMenuBar()->IsChecked(disk) && editor->Send(Message::GetReadOnly) &&

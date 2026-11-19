@@ -178,6 +178,7 @@ add_library(app_shell STATIC
     src/app/desktop_launch.cpp
     src/app/document_tools.cpp
     src/app/new_window.cpp
+    src/app/open_targets.cpp
     src/app/run_command.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
@@ -378,6 +379,14 @@ if(BUILD_TESTING)
         target_link_libraries(document_tools PRIVATE PkgConfig::GIO_UNIX)
     endif()
     add_gui_program(new_window tests/new_window.cpp app_shell)
+    add_gui_program(open_targets tests/open_targets.cpp app_shell)
+    add_test(NAME original_open_targets COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/open_targets_process.py" "$<TARGET_FILE:open_targets>")
+    set_tests_properties(original_open_targets PROPERTIES TIMEOUT 60)
+    add_test(NAME original_open_target_startup COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/open_target_startup.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_CURRENT_BINARY_DIR}")
+    set_tests_properties(original_open_target_startup PROPERTIES TIMEOUT 90)
     add_test(NAME original_new_window COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario normal)
     set_tests_properties(original_new_window PROPERTIES TIMEOUT 45)

@@ -11,6 +11,7 @@
 #include <wx/modalhook.h>
 #include <wx/textctrl.h>
 #include <filesystem>
+#include <fstream>
 #include <cstdio>
 #include <functional>
 #include <algorithm>
@@ -18,9 +19,6 @@
 #include <stdexcept>
 #ifdef __WXMSW__
 #include <shlobj.h>
-#else
-#include <csignal>
-#include <sys/resource.h>
 #endif
 
 namespace {
@@ -421,40 +419,62 @@ void UntitledAndFallback(EditorFrame& frame, const fs::path& root) {
     SetOptions(frame, true, false);
 }
 #ifndef __WXMSW__
-class ShortWriteLimit final {
+class BackupDirectoryWriteBlock final {
 public:
-    ShortWriteLimit() {
-        Require(getrlimit(RLIMIT_FSIZE, &original_) == 0, "reads owned process write limit");
-        previous_ = std::signal(SIGXFSZ, SIG_IGN);
-        const rlimit limited{1, original_.rlim_max};
-        Require(setrlimit(RLIMIT_FSIZE, &limited) == 0, "limits owned process to real one-byte writes");
+    explicit BackupDirectoryWriteBlock(fs::path directory)
+        : directory_(std::move(directory)), original_(fs::status(directory_).permissions()) {
+        constexpr auto WritePermissions = fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write;
+        fs::permissions(directory_, original_ & ~WritePermissions);
     }
-    ~ShortWriteLimit() {
-        setrlimit(RLIMIT_FSIZE, &original_);
-        std::signal(SIGXFSZ, previous_);
+    ~BackupDirectoryWriteBlock() {
+        std::error_code error;
+        fs::permissions(directory_, original_, error);
+        if (error)
+            std::fprintf(stderr, "FAIL: restore private backup directory permissions: %s\n", error.message().c_str());
     }
+    void Restore() const { fs::permissions(directory_, original_); }
 
 private:
-    rlimit original_{};
-    void (*previous_)(int) = SIG_DFL;
+    fs::path directory_;
+    fs::perms original_;
 };
 void FailedBackupRetry(EditorFrame& frame, const fs::path& root) {
     const auto folder = root / "retry";
     fs::create_directories(folder);
     const auto source = folder / "source.txt";
     TestFiles::WriteBytes(source, "original");
-    Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "opens real short-write fixture");
+    Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened,
+            "opens real filesystem-failure fixture");
+    const auto fallback = Fallback(root);
+    fs::create_directories(fallback);
+    Require(Backups(fallback).empty(), "private fallback starts without this fixture's backups");
     TestEditor::Append(&frame, "new-revision");
+    const auto originalSize = frame.GetSize();
     {
-        const ShortWriteLimit limited;
+        // Restrict only the two private backup destinations. A process-wide
+        // file-size limit would also reject Wayland's shared-memory ftruncate
+        // while this real timer test pumps native GUI events.
+        const BackupDirectoryWriteBlock siblingBlocked(folder);
+        const BackupDirectoryWriteBlock fallbackBlocked(fallback);
+        for (const auto& directory : {folder, fallback}) {
+            const std::ofstream denied(directory / "write-probe", std::ios::binary);
+            Require(!denied, "both private backup destinations reject actual filesystem writes");
+        }
+        // Resizing forces Wayland to allocate a new backing buffer while the
+        // backup failure is active, reproducing the old process-limit hazard.
+        frame.SetSize(originalSize + frame.FromDIP(wxSize(200, 100)));
         Pump(300);
-        Require(Backups(folder).empty(), "failed periodic writes remove incomplete files and stay silent");
+        Require(Backups(folder).empty() && Backups(fallback).empty(),
+                "failed periodic backups leave no incomplete files in either destination and stay silent");
+        siblingBlocked.Restore();
+        fallbackBlocked.Restore();
     }
+    frame.SetSize(originalSize);
     Wait([&] { return Backups(folder).size() == 1; }, "failed backup keeps same revision eligible for later period");
     Require(TestFiles::Bytes(Backups(folder).front()) == "originalnew-revision" &&
                 TestFiles::Bytes(source) == "original" && frame.DocumentIsModified(),
             "retry produces complete bytes without touching source/save point");
-    Require(frame.Save().status == SaveStatus::Saved, "save cleans retried backup");
+    Require(frame.Save().status == SaveStatus::Saved && Backups(folder).empty(), "save cleans retried backup");
 }
 #endif
 class PeriodicFixtureRoot {

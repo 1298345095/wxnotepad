@@ -395,6 +395,10 @@ msgstr ""
 msgid "&One Page"
 msgstr ""
 
+#: src/app/open_targets.cpp
+msgid "&Open File, Folder, Link, etc."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Open...\tCtrl+O"
 msgstr ""
@@ -643,6 +647,10 @@ msgstr ""
 
 #: src/editor/special_insert.h
 msgid "ASS — Activate &symmetric swapping"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Action on &Selection"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1068,12 +1076,24 @@ msgstr ""
 msgid "Could not open new window"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Could not open target"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not open the containing folder."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not open the destination for writing."
 msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
+msgstr ""
+
+#: src/app/open_targets.cpp
+msgid "Could not open the selected target."
 msgstr ""
 
 #. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
@@ -1871,6 +1891,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Open Containing &Folder"
 msgstr ""
 
 #: src/app/document_tools.cpp

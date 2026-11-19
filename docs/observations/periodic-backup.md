@@ -55,7 +55,8 @@ retains its own transition.
 `original_periodic_backup` drives the actual menu/dialog/timer and reads disk bytes
 independently. It covers continuous edits, interval reset, period boundaries,
 rotation, retention, manual revision interaction, cancelled/failed actions,
-reload/New/open/discard, untitled output and real Linux short-write retry.
+reload/New/open/discard, untitled output and real Linux filesystem-failure retry.
+The manual-backup fixture retains synchronous real short-write cleanup coverage.
 `original_periodic_backup_process` uses the real development bundler and shown
 application processes, native edits, Save/close/restart ownership and localized
 English/Simplified Chinese/Traditional Chinese dialogs with measured native layout
