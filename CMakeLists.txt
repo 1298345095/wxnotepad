@@ -173,6 +173,7 @@ add_library(app_shell STATIC
     src/app/native_launch.cpp
     src/app/desktop_launch.cpp
     src/app/new_window.cpp
+    src/app/run_command.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
@@ -232,6 +233,12 @@ include(cmake/Localization.cmake)
 
 include(CTest)
 if(BUILD_TESTING)
+    add_gui_program(run_command tests/run_command.cpp app_shell)
+    add_executable(run_command_child tests/run_command_child.cpp)
+    target_link_libraries(run_command_child PRIVATE wx::base)
+    add_dependencies(run_command run_command_child)
+    add_test(NAME original_run_command COMMAND run_command)
+    set_tests_properties(original_run_command PROPERTIES TIMEOUT 90)
     add_executable(date_time_format tests/date_time_format.cpp)
     target_link_libraries(date_time_format PRIVATE editor_runtime)
     if(MSVC)
