@@ -118,28 +118,43 @@ wxString TrimTarget(wxString text) {
 }
 std::optional<wxString> ExistingPath(const wxString& target, const wxString& document) {
     if (target.StartsWith("//")) return {};
-    const auto existing = [](wxFileName path) -> std::optional<wxString> {
-        if (!wxFileExists(path.GetFullPath()) && !wxDirExists(path.GetFullPath())) return {};
+    const auto existing = [](const wxString& candidate) -> std::optional<wxString> {
+#ifdef __WXMSW__
+        // Original EditOpenSelectionCheckFile checks the raw name first.
+        // wxFileName::GetFullPath normalizes DOS volumes, so doing that to an
+        // unclassified "filename:line:column" or URI can stall on a fake volume.
+        if (GetFileAttributesW(candidate.wc_str()) == INVALID_FILE_ATTRIBUTES) return {};
+#else
+        if (!wxFileExists(candidate) && !wxDirExists(candidate)) return {};
+#endif
+        wxFileName path(candidate);
         path.MakeAbsolute();
         return path.GetFullPath();
     };
-    if (const auto path = existing(wxFileName(target))) return path;
-    // Original expansion is only attempted for a leading environment variable,
-    // leaving percent-encoded URI bytes untouched. Use each host's notation.
+    if (const auto path = existing(target)) return path;
+    // Expand only leading native filesystem variables, preserving URL encoding.
 #ifdef __WXMSW__
-    const bool expand = target.StartsWith("%");
+    if (target.StartsWith("%")) {
+        const auto length = ExpandEnvironmentStringsW(target.wc_str(), nullptr, 0);
+        if (length != 0) {
+            std::wstring expanded(length, L'\0');
+            const auto count = ExpandEnvironmentStringsW(target.wc_str(), expanded.data(), length);
+            if (count != 0 && count <= length) {
+                expanded.resize(count - 1);
+                if (const auto path = existing(wxString(expanded))) return path;
+            }
+        }
+    }
 #else
-    const bool expand = target.StartsWith("$") || target.StartsWith("~");
-#endif
-    if (expand) {
+    if (target.StartsWith("$") || target.StartsWith("~")) {
         wxFileName expanded(target);
         expanded.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_TILDE | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE);
-        if (const auto path = existing(expanded)) return path;
+        if (const auto path = existing(expanded.GetFullPath())) return path;
     }
+#endif
     if (!document.empty() && wxFileName(target).IsRelative()) {
-        wxFileName relative(target);
-        relative.MakeAbsolute(wxFileName(document).GetPath());
-        if (const auto path = existing(relative)) return path;
+        const auto candidate = wxFileName(document).GetPathWithSep() + target;
+        if (const auto path = existing(candidate)) return path;
     }
     return {};
 }

@@ -35,17 +35,24 @@ public:
         return wxID_NONE;
     }
 };
+std::filesystem::path NativePath(const wxString& name) {
+#ifdef __WXMSW__
+    return std::filesystem::path(name.ToStdWstring());
+#else
+    return std::filesystem::path(name.utf8_string());
+#endif
+}
 std::filesystem::path Directory() {
     wxString name;
     Require(wxGetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", &name), "owned fixture directory must be configured");
-    return std::filesystem::path(name.ToStdWstring());
+    return NativePath(name);
 }
 void FileTarget(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto folder = Directory();
     const std::string contents = "first\nabcd中文\nlast\n";
     for (const auto& filename : {"target.txt", "目标 file.txt", "cwd-only.txt"})
-        std::ofstream(folder / std::filesystem::u8path(filename), std::ios::binary) << contents;
+        std::ofstream(folder / NativePath(wxString::FromUTF8(filename)), std::ios::binary) << contents;
     std::filesystem::create_directory(folder / "documents");
     std::ofstream(folder / "documents" / "parent.txt") << "source\n";
     std::ofstream(folder / "documents" / "doc-only.txt", std::ios::binary) << contents;
@@ -100,8 +107,8 @@ void FileTarget(EditorFrame* frame) {
     run("prefix target.txt(2,4): warning", 10, 10, "target.txt", 9);
     run("prefix target.txt:2:4 suffix", 10, 10, "target.txt", 9);
     run("[alt](./target.txt)", 12, 12, "target.txt", 0);
-    const auto quoted = "  '" + TestFiles::Filename(folder / std::filesystem::u8path("目标 file.txt")) + "'  ";
-    run(quoted, 0, quoted.utf8_string().size(), "目标 file.txt", 0);
+    const auto quoted = "  '" + TestFiles::Filename(folder / NativePath(wxString::FromUTF8("目标 file.txt"))) + "'  ";
+    run(quoted, 0, static_cast<intptr_t>(quoted.utf8_string().size()), "目标 file.txt", 0);
     run(wxString::FromUTF8("目标 file.txt"), 3, 3, "目标 file.txt", 0, true);
     wxSetEnv("WXNOTEPAD_OPEN_DIR", TestFiles::Filename(folder));
 #ifdef __WXMSW__
@@ -109,7 +116,7 @@ void FileTarget(EditorFrame* frame) {
 #else
     const wxString variable = "$WXNOTEPAD_OPEN_DIR/target.txt";
 #endif
-    run(variable, 0, variable.utf8_string().size(), "target.txt", 0);
+    run(variable, 0, static_cast<intptr_t>(variable.utf8_string().size()), "target.txt", 0);
     editor->Send(Message::SetSavePoint);
     Require(frame->Open(TestFiles::Filename(folder / "documents" / "parent.txt")).status == OpenStatus::Opened,
             "relative-target source opens in its own directory");
@@ -147,7 +154,7 @@ void DesktopTarget(EditorFrame* frame) {
         const auto marker = Directory() / "desktop-received";
         std::filesystem::remove(marker);
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(input.c_str()));
-        editor->Send(Message::SetSel, 0, input.size());
+        editor->Send(Message::SetSel, 0, static_cast<intptr_t>(input.size()));
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Open File, Folder, Link, etc."));
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
         while (!std::filesystem::exists(marker) && std::chrono::steady_clock::now() < deadline) {
@@ -161,7 +168,8 @@ void DesktopTarget(EditorFrame* frame) {
         Require(TestFiles::Bytes(marker) == expected + "\n",
                 "desktop association receives exact independently specified target");
         Require(TestEditor::Text(frame) == input, "desktop action preserves source bytes");
-        TestEditor::RequireSelection(editor, 0, input.size(), "desktop action preserves source selection");
+        TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(input.size()),
+                                     "desktop action preserves source selection");
         std::printf("PASS: desktop input %s -> %s\n", input.c_str(), expected.c_str());
     };
     run("wx242://host:4321/path%20name", "wx242://host:4321/path%20name");
@@ -205,11 +213,11 @@ void FolderTarget(EditorFrame* frame) {
     run(root / "documents" / "parent.txt", "File");
     const std::string file = "target.txt:2:4";
     frame->Editor()->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(file.c_str()));
-    frame->Editor()->Send(Message::SetSel, 0, file.size());
+    frame->Editor()->Send(Message::SetSel, 0, static_cast<intptr_t>(file.size()));
     run(root / "target.txt", "Tools");
     const std::string directory = "documents";
     frame->Editor()->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(directory.c_str()));
-    frame->Editor()->Send(Message::SetSel, 0, directory.size());
+    frame->Editor()->Send(Message::SetSel, 0, static_cast<intptr_t>(directory.size()));
     run(root / "documents", "Tools");
     run(root / "documents", "Tools", true);
 #elif defined(__WXGTK__)
@@ -229,7 +237,7 @@ void FolderTarget(EditorFrame* frame) {
     std::filesystem::remove(marker);
     const std::string target = "target.txt:2:4";
     frame->Editor()->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(target.c_str()));
-    frame->Editor()->Send(Message::SetSel, 0, target.size());
+    frame->Editor()->Send(Message::SetSel, 0, static_cast<intptr_t>(target.size()));
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Open Containing Folder"));
     wait();
     Require(TestFiles::Bytes(marker) == "file://" + TestFiles::Filename(root / "target.txt").utf8_string() + "\n",
@@ -294,14 +302,22 @@ class OpenTargetApp final : public wxApp {
 
 public:
     bool OnInit() override {
+        if (argc == 4 && wxString(argv[1]) == "--desktop-target")
+            wxSetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", wxString(argv[3]));
+#ifdef __WXMSW__
+        const auto log = Directory() / ("native-" + std::to_string(wxGetProcessId()));
+        _wfreopen((log.wstring() + L".stdout.log").c_str(), L"wb", stdout);
+        _wfreopen((log.wstring() + L".stderr.log").c_str(), L"wb", stderr);
+#endif
         std::setvbuf(stdout, nullptr, _IONBF, 0);
+        std::printf("BEGIN process %lu argc=%d\n", wxGetProcessId(), argc);
 #ifdef __WXGTK__
         if (argc == 2 && wxString(argv[1]) == "--file-manager") {
             RunOwnedFileManager(Directory());
             return false;
         }
 #endif
-        if (argc == 3 && wxString(argv[1]) == "--desktop-target") {
+        if (argc >= 3 && wxString(argv[1]) == "--desktop-target") {
             std::ofstream(Directory() / "desktop-received.tmp", std::ios::binary)
                 << wxString(argv[2]).utf8_string() << '\n';
             std::filesystem::rename(Directory() / "desktop-received.tmp", Directory() / "desktop-received");

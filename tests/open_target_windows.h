@@ -6,12 +6,11 @@
 #include <wx/stdpaths.h>
 #include <stdexcept>
 
-// Process-local registry views isolate native ShellExecute association lookup.
-// The live user Classes/UserChoice trees are never modified.
+// A process-local Classes view redirects each existing protocol ProgId to the
+// owned recorder. The live Classes/UserChoice trees are never modified.
 class OwnedTargetAssociations final {
     HKEY storage_ = nullptr;
     HKEY classes_ = nullptr;
-    HKEY user_ = nullptr;
     std::wstring key_;
 
     static void Check(LSTATUS result) {
@@ -33,17 +32,28 @@ public:
             Check(RegCreateKeyExW(HKEY_CURRENT_USER, key_.c_str(), 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &storage_,
                                   nullptr));
             Check(RegCreateKeyExW(storage_, L"Classes", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &classes_, nullptr));
-            Check(RegCreateKeyExW(storage_, L"User", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &user_, nullptr));
             const std::wstring executable = wxStandardPaths::Get().GetExecutablePath().ToStdWstring();
-            const auto command = L"\"" + executable + L"\" --desktop-target \"%1\"";
+            wxString recorderDirectory;
+            if (!wxGetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", &recorderDirectory))
+                throw std::runtime_error("owned recorder directory must be configured");
+            const auto command =
+                L"\"" + executable + L"\" --desktop-target \"%1\" \"" + recorderDirectory.ToStdWstring() + L"\"";
             for (const wchar_t* scheme : {L"http", L"https", L"mailto", L"wx242"}) {
                 Value(scheme, nullptr, L"URL:owned target recorder");
                 Value(scheme, L"URL Protocol", L"");
                 Value(std::wstring(scheme) + L"\\shell\\open\\command", nullptr, command);
+                // Known protocols resolve the user's existing protected ProgId.
+                // Read that identity and shadow its command only in this process.
+                const auto choice = L"Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\" +
+                                    std::wstring(scheme) + L"\\UserChoice";
+                wchar_t program[512]{};
+                DWORD bytes = sizeof(program);
+                if (RegGetValueW(HKEY_CURRENT_USER, choice.c_str(), L"ProgId", RRF_RT_REG_SZ, nullptr, program,
+                                 &bytes) == ERROR_SUCCESS)
+                    Value(std::wstring(program) + L"\\shell\\open\\command", nullptr, command);
             }
             Value(L".wx242", nullptr, L"wx242file");
             Value(L"wx242file\\shell\\open\\command", nullptr, command);
-            Check(RegOverridePredefKey(HKEY_CURRENT_USER, user_));
             Check(RegOverridePredefKey(HKEY_CLASSES_ROOT, classes_));
             for (const wchar_t* scheme : {L"http", L"https", L"mailto", L"wx242"}) {
                 wchar_t selected[32768]{};
@@ -66,8 +76,6 @@ public:
 private:
     void Restore() {
         RegOverridePredefKey(HKEY_CLASSES_ROOT, nullptr);
-        RegOverridePredefKey(HKEY_CURRENT_USER, nullptr);
-        if (user_) RegCloseKey(user_);
         if (classes_) RegCloseKey(classes_);
         if (storage_) RegCloseKey(storage_);
         RegDeleteTreeW(HKEY_CURRENT_USER, key_.c_str());

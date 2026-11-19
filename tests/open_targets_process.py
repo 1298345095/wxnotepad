@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 import shutil
+from resource_process import process_windows
 
 
 def main():
@@ -14,6 +15,11 @@ def main():
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
+        if sys.platform == "win32":
+            # Shell association dispatch may come from the desktop process,
+            # whose environment does not include this fixture's PATH.
+            for library in source.parent.glob("*.dll"):
+                shutil.copy2(library, folder / library.name)
         (folder / "parent.txt").write_bytes(b"parent fixture\n")
         environment = dict(os.environ, WXNOTEPAD_OPEN_TARGET_ROOT=str(folder),
                            PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
@@ -52,7 +58,18 @@ def main():
                     assert manager.poll() is None, "owned file-manager service must stay running"
                     time.sleep(0.01)
                 assert (folder / "filemanager-ready").exists(), "owned file-manager service must acquire its name"
-            subprocess.run([str(executable)], cwd=folder, env=environment, check=True, timeout=45)
+            app = subprocess.Popen([str(executable)], cwd=folder, env=environment)
+            try:
+                assert app.wait(timeout=45) == 0, "native target fixture must complete successfully"
+            except BaseException:
+                print("Owned native windows:", process_windows(app), flush=True)
+                for log in sorted(folder.glob("native-*.log")):
+                    print(log.name + ":\n" + log.read_text(encoding="utf-8", errors="replace"), flush=True)
+                raise
+            finally:
+                if app.poll() is None:
+                    app.terminate()
+                    app.wait(timeout=10)
             if sys.platform == "win32":
                 assert manager.wait(timeout=10) == 0, "actual Explorer folder/item observations must succeed"
         finally:
