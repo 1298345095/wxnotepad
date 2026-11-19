@@ -104,12 +104,17 @@ private:
         }
         wxArrayString names;
         wxString name;
-        for (bool found = directory.GetFirst(&name, {}, wxDIR_FILES); found; found = directory.GetNext(&name)) {
+#ifdef __WXMSW__
+        constexpr int ProgramEntries = wxDIR_FILES | wxDIR_DIRS;
+#else
+        constexpr int ProgramEntries = wxDIR_FILES;
+#endif
+        for (bool found = directory.GetFirst(&name, {}, ProgramEntries); found; found = directory.GetNext(&name)) {
 #ifndef __WXMSW__
             const wxFileName file(directory_, name);
             if (file.GetExt() != "desktop" && access(file.GetFullPath().utf8_str(), X_OK) != 0) continue;
-            if (file.GetExt() == "exe" || file.GetExt() == "lnk" || file.GetExt() == "bat" || file.GetExt() == "cmd")
-                continue;
+            const auto extension = file.GetExt().Lower();
+            if (extension == "exe" || extension == "lnk" || extension == "bat" || extension == "cmd") continue;
 #endif
             names.push_back(name);
         }
