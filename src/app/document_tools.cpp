@@ -12,7 +12,7 @@
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
-#include <wx/stattext.h>
+#include <wx/textctrl.h>
 #include <wx/stdpaths.h>
 #include <wx/log.h>
 #include <wx/utils.h>
@@ -49,7 +49,7 @@ public:
           directory_(directory) {
         if (directory_.empty()) directory_ = DefaultProgramDirectory();
         auto* layout = new wxBoxSizer(wxVERTICAL);
-        path_ = new wxStaticText(this, wxID_ANY, directory_);
+        path_ = new wxTextCtrl(this, wxID_ANY, directory_, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
         path_->SetName("open-with-directory");
         layout->Add(path_, 0, wxEXPAND | wxALL, FromDIP(8));
         programs_ = new wxListBox(this, wxID_ANY);
@@ -91,7 +91,8 @@ public:
 private:
     void UpdateSelection() { FindWindow(wxID_OK)->Enable(programs_->GetSelection() != wxNOT_FOUND); }
     void Fill() {
-        path_->SetLabel(directory_);
+        path_->ChangeValue(directory_);
+        path_->SetToolTip(directory_);
         programs_->Clear();
         paths_.clear();
         wxDir directory(directory_);
@@ -121,7 +122,7 @@ private:
         Layout();
     }
     wxString& directory_;
-    wxStaticText* path_;
+    wxTextCtrl* path_;
     wxListBox* programs_;
     std::vector<wxString> paths_;
 };

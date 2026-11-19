@@ -7,6 +7,7 @@
 #include <wx/wx.h>
 #include <wx/listbox.h>
 #include <wx/stattext.h>
+#include <wx/textctrl.h>
 #include <wx/stdpaths.h>
 #include <wx/ffile.h>
 #include <wx/dialog.h>
@@ -139,8 +140,8 @@ public:
             }
             return;
         }
-        const auto* label = dynamic_cast<wxStaticText*>(dialog_->FindWindowByName("open-with-directory", dialog_));
-        if (label && label->GetLabel() == directory_) {
+        const auto* path = dynamic_cast<wxTextCtrl*>(dialog_->FindWindowByName("open-with-directory", dialog_));
+        if (path && path->GetValue() == directory_) {
             changed = true;
             Stop();
             wxCommandEvent cancel(wxEVT_BUTTON, wxID_CANCEL);
