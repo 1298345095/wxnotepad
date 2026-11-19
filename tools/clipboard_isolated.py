@@ -138,7 +138,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
             if request.startswith("trace:"):
                 _, identity, request = request.split(":", 2)
                 trace_gesture = identity if identity.isdecimal() else "0"
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "click:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -285,6 +285,12 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     acknowledge(focus)
                     xdo("mousemove", str(x), str(y))
                     xdo("click", str(button))
+                elif request.startswith(("keydown:", "keyup:")):
+                    phase, key = request.split(":", 1)
+                    acknowledge(focus)
+                    driver_trace(focus, "driver.inject-begin", phase)
+                    xdo(phase, key)
+                    driver_trace(focus, "driver.inject-complete", phase)
                 elif request.startswith("key:"):
                     acknowledge(focus)
                     driver_trace(focus, "driver.inject-begin", "key-press-release")
