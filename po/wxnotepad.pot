@@ -123,6 +123,10 @@ msgstr ""
 msgid "&Boundary:"
 msgstr ""
 
+#: src/app/document_tools.cpp
+msgid "&Browse Directory..."
+msgstr ""
+
 #: src/app/run_command.cpp
 msgid "&Browse..."
 msgstr ""
@@ -480,6 +484,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Save\tCtrl+S"
+msgstr ""
+
+#: src/app/document_tools.cpp
+msgid "&Save Before Running Tools"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1031,8 +1039,16 @@ msgstr ""
 msgid "Could not determine the file size."
 msgstr ""
 
-#: src/app/desktop_launch.cpp
+#: src/app/document_tools.cpp
+msgid "Could not execute document"
+msgstr ""
+
+#: src/app/desktop_launch.cpp src/app/document_tools.cpp
 msgid "Could not load the desktop application entry."
+msgstr ""
+
+#: src/app/document_tools.cpp
+msgid "Could not open document with program"
 msgstr ""
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
@@ -1070,6 +1086,10 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
+msgstr ""
+
+#: src/app/document_tools.cpp
+msgid "Could not read the program directory."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1248,6 +1268,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
+msgstr ""
+
+#: src/app/document_tools.cpp
+msgid "Execute &Document\tCtrl+L"
 msgstr ""
 
 #: src/editor/special_insert.h
@@ -1778,6 +1802,10 @@ msgstr ""
 msgid "Normal"
 msgstr ""
 
+#: src/app/document_tools.cpp
+msgid "O&pen Document With..."
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr ""
@@ -1825,6 +1853,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
+msgstr ""
+
+#: src/app/document_tools.cpp
+msgid "Open Document With"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -2169,7 +2201,7 @@ msgstr ""
 msgid "Save changes to %s before restarting?"
 msgstr ""
 
-#: src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr ""

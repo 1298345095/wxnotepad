@@ -5,9 +5,10 @@
 #include <vector>
 
 namespace RecentFiles {
+enum class PathKind { File, Directory };
 inline constexpr int MinimumCapacity = OriginalSettingLimits::MinRecentFiles;
 bool Equal(const wxString& left, const wxString& right);
 void Add(std::vector<wxString>& history, const wxString& path, int capacity);
 wxString ExpandPath(wxString path);
-wxString PortablePath(const wxString& path, bool relative, bool portableDocuments);
+wxString PortablePath(const wxString& path, bool relative, bool portableDocuments, PathKind kind = PathKind::File);
 } // namespace RecentFiles
