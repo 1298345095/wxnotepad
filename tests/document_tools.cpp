@@ -246,6 +246,7 @@ public:
         auto command = classKey_ + wxString(wxUniChar(92)) + "shell" + wxString(wxUniChar(92)) + "open" +
                        wxString(wxUniChar(92)) + "command";
         RegistryString(command, "\"" + executable + "\" --record \"" + Name(Root()) + "\" \"%1\"");
+        SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 #else
         const auto desktop = Root() / "data" / "applications" / "handler.desktop";
         std::filesystem::create_directories(desktop.parent_path());
@@ -263,6 +264,7 @@ public:
 #ifdef __WXMSW__
         RegDeleteTreeW(HKEY_CURRENT_USER, key_.wc_str());
         RegDeleteTreeW(HKEY_CURRENT_USER, classKey_.wc_str());
+        SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 #endif
     }
 
