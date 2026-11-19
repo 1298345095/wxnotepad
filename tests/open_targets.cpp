@@ -14,6 +14,9 @@
 #include <filesystem>
 #include <fstream>
 #include <chrono>
+#ifdef __WXMSW__
+#include <objbase.h>
+#endif
 #ifdef __WXGTK__
 #include <gio/gio.h>
 #endif
@@ -223,8 +226,15 @@ void FolderTarget(EditorFrame* frame) {
     const auto run = [&](const std::filesystem::path& item, const char* menu, bool openDirectory = false) {
         ++request;
         const auto target = TestFiles::Filename(item);
+        APTTYPE apartment{};
+        APTTYPEQUALIFIER qualifier{};
+        const auto apartmentResult = CoGetApartmentType(&apartment, &qualifier);
         std::printf("BEGIN: native Explorer request %d directory=%d target=%s cwd=%s\n", request, openDirectory,
                     target.utf8_str().data(), wxGetCwd().utf8_str().data());
+        std::printf(
+            "Native Explorer caller pid=%lu thread=%lu com_result=%08lx apartment=%d qualifier=%d attributes=%08lx\n",
+            GetCurrentProcessId(), GetCurrentThreadId(), static_cast<unsigned long>(apartmentResult),
+            static_cast<int>(apartment), static_cast<int>(qualifier), GetFileAttributesW(target.wc_str()));
         std::ofstream(root / ("folder-request-" + std::to_string(request)), std::ios::binary)
             << (openDirectory ? target : wxFileName(target).GetPath()).utf8_string() << '\n'
             << (openDirectory ? wxString{} : target).utf8_string() << '\n';
