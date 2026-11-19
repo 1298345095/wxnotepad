@@ -232,12 +232,25 @@ void FolderTarget(EditorFrame* frame) {
                               frame->GetMenuBar()->FindMenuItem(menu, openDirectory ? "Open File, Folder, Link, etc."
                                                                                     : "Open Containing Folder"));
         const auto done = root / ("folder-done-" + std::to_string(request));
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+        const auto started = std::chrono::steady_clock::now();
+        const auto deadline = started + std::chrono::seconds(20);
         while (!std::filesystem::exists(done) && std::chrono::steady_clock::now() < deadline) {
             wxYield();
             wxMilliSleep(10);
         }
-        Require(std::filesystem::exists(done) && TestFiles::Bytes(done) == "ok\n",
+        const bool acknowledged = std::filesystem::exists(done);
+        const auto response = acknowledged ? TestFiles::Bytes(done) : std::string{};
+        if (!acknowledged || response != "ok\n") {
+            const auto elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started);
+            std::fprintf(stderr,
+                         "Explorer acknowledgement request=%d exists=%d elapsed_ms=%lld bytes=%zu hex=", request,
+                         acknowledged, static_cast<long long>(elapsed.count()), response.size());
+            for (const unsigned char byte : response)
+                std::fprintf(stderr, "%02x", byte);
+            std::fputc('\n', stderr);
+        }
+        Require(acknowledged && response == "ok\n",
                 "native Explorer must display the owned directory and select the exact owned item");
     };
     run(root / "documents" / "parent.txt", "File");

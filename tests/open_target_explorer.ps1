@@ -58,7 +58,11 @@ for ($taskIndex = 1; $taskIndex -le 4; $taskIndex++) {
         } while ($taskStillPresent -and $taskCloseWatch.Elapsed.TotalSeconds -lt 5)
         if ($taskStillPresent) { throw 'Owned Explorer window must finish closing before the next selection request' }
     }
-    [System.IO.File]::WriteAllText((Join-Path $Root "folder-done-$taskIndex"), "ok`n")
+    # Publish only after the complete acknowledgement is closed; the native
+    # reader checks existence before independently reading the exact bytes.
+    $taskDone = Join-Path $Root "folder-done-$taskIndex"
+    [System.IO.File]::WriteAllText("$taskDone.tmp", "ok`n")
+    [System.IO.File]::Move("$taskDone.tmp", $taskDone)
 }
 
 } finally {
