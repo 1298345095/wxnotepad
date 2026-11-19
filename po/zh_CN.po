@@ -1104,6 +1104,10 @@ msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问
 msgid "Could not determine the file size."
 msgstr "无法确定文件大小。"
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr ""
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"

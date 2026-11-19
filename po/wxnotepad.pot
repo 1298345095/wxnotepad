@@ -1011,6 +1011,10 @@ msgstr ""
 msgid "Could not determine the file size."
 msgstr ""
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr ""
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"

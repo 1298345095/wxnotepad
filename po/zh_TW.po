@@ -1199,6 +1199,10 @@ msgstr "無法在目的檔案旁建立暫存檔案。請檢查資料夾及存取
 msgid "Could not determine the file size."
 msgstr "無法判斷檔案大小。"
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr ""
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
