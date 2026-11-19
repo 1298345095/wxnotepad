@@ -8,6 +8,7 @@
 #include <wx/filename.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <algorithm>
 #include <utility>
 #include <stdexcept>
 
@@ -179,10 +180,12 @@ void Shortcut(EditorFrame* frame) {
 #endif
     Layout(frame);
 }
+int RowCenterY(EditorControl* editor, intptr_t rowTop) {
+    return static_cast<int>(rowTop + editor->Send(Message::TextHeight, 0) / 2);
+}
 void MouseSelect(EditorControl* editor, intptr_t position, bool extend) {
     const int x = static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)) + 2;
-    const int y = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
-                                   editor->Send(Message::TextHeight, 0) / 2);
+    const int y = RowCenterY(editor, editor->Send(Message::PointYFromPosition, 0, position));
 #ifdef __WXMSW__
     const auto handle = static_cast<HWND>(editor->GetHandle());
     const auto modifiers = extend ? MK_SHIFT : 0;
@@ -298,6 +301,7 @@ public:
                 editor->Send(ScrollCaret);
                 Layout(frame);
                 const auto rows = editor->Send(WrapCount, 0);
+                const auto continuationHitY = editor->Send(TextHeight, 0) + 2;
 #ifdef __WXMSW__
                 const auto firstVisible = editor->Send(GetFirstVisibleLine);
 #endif
@@ -307,6 +311,23 @@ public:
 #ifdef __WXMSW__
                 Require(editor->Send(GetFirstVisibleLine) == firstVisible,
                         "native resizing preserves the original physical viewport");
+                // Keep the full caret row and both later continuation-row input
+                // points inside the viewport after native chrome is laid out.
+                const int lineHeight = static_cast<int>(editor->Send(TextHeight, 0));
+                const int continuationMouseY = RowCenterY(editor, lineHeight);
+                const int requiredHeight =
+                    std::max({lineHeight, static_cast<int>(continuationHitY) + 1, continuationMouseY + 1});
+                const int missingHeight = requiredHeight - editor->GetClientSize().y;
+                if (missingHeight > 0) {
+                    frame->SetSize(frame->GetSize() + wxSize(0, missingHeight));
+                    Layout(frame);
+                }
+                Require(editor->GetClientSize().y >= lineHeight,
+                        "the resize fixture has a complete native text row for caret visibility");
+                Require(continuationHitY < editor->GetClientSize().y && continuationMouseY < editor->GetClientSize().y,
+                        "the continuation-row hit and mouse points lie inside the native viewport");
+                Require(editor->Send(GetFirstVisibleLine) == firstVisible,
+                        "viewport-height setup preserves the original physical top line");
                 editor->Send(ScrollCaret);
                 Layout(frame);
 #endif
@@ -338,7 +359,7 @@ public:
                 Require(editor->Send(GetWrapMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Auto)) &&
                             frame->GetMenuBar()->IsChecked(wrap) && editor->Send(WrapCount, 0) > 1,
                         "native shortcut enables character fallback for an unbroken line");
-                const auto secondRow = editor->Send(PositionFromPointClose, 70, editor->Send(TextHeight, 0) + 2);
+                const auto secondRow = editor->Send(PositionFromPointClose, 70, continuationHitY);
                 Require(secondRow > 0 && secondRow < 400, "hit testing on a continuation row returns a byte position");
                 MouseSelect(editor, 0, false);
                 MouseSelect(editor, secondRow, true);
