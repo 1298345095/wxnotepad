@@ -406,14 +406,23 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     Shortcut(documentShortcut, Name(path));
     Shortcut(shortcuts / "program.lnk", wxStandardPaths::Get().GetExecutablePath());
     Require(frame->Open(Name(documentShortcut)).status == OpenStatus::Opened, "open the named shortcut document");
+    const auto shortcutIdentity = frame->DocumentPath();
+    const auto shortcutEncoding = frame->DocumentEncoding();
+    const auto shortcutDirty = editor->Send(Message::GetModify);
+    const auto shortcutText = TestEditor::Text(frame);
+    const auto shortcutRevision = editor->DocumentRevision();
+    const auto shortcutUndo = editor->Send(Message::CanUndo);
     settings.values.openWithDirectory = Name(shortcuts);
     {
         ProgramDriver chooser("program.lnk");
         Require(frame->OpenDocumentWith(), "Windows program shortcut remains usable in the program directory");
     }
     WaitForChild("disk bytes unsaved", Name(path), Name(Root()));
-    Require(frame->DocumentPath() == Name(documentShortcut) && !editor->Send(Message::GetModify),
-            "resolving the document shortcut affects only the external argument");
+    Require(
+        frame->DocumentPath() == shortcutIdentity && frame->DocumentEncoding() == shortcutEncoding &&
+            editor->Send(Message::GetModify) == shortcutDirty && TestEditor::Text(frame) == shortcutText &&
+            editor->DocumentRevision() == shortcutRevision && editor->Send(Message::CanUndo) == shortcutUndo,
+        "resolving the document shortcut retains the actual loaded identity, encoding, dirty state, text and history");
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "restore the ordinary named document");
 #endif
     const auto failedPrograms = Root() / "failed-programs";

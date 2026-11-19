@@ -2,11 +2,9 @@
 import argparse
 import ctypes
 from ctypes import wintypes
-import os
 from pathlib import Path
 import sys
 import tempfile
-import time
 from localization_process import Acceptance, PREFERENCE
 from localization_package import menus, read_settings
 from localization_layout import capture_and_check
@@ -68,6 +66,7 @@ def main():
                 assert menus(app.state)[ids[save_tools]]['checked'] == '1'
                 app.begin('menu', str(ids[open_with]))
                 window = fixture.dialogs.wait(app.process, title)
+                assert browse in [plain(text) for text in fixture.dialogs.texts(window)]
                 capture(fixture, app, window, fixture.logs / f'open-with-{code}.png')
                 fixture.dialogs.click(window, 'Cancel' if sys.platform != 'win32' or code == 'en' else '取消')
                 app.finish()
