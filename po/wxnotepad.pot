@@ -123,6 +123,10 @@ msgstr ""
 msgid "&Boundary:"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr ""
@@ -146,6 +150,10 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Command:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -454,6 +462,14 @@ msgstr ""
 msgid "&Right."
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Save"
 msgstr ""
@@ -629,6 +645,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All Files (*)"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -844,6 +864,10 @@ msgstr ""
 msgid "Choose an existing file to open."
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "Choose program"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr ""
@@ -987,6 +1011,10 @@ msgstr ""
 msgid "Could not determine the file size."
 msgstr ""
 
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
+msgstr ""
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -1035,6 +1063,11 @@ msgstr ""
 
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
+msgstr ""
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
 msgstr ""
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
@@ -1865,6 +1898,10 @@ msgstr ""
 msgid "Print zoom (%d%% to %d%%):"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr ""
@@ -2016,6 +2053,10 @@ msgstr ""
 msgid "Right:"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr ""
@@ -2098,6 +2139,11 @@ msgstr ""
 #: src/app/new_window.cpp
 #, c-format
 msgid "Save changes to %s before restarting?"
+msgstr ""
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -2403,6 +2449,14 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Text files (*.txt)"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
 msgstr ""
 
 #: src/app/editor_frame_file_watching.cpp
