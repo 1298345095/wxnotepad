@@ -277,7 +277,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     TestFiles::WriteBytes(path, "disk bytes");
     Association association;
     LaunchErrors launchErrors;
-    std::fprintf(stderr, "phase: Ctrl+L\n");
+    std::fprintf(stderr, "phase: direct Execute menu\n");
     std::fflush(stderr);
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "open named document");
     auto* editor = frame->Editor();
