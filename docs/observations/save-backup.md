@@ -18,7 +18,8 @@ The original uses exclusive creation and never overwrites a backup. If creating
 the sibling fails, it tries the same leaf name in the fallback directory and
 adds `AutoSave for `, the full source path, and the active document EOL. A write
 failure removes the newly created incomplete file and does not retry elsewhere.
-Creation or write failures remain silent. There is no scheduled rotation.
+Creation or write failures remain silent. Manual backups stay untracked by
+[periodic rotation and cleanup](periodic-backup.md).
 
 The typical name is `name.ext YYYYMMDD HHMMSS.ext`, based on local time. The
 unnamed prefix is literally `Untitled`, and the default extension is `.bak`.

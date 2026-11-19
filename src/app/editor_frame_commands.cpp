@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
 #include "app/editor_print_job.h"
 #include "app/localization.h"
@@ -2139,6 +2140,16 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
 
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
+    const int autoSave = wxWindow::NewControlId();
+    view->Append(autoSave, _("AutoSave Settings..."));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoSaveSettingsDialog(this, preferences.autoSave))
+                document_.ConfigureAutoSave(preferences.autoSave);
+        },
+        autoSave);
     AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
     const int wordWrapSettings = wxWindow::NewControlId();

@@ -11,6 +11,7 @@
 #include "editor/word_completion.h"
 #include "settings/file_watching_options.h"
 #include "settings/print_options.h"
+#include "settings/auto_save_options.h"
 #include "syntax/syntax_catalog.h"
 #include <ScintillaTypes.h>
 #include <wx/string.h>
@@ -54,6 +55,7 @@ struct OriginalSettings {
     bool fixTrailingBlanks = false;
     PrintOptions printing;
     FileWatchingOptions fileWatching;
+    AutoSaveOptions autoSave;
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;
     int renderingTechnology = std::to_underlying(Scintilla::Technology::DirectWrite);

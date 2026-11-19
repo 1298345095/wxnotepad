@@ -147,6 +147,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/app/dialogs/auto_completion_settings_dialog.cpp
+    src/app/dialogs/auto_save_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/word_wrap_settings_dialog.cpp
@@ -405,6 +406,11 @@ if(BUILD_TESTING)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
     add_editor_test(save_backup original_save_backup 30)
+    add_editor_test(periodic_backup original_periodic_backup 90)
+    add_test(NAME original_periodic_backup_process COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/periodic_backup_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}")
+    set_tests_properties(original_periodic_backup_process PROPERTIES TIMEOUT 180)
     add_editor_test(current_encoding original_current_encoding 90)
     add_test(NAME original_current_encoding_native_keys COMMAND current_encoding)
     set_tests_properties(original_current_encoding_native_keys PROPERTIES TIMEOUT 90

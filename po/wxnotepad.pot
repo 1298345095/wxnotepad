@@ -316,6 +316,10 @@ msgstr ""
 msgid "&Lower Case\tCtrl+U"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr ""
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
 msgstr ""
@@ -690,6 +694,14 @@ msgstr ""
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr ""
@@ -712,6 +724,14 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1118,6 +1138,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
 msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
@@ -1695,6 +1719,10 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
