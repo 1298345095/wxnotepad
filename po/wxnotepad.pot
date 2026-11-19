@@ -121,6 +121,10 @@ msgstr ""
 msgid "&Boundary:"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr ""
@@ -144,6 +148,10 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Command:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
@@ -314,6 +322,10 @@ msgstr ""
 msgid "&Lower Case\tCtrl+U"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr ""
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
 msgstr ""
@@ -450,6 +462,14 @@ msgstr ""
 
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Right."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -629,6 +649,10 @@ msgstr ""
 msgid "All Files (*)"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All files (*.*)"
 msgstr ""
@@ -688,6 +712,14 @@ msgstr ""
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr ""
 
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr ""
@@ -710,6 +742,14 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -811,6 +851,14 @@ msgstr ""
 msgid "Change &background color."
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Change the disk file's read-only attribute. F10 controls editing only."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
+msgstr ""
+
 #: src/app/language_commands.cpp
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
 msgstr ""
@@ -837,6 +885,10 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Choose an existing file to open."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "Choose program"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
@@ -957,6 +1009,25 @@ msgid "Copy as &RTF"
 msgstr ""
 
 #: src/document/document_session.cpp
+#, c-format
+msgid "Could not change file attributes: %s"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not change file protection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Could not change read-only protection for %s. %s"
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change the file owner's write permission: %s"
+msgstr ""
+
+#: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr ""
 
@@ -966,6 +1037,10 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "Could not determine the file size."
+msgstr ""
+
+#: src/app/desktop_launch.cpp
+msgid "Could not load the desktop application entry."
 msgstr ""
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
@@ -992,6 +1067,16 @@ msgid "Could not print \"%s\"."
 msgstr ""
 
 #: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file attributes: %s"
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file permissions: %s"
+msgstr ""
+
+#: src/document/document_session.cpp
 msgid "Could not read the complete file."
 msgstr ""
 
@@ -1006,6 +1091,11 @@ msgstr ""
 
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
+msgstr ""
+
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
 msgstr ""
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
@@ -1126,6 +1216,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
 msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
@@ -1711,8 +1805,16 @@ msgstr ""
 msgid "On &Startup"
 msgstr ""
 
+#: src/document/document_session.cpp
+msgid "Only the file owner can change the owner's write permission."
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
+msgstr ""
+
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1842,6 +1944,10 @@ msgstr ""
 msgid "Print zoom (%d%% to %d%%):"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr ""
@@ -1884,6 +1990,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Read Only &File"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -1989,6 +2099,10 @@ msgstr ""
 msgid "Right:"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr ""
@@ -2073,12 +2187,21 @@ msgstr ""
 msgid "Save changes to %s before restarting?"
 msgstr ""
 
+#: src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "Save changes?"
 msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Save file"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Save the document before changing file permissions."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2388,6 +2511,14 @@ msgstr ""
 msgid "Text files (*.txt)"
 msgstr ""
 
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr ""
+
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
+msgstr ""
+
 #: src/app/editor_frame_file_watching.cpp
 msgid "The current file has been deleted. Save now?"
 msgstr ""
@@ -2439,6 +2570,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "The specified text was not found."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "This command changes a file, not a directory."
 msgstr ""
 
 #: src/document/document_session.cpp

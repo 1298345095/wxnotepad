@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
 #include "app/editor_print_job.h"
 #include "app/localization.h"
@@ -92,6 +93,7 @@ void EditorFrame::CreateMenus() {
 
 wxMenu* EditorFrame::CreateToolsMenu() {
     auto* tools = new wxMenu;
+    AppendRunCommand(tools);
     auto* base64 = new wxMenu;
     for (const auto& [label, command] :
          {std::pair{wxTRANSLATE("Standard &Encode"), Base64Conversion::Encode},
@@ -251,6 +253,38 @@ wxMenu* EditorFrame::CreateFileMenu() {
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, updateTime);
     file->AppendSeparator();
     auto* mode = new wxMenu;
+    const int readOnlyFile = wxWindow::NewControlId();
+#ifdef __WXMSW__
+    const wxString fileProtectionHelp = _("Change the disk file's read-only attribute. F10 controls editing only.");
+#else
+    const wxString fileProtectionHelp =
+        _("Change the file owner's write permission for this user's other programs too. F10 controls editing only.");
+#endif
+    auto* readOnlyFileItem = mode->AppendCheckItem(readOnlyFile, _("Read Only &File"), fileProtectionHelp);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto error = document_.ToggleReadOnlyFile();
+            UpdateDocumentState();
+            UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            if (!error.empty())
+                wxMessageBox(
+                    wxString::Format(_("Could not change read-only protection for %s. %s"), document_.Path(), error),
+                    _("Could not change file protection"), wxOK | wxICON_ERROR, this);
+        },
+        readOnlyFile);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this, readOnlyFileItem, fileProtectionHelp](wxUpdateUIEvent& event) {
+            const bool previous = document_.IsReadOnlyFile();
+            document_.RefreshReadOnlyFile();
+            event.Check(document_.ReadOnlyFileFlag());
+            event.Enable(document_.ReadOnlyFileChangeError().empty());
+            readOnlyFileItem->SetHelp(
+                document_.ReadOnlyFileChangeError().empty() ? fileProtectionHelp : document_.ReadOnlyFileChangeError());
+            if (previous != document_.IsReadOnlyFile()) UpdateDocumentState();
+        },
+        readOnlyFile);
     const int readOnly = wxWindow::NewControlId();
     mode->AppendCheckItem(readOnly, _("&Read Only Mode\tF10"));
     file->AppendSubMenu(mode, _("File &Mode"));
@@ -2145,6 +2179,16 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
 
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
+    const int autoSave = wxWindow::NewControlId();
+    view->Append(autoSave, _("AutoSave Settings..."));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoSaveSettingsDialog(this, preferences.autoSave))
+                document_.ConfigureAutoSave(preferences.autoSave);
+        },
+        autoSave);
     AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
     const int wordWrapSettings = wxWindow::NewControlId();

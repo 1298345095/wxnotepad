@@ -92,7 +92,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
                                                   settings->values.noHtmlGuess}
-                         : SyntaxDetectionOptions{}),
+                         : SyntaxDetectionOptions{},
+                settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { return HandleFileChange(); }), search_(*editor_) {
     // Establish the single editor child before preferences calculate wrapped geometry.
@@ -193,7 +194,10 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
 #endif
-    Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
+    Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) {
+        document_.DocumentChanged();
+        UpdateDocumentState();
+    });
     editor_->Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
     Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
     DragAcceptFiles(true);
@@ -801,7 +805,10 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& prompt) {
                  choice == wxID_YES  ? "Save"
                  : choice == wxID_NO ? "Discard"
                                      : "Cancel");
-    if (choice == wxID_NO) return true;
+    if (choice == wxID_NO) {
+        document_.StopAutoSave(false);
+        return true;
+    }
     if (choice != wxID_YES) return false;
     const auto result = Save();
     WXNOTE_TRACE("close.save-result", "\ttarget=%p\tsaved=%d", static_cast<void*>(this),
