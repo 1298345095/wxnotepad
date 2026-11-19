@@ -290,9 +290,6 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     const auto preference = frame->GetMenuBar()->FindMenuItem("Tools", "Save Before Running Tools");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(execute), "named document enables Execute");
-    NativeSearch::Command(frame, execute);
-    Require(launchErrors.errors == 0, "direct Execute menu starts the registered native handler without an error");
-    WaitForChild("disk bytes", Name(path), Name(Root()));
     int executeEvents = 0;
     frame->Bind(
         wxEVT_MENU,
@@ -301,8 +298,12 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
             event.Skip();
         },
         execute);
+    NativeSearch::Command(frame, execute);
+    Require(executeEvents == 1, "direct native Execute menu dispatches its owned command");
+    Require(launchErrors.errors == 0, "direct Execute menu starts the registered native handler without an error");
+    WaitForChild("disk bytes", Name(path), Name(Root()));
     NativeKeys::Shortcut(frame, 'L', true);
-    Require(executeEvents == 1, "native Ctrl+L dispatches the Execute Document menu event");
+    Require(executeEvents == 2, "native Ctrl+L dispatches the Execute Document menu event");
     WaitForChild("disk bytes", Name(path), Name(Root()));
     Require(editor->DocumentRevision() == revision && editor->Send(Message::GetModify) &&
                 editor->Send(Message::CanUndo) && editor->Send(Message::GetAnchor) == 2 &&
