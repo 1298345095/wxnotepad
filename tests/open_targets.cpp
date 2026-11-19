@@ -156,31 +156,39 @@ void Anchor(EditorFrame* frame) {
     editor->Send(Message::SetSavePoint);
     std::puts("PASS: native selection action, name/id anchor priority, source state and original menu availability");
 }
+void DesktopTargetCase(EditorFrame* frame, const std::string& input, const std::string& expected, intptr_t caret = -1) {
+    auto* editor = frame->Editor();
+    const auto marker = Directory() / "desktop-received";
+    std::filesystem::remove(marker);
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(input.c_str()));
+    editor->Send(Message::SetSel, caret < 0 ? 0 : caret, caret < 0 ? static_cast<intptr_t>(input.size()) : caret);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Open File, Folder, Link, etc."));
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!std::filesystem::exists(marker) && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(std::filesystem::exists(marker), "desktop association must receive the target through a real child");
+    if (TestFiles::Bytes(marker) != expected + "\n")
+        std::fprintf(stderr, "desktop received [%s] expected [%s]\n", TestFiles::Bytes(marker).c_str(),
+                     expected.c_str());
+    Require(TestFiles::Bytes(marker) == expected + "\n",
+            "desktop association receives exact independently specified target");
+    Require(TestEditor::Text(frame) == input, "desktop action preserves source bytes");
+    TestEditor::RequireSelection(editor, caret < 0 ? 0 : caret, caret < 0 ? static_cast<intptr_t>(input.size()) : caret,
+                                 "desktop action preserves source selection");
+    std::printf("PASS: desktop input %s -> %s\n", input.c_str(), expected.c_str());
+}
+void MailTargets(EditorFrame* frame) {
+    DesktopTargetCase(frame, "reader@example.invalid", "mailto:reader@example.invalid");
+    DesktopTargetCase(frame, "mailto:reader@example.invalid?subject=test%20value",
+                      "mailto:reader@example.invalid?subject=test%20value");
+    std::puts("PASS: real mailto handler preserves bare email and explicit mail URI bytes");
+}
 void DesktopTarget(EditorFrame* frame, const wxString& scheme, const wxString& extension,
                    bool standardSchemes = false) {
-    auto* editor = frame->Editor();
-    const auto run = [&](const std::string& input, const std::string& expected, intptr_t caret = -1) {
-        const auto marker = Directory() / "desktop-received";
-        std::filesystem::remove(marker);
-        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(input.c_str()));
-        editor->Send(Message::SetSel, caret < 0 ? 0 : caret, caret < 0 ? static_cast<intptr_t>(input.size()) : caret);
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Open File, Folder, Link, etc."));
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-        while (!std::filesystem::exists(marker) && std::chrono::steady_clock::now() < deadline) {
-            wxYield();
-            wxMilliSleep(10);
-        }
-        Require(std::filesystem::exists(marker), "desktop association must receive the target through a real child");
-        if (TestFiles::Bytes(marker) != expected + "\n")
-            std::fprintf(stderr, "desktop received [%s] expected [%s]\n", TestFiles::Bytes(marker).c_str(),
-                         expected.c_str());
-        Require(TestFiles::Bytes(marker) == expected + "\n",
-                "desktop association receives exact independently specified target");
-        Require(TestEditor::Text(frame) == input, "desktop action preserves source bytes");
-        TestEditor::RequireSelection(editor, caret < 0 ? 0 : caret,
-                                     caret < 0 ? static_cast<intptr_t>(input.size()) : caret,
-                                     "desktop action preserves source selection");
-        std::printf("PASS: desktop input %s -> %s\n", input.c_str(), expected.c_str());
+    const auto run = [frame](const std::string& input, const std::string& expected, intptr_t caret = -1) {
+        DesktopTargetCase(frame, input, expected, caret);
     };
     const auto protocol = scheme.utf8_string();
     run(protocol + "://host:4321/path%20name", protocol + "://host:4321/path%20name");
@@ -194,8 +202,7 @@ void DesktopTarget(EditorFrame* frame, const wxString& scheme, const wxString& e
         run("prefix(https://example.invalid/target", "https://example.invalid/target");
         run("//example.invalid/path%20name", "http://example.invalid/path%20name");
         run("www.example.invalid/path", "http://www.example.invalid/path");
-        run("reader@example.invalid", "mailto:reader@example.invalid");
-        run("mailto:reader@example.invalid?subject=test%20value", "mailto:reader@example.invalid?subject=test%20value");
+        MailTargets(frame);
         std::puts(
             "PASS: real standard-scheme handlers preserve explicit URLs, Markdown, mail, www and relative protocols");
     }
@@ -326,7 +333,8 @@ class OpenTargetApp final : public wxApp {
 public:
     bool OnInit() override {
         const bool standard = argc == 3 && wxString(argv[1]) == "--desktop-standards";
-        if (standard) wxSetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", wxString(argv[2]));
+        const bool mail = argc == 3 && wxString(argv[1]) == "--desktop-mail-standards";
+        if (standard || mail) wxSetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", wxString(argv[2]));
         if (argc == 4 && wxString(argv[1]) == "--desktop-target")
             wxSetEnv("WXNOTEPAD_OPEN_TARGET_ROOT", wxString(argv[3]));
 #ifdef __WXMSW__
@@ -365,7 +373,7 @@ public:
                     "child reuses ordinary startup document loading");
         }
         frame->Show();
-        NativeKeys::AfterPresentation(frame, [this, frame, child, standard](bool ready) {
+        NativeKeys::AfterPresentation(frame, [this, frame, child, standard, mail](bool ready) {
             try {
                 Require(ready, "native frame must be presented");
                 if (child) {
@@ -379,6 +387,11 @@ public:
                         << frame->Editor()->Send(Message::GetCurrentPos) << '\n';
                     std::filesystem::rename(Directory() / "child-received.tmp", Directory() / "child-received");
 #ifdef __WXMSW__
+                } else if (mail) {
+                    TargetFeedback feedback;
+                    OwnedTargetAssociations::RequireMailHandler();
+                    MailTargets(frame);
+                    Require(feedback.shown == 0, "successful mail commands must not report launch failure");
                 } else if (standard) {
                     TargetFeedback feedback;
                     OwnedTargetAssociations associations;
