@@ -26,6 +26,8 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 std::filesystem::path Root() {
+    if (wxTheApp && wxTheApp->argc >= 3 && wxString(wxTheApp->argv[1]) == "--record")
+        return TestFiles::Utf8Path(wxString(wxTheApp->argv[2]).utf8_string());
     wxString root;
     Require(wxGetEnv("WXNOTEPAD_DOCUMENT_TOOLS_ROOT", &root), "owned root must be configured");
     return TestFiles::Utf8Path(root.utf8_string());
@@ -243,7 +245,7 @@ public:
         classKey_.Replace("/", wxString(wxUniChar(92)));
         auto command = classKey_ + wxString(wxUniChar(92)) + "shell" + wxString(wxUniChar(92)) + "open" +
                        wxString(wxUniChar(92)) + "command";
-        RegistryString(command, "\"" + executable + "\" \"%1\"");
+        RegistryString(command, "\"" + executable + "\" --record \"" + Name(Root()) + "\" \"%1\"");
 #else
         const auto desktop = Root() / "data" / "applications" / "handler.desktop";
         std::filesystem::create_directories(desktop.parent_path());
@@ -454,11 +456,13 @@ public:
         std::fprintf(stderr, "phase: init argc=%d\n", argc);
         std::fflush(stderr);
         if (argc != 2 || wxString(argv[1]) != "--fixture") {
-            const auto argument = argc > 1 ? wxString(argv[1]) : wxString{};
+            const int firstArgument = argc >= 3 && wxString(argv[1]) == "--record" ? 3 : 1;
+            const auto argument = argc > firstArgument ? wxString(argv[firstArgument]) : wxString{};
             std::string disk;
             if (!argument.empty()) disk = TestFiles::Bytes(TestFiles::Utf8Path(argument.utf8_string()));
             wxFFile output(Name(Root() / "record.tmp"), "wb");
-            output.Write(wxString::Format("%d\n%s\n%s\n%s", argc - 1, argument, wxGetCwd(), wxString::FromUTF8(disk)),
+            output.Write(wxString::Format("%d\n%s\n%s\n%s", argc - firstArgument, argument, wxGetCwd(),
+                                          wxString::FromUTF8(disk)),
                          wxConvUTF8);
             output.Close();
             wxRenameFile(Name(Root() / "record.tmp"), Name(Root() / "record.txt"));
