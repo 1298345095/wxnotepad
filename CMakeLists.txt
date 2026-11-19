@@ -349,6 +349,9 @@ if(BUILD_TESTING)
         add_test(NAME native_localization_button_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py")
         set_tests_properties(native_localization_button_readiness PROPERTIES TIMEOUT 30)
+        add_test(NAME native_localization_input_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py" --input)
+        set_tests_properties(native_localization_input_readiness PROPERTIES TIMEOUT 30)
         add_test(NAME packaged_ui_localization_regional COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
             --cmake-dir "${CMAKE_BINARY_DIR}"
