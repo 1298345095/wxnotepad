@@ -229,7 +229,11 @@ void LiteralNamedPrograms(EditorFrame* frame) {
         const auto script = "#!/bin/sh\nexec \"" + child.GetFullPath().utf8_string() + "\" \"$0\" \"$@\"\n";
         TestFiles::WriteBytes(program, script);
         std::filesystem::permissions(program, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
-        Require(frame->Open(TestFiles::Filename(program)).status == OpenStatus::Opened,
+        // Open's existing environment expansion supplies the literal filename once;
+        // the document identity must not expand it again when Run is initialized.
+        wxSetEnv("WXNOTEPAD_RUN_NAMED_PATH", TestFiles::Filename(program));
+        Require(frame->Open(wxString("$WXNOTEPAD_RUN_NAMED_PATH")).status == OpenStatus::Opened &&
+                    frame->DocumentPath() == TestFiles::Filename(program),
                 "open a real named executable with literal filename punctuation");
         const auto record = directory / (std::string(name) + ".record");
         wxSetEnv("WXNOTEPAD_RUN_RECORD", TestFiles::Filename(record));
