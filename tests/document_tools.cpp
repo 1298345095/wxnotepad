@@ -44,6 +44,42 @@ void WaitForChild(const std::string& expected, const wxString& path, const wxStr
     file.Close();
     std::filesystem::remove(marker);
 }
+class LaunchErrors final : public wxTimer {
+public:
+    LaunchErrors() { Start(50); }
+    int errors = 0;
+    void Notify() override {
+#ifdef __WXMSW__
+        EnumThreadWindows(GetCurrentThreadId(), [](HWND window, LPARAM data) -> BOOL {
+            wchar_t title[256]{};
+            GetWindowTextW(window, title, static_cast<int>(std::size(title)));
+            if (IsWindowVisible(window) && (wxString(title) == "Could not execute document" ||
+                    wxString(title) == "Could not open document with program")) {
+                ++reinterpret_cast<LaunchErrors*>(data)->errors;
+                SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
+            }
+            return TRUE;
+        }, reinterpret_cast<LPARAM>(this));
+#else
+        GList* windows = gtk_window_list_toplevels();
+        for (auto* item = windows; item; item = item->next) {
+            auto* widget = GTK_WIDGET(item->data);
+            if (!gtk_widget_get_visible(widget) || !GTK_IS_MESSAGE_DIALOG(widget)) continue;
+            const wxString title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
+            if (title == "Could not execute document" || title == "Could not open document with program") {
+                gchar* text = nullptr;
+                g_object_get(widget, "text", &text, nullptr);
+                std::fprintf(stderr, "Native launch error: %s
+", text ? text : "");
+                g_free(text);
+                ++errors;
+                NativeDialogs::Respond(widget, GTK_RESPONSE_OK);
+            }
+        }
+        g_list_free(windows);
+#endif
+    }
+};
 class ProgramDriver final : public wxTimer {
 public:
     ProgramDriver(wxString program, bool cancel = false) : program_(std::move(program)), cancel_(cancel) { Start(50); }
@@ -120,6 +156,10 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     const auto path = Root() / TestFiles::Utf8Path("document 中文 & space.wxlaunch244");
     TestFiles::WriteBytes(path, "disk bytes");
     Association association;
+    LaunchErrors launchErrors;
+    std::fprintf(stderr, "phase: Ctrl+L
+");
+    std::fflush(stderr);
     wxSetEnv("WXNOTEPAD_DOCUMENT_TOOLS_CHILD", "1");
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "open named document");
     auto* editor = frame->Editor();
@@ -138,6 +178,9 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
                 editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 6 &&
                 frame->DocumentEncoding() == encoding && TestEditor::Text(frame) == "disk bytes unsaved",
             "Ctrl+L with preference off preserves the complete live document");
+    std::fprintf(stderr, "phase: Open With
+");
+    std::fflush(stderr);
     const auto program = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetFullName();
     settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
     {
@@ -151,6 +194,9 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(!frame->OpenDocumentWith(), "chooser Cancel stops launch");
     }
     Require(!std::filesystem::exists(Root() / "record.txt"), "Cancel launches no program");
+    std::fprintf(stderr, "phase: save policy
+");
+    std::fflush(stderr);
     NativeSearch::Command(frame, preference);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
     Require(settings.values.saveBeforeRunningTools, "visible preference persists");
@@ -171,6 +217,9 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     WaitForChild("disk bytes", Name(path), Name(Root()));
     // Replacing the backing file with a directory makes the ordinary required
     // Save fail on both platforms, without changing editor identity.
+    std::fprintf(stderr, "phase: failed save
+");
+    std::fflush(stderr);
     std::filesystem::remove(path);
     std::filesystem::create_directory(path);
     {
@@ -189,6 +238,9 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(decision.prompts == 1 && !editor->Send(Message::GetModify), "Save uses ordinary save point");
     }
     WaitForChild("disk bytes unsaved", Name(path), Name(Root()));
+    std::fprintf(stderr, "phase: untitled
+");
+    std::fflush(stderr);
     Require(frame->NewDocument(), "clean named document becomes untitled");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(!frame->GetMenuBar()->IsEnabled(execute) && frame->GetMenuBar()->IsEnabled(openWith),
