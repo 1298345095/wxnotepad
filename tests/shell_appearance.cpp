@@ -8,18 +8,17 @@
 #include <memory>
 #include <wx/log.h>
 #include <wx/dialog.h>
-#ifdef __WXMSW__
-#include <commctrl.h>
-#elif defined(__WXGTK__)
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#ifdef __WXMSW__
+#include <commctrl.h>
 #endif
 
 namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-#ifdef __WXGTK__
+#if defined(__WXGTK__) || defined(__WXMSW__)
 void AwaitPaste(wxToolBar* toolbar, bool enabled) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
     do {
@@ -99,7 +98,7 @@ public:
                         "native status painting displays the complete size beside its sizing grip");
 #endif
                 auto* toolbar = frame->GetToolBar();
-#ifdef __WXGTK__
+#if defined(__WXGTK__) || defined(__WXMSW__)
                 ClipboardOffer(new wxTextDataObject("native toolbar text"));
                 AwaitPaste(toolbar, true);
                 editor->Send(SetReadOnly, 1);
