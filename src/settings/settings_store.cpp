@@ -523,7 +523,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteString("OpenWithDir",
                     values.openWithDirectory.empty()
                         ? wxString{}
-                        : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs),
+                        : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs,
+                                                    RecentFiles::PathKind::Directory),
                     {});
         WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
         const auto& print = values.printing;
