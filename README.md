@@ -361,11 +361,19 @@ Linux, from a native filesystem checkout:
 
 ```sh
 python3 tools/build.py --source /path/to/notepad4 --vcpkg-root "$HOME/vcpkg"
+export GIO_LAUNCH_DESKTOP="$HOME/vcpkg/installed/x64-linux/libexec/gio-launch-desktop"
 GDK_BACKEND=wayland ctest --test-dir build/cmake --output-on-failure
 GDK_BACKEND=x11 ctest --test-dir build/cmake --output-on-failure
 GDK_BACKEND=wayland ./build/cmake/wxnotepad
 GDK_BACKEND=x11 ./build/cmake/wxnotepad
 ```
+
+Use the helper from the selected SDK installation and triplet if they differ
+from this example. GLib's desktop launches need this executable after vcpkg
+removes its package staging tree. The canonical `ci.py test` runner selects it
+from the build's CMake cache. Development artifacts include their own copy and
+document the corresponding `GIO_LAUNCH_DESKTOP` and library-path launch command
+in `README.txt`; bare ELF invocation does not configure these runtime paths.
 
 Without `--source`, the entry point fetches the exact original revision into its
 build directory. It never checks out or patches the supplied original repository.
