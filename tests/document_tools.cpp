@@ -315,6 +315,15 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
         Require(chooser.choosers == 1, "Open With uses the program directory chooser");
     }
     WaitForChild("disk bytes", Name(path), Name(Root()));
+#ifndef __WXMSW__
+    settings.values.openWithDirectory = Name(Root() / "data" / "applications");
+    {
+        ProgramDriver chooser("handler.desktop");
+        Require(frame->OpenDocumentWith(), "a selected native desktop entry receives the document");
+    }
+    WaitForChild("disk bytes", Name(path), Name(Root()));
+    settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
+#endif
     {
         ProgramDriver chooser(program, true);
         Require(!frame->OpenDocumentWith(), "chooser Cancel stops launch");
