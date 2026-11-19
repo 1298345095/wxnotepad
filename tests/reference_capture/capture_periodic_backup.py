@@ -10,7 +10,7 @@ import sys
 import time
 
 from original_host import Original, user
-from capture_save_backup import local_backup_directory, wait_ready
+from capture_save_backup import wait_ready
 
 
 def wait_for(check, message, seconds=5):
