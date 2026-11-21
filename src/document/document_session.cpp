@@ -21,6 +21,7 @@
 #include <array>
 #include <limits>
 #ifdef __WXMSW__
+#include <filesystem>
 #include <shlobj.h>
 #include <windows.h>
 #else
@@ -105,6 +106,18 @@ constexpr intptr_t NativeConversionLimit = (intptr_t{1} << 30) - 16;
 // successful. Preserve every settable time around the existing safe-write path.
 #ifdef __WXMSW__
 using FileTimes = FILE_BASIC_INFO;
+std::optional<FILETIME> ReadAccessTime(const wxString& path) {
+    WIN32_FILE_ATTRIBUTE_DATA attributes{};
+    if (!GetFileAttributesExW(path.wc_str(), GetFileExInfoStandard, &attributes)) return std::nullopt;
+    if (attributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+        // Path attributes describe a final symbolic link itself; the command's
+        // normal CreateFile follows it. Capture the same target's access time.
+        std::error_code error;
+        const auto target = std::filesystem::canonical(std::filesystem::path(path.ToStdWstring()), error);
+        if (error || !GetFileAttributesExW(target.c_str(), GetFileExInfoStandard, &attributes)) return std::nullopt;
+    }
+    return attributes.ftLastAccessTime;
+}
 std::optional<FileTimes> ReadFileTimes(const wxString& path) {
     const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                   nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -801,12 +814,19 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
 bool DocumentSession::UpdateFileTime() {
     if (path_.empty()) return false;
 #ifdef __WXMSW__
+    // Opening the update handle can expose a newer access time than the
+    // pre-operation path attributes. Preserve that observed value separately.
+    const auto originalAccess = ReadAccessTime(path_);
     const auto file = CreateFileW(path_.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                   nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) return false;
     FILE_BASIC_INFO times{};
     bool updated = GetFileInformationByHandleEx(file, FileBasicInfo, &times, sizeof(times)) != 0;
     if (updated) {
+        if (originalAccess) {
+            times.LastAccessTime.LowPart = originalAccess->dwLowDateTime;
+            times.LastAccessTime.HighPart = static_cast<LONG>(originalAccess->dwHighDateTime);
+        }
         GetSystemTimePreciseAsFileTime(reinterpret_cast<FILETIME*>(&times.LastWriteTime));
         updated = SetFileInformationByHandle(file, FileBasicInfo, &times, sizeof(times)) != 0;
     }
