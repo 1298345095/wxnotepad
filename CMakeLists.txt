@@ -699,7 +699,7 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(word_wrap word_wrap_view 60)
     if(WIN32)
-        foreach(target IN ITEMS clipboard_smoke word_wrap)
+        foreach(target IN ITEMS clipboard_smoke word_wrap context_menu)
             target_compile_definitions(${target} PRIVATE
                 "NATIVE_FAILURE_PYTHON=\"${Python3_EXECUTABLE}\""
                 "NATIVE_FAILURE_SCRIPT=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_failure_capture.py\"")
