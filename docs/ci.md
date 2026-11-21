@@ -23,7 +23,9 @@ concurrently without sharing native dialogs or clipboard ownership. Xvfb allocat
 its own display number with `-displayfd` and reports readiness before the command
 starts; each session retains its own authentication cookie. If allocation selects
 the reserved primary display `:0`, that owned server stays alive while a second
-server allocates the test display. The native-input primary-desktop guard remains
+server allocates the test display. Xvfb uses `-noreset` to keep new connections
+available when sequential GUI processes close the display's last client. The
+native-input primary-desktop guard remains
 in force. This avoids
 `xvfb-run -a` exhausting its ten display-number retries and then launching a client
 against another session's display. A dedicated step after dependency installation
