@@ -228,13 +228,14 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
     wxString intent = wxString(frame->IsActive() ? "focus:" : "front:") + focusName;
 #ifdef __WXGTK__
+    unsigned int surfaceId = 0;
     if (!frame->IsActive() && wayland) {
         auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
         if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
+        surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
         const auto remaining =
             std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
-        intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(),
-                                  wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
+        intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(), surfaceId,
                                   static_cast<long long>(g_get_monotonic_time() + remaining));
     }
 #endif
@@ -254,8 +255,23 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
         wxYield();
         wxMilliSleep(10);
     }
-    if (!acknowledged || !frame->IsActive() || !editor->HasFocus())
+    if (!acknowledged || !frame->IsActive() || !editor->HasFocus()) {
+#ifdef __WXGTK__
+        if (wayland) {
+            if (!surfaceId) {
+                auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+                if (surface) surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+            }
+            std::fprintf(stderr,
+                         "Native activation failure: request=%s acknowledged=%d frameActive=%d "
+                         "editorFocus=%d ownedPid=%lu ownedSurface=%u\n",
+                         intent.BeforeFirst(':').utf8_str().data(), acknowledged, frame->IsActive(), editor->HasFocus(),
+                         wxGetProcessId(), surfaceId);
+            std::fflush(stderr);
+        }
+#endif
         throw std::runtime_error("private native input must activate the owned editor");
+    }
 }
 inline wxString KeyName(int key) {
     if (key >= WXK_F1 && key <= WXK_F24) return wxString::Format("F%d", key - WXK_F1 + 1);
