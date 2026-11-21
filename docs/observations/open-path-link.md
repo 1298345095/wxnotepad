@@ -20,6 +20,9 @@ Windows `%VARIABLE%`, or Linux `$VARIABLE`/`~`, use native filesystem notation.
 URI percent escapes are retained. Colon and parenthesized line/column suffixes
 are committed only if the resulting filesystem target exists. Existing full
 names and URI ports retain their original classification.
+Existing names and location-suffixed files are resolved before stripping
+punctuation from a possible URI scheme. This preserves selected relative names
+such as `目标, selected file.txt:2:4` instead of truncating them to `file.txt:2:4`.
 
 Windows checks raw candidates with `GetFileAttributesW`, as the original does,
 and uses native `GetFullPathNameW` only after finding an existing target.
@@ -43,6 +46,18 @@ parent directory opens through its native association. Directory targets use
 the native file manager directly. Linux window placement belongs to its
 compositor.
 
+Hosted Windows Server controls exposed a cold-view delivery problem: both the
+verbatim pinned helper and documented single-item API returned without a visible
+selection, and a direct Explorer `/select,"path"` startup also lost selection.
+The same single native selection request succeeds after the parent view is
+ready. Windows therefore opens the parent first and observes its native
+ReadyState/Busy/folder identity using a GUI-STA timer before sending that one
+selection request. There is no selection retry, background worker or blocking
+readiness loop. Separate explicit requests remain pending independently.
+The frame owns the timer and COM state; closing it cancels pending requests and
+queued failure reports. A successful asynchronous return means accepted, while
+later failure retains the native association fallback and surviving-owner error.
+
 `original_open_targets` exercises native menu commands, independently loaded
 child files and positions, controlled local desktop handlers, containing-folder
 requests, no-op shapes and failed executable startup. Its Linux file-manager
@@ -55,8 +70,13 @@ probes resolve its command through `AssocQueryString` but the real shell still
 reports file not found. Existing protocols and protected `UserChoice` keys are
 untouched by the ordinary host test. Explorer observations require a newly created HWND at the exact
 owned temporary folder and inspect the selected item's full path before closing
-only that window. Each owned Explorer HWND must finish closing before the next
-request, preventing an earlier window from consuming a new item selection.
+only that window. Sequential cases wait for each HWND to finish closing before
+the next request. The original four cases remain, with additional checks for a
+Unicode/comma/space target, two requests queued together while callbacks remain
+responsive, and owner destruction before a pending selection. The cancellation
+case observes no selected item while the other frame's native loop continues.
+The ordinary and diagnostic cases retain their original acknowledgement and
+observation deadlines.
 
 Both Linux backends record the standard explicit URL, protocol-relative, www
 and email cases through their private desktop handlers. Windows exercises the

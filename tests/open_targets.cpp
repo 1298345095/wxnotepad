@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include <chrono>
+#include <wx/weakref.h>
 #ifdef __WXMSW__
 #include <objbase.h>
 #endif
@@ -219,6 +220,68 @@ void DesktopTarget(EditorFrame* frame, const wxString& scheme, const wxString& e
 #endif
     std::puts("PASS: controlled real desktop handlers preserve URI ports, encoding and unsupported files");
 }
+#ifdef __WXMSW__
+void WaitExplorerRequests(const std::filesystem::path& root, std::initializer_list<int> requests) {
+    const auto finished = [&] {
+        for (const int request : requests)
+            if (!std::filesystem::exists(root / ("folder-done-" + std::to_string(request)))) return false;
+        return true;
+    };
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    while (!finished() && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(finished(), "pending Explorer requests must complete within the original acknowledgement deadline");
+    for (const int request : requests)
+        Require(TestFiles::Bytes(root / ("folder-done-" + std::to_string(request))) == "ok\n",
+                "pending request acknowledgement must retain its exact bytes");
+}
+void PendingFolderTargets(EditorFrame* frame, int& request) {
+    const auto root = Directory();
+    const auto prepare = [&](const char* directory, bool cancelled) {
+        const auto parent = root / directory;
+        std::filesystem::create_directory(parent);
+        std::ofstream(parent / "target.txt") << "owned pending target\n";
+        const auto target = TestFiles::Filename(parent / "target.txt");
+        std::ofstream marker(root / ("folder-request-" + std::to_string(++request)), std::ios::binary);
+        marker << TestFiles::Filename(parent).utf8_string() << '\n'
+               << target.utf8_string() << '\n'
+               << GetCurrentProcessId() << '\n';
+        if (cancelled) marker << "cancelled\n";
+        return target;
+    };
+    const auto first = prepare("pending-first", false);
+    const int firstRequest = request;
+    const auto second = prepare("pending-second", false);
+    const int secondRequest = request;
+    for (const auto& path : {first, second}) {
+        const auto text = path.utf8_string();
+        frame->Editor()->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
+        frame->Editor()->Send(Message::SetSel, 0, static_cast<intptr_t>(text.size()));
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        // Keep both explicit menu requests pending before returning to the loop.
+        NativeSearch::ActivateCommand(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Open Containing Folder"));
+    }
+    const auto responsive = std::make_shared<bool>(false);
+    frame->CallAfter([responsive] { *responsive = true; });
+    WaitExplorerRequests(root, {firstRequest, secondRequest});
+    Require(*responsive, "the GUI loop must continue servicing callbacks while folder requests are pending");
+    std::puts("PASS: two explicit native menu requests coexist while the GUI remains responsive");
+
+    const auto cancelledPath = prepare("cancelled-owner", true);
+    auto* cancelled = new EditorFrame;
+    wxWeakRef<EditorFrame> weak(cancelled);
+    Require(cancelled->Open(cancelledPath).status == OpenStatus::Opened, "cancellation source must open normally");
+    cancelled->Show();
+    cancelled->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    NativeSearch::ActivateCommand(cancelled, cancelled->GetMenuBar()->FindMenuItem("File", "Open Containing Folder"));
+    cancelled->Destroy();
+    WaitExplorerRequests(root, {request});
+    Require(!weak, "closed native owner must be destroyed while the surviving source loop continues");
+    std::puts("PASS: destroying the owner cancels pending selection and leaves the other frame usable");
+}
+#endif
 void FolderTarget(EditorFrame* frame) {
     const auto root = Directory();
 #ifdef __WXMSW__
@@ -274,6 +337,16 @@ void FolderTarget(EditorFrame* frame) {
     frame->Editor()->Send(Message::SetSel, 0, static_cast<intptr_t>(directory.size()));
     run(root / "documents", "Tools");
     run(root / "documents", "Tools", true);
+    const auto unicodeName = wxString::FromUTF8("目标, selected file.txt");
+    std::ofstream(root / NativePath(unicodeName)) << "owned Unicode selection target\n";
+    const auto unicodeInput = (unicodeName + ":2:4").utf8_string();
+    frame->Editor()->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(unicodeInput.c_str()));
+    frame->Editor()->Send(Message::SetSel, 0, static_cast<intptr_t>(unicodeInput.size()));
+    run(root / NativePath(unicodeName), "Tools");
+    Require(TestEditor::Text(frame) == unicodeInput, "Unicode folder action retains exact source bytes");
+    TestEditor::RequireSelection(frame->Editor(), 0, static_cast<intptr_t>(unicodeInput.size()),
+                                 "Unicode folder action retains source selection");
+    PendingFolderTargets(frame, request);
 #elif defined(__WXGTK__)
     const auto marker = root / "filemanager-received";
     const auto wait = [&] {
