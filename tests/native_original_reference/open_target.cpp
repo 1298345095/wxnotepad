@@ -99,13 +99,34 @@ bool PrepareReadyFolder(const std::filesystem::path& directory) {
     } while (std::chrono::steady_clock::now() < deadline);
     return false;
 }
+bool StartExplorerSelection(const std::filesystem::path& item) {
+    wchar_t windowsDirectory[MAX_PATH]{};
+    const auto length = GetWindowsDirectoryW(windowsDirectory, MAX_PATH);
+    if (length == 0 || length >= MAX_PATH) return false;
+    const auto explorer = std::filesystem::path(windowsDirectory) / L"explorer.exe";
+    // Pinned Helpers.cpp's disabled native fallback owns this Explorer-specific
+    // grammar: quote the target after /select, rather than quote a whole argv.
+    const auto parameters = L"/select,\"" + item.wstring() + L"\"";
+    const auto directory = item.parent_path();
+    SHELLEXECUTEINFOW request{sizeof(request)};
+    request.fMask = SEE_MASK_FLAG_NO_UI;
+    request.lpVerb = L"open";
+    request.lpFile = explorer.c_str();
+    request.lpParameters = parameters.c_str();
+    request.lpDirectory = directory.c_str();
+    request.nShow = SW_SHOWNORMAL;
+    const bool started = ShellExecuteExW(&request) != FALSE;
+    std::printf("Independent Explorer startup launched=%d last_error=%lu\n", started, GetLastError());
+    return started;
+}
 } // namespace
 
 int wmain(int argc, wchar_t** argv) {
     if (argc != 3) return 2;
     const std::filesystem::path root = argv[1];
     const std::wstring mode = argv[2];
-    if (mode != L"original" && mode != L"single-item" && mode != L"single-item-ready") return 2;
+    if (mode != L"original" && mode != L"single-item" && mode != L"single-item-ready" && mode != L"explorer-startup")
+        return 2;
     const auto initialized = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(initialized)) return 3;
     const auto directory = root / "documents";
@@ -125,6 +146,8 @@ int wmain(int argc, wchar_t** argv) {
     }
     if (mode == L"original") {
         OpenContainingFolder(nullptr, item.c_str(), true);
+    } else if (mode == L"explorer-startup") {
+        StartExplorerSelection(item);
     } else {
         auto* pidl = ILCreateFromPathW(item.c_str());
         const auto result = pidl ? SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0) : E_FAIL;

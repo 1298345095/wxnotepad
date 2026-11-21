@@ -38,7 +38,8 @@ def pinned_helpers(upstream, build):
 def open_target_control(executable, mode, output):
     """Observe one independent request; never retry it or set Explorer selection."""
     output.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='wxnotepad-shell-control-') as name:
+    prefix = 'wxnotepad-shell-目标, space-' if mode == 'explorer-startup' else 'wxnotepad-shell-control-'
+    with tempfile.TemporaryDirectory(prefix=prefix) as name:
         root = Path(name).resolve(strict=True)
         owned_executable = root / executable.name
         shutil.copy2(executable, owned_executable)
@@ -78,7 +79,7 @@ def open_target_control(executable, mode, output):
 
 def open_target_controls(executable, output):
     results = []
-    for mode in ('original', 'single-item', 'single-item-ready'):
+    for mode in ('original', 'single-item', 'single-item-ready', 'explorer-startup'):
         try:
             results.append(open_target_control(executable, mode, output / mode))
         except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:

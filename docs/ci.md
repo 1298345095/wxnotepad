@@ -88,6 +88,9 @@ native readiness before making its single selection call, isolating cold-view
 delivery from delivery to an existing view. The controller performs that initial
 navigation; the selection observer remains read-only. These reports are also
 uploaded immediately, before the ordinary suite, using the existing artifact action.
+An additional fresh cold-root control submits the original disabled fallback's
+single Explorer startup request with a quoted target. Its owned path includes
+Unicode, a comma and a space so the native parameter grammar is exercised.
 
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
