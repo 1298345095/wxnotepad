@@ -22,6 +22,7 @@
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
+#include "native_key_helpers.h"
 #include <gtk/gtk.h>
 #endif
 
@@ -659,6 +660,20 @@ private:
         return path;
     }
 };
+const wxPoint NativeWindowGrabOffset{100, 100};
+const wxPoint NativePeerGrabDestination{950, 192};
+void MoveNativeWindow(wxPoint from, wxPoint to) {
+    wxString control;
+    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control), "move only an owned private-display window");
+    {
+        wxFFile request(control, "wb");
+        Require(request.IsOpened() &&
+                    request.Write(wxString::Format("move-peer:%d,%d,%d,%d", from.x, from.y, to.x, to.y)) &&
+                    request.Close(),
+                "publish the owned native window move");
+    }
+    WaitForDriver(control);
+}
 std::pair<wxPoint, wxPoint> WaylandOrigins(EditorControl* editor, const wxString& directory) {
     wxString control;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control), "Wayland geometry requires the private driver");
@@ -901,14 +916,7 @@ void IndependentProcessDrags(wxFrame* frame, EditorControl* editor) {
     wxPoint peerOrigin;
     if (wayland) {
         auto origins = WaylandOrigins(editor, independent.directory);
-        wxString control;
-        wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control);
-        {
-            wxFFile request(control, "wb");
-            request.Write(
-                wxString::Format("move-peer:%d,%d,%d,%d", origins.second.x + 100, origins.second.y + 100, 950, 192));
-        }
-        WaitForDriver(control);
+        MoveNativeWindow(origins.second + NativeWindowGrabOffset, NativePeerGrabDestination);
         origins = WaylandOrigins(editor, independent.directory);
         editorOrigin = origins.first;
         peerOrigin = origins.second;
@@ -920,6 +928,45 @@ void IndependentProcessDrags(wxFrame* frame, EditorControl* editor) {
         Front("main");
     IndependentOutgoingDrags(frame, editor, independent, editorOrigin, peerOrigin, wayland);
     IndependentIncomingDrag(frame, editor, independent, editorOrigin, peerOrigin, wayland);
+}
+std::pair<wxPoint, wxPoint> ArrangeFileDropWindows(EditorFrame* frame, const PeerProcess& peer) {
+    auto* editor = frame->Editor();
+    auto origins = WaylandOrigins(editor, peer.directory);
+    MoveNativeWindow(origins.second + NativeWindowGrabOffset, NativePeerGrabDestination);
+    origins = WaylandOrigins(editor, peer.directory);
+#ifdef __WXGTK__
+    wxString overlap;
+    if (wxGetEnv("WXNOTEPAD_FILE_DROP_OVERLAP", &overlap) && overlap == "1") {
+        wxString control;
+        NativeKeys::FocusEditor(frame, frame->GetTitle(), control);
+        origins = WaylandOrigins(editor, peer.directory);
+        // Recreate the CI failure: the editor's first drop point sits one pixel
+        // outside the peer widget, covered by its native window decoration.
+        const wxPoint coveredPoint{origins.second.x - 1, origins.second.y + NativeWindowGrabOffset.y};
+        const auto dropPoint = At(editor, 0) + origins.first - editor->GetPosition();
+        const auto grab = origins.first + NativeWindowGrabOffset;
+        MoveNativeWindow(grab, grab + coveredPoint - dropPoint);
+        Front("peer");
+        origins = WaylandOrigins(editor, peer.directory);
+        Require(At(editor, 0) + origins.first - editor->GetPosition() == coveredPoint,
+                "overlap regression must place the drop point under the peer decoration");
+    }
+    // A compositor may initially place Main under the peer's decoration. Give
+    // both native clients visible input areas before publishing any file drag.
+    wxString control;
+    NativeKeys::FocusEditor(frame, frame->GetTitle(), control);
+    origins = WaylandOrigins(editor, peer.directory);
+    const wxPoint mainSurfaceOrigin{20, 20};
+    MoveNativeWindow(origins.first + NativeWindowGrabOffset,
+                     mainSurfaceOrigin + ClientOffset(editor) + NativeWindowGrabOffset);
+    Front("peer");
+    origins = WaylandOrigins(editor, peer.directory);
+    MoveNativeWindow(origins.second + NativeWindowGrabOffset, NativePeerGrabDestination);
+    origins = WaylandOrigins(editor, peer.directory);
+    Require(origins.second.x >= origins.first.x + editor->GetSize().x,
+            "native file-drop windows must leave the editor and peer client visible");
+#endif
+    return origins;
 }
 void NativeFileDrop(EditorFrame* frame, PeerDelay delay = PeerDelay::None) {
     auto* editor = frame->Editor();
@@ -939,16 +986,7 @@ void NativeFileDrop(EditorFrame* frame, PeerDelay delay = PeerDelay::None) {
     wxPoint editorOrigin;
     wxPoint peerOrigin;
     if (wayland) {
-        auto origins = WaylandOrigins(editor, peer.directory);
-        wxString control;
-        wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control);
-        {
-            wxFFile request(control, "wb");
-            request.Write(
-                wxString::Format("move-peer:%d,%d,%d,%d", origins.second.x + 100, origins.second.y + 100, 950, 192));
-        }
-        WaitForDriver(control);
-        origins = WaylandOrigins(editor, peer.directory);
+        const auto origins = ArrangeFileDropWindows(frame, peer);
         editorOrigin = origins.first - editor->GetPosition();
         peerOrigin = origins.second;
     }

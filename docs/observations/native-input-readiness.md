@@ -117,3 +117,41 @@ Evidence, red controls and native results are retained at
 `F:/wxnotepad-evidence/toolbar-artwork-2026-11-21/focus-cache-control/`.
 This correction does not establish the cause of the separately observed
 scenario-13 key-release failure.
+
+## Wayland file-drop fixture placement
+
+CI run `44906515593` at `61dab58` passed X11 and both coverage backends, but
+ordinary Wayland shard 4 stopped in `native_file_drop`. Its first file drag from
+`860,102` to `849,225` never observed native target phase `target:2`. The
+separate `native_stream_drag` case passed. The failed shard's CTest process was
+terminated by the driver before its current test output was flushed.
+
+The isolated file-drop case and the failed display's preceding 25 tests passed
+locally. A native window-placement replay then reproduced the exact coordinates
+and phase failure twice in about nine seconds: the intended editor point was
+one pixel left of the peer widget, under its window decoration. Native tracing
+observed source press/start but no target motion. Moving only Main 45 pixels
+left preserved all four original file drags and their assertions and passed.
+These are controlled native observations; the historical CI did not retain its
+full scene graph or the target's event trace.
+
+The fixture now verifies Main's native focus, moves it to the left of the private
+display, raises and positions the peer, then reads their actual compositor and
+widget coordinates again. It requires the editor and peer client areas to remain
+visible before issuing the original file offers. The shared window-move helper
+retains the existing native Super-plus-mouse route.
+
+`native_file_drop_overlap` first deliberately places the editor's intended drop
+point under the peer decoration and checks that precondition using actual widget
+geometry. It then executes the same file-drop workflow. Before the layout
+correction, this registered regression fails at the same native phase in 9.07
+seconds. Afterward it passes, as does the original captured-coordinate replay.
+X11 runs the complete original file-drop workflow for this additional case;
+there is no additional skip.
+
+The existing first-file-only Unicode/percent-path, read-only, directory chooser,
+dirty-document Cancel/Save, disk-byte and undo assertions remain. The five-second
+driver phase wait, eight-second caller wait, ninety-second CTest guard and default
+parallel test policy are unchanged. No application drag/drop code is modified.
+Replays, mutation diffs and native reports are retained at
+`F:/wxnotepad-evidence/toolbar-artwork-2026-11-21/wayland-drag-followup/`.

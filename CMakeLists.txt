@@ -1072,6 +1072,9 @@ if(BUILD_TESTING)
         set_tests_properties(original_shell_appearance_scale2 PROPERTIES TIMEOUT 60
             ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=0.5")
         add_editor_test(focus_acknowledgement native_focus_acknowledgement 20)
+        add_test(NAME native_file_drop_overlap COMMAND stream_drag --file-drop)
+        set_tests_properties(native_file_drop_overlap PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_FILE_DROP_OVERLAP=1")
     endif()
 endif()
 
