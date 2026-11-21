@@ -614,6 +614,36 @@ void CheckClipboardCommands(EditorFrame* frame, Popup& popup, const wxPoint& scr
     popup.inspect = {};
 }
 
+void CheckScrolledPlacement(EditorFrame* frame, Popup& popup) {
+    auto* editor = frame->Editor();
+    popup.action = wxID_NONE;
+    std::string scrolled;
+    for (int line = 0; line < 80; ++line)
+        scrolled += std::string(180, 'x') + '\n';
+    scrolled += std::string(400, 'x') + "tail";
+#ifdef __WXMSW__
+    const auto display = wxDisplay::GetFromWindow(frame);
+    Require(display != wxNOT_FOUND, "owned frame has a native monitor for edge-placement fixture");
+    const auto work = wxDisplay(static_cast<unsigned>(display)).GetClientArea();
+    frame->SetPosition(wxPoint(work.GetRight() - frame->GetSize().x + 1, work.GetBottom() - frame->GetSize().y + 1));
+#endif
+    TestEditor::ResetStream(editor, scrolled.c_str(), scrolled.size(), scrolled.size());
+    for (const auto wrap : {Scintilla::Wrap::None, Scintilla::Wrap::Word}) {
+        editor->SetWordWrapMode(wrap);
+        editor->Send(GotoPos, scrolled.size());
+        NativePaint::Complete(editor);
+        Require(editor->Send(GetFirstVisibleLine) > 0, "placement fixture scrolls the document vertically");
+        if (wrap == Scintilla::Wrap::None)
+            Require(editor->Send(GetXOffset) > 0, "unwrapped placement fixture also scrolls horizontally");
+        const auto caret = editor->Send(GetCurrentPos);
+        popup.anchor = editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(PointXFromPosition, 0, caret)),
+                                                      static_cast<int>(editor->Send(PointYFromPosition, 0, caret))));
+        popup.Open(wxDefaultPosition, WXK_MENU);
+        TestEditor::RequireSelection(editor, scrolled.size(), scrolled.size(), "keyboard placement preserves caret");
+    }
+    popup.anchor.reset();
+}
+
 void Check(EditorFrame* frame) {
     auto* editor = frame->Editor();
     Focus(frame);
@@ -767,32 +797,7 @@ void Check(EditorFrame* frame) {
     for (const auto& file : std::filesystem::directory_iterator(folder))
         if (file.path().filename().string().starts_with("launched-")) ++children;
     Require(children == 1, "recreated popups retain exactly one Open binding and one child launch");
-    popup.action = wxID_NONE;
-    std::string scrolled;
-    for (int line = 0; line < 80; ++line)
-        scrolled += std::string(180, 'x') + '\n';
-    scrolled += std::string(400, 'x') + "tail";
-#ifdef __WXMSW__
-    const auto display = wxDisplay::GetFromWindow(frame);
-    Require(display != wxNOT_FOUND, "owned frame has a native monitor for edge-placement fixture");
-    const auto work = wxDisplay(static_cast<unsigned>(display)).GetClientArea();
-    frame->SetPosition(wxPoint(work.GetRight() - frame->GetSize().x + 1, work.GetBottom() - frame->GetSize().y + 1));
-#endif
-    TestEditor::ResetStream(editor, scrolled.c_str(), scrolled.size(), scrolled.size());
-    for (const auto wrap : {Scintilla::Wrap::None, Scintilla::Wrap::Word}) {
-        editor->SetWordWrapMode(wrap);
-        editor->Send(GotoPos, scrolled.size());
-        NativePaint::Complete(editor);
-        Require(editor->Send(GetFirstVisibleLine) > 0, "placement fixture scrolls the document vertically");
-        if (wrap == Scintilla::Wrap::None)
-            Require(editor->Send(GetXOffset) > 0, "unwrapped placement fixture also scrolls horizontally");
-        const auto caret = editor->Send(GetCurrentPos);
-        popup.anchor = editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(PointXFromPosition, 0, caret)),
-                                                      static_cast<int>(editor->Send(PointYFromPosition, 0, caret))));
-        popup.Open(wxDefaultPosition, WXK_MENU);
-        TestEditor::RequireSelection(editor, scrolled.size(), scrolled.size(), "keyboard placement preserves caret");
-    }
-    popup.anchor.reset();
+    CheckScrolledPlacement(frame, popup);
     std::puts("PASS: original native popup groups, pointer and keyboard selection preservation, cancellation");
 }
 class ContextMenuApp final : public wxApp {

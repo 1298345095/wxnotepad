@@ -1,6 +1,6 @@
 #include "app/editor_frame.h"
 #include <array>
-#include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/app.h>
@@ -103,7 +103,8 @@ void Fixtures(EditorFrame* frame) {
         "PASS: partial/reversed/end-at-line-start selections, mixed EOLs, Unicode, paragraph runs, trailing EOLs, "
         "unterminated lines, unchanged and identical-replacement history, one-step Undo/Redo");
 }
-void NativeKey(EditorControl* editor, bool shift, bool alt = false) {
+void NativeKey(EditorFrame* frame, bool shift, bool alt = false) {
+    auto* editor = frame->Editor();
 #ifdef __WXMSW__
     const bool handled = NativeSearch::WindowsShortcut(
         editor, 'J', {{VK_CONTROL, 0x80}, {VK_SHIFT, shift ? 0x80 : 0}, {VK_MENU, alt ? 0x80 : 0}});
@@ -111,6 +112,7 @@ void NativeKey(EditorControl* editor, bool shift, bool alt = false) {
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display helper");
+    NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
     bool received = false;
     wxEvtHandler observer;
     observer.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
@@ -135,15 +137,15 @@ void NativeKey(EditorControl* editor, bool shift, bool alt = false) {
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
     Set(editor, "A\n\nB", 0, 4);
-    NativeKey(editor, false);
+    NativeKey(frame, false);
     Require(TestEditor::Text(editor) == "A B", "native Ctrl+J invokes core join");
     Set(editor, "A\n\nB", 0, 4);
-    NativeKey(editor, true);
+    NativeKey(frame, true);
     Require(TestEditor::Text(editor) == "A\n\nB" && editor->Send(Message::GetModify),
             "native Ctrl+Shift+J invokes paragraph join identical-byte replacement");
     for (bool shift : {false, true}) {
         Set(editor, "A\n\nB", 0, 4);
-        NativeKey(editor, shift, true);
+        NativeKey(frame, shift, true);
         Require(TestEditor::Text(editor) == "A\n\nB" && !editor->Send(Message::CanUndo),
                 "additional Alt modifier does not route either join command");
     }
