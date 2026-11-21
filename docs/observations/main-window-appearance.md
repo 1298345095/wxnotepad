@@ -10,6 +10,12 @@ Disabled artwork follows the original alpha blend against the native background.
 The original BSD license remains in `LICENSES/`. The application and executable
 icons use the original multiresolution resource.
 
+The pinned 32-bit toolbar DIBs include straight BGRA edge transparency even
+though their BI_RGB header makes Pillow expose them as RGB. Import reads those
+original alpha bytes directly; replacing them with a color-key mask loses
+anti-aliasing at every supplied size. A frozen original 24-pixel New-icon alpha
+plane is checked through the actual toolbar bundle on each native backend.
+
 `ShowToolbar` follows the existing settings lifecycle and Ctrl+F11 command.
 Toolbar visibility is independent of the menu/status preferences and fullscreen.
 The editor has no added border. The title follows the original filename,

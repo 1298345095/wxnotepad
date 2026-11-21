@@ -1,5 +1,6 @@
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
+#include "toolbar_art_reference.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include "editor/occurrence_marking.h"
@@ -19,6 +20,17 @@
 namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
+}
+void OriginalToolbarAlpha(wxToolBar* toolbar) {
+    using namespace ToolbarArtReference;
+    const auto icon = toolbar->FindById(wxID_NEW)
+                          ->GetNormalBitmapBundle()
+                          .GetBitmap(wxSize(IconSizePixels, IconSizePixels))
+                          .ConvertToImage();
+    Require(icon.HasAlpha() && icon.GetSize() == wxSize(IconSizePixels, IconSizePixels),
+            "original 150-percent toolbar artwork retains its alpha channel and physical size");
+    Require(std::equal(NewIconAlpha.begin(), NewIconAlpha.end(), icon.GetAlpha()),
+            "toolbar preserves every original anti-aliased edge alpha value instead of a binary mask");
 }
 #if defined(__WXGTK__) || defined(__WXMSW__)
 void AwaitPaste(wxToolBar* toolbar, bool enabled) {
@@ -452,6 +464,7 @@ public:
                 Require(frame->GetToolBar()->FindById(wxID_NEW)->GetNormalBitmap().IsOk(),
                         "toolbar command displays its original artwork");
                 Require(frame->GetStatusBar()->GetFieldsCount() == 13, "status exposes the original thirteen fields");
+                OriginalToolbarAlpha(frame->GetToolBar());
                 CheckDocumentStatus(frame);
                 CheckToolbarClipboardAndHistory(frame);
                 CheckStatusActions(frame);
