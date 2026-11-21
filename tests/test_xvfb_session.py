@@ -17,6 +17,22 @@ NATIVE_TOOLS = ('ctest', 'Xvfb', 'xauth', 'xdpyinfo', 'dbus-run-session', 'xdoto
 @unittest.skipUnless(sys.platform == 'linux' and all(shutil.which(tool) for tool in NATIVE_TOOLS),
                      'Requires the native Linux GUI validation tools')
 class PrivateXvfb(unittest.TestCase):
+    def test_sequential_clients_connect_after_last_client_closes(self):
+        probe = (
+            'import ctypes\n'
+            'x11=ctypes.CDLL("libX11.so.6")\n'
+            'x11.XOpenDisplay.argtypes=[ctypes.c_char_p]\n'
+            'x11.XOpenDisplay.restype=ctypes.c_void_p\n'
+            'x11.XCloseDisplay.argtypes=[ctypes.c_void_p]\n'
+            'for index in range(100):\n'
+            '    display=x11.XOpenDisplay(None)\n'
+            '    assert display, f"private display rejected sequential client {index}"\n'
+            '    x11.XCloseDisplay(display)\n')
+        result = subprocess.run(
+            [sys.executable, ROOT / 'tools/xvfb_session.py', sys.executable, '-c', probe],
+            capture_output=True, text=True, encoding='utf-8', timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_parallel_sessions_authenticate_and_keep_displays_independent(self):
         with tempfile.TemporaryDirectory(prefix='wxnotepad display sessions ') as temporary:
             directory = Path(temporary)
