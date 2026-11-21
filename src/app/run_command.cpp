@@ -62,6 +62,41 @@ struct NativeCommand {
     wxString error;
     size_t programEnd = wxString::npos;
 };
+void FinishArgument(NativeCommand& result, wxString& argument, size_t end) {
+    if (result.arguments.empty()) result.programEnd = end;
+    result.arguments.push_back(std::exchange(argument, {}));
+}
+bool ConsumeEscape(const wxString& command, wxUniChar quote, size_t& index, NativeCommand& result, wxString& argument) {
+    if (command[index] != '\\' || quote == '\'') return false;
+    if (index + 1 == command.length()) {
+        // TRANSLATORS: Linux IDD_RUN parser error; a trailing backslash has no following character.
+        result.error = _("The command ends with an unfinished escape.");
+        return true;
+    }
+    const auto next = command[index + 1];
+    if (quote && next != '"' && next != '\\' && next != '$' && next != '\n') return false;
+    ++index;
+    if (next != '\n') argument += next;
+    return true;
+}
+bool ExpandVariable(const wxString& command, wxUniChar quote, size_t& index, wxString& argument) {
+    if (command[index] != '$' || quote == '\'' || index + 1 == command.length()) return false;
+    size_t end = index + 1;
+    const bool braced = command[end] == '{';
+    if (braced) ++end;
+    const size_t start = end;
+    const auto variableCharacter = [](wxUniChar ch) {
+        return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_';
+    };
+    while (end < command.length() && variableCharacter(command[end]))
+        ++end;
+    if (end == start || (braced && (end == command.length() || command[end] != '}'))) return false;
+    wxString value;
+    wxGetEnv(command.Mid(start, end - start), &value);
+    argument += value;
+    index = braced ? end : end - 1;
+    return true;
+}
 NativeCommand ParseNativeCommand(const wxString& command) {
     // Native argv mapping: quoting groups bytes; expansion never performs word
     // splitting, globbing, redirection, pipelines or command substitution.
@@ -69,16 +104,10 @@ NativeCommand ParseNativeCommand(const wxString& command) {
     wxString argument;
     wxUniChar quote = 0;
     bool started = false;
-    const auto variableCharacter = [](wxUniChar ch) {
-        return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_';
-    };
     for (size_t index = 0; index < command.length(); ++index) {
         const auto ch = command[index];
         if (!quote && (ch == ' ' || ch == '\t' || ch == '\n')) {
-            if (started) {
-                if (result.arguments.empty()) result.programEnd = index;
-                result.arguments.push_back(std::exchange(argument, {}));
-            }
+            if (started) FinishArgument(result, argument, index);
             started = false;
             continue;
         }
@@ -91,34 +120,11 @@ NativeCommand ParseNativeCommand(const wxString& command) {
             quote = ch;
             continue;
         }
-        if (ch == '\\' && quote != '\'') {
-            if (index + 1 == command.length()) {
-                // TRANSLATORS: Linux IDD_RUN parser error; a trailing backslash has no following character.
-                result.error = _("The command ends with an unfinished escape.");
-                return result;
-            }
-            const auto next = command[index + 1];
-            if (!quote || next == '"' || next == '\\' || next == '$' || next == '\n') {
-                ++index;
-                if (next != '\n') argument += next;
-                continue;
-            }
+        if (ConsumeEscape(command, quote, index, result, argument)) {
+            if (!result.error.empty()) return result;
+            continue;
         }
-        if (ch == '$' && quote != '\'' && index + 1 < command.length()) {
-            size_t end = index + 1;
-            const bool braced = command[end] == '{';
-            if (braced) ++end;
-            const size_t start = end;
-            while (end < command.length() && variableCharacter(command[end]))
-                ++end;
-            if (end != start && (!braced || (end < command.length() && command[end] == '}'))) {
-                wxString value;
-                wxGetEnv(command.Mid(start, end - start), &value);
-                argument += value;
-                index = braced ? end : end - 1;
-                continue;
-            }
-        }
+        if (ExpandVariable(command, quote, index, argument)) continue;
         argument += ch;
     }
     if (quote)
