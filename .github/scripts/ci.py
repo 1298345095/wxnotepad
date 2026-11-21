@@ -18,6 +18,7 @@ REPORTS = WORK / 'reports'
 VCPKG = WORK / 'vcpkg'
 BUILD = WORK / 'build'
 BUILD_RECORD = 'build.json'
+GIO_LAUNCH_HELPER = Path('libexec/gio-launch-desktop')
 WINDOWS = sys.platform == 'win32'
 TRIPLET = 'x64-windows-ci' if WINDOWS else 'x64-linux-ci'
 
@@ -262,6 +263,17 @@ def windows_desktop_names():
         user.CloseDesktop(input_desktop)
 
 
+def require_windows_test_desktop(jobs, reports):
+    if jobs != 1:
+        raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
+    desktop = windows_desktop_names()
+    (reports / 'windows-desktop.json').write_text(json.dumps(desktop, indent=2) + '\n', encoding='utf-8')
+    if any(value.casefold() != 'default' for value in desktop.values()):
+        raise SystemExit('Windows native tests require the Default input desktop; '
+                         f'thread={desktop["thread"]}, input={desktop["input"]}. '
+                         'Run ci.py test directly from a terminal on the normal desktop.')
+
+
 def test(backend, cmake_dir, expression, jobs, report_prefix='', report_directory=None):
     if (backend == 'windows') != WINDOWS:
         raise SystemExit('The requested test backend does not match this host')
@@ -271,14 +283,7 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
     except FileExistsError:
         raise SystemExit('Report directory already exists; choose a fresh directory to retain earlier evidence')
     if WINDOWS:
-        if jobs != 1:
-            raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
-        desktop = windows_desktop_names()
-        (reports / 'windows-desktop.json').write_text(json.dumps(desktop, indent=2) + '\n', encoding='utf-8')
-        if any(value.casefold() != 'default' for value in desktop.values()):
-            raise SystemExit('Windows native tests require the Default input desktop; '
-                             f'thread={desktop["thread"]}, input={desktop["input"]}. '
-                             'Run ci.py test directly from a terminal on the normal desktop.')
+        require_windows_test_desktop(jobs, reports)
     report = report_prefix + backend
     command = ['ctest', '--test-dir', cmake_dir, '-C', 'Release', '--parallel', '1',
                '--output-on-failure', '--no-tests=error',
@@ -347,6 +352,13 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        '--target', *targets]), 'diagnostic-build.log')
 
 
+def diagnostic_test(backend):
+    expression = '^native_diagnostic_'
+    if backend == 'windows':
+        expression = '(^native_diagnostic_|^original_open_targets$)'
+    test(backend, (BUILD / 'diagnostic-cmake').resolve(), expression, 1, 'diagnostic-')
+
+
 def split_linux_symbols(binary, symbols):
     """Keep matching symbols separately and strip only the distribution copy."""
     debug_directory = symbols / '.debug'
@@ -361,7 +373,7 @@ def bundle_linux_runtime(executable, destination, symbols, installed, reports):
     libraries = destination / 'lib'
     libraries.mkdir(exist_ok=True)
     for relative, report in ((Path(executable.name), 'runtime-libraries.txt'),
-                             (Path('libexec/gio-launch-desktop'), 'gio-launch-desktop-libraries.txt')):
+                             (GIO_LAUNCH_HELPER, 'gio-launch-desktop-libraries.txt')):
         binary = destination / relative
         split_linux_symbols(binary, symbols / relative.parent)
         dependencies = subprocess.check_output(['ldd', str(binary)], text=True)
@@ -379,7 +391,7 @@ def bundle_linux_runtime(executable, destination, symbols, installed, reports):
 def linux_gio_helper(cache):
     # GLib's compiled libexec prefix points into vcpkg's disposable package
     # staging tree. Select the helper from this build's actual installed SDK.
-    helper = Path(cache['VCPKG_INSTALLED_DIR']) / cache['VCPKG_TARGET_TRIPLET'] / 'libexec/gio-launch-desktop'
+    helper = Path(cache['VCPKG_INSTALLED_DIR']) / cache['VCPKG_TARGET_TRIPLET'] / GIO_LAUNCH_HELPER
     if not helper.is_file() or not os.access(helper, os.X_OK):
         raise FileNotFoundError(f'Required executable GLib desktop launch helper: {helper}')
     return helper.resolve()
@@ -415,7 +427,7 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         for library in directory.glob('*.dll'):
             shutil.copy2(library, destination / library.name)
     else:
-        helper = destination / 'libexec/gio-launch-desktop'
+        helper = destination / GIO_LAUNCH_HELPER
         helper.parent.mkdir(exist_ok=True)
         shutil.copy2(linux_gio_helper(cache), helper)
         bundle_linux_runtime(executable, destination, symbols, installed, reports)
@@ -530,10 +542,7 @@ def main():
         configure(False, coverage=True)
         build(False, arguments.jobs, coverage=True)
     elif arguments.command == 'diagnostic-test':
-        expression = '^native_diagnostic_'
-        if arguments.backend == 'windows':
-            expression = '(^native_diagnostic_|^original_open_targets$)'
-        test(arguments.backend, (BUILD / 'diagnostic-cmake').resolve(), expression, 1, 'diagnostic-')
+        diagnostic_test(arguments.backend)
     else:
         globals()[arguments.command]()
 
