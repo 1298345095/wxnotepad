@@ -83,6 +83,8 @@ public:
         Require(process_ > 0, "launch independent stock-widget clipboard peer");
         Require(Request("ready") == "ready", "clipboard peer maps its native window");
     }
+    ClipboardPeer(const ClipboardPeer&) = delete;
+    ClipboardPeer& operator=(const ClipboardPeer&) = delete;
     ~ClipboardPeer() {
         try {
             Request("quit");
@@ -191,45 +193,8 @@ public:
         invocationReleaseRequested_ = false;
         nativeMenuOpen_ = false;
 #endif
-        auto* editor = frame_->Editor();
         if (key) {
-            const auto focusDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-            while ((!editor->HasFocus() || !frame_->IsActive()) && std::chrono::steady_clock::now() < focusDeadline) {
-                wxYield();
-                wxMilliSleep(10);
-            }
-            Require(editor->HasFocus() && frame_->IsActive(),
-                    "native popup keyboard gesture retains existing editor focus");
-#ifdef __WXMSW__
-            Require(GetForegroundWindow() == static_cast<HWND>(frame_->GetHandle()),
-                    "native context-menu keys target the owned foreground editor");
-            INPUT input[4]{};
-            const UINT count = key == WXK_MENU ? 2 : 4;
-            for (auto& item : input)
-                item.type = INPUT_KEYBOARD;
-            if (key == WXK_MENU) {
-                input[0].ki.wVk = input[1].ki.wVk = VK_APPS;
-                input[1].ki.dwFlags = KEYEVENTF_KEYUP;
-            } else {
-                input[0].ki.wVk = input[3].ki.wVk = VK_SHIFT;
-                input[1].ki.wVk = input[2].ki.wVk = VK_F10;
-                input[2].ki.dwFlags = input[3].ki.dwFlags = KEYEVENTF_KEYUP;
-            }
-            Require(SendInput(count, input, sizeof(INPUT)) == count, "native keyboard invokes context menu");
-#else
-            const wxString gesture = key == WXK_MENU ? "Menu" : "shift+F10";
-            if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(static_cast<GtkWidget*>(editor->GetHandle())))) {
-                // A release can invalidate the press serial while GTK creates
-                // its native popup. Complete this one physical gesture only
-                // after the popup is ready, then observe its real key-up(s).
-                heldInvocationKey_ = gesture;
-                invocationReleases_.insert(key);
-                if (key == WXK_F10) invocationReleases_.insert(WXK_SHIFT);
-                NativeRequest("keydown:" + gesture);
-            } else {
-                NativeRequest("key:" + gesture);
-            }
-#endif
+            InvokeKeyboard(key);
         } else {
             NativeClick(frame_, screen, 3);
         }
@@ -265,6 +230,47 @@ public:
     std::optional<wxPoint> anchor;
 
 private:
+    void InvokeKeyboard(int key) {
+        auto* editor = frame_->Editor();
+        const auto focusDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while ((!editor->HasFocus() || !frame_->IsActive()) && std::chrono::steady_clock::now() < focusDeadline) {
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Require(editor->HasFocus() && frame_->IsActive(),
+                "native popup keyboard gesture retains existing editor focus");
+#ifdef __WXMSW__
+        Require(GetForegroundWindow() == static_cast<HWND>(frame_->GetHandle()),
+                "native context-menu keys target the owned foreground editor");
+        INPUT input[4]{};
+        const UINT count = key == WXK_MENU ? 2 : 4;
+        for (auto& item : input)
+            item.type = INPUT_KEYBOARD;
+        if (key == WXK_MENU) {
+            input[0].ki.wVk = input[1].ki.wVk = VK_APPS;
+            input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+        } else {
+            input[0].ki.wVk = input[3].ki.wVk = VK_SHIFT;
+            input[1].ki.wVk = input[2].ki.wVk = VK_F10;
+            input[2].ki.dwFlags = input[3].ki.dwFlags = KEYEVENTF_KEYUP;
+        }
+        Require(SendInput(count, input, sizeof(INPUT)) == count, "native keyboard invokes context menu");
+#else
+        const wxString gesture = key == WXK_MENU ? "Menu" : "shift+F10";
+        if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(static_cast<GtkWidget*>(editor->GetHandle())))) {
+            // A release can invalidate the press serial while GTK creates
+            // its native popup. Complete this one physical gesture only
+            // after the popup is ready, then observe its real key-up(s).
+            heldInvocationKey_ = gesture;
+            invocationReleases_.insert(key);
+            if (key == WXK_F10) invocationReleases_.insert(WXK_SHIFT);
+            NativeRequest("keydown:" + gesture);
+        } else {
+            NativeRequest("key:" + gesture);
+        }
+#endif
+    }
+
     EditorFrame* frame_;
     unsigned language_;
     int observed_ = 0;
@@ -524,6 +530,90 @@ private:
     }
 };
 
+void CheckClipboardCommands(EditorFrame* frame, Popup& popup, const wxPoint& screen) {
+    auto* editor = frame->Editor();
+    ClipboardPeer peer(frame);
+    peer.Offer("owned clipboard sentinel");
+    TestEditor::ResetStream(editor, "first\nsecond\n", 2, 2);
+    popup.action = wxID_COPY;
+    popup.Open(wxDefaultPosition);
+    Require(peer.Request("paste") == "first\n",
+            "empty-selection popup Copy retains original current-line clipboard behavior");
+    TestEditor::RequireSelection(editor, 2, 2, "current-line Copy keeps the empty caret selection");
+    editor->Send(SetSel, 5, 0);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Lines));
+    popup.Open(screen);
+    const auto lineClipboard = peer.Request("paste");
+    Require(lineClipboard == "first" &&
+                editor->Send(GetSelectionMode) == static_cast<int>(Scintilla::SelectionMode::Lines),
+            "native popup Copy preserves line-selection bytes and mode");
+    TestEditor::RequireSelection(editor, 5, 0, "original line selection excludes EOL and preserves direction");
+    TestEditor::ResetStream(editor, "alpha beta\nnext line", 10, 6);
+    popup.action = wxID_COPY;
+    popup.Open(screen);
+    Require(peer.Request("paste") == "beta", "independent stock text control pastes popup Copy bytes");
+    TestEditor::RequireSelection(editor, 10, 6, "Copy preserves reversed source selection");
+    popup.action = wxID_CUT;
+    popup.Open(wxDefaultPosition);
+    const auto cutClipboard = peer.Request("paste");
+    const auto cutText = TestEditor::Text(frame);
+    Require(cutClipboard == "beta" && cutText == "alpha \nnext line",
+            "native Cut publishes selected bytes and removes them exactly once");
+    peer.Offer("owned paste");
+    popup.action = wxID_PASTE;
+    popup.Open(wxDefaultPosition);
+    Require(TestEditor::Text(frame) == "alpha owned paste\nnext line",
+            "native popup Paste inserts independent offer once");
+    popup.action = wxID_SELECTALL;
+    popup.Open(wxDefaultPosition);
+    TestEditor::RequireSelection(editor, 27, 0, "native Select All retains original reversed whole-document selection");
+    TestEditor::ResetStream(editor, "ab12\ncd34\n", 2, 9);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(SetRectangularSelectionAnchor, 2);
+    editor->Send(SetRectangularSelectionCaret, 9);
+    popup.action = wxID_COPY;
+    popup.Open(screen);
+    const auto rectangleClipboard = peer.Request("paste");
+#ifdef __WXMSW__
+    constexpr std::string_view expectedRectangle = "12\n34";
+#else
+    // The original GTK rectangle carrier includes a final LF for a stock
+    // text widget; Windows publishes the original rows without that LF.
+    constexpr std::string_view expectedRectangle = "12\n34\n";
+#endif
+    Require(rectangleClipboard == wxString::FromUTF8(expectedRectangle.data(), expectedRectangle.size()),
+            "native popup Copy retains original rectangular clipboard rows");
+    Require(editor->Send(GetSelectionMode) == static_cast<int>(Scintilla::SelectionMode::Rectangle) &&
+                editor->Send(GetRectangularSelectionAnchor) == 2 && editor->Send(GetRectangularSelectionCaret) == 9,
+            "pointer popup preserves rectangular selection endpoints and direction");
+    TestEditor::ResetStream(editor, "alpha beta gamma", 0, 5);
+    editor->Send(AddSelection, 10, 6);
+    popup.Open(screen);
+    Require(peer.Request("paste") == "alpha\nbeta", "native popup Copy preserves multiple-selection clipboard order");
+    Require(editor->Send(GetSelections) == 2 && editor->Send(GetSelectionNAnchor, 0) == 0 &&
+                editor->Send(GetSelectionNCaret, 0) == 5 && editor->Send(GetSelectionNAnchor, 1) == 6 &&
+                editor->Send(GetSelectionNCaret, 1) == 10,
+            "popup preserves every multiple-selection endpoint");
+    peer.Offer("read-only availability offer");
+    editor->Send(SetReadOnly, 1);
+    popup.action = wxID_NONE;
+    popup.inspect = [](wxMenu& menu) {
+        Require(!menu.IsEnabled(wxID_PASTE) && menu.IsEnabled(wxID_CUT) && menu.IsEnabled(wxID_COPY) &&
+                    menu.IsEnabled(wxID_DELETE),
+                "original read-only popup availability follows live clipboard and core state");
+    };
+    popup.Open(wxDefaultPosition);
+    TestEditor::ResetStream(editor, "");
+    popup.inspect = [](wxMenu& menu) {
+        Require(!menu.IsEnabled(wxID_CUT) && !menu.IsEnabled(wxID_COPY) && !menu.IsEnabled(wxID_DELETE) &&
+                    !menu.IsEnabled(wxID_SELECTALL) && !menu.FindItemByPosition(12)->IsEnabled() &&
+                    menu.IsEnabled(wxID_PASTE),
+                "empty document popup refreshes document and clipboard command states");
+    };
+    popup.Open(wxDefaultPosition);
+    popup.inspect = {};
+}
+
 void Check(EditorFrame* frame) {
     auto* editor = frame->Editor();
     Focus(frame);
@@ -631,90 +721,7 @@ void Check(EditorFrame* frame) {
     Require(editor->Send(CallTipActive), "native CallTip is active before pointer popup");
     popup.Open(transientPoint);
     Require(!editor->Send(CallTipActive), "original right-button path cancels CallTip before popup");
-    {
-        ClipboardPeer peer(frame);
-        peer.Offer("owned clipboard sentinel");
-        TestEditor::ResetStream(editor, "first\nsecond\n", 2, 2);
-        popup.action = wxID_COPY;
-        popup.Open(wxDefaultPosition);
-        Require(peer.Request("paste") == "first\n",
-                "empty-selection popup Copy retains original current-line clipboard behavior");
-        TestEditor::RequireSelection(editor, 2, 2, "current-line Copy keeps the empty caret selection");
-        editor->Send(SetSel, 5, 0);
-        editor->Send(SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Lines));
-        popup.Open(screen);
-        const auto lineClipboard = peer.Request("paste");
-        Require(lineClipboard == "first" &&
-                    editor->Send(GetSelectionMode) == static_cast<int>(Scintilla::SelectionMode::Lines),
-                "native popup Copy preserves line-selection bytes and mode");
-        TestEditor::RequireSelection(editor, 5, 0, "original line selection excludes EOL and preserves direction");
-        TestEditor::ResetStream(editor, "alpha beta\nnext line", 10, 6);
-        popup.action = wxID_COPY;
-        popup.Open(screen);
-        Require(peer.Request("paste") == "beta", "independent stock text control pastes popup Copy bytes");
-        TestEditor::RequireSelection(editor, 10, 6, "Copy preserves reversed source selection");
-        popup.action = wxID_CUT;
-        popup.Open(wxDefaultPosition);
-        const auto cutClipboard = peer.Request("paste");
-        const auto cutText = TestEditor::Text(frame);
-        Require(cutClipboard == "beta" && cutText == "alpha \nnext line",
-                "native Cut publishes selected bytes and removes them exactly once");
-        peer.Offer("owned paste");
-        popup.action = wxID_PASTE;
-        popup.Open(wxDefaultPosition);
-        Require(TestEditor::Text(frame) == "alpha owned paste\nnext line",
-                "native popup Paste inserts independent offer once");
-        popup.action = wxID_SELECTALL;
-        popup.Open(wxDefaultPosition);
-        TestEditor::RequireSelection(editor, 27, 0,
-                                     "native Select All retains original reversed whole-document selection");
-        TestEditor::ResetStream(editor, "ab12\ncd34\n", 2, 9);
-        editor->Send(SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(SetRectangularSelectionAnchor, 2);
-        editor->Send(SetRectangularSelectionCaret, 9);
-        popup.action = wxID_COPY;
-        popup.Open(screen);
-        const auto rectangleClipboard = peer.Request("paste");
-#ifdef __WXMSW__
-        constexpr std::string_view expectedRectangle = "12\n34";
-#else
-        // The original GTK rectangle carrier includes a final LF for a stock
-        // text widget; Windows publishes the original rows without that LF.
-        constexpr std::string_view expectedRectangle = "12\n34\n";
-#endif
-        Require(rectangleClipboard == wxString::FromUTF8(expectedRectangle.data(), expectedRectangle.size()),
-                "native popup Copy retains original rectangular clipboard rows");
-        Require(editor->Send(GetSelectionMode) == static_cast<int>(Scintilla::SelectionMode::Rectangle) &&
-                    editor->Send(GetRectangularSelectionAnchor) == 2 && editor->Send(GetRectangularSelectionCaret) == 9,
-                "pointer popup preserves rectangular selection endpoints and direction");
-        TestEditor::ResetStream(editor, "alpha beta gamma", 0, 5);
-        editor->Send(AddSelection, 10, 6);
-        popup.Open(screen);
-        Require(peer.Request("paste") == "alpha\nbeta",
-                "native popup Copy preserves multiple-selection clipboard order");
-        Require(editor->Send(GetSelections) == 2 && editor->Send(GetSelectionNAnchor, 0) == 0 &&
-                    editor->Send(GetSelectionNCaret, 0) == 5 && editor->Send(GetSelectionNAnchor, 1) == 6 &&
-                    editor->Send(GetSelectionNCaret, 1) == 10,
-                "popup preserves every multiple-selection endpoint");
-        peer.Offer("read-only availability offer");
-        editor->Send(SetReadOnly, 1);
-        popup.action = wxID_NONE;
-        popup.inspect = [](wxMenu& menu) {
-            Require(!menu.IsEnabled(wxID_PASTE) && menu.IsEnabled(wxID_CUT) && menu.IsEnabled(wxID_COPY) &&
-                        menu.IsEnabled(wxID_DELETE),
-                    "original read-only popup availability follows live clipboard and core state");
-        };
-        popup.Open(wxDefaultPosition);
-        TestEditor::ResetStream(editor, "");
-        popup.inspect = [](wxMenu& menu) {
-            Require(!menu.IsEnabled(wxID_CUT) && !menu.IsEnabled(wxID_COPY) && !menu.IsEnabled(wxID_DELETE) &&
-                        !menu.IsEnabled(wxID_SELECTALL) && !menu.FindItemByPosition(12)->IsEnabled() &&
-                        menu.IsEnabled(wxID_PASTE),
-                    "empty document popup refreshes document and clipboard command states");
-        };
-        popup.Open(wxDefaultPosition);
-        popup.inspect = {};
-    }
+    CheckClipboardCommands(frame, popup, screen);
     const auto folder = TestFiles::TemporaryDirectory("context-launch");
     std::filesystem::create_directory(folder);
     const auto cpp = folder / "fold.cpp";
