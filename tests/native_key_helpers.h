@@ -17,6 +17,7 @@
 
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
+inline constexpr auto FocusAcknowledgementTimeout = std::chrono::seconds(3);
 inline int UnshiftedPunctuation(int key) {
     switch (key) {
     case '{':
@@ -91,12 +92,25 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
 
 class KeyRelease final : public wxEventFilter {
 public:
+    struct Observation {
+        const char* phase = "none";
+        int key = WXK_NONE;
+        int modifiers = wxMOD_NONE;
+        wxObject* target = nullptr;
+    };
+
     KeyRelease(int key, bool& received, bool* signal, wxWindow* intended = nullptr)
         : key_(key), received_(received), signal_(signal), intended_(intended) {
         wxEvtHandler::AddFilter(this);
     }
     ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
+    const Observation& LastKeyEvent() const { return lastKeyEvent_; }
     int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_KEY_DOWN || event.GetEventType() == wxEVT_KEY_UP) {
+            const auto& key = static_cast<wxKeyEvent&>(event);
+            lastKeyEvent_ = {event.GetEventType() == wxEVT_KEY_UP ? "up" : "down", key.GetKeyCode(), key.GetModifiers(),
+                             event.GetEventObject()};
+        }
         if (event.GetEventType() == wxEVT_KEY_UP &&
             UnshiftedPunctuation(static_cast<wxKeyEvent&>(event).GetKeyCode()) == key_ &&
             (!intended_ || event.GetEventObject() == intended_)) {
@@ -111,6 +125,7 @@ private:
     bool& received_;
     bool* signal_;
     wxWindow* intended_;
+    Observation lastKeyEvent_;
 };
 #ifdef __WXMSW__
 inline void DialogNavigation(wxDialog* dialog, int key) {
@@ -214,6 +229,76 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
 }
 #endif
 #ifndef __WXMSW__
+#ifdef __WXGTK__
+inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& focusFile, const wxString& request,
+                                          int expectedKey, bool received, const KeyRelease::Observation& lastEvent) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
+    const auto failedAt = g_get_monotonic_time();
+    wxString pending;
+    wxFFile observed(focusFile, "rb");
+    const bool read = observed.IsOpened() && observed.ReadAll(&pending);
+    const auto snapshot = wxString::Format(
+        "mono_us=%lld\tevent=driver.key-release-failure\townedPid=%lu\trequest_kind=%s"
+        "\tcached_pending_source=last-write\tcached_pending_kind=%s\texpected_key=%d\trelease_received=%d"
+        "\tfresh_pending_read=%d\tfresh_pending_empty=%d\tfresh_pending_kind=%s\tpending_read_mono_us=%lld"
+        "\tlast_key_phase=%s\tlast_key_code=%d\tlast_modifiers=%d\tlast_target=%p\tcurrent_focus=%p"
+        "\towned_editor=%p\tframeActive=%d\teditorFocus=%d\n",
+        static_cast<long long>(failedAt), wxGetProcessId(), request.BeforeFirst(':'), request.BeforeFirst(':'),
+        expectedKey, received, read, pending.empty(), pending.BeforeFirst(':'),
+        static_cast<long long>(g_get_monotonic_time()), lastEvent.phase, lastEvent.key, lastEvent.modifiers,
+        static_cast<void*>(lastEvent.target), static_cast<void*>(wxWindow::FindFocus()),
+        static_cast<void*>(frame->Editor()), frame->IsActive(), frame->Editor()->HasFocus());
+    std::fprintf(stderr, "Native shortcut release failure: %s", snapshot.utf8_str().data());
+    std::fflush(stderr);
+    bool written = false;
+    {
+        wxFFile marker(focusFile + ".failure.tmp", "wb");
+        written = marker.IsOpened() && marker.Write(snapshot);
+    }
+    if (!written || !wxRenameFile(focusFile + ".failure.tmp", focusFile + ".failure", true))
+        std::fputs("Could not publish native shortcut release failure snapshot\n", stderr);
+}
+
+inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxString& focusFile,
+                                const wxString& intent, const wxString& lastPending, bool acknowledged,
+                                unsigned int surfaceId) {
+    const auto failedAt = g_get_monotonic_time();
+    auto* editor = frame->Editor();
+    if (!surfaceId) {
+        auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+        if (surface) surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+    }
+    std::fprintf(stderr,
+                 "Native activation failure: request=%s acknowledged=%d frameActive=%d "
+                 "editorFocus=%d ownedPid=%lu ownedSurface=%u\n",
+                 intent.BeforeFirst(':').utf8_str().data(), acknowledged, frame->IsActive(), editor->HasFocus(),
+                 wxGetProcessId(), surfaceId);
+    std::fflush(stderr);
+    unsigned long long gesture = 0;
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    gesture = DiagnosticTrace::Gesture();
+#endif
+    wxString failurePending;
+    wxFFile observed(focusFile, "rb");
+    const bool failureRead = observed.IsOpened() && observed.ReadAll(&failurePending);
+    const auto snapshot = wxString::Format(
+        "mono_us=%lld\tevent=driver.wait-failure\tgesture=%llu\trequest_kind=%s\tpending_kind=%s"
+        "\tacknowledged=%d\tframeActive=%d\teditorFocus=%d\townedPid=%lu\townedSurface=%u"
+        "\tfailure_pending_read=%d\tfailure_pending_empty=%d\tfailure_pending_kind=%s"
+        "\tpending_read_mono_us=%lld\n",
+        static_cast<long long>(failedAt), gesture, intent.BeforeFirst(':'), lastPending.BeforeFirst(':'), acknowledged,
+        frame->IsActive(), editor->HasFocus(), wxGetProcessId(), surfaceId, failureRead, failurePending.empty(),
+        failurePending.BeforeFirst(':'), static_cast<long long>(g_get_monotonic_time()));
+    bool written = false;
+    {
+        wxFFile marker(focusFile + ".failure.tmp", "wb");
+        written = marker.IsOpened() && marker.Write(snapshot);
+    }
+    if (!written || !wxRenameFile(focusFile + ".failure.tmp", focusFile + ".failure", true))
+        std::fputs("Could not publish native focus failure snapshot\n", stderr);
+}
+#endif
 inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString& focusFile) {
     using Clock = std::chrono::steady_clock;
     auto* editor = frame->Editor();
@@ -225,17 +310,24 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     wxYield();
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile))
         throw std::runtime_error("native shortcuts require a private display");
-    const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
-    wxString intent = wxString(frame->IsActive() ? "focus:" : "front:") + focusName;
+    const auto focusDeadline = Clock::now() + FocusAcknowledgementTimeout;
+    const bool active = frame->IsActive();
+    wxString intent = wxString(active ? "focus:" : "front:") + focusName;
 #ifdef __WXGTK__
-    if (!frame->IsActive() && wayland) {
-        auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
-        if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
+    unsigned int surfaceId = 0;
+    const bool deadlineGated = wayland || active;
+    if (deadlineGated) {
         const auto remaining =
             std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
-        intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(),
-                                  wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
-                                  static_cast<long long>(g_get_monotonic_time() + remaining));
+        const auto expiry = static_cast<long long>(g_get_monotonic_time() + remaining);
+        if (active) {
+            intent = wxString::Format("focus-until:%lld:", expiry) + focusName;
+        } else {
+            auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+            if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
+            surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+            intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(), surfaceId, expiry);
+        }
     }
 #endif
     {
@@ -243,19 +335,36 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
         file.Write(NativeTrace::Request(intent));
     }
     bool acknowledged = false;
-    while (Clock::now() < focusDeadline) {
+    wxString lastPending;
+    const auto observeAcknowledgement = [&] {
         wxString pending;
         {
             wxFFile file(focusFile, "rb");
             file.ReadAll(&pending);
         }
+        lastPending = pending;
         acknowledged = pending.empty();
+    };
+    while (Clock::now() < focusDeadline) {
+        observeAcknowledgement();
         if (acknowledged && frame->IsActive() && editor->HasFocus()) break;
         wxYield();
         wxMilliSleep(10);
     }
-    if (!acknowledged || !frame->IsActive() || !editor->HasFocus())
+#ifdef __WXGTK__
+    // A GUI callback can outlast polling even when the driver claimed on time.
+    // These requests are deadline-gated by the driver, so a fresh read cannot
+    // turn a claim after the original deadline into a successful wait.
+    if (deadlineGated && !acknowledged) observeAcknowledgement();
+#endif
+    if (!acknowledged || !frame->IsActive() || !editor->HasFocus()) {
+#ifdef __WXGTK__
+        if (wayland) {
+            ObserveFocusFailure(frame, widget, focusFile, intent, lastPending, acknowledged, surfaceId);
+        }
+#endif
         throw std::runtime_error("private native input must activate the owned editor");
+    }
 }
 inline wxString KeyName(int key) {
     if (key >= WXK_F1 && key <= WXK_F24) return wxString::Format("F%d", key - WXK_F1 + 1);
@@ -285,7 +394,8 @@ inline wxString KeyName(int key) {
 }
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
-                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
+                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad",
+                     [[maybe_unused]] std::chrono::steady_clock::time_point* releaseDeadline = nullptr) {
     const NativeTrace::Gesture trace(*frame->Editor(), key,
                                      (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
@@ -317,18 +427,27 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     bool received = false;
     const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
     KeyRelease observer(key, received, releaseSignal, punctuation ? editor : nullptr);
+    wxString request;
     {
         wxFFile file(focusFile, "wb");
         const auto name = KeyName(key);
-        file.Write(NativeTrace::Request(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") +
-                                        (shift ? "shift+" : "") + name));
+        request = wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + name;
+        wxString delay;
+        if (wxGetEnv("WXNOTEPAD_NATIVE_KEY_DELAY_MS", &delay)) request = "key-delay:" + delay + ":" + request.Mid(4);
+        file.Write(NativeTrace::Request(request));
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
+    if (releaseDeadline) *releaseDeadline = keyDeadline;
     while (!received && Clock::now() < keyDeadline) {
         wxYield();
         wxMilliSleep(10);
     }
-    if (!received) throw std::runtime_error("native shortcut release must reach the owned editor or its dialog");
+    if (!received) {
+#ifdef __WXGTK__
+        ObserveShortcutReleaseFailure(frame, focusFile, request, key, received, observer.LastKeyEvent());
+#endif
+        throw std::runtime_error("native shortcut release must reach the owned editor or its dialog");
+    }
 #endif
     wxYield();
 }

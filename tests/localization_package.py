@@ -183,6 +183,7 @@ def environment(package, root, preferred='en'):
     # the build tree, working directory and document directory.
     if sys.platform != 'win32':
         result['LD_LIBRARY_PATH'] = str(package.parent / 'lib')
+        result['GIO_LAUNCH_DESKTOP'] = str(package.parent / 'libexec/gio-launch-desktop')
         result['LC_ALL'] = 'C.UTF-8'
         result.pop('NO_AT_BRIDGE', None)
     return result

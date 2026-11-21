@@ -7,6 +7,7 @@
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #include <wx/wupdlock.h>
+#include <wx/settings.h>
 #include <cmath>
 #include <type_traits>
 #include <utility>
@@ -62,7 +63,7 @@ void EditorControl::BindCoreEvent(const wxEventTypeTag<Event>& type, Handler han
 
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
+                wxBORDER_NONE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
       caretTimer_(this), scrollTimer_(this), widenTimer_(this), dwellTimer_(this) {
     // The native Notepad4 host initializes these tables before any document
     // copies its ASCII word classes. The wx host must do the same.
@@ -72,6 +73,14 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    // wxSTC initializes selection colors from the native text-control palette;
+    // the core's light-grey selection cannot pair with a dark-theme foreground.
+    for (const auto [element, systemColour] : {std::pair{Scintilla::Element::SelectionText, wxSYS_COLOUR_HIGHLIGHTTEXT},
+                                               std::pair{Scintilla::Element::SelectionBack, wxSYS_COLOUR_HIGHLIGHT}}) {
+        const auto colour = wxSystemSettings::GetColour(systemColour);
+        Send(Message::SetElementColour, static_cast<uintptr_t>(element),
+             0xFF000000U | colour.Red() | (colour.Green() << 8U) | (colour.Blue() << 16U));
+    }
 #ifdef __WXMSW__
     // A top-level move can change monitor calibration without changing DPI.
     // The wx member-function binding disconnects when this editor is destroyed.
@@ -146,6 +155,25 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickDwell(); }, dwellTimer_.GetId());
     BindCoreEvent(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    const auto rightDown = [this](wxMouseEvent& event) {
+        core_->Mouse(event);
+#ifdef __WXGTK__
+        if (event.RightDClick()) {
+            // wxGTK filters the second press into RIGHT_DCLICK and emits its
+            // context-menu event only for RIGHT_DOWN. Keep rapid right-clicks
+            // usable without emitting another event for ordinary presses.
+            wxContextMenuEvent context(wxEVT_CONTEXT_MENU, GetId(), ClientToScreen(event.GetPosition()));
+            context.SetEventObject(this);
+            ProcessWindowEvent(context);
+            return;
+        }
+#endif
+        // wxSTC OnMouseRightDown: let wx generate one native context-menu
+        // event after the original core has cancelled completion/CallTip.
+        event.Skip();
+    };
+    BindCoreEvent(wxEVT_RIGHT_DOWN, rightDown);
+    BindCoreEvent(wxEVT_RIGHT_DCLICK, rightDown);
     BindCoreEvent(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { core_->MouseDeparted(); });
     BindCoreEvent(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
@@ -408,6 +436,10 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
     Send(Message::SetIndent, indentWidth);
     ApplyWrapIndent();
     core_->UpdateWrapLayout();
+}
+
+bool EditorControl::CanPasteText(bool clipboardHasText) const noexcept {
+    return core_->CanPasteText(clipboardHasText);
 }
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {

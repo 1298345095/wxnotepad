@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -219,26 +220,25 @@ void NativeAliasQuickReload(EditorFrame* frame, bool useShortcut, bool oem) {
     const auto samples = QuickSamples(native->encoding);
     const wxString identity = oem ? "OEM (" : "ANSI (";
     Require(dialogs.errors == 0 && frame->DocumentEncoding() == native->encoding && !frame->DocumentHasBom() &&
-                frame->GetStatusBar()->GetStatusText().StartsWith(identity) &&
-                TestEditor::Text(frame) == samples.text && TestFiles::Bytes(path) == bytes,
+                StatusMetadata(frame).StartsWith(identity) && TestEditor::Text(frame) == samples.text &&
+                TestFiles::Bytes(path) == bytes,
             "quick reload must decode disk bytes as the requested native source and retain its identity");
     const std::string signature = "\x{ef}\x{bb}\x{bf}text\n";
     TestFiles::WriteBytes(path, signature);
     invoke();
-    Require(!frame->DocumentHasBom() && frame->GetStatusBar()->GetStatusText().StartsWith(identity) &&
+    Require(!frame->DocumentHasBom() && StatusMetadata(frame).StartsWith(identity) &&
                 TestEditor::Text(frame) == samples.signatureText && TestFiles::Bytes(path) == signature,
             "native ANSI and OEM must interpret a UTF-8 signature as document content");
     TestFiles::WriteBytes(path, "ASCII\n");
     invoke();
     Require(TestEditor::Text(frame) == "ASCII\n" && frame->DocumentEncoding() == native->encoding &&
-                !frame->GetStatusBar()->GetStatusText().StartsWith("ANSI (") &&
-                frame->GetStatusBar()->GetStatusText().StartsWith("OEM (") == oem,
+                !StatusMetadata(frame).StartsWith("ANSI (") && StatusMetadata(frame).StartsWith("OEM (") == oem,
             "for ASCII under the default load options OEM remains native and ANSI uses its explicit codec identity");
 }
 auto QuickReloadState(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    return std::make_tuple(TestEditor::Text(frame), frame->DocumentPath(), frame->GetStatusBar()->GetStatusText(),
+    return std::make_tuple(TestEditor::Text(frame), frame->DocumentPath(), StatusMetadata(frame),
                            editor->Send(GetAnchor), editor->Send(GetCurrentPos), editor->Send(GetFirstVisibleLine),
                            editor->Send(GetXOffset), editor->Send(GetEOLMode), frame->DocumentIsModified(),
                            editor->Send(CanUndo), editor->Send(CanRedo));
@@ -390,8 +390,7 @@ void DeliveredCodecs(EditorFrame* frame) {
                 driver.lineEndings == (fixture.text == "a\r\nb\nc\r" ? 1 : 0) &&
                 TestEditor::Text(frame) == fixture.text && TestFiles::Bytes(path) == fixture.bytes &&
                 frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == fixture.bom &&
-                frame->GetStatusBar()->GetStatusText().StartsWith(wxString(fixture.label) +
-                                                                  (fixture.bom ? " (BOM)" : " |")) &&
+                StatusMetadata(frame).StartsWith(wxString(fixture.label) + (fixture.bom ? " (BOM)" : " |")) &&
                 !frame->Editor()->Send(Scintilla::Message::GetModify) &&
                 !frame->Editor()->Send(Scintilla::Message::CanUndo),
             "explicit reload must honor the selected codec, actual BOM, conflicting declarations and mixed EOL bytes");

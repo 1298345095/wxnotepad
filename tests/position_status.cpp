@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "steady_stopwatch.h"
 #include "editor/editor_control.h"
@@ -25,10 +26,10 @@ void Status(EditorFrame* frame, const wxString& expected) {
     TestClock::StopWatch clock;
     do {
         NativeFold::Paint(frame->Editor());
-        if (status->GetStatusText(1) == expected) return;
+        if (StatusPosition(frame) == expected) return;
         wxMilliSleep(10);
     } while (clock.Time() < 2000);
-    const auto actual = status->GetStatusText(1);
+    const auto actual = StatusPosition(frame);
     if (actual != expected)
         std::fprintf(stderr, "Status: %s; expected %s\n", actual.utf8_str().data(), expected.utf8_str().data());
     Require(actual == expected, "status must describe the active logical caret");
@@ -110,7 +111,7 @@ public:
                 Status(frame, "Ln 2, Col 9");
                 TabDialog::File(frame, 4, 4, false);
                 Status(frame, "Ln 2, Col 5");
-                Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8"), "metadata must remain visible");
+                Require(StatusMetadata(frame).Contains("UTF-8"), "metadata must remain visible");
                 std::puts("PASS: live logical line and core column use tab stops and Unicode characters");
                 const std::string selected = "\x{E4}\x{B8}\x{AD}\x{E6}\x{96}\x{87}\x{F0}\x{9F}\x{98}\x{80}"
                                              "e\x{CC}\x{81}\t\r\n";
@@ -138,9 +139,9 @@ public:
                 NativeSearch::Click(query->GetParent(), wxID_FORWARD);
                 NativeSearch::Selection(editor, 4, 10, "native Find must select the expected UTF-8 byte range");
                 Status(frame, "Ln 2, Col 3 | Sel 2");
-                Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8") &&
-                            frame->GetStatusBar()->GetFieldsCount() == 3 &&
-                            frame->GetStatusBar()->GetStatusText(2) == "Match found",
+                Require(StatusMetadata(frame).Contains("UTF-8") &&
+                            frame->GetStatusBar()->GetFieldsCount() == StatusField::Count &&
+                            frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Match found",
                         "Find must preserve document metadata alongside position and its result");
                 query->GetParent()->Hide();
                 std::puts("PASS: Find updates selection status while retaining encoding, language and search result");
@@ -150,7 +151,7 @@ public:
                 editor->Send(Message::SetSel, 0, 500);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Python"));
                 Status(frame, "Ln 1, Col 501 | Sel 500");
-                for (int field : {0, 1}) {
+                for (int field : {StatusField::Line, StatusField::Column}) {
                     auto* status = frame->GetStatusBar();
                     wxRect rectangle;
                     Require(status->GetFieldRect(field, rectangle), "status field must have a native rectangle");
@@ -226,8 +227,7 @@ public:
                 wxRemoveFile(source);
                 Require(opened.status == OpenStatus::Opened, "valid Open must replace the document");
                 Status(frame, "Ln 1, Col 1");
-                Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8 (BOM)"),
-                        "Open retains encoding/BOM metadata");
+                Require(StatusMetadata(frame).Contains("UTF-8 (BOM)"), "Open retains encoding/BOM metadata");
                 Require(frame->NewDocument(), "clean New must succeed");
                 Status(frame, "Ln 1, Col 1");
                 std::puts("PASS: cancelled/failed operations preserve real status; successful Open/New reset it");

@@ -25,6 +25,9 @@ def display_server(authority, log):
             try:
                 server = subprocess.Popen(
                     ['Xvfb', '-displayfd', str(write_fd), '-screen', '0', SCREEN_GEOMETRY,
+                     # Sequential GUI processes can connect while a last-client
+                     # reset is rebuilding the server, losing their initial connection.
+                     '-noreset',
                      # Linux abstract UNIX sockets also work with WSLg's read-only socket mount.
                      '-nolisten', 'tcp', '-nolisten', 'unix', '-listen', 'local',
                      '-auth', str(authority)],

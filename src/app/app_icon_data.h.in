@@ -1,0 +1,3 @@
+#pragma once
+// Embedded pinned artwork, with its original independent DPI images intact.
+inline constexpr unsigned char AppIconData[] = {@WXNOTEPAD_ICON_DATA@};

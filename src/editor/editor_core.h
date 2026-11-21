@@ -33,6 +33,7 @@ public:
     uint64_t SelectionRevision() const noexcept;
 
     intptr_t SelectionCharacterCount();
+    bool CanPasteText(bool clipboardHasText) const noexcept;
     NativeByteSnapshot RawNativeBytes() const { return nativeBytes_.Snapshot(); }
     std::string NativeSelectedBytes(bool binary);
     std::string NativeBytesAfter(intptr_t position);

@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "settings/settings_store.h"
@@ -55,7 +56,7 @@ public:
                 Paint(editor);
                 Require(editor->Send(GetLength) == static_cast<intptr_t>(bytes.size()) &&
                             editor->Send(GetLexer) == SCLEX_CPP && editor->Send(GetStyleIndexAt, 0) == SCE_C_WORD2 &&
-                            frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
+                            StatusMetadata(frame).Contains("C/C++"),
                         "a supported document above 32 MiB must retain its normal language, lexer and token styles");
                 const int plain = frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text");
                 wxCommandEvent choose(wxEVT_MENU, plain);
@@ -63,7 +64,7 @@ public:
                 Paint(editor);
                 Require(editor->Send(GetLexer) == SCLEX_NULL && editor->Send(GetStyleIndexAt, 0) == 0 &&
                             editor->Send(GetMarginWidthN, 2) > 0 &&
-                            frame->GetStatusBar()->GetStatusText().Contains("Plain Text (override)"),
+                            StatusMetadata(frame).Contains("Plain Text (override)"),
                         "manual Plain Text above 32 MiB must use the existing no-lexer and cleared-style path");
                 Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == bytes &&
                             editor->Send(GetLexer) == SCLEX_NULL && frame->GetMenuBar()->IsChecked(plain),
@@ -76,7 +77,7 @@ public:
                         "large-file Save As must retain exact bytes");
                 Paint(editor);
                 Require(editor->Send(GetLexer) == SCLEX_CPP && editor->Send(GetStyleIndexAt, 0) == SCE_C_WORD2 &&
-                            !frame->GetStatusBar()->GetStatusText().Contains("override") && !editor->Send(GetModify) &&
+                            !StatusMetadata(frame).Contains("override") && !editor->Send(GetModify) &&
                             !editor->Send(CanUndo),
                         "large-file naming must restore filename-based lexer selection without adding edit history");
                 std::printf(

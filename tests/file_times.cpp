@@ -41,10 +41,10 @@ struct Times {
     long long change;
     bool operator==(const Times&) const = default;
 };
-Times ReadTimes(const std::filesystem::path& path) {
+Times ReadTimes(const std::filesystem::path& path, DWORD attributes = FILE_ATTRIBUTE_NORMAL) {
     const auto file =
         CreateFileW(path.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+                    OPEN_EXISTING, attributes, nullptr);
     FILE_BASIC_INFO info{};
     Require(file != INVALID_HANDLE_VALUE, "metadata fixture must open");
     const bool read = GetFileInformationByHandleEx(file, FileBasicInfo, &info, sizeof(info)) != 0;
@@ -53,16 +53,17 @@ Times ReadTimes(const std::filesystem::path& path) {
     return {info.CreationTime.QuadPart, info.LastAccessTime.QuadPart, info.LastWriteTime.QuadPart,
             info.ChangeTime.QuadPart};
 }
-void SetOldTimes(const std::filesystem::path& path) {
+void SetOldTimes(const std::filesystem::path& path, DWORD attributes = FILE_ATTRIBUTE_NORMAL,
+                 long long offsetTicks = 0) {
     const auto file =
         CreateFileW(path.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+                    nullptr, OPEN_EXISTING, attributes, nullptr);
     Require(file != INVALID_HANDLE_VALUE, "fixture times must be writable");
     FILE_BASIC_INFO info{};
-    info.CreationTime.QuadPart = 132537600000000000LL;
-    info.LastAccessTime.QuadPart = 132538464000000000LL;
-    info.LastWriteTime.QuadPart = 132539328000000000LL;
-    info.ChangeTime.QuadPart = 132540192000000000LL;
+    info.CreationTime.QuadPart = 132537600000000000LL + offsetTicks;
+    info.LastAccessTime.QuadPart = 132538464000000000LL + offsetTicks;
+    info.LastWriteTime.QuadPart = 132539328000000000LL + offsetTicks;
+    info.ChangeTime.QuadPart = 132540192000000000LL + offsetTicks;
     const bool set = SetFileInformationByHandle(file, FileBasicInfo, &info, sizeof(info)) != 0;
     CloseHandle(file);
     Require(set, "fixture timestamps must be settable");
@@ -295,6 +296,59 @@ void UpdateFailures(EditorFrame* frame, int update) {
             "timestamp-only failure command must silently retain live state without creating parents");
     std::puts("PASS: timestamp-only missing-file recreation and silent failure retain live state");
 }
+#ifdef __WXMSW__
+void UpdateSymlinkTarget(EditorFrame* frame) {
+    const auto directory = TestFiles::TemporaryDirectory() / "symlink-times";
+    std::filesystem::create_directory(directory);
+    const auto target = directory / "target.txt";
+    const auto link = directory / "link.txt";
+    TestFiles::WriteBytes(target, "target bytes");
+    if (!CreateSymbolicLinkW(link.c_str(), target.c_str(), SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE)) {
+        const DWORD error = GetLastError();
+        if (error == ERROR_PRIVILEGE_NOT_HELD) {
+            std::printf("SKIP: owned file symlink creation requires unavailable host privilege (error %lu)\n", error);
+            return;
+        }
+        throw std::runtime_error("create owned file symlink failed: " + std::to_string(error));
+    }
+    std::fputs("PHASE: owned symlink created; opening in independent clean frame\n", stderr);
+    Require(!frame->DocumentIsModified(), "independent symlink frame starts with a clean document");
+    Require(frame->Open(TestFiles::Filename(link)).status == OpenStatus::Opened, "opens actual file symlink target");
+    Require(frame->DocumentPath() == TestFiles::Filename(link), "document keeps the actual symlink spelling");
+    TestEditor::Append(frame, " unsaved");
+    const auto text = TestEditor::Text(frame);
+    constexpr DWORD LinkAttributes = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT;
+    constexpr long long LinkTimeOffsetTicks =
+        FileTimeTicksPerSecond * std::chrono::duration_cast<std::chrono::seconds>(std::chrono::days(10)).count();
+    SetOldTimes(target);
+    SetOldTimes(link, LinkAttributes, LinkTimeOffsetTicks);
+    const auto beforeTarget = ReadTimes(target);
+    const auto beforeLink = ReadTimes(link, LinkAttributes);
+    Require(beforeTarget.creation != beforeLink.creation && beforeTarget.access != beforeLink.access &&
+                beforeTarget.modified != beforeLink.modified && beforeTarget.change != beforeLink.change,
+            "link and target start with independently distinct values for every timestamp");
+    std::fputs("PHASE: distinct link/target times captured; dispatching timestamp command\n", stderr);
+    const auto update = frame->GetMenuBar()->FindMenuItem("File", "Update File Time");
+    Require(update != wxNOT_FOUND, "independent symlink frame exposes timestamp command");
+    const auto earliest = NowSeconds();
+    Command(frame, update);
+    const auto afterTarget = ReadTimes(target);
+    const auto afterLink = ReadTimes(link, LinkAttributes);
+    LogTimes("Symlink target before", beforeTarget);
+    LogTimes("Symlink target after", afterTarget);
+    LogTimes("Symlink itself before", beforeLink);
+    LogTimes("Symlink itself after", afterLink);
+    Require(ModifiedSeconds(afterTarget) >= earliest - TimestampToleranceSeconds &&
+                ModifiedSeconds(afterTarget) <= NowSeconds() + TimestampToleranceSeconds &&
+                OtherTimesEqual(beforeTarget, afterTarget),
+            "timestamp command through file symlink preserves target creation/access/change and updates target mtime");
+    Require(WritableTimesEqual(beforeLink, afterLink), "target timestamp update leaves all link timestamps intact");
+    Require(TestFiles::Bytes(target) == "target bytes" && TestEditor::Text(frame) == text &&
+                frame->DocumentPath() == TestFiles::Filename(link) && frame->DocumentIsModified(),
+            "symlink timestamp update preserves target bytes and live dirty document identity/text");
+    std::puts("PASS: actual file symlink preserves target and link timestamp identities");
+}
+#endif
 class FileTimesApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -320,11 +374,23 @@ public:
                 SaveDestinations(frame);
                 LegacyLoss(frame);
                 UpdateFailures(frame, update);
+#ifdef __WXMSW__
+                std::fputs("PHASE: all original file-time cases returned; creating independent symlink fixture\n",
+                           stderr);
+                linkSettings_ = std::make_unique<SettingsStore>(
+                    TestFiles::Filename(TestFiles::TemporaryDirectory() / "symlink-settings.ini"));
+                linkSettings_->values.warnLineEndings = false;
+                linkFrame_ = new EditorFrame(linkSettings_.get());
+                UpdateSymlinkTarget(linkFrame_);
+#endif
                 std::puts("PASS: file-time menu enablement and shared save action");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
+#ifdef __WXMSW__
+            if (linkFrame_) linkFrame_->Destroy();
+#endif
             frame->Destroy();
             ExitMainLoop();
         });
@@ -338,6 +404,10 @@ public:
 
 private:
     std::unique_ptr<SettingsStore> settings_;
+#ifdef __WXMSW__
+    std::unique_ptr<SettingsStore> linkSettings_;
+    EditorFrame* linkFrame_ = nullptr;
+#endif
     int result_ = 1;
 };
 } // namespace

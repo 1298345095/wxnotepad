@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
@@ -197,21 +198,18 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
     editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("echo first\n"));
     const auto first = directory / "first.unknown";
     Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(first) == "echo first\n" &&
-                frame->GetStatusBar()->GetStatusText().Contains("Bash (override)"),
+                TestFiles::Bytes(first) == "echo first\n" && StatusMetadata(frame).Contains("Bash (override)"),
             "first Save must retain a selected shell scheme and LF bytes");
     const auto renamed = directory / "renamed.m4";
     Require(frame->SaveAs(TestFiles::Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved &&
-                TestFiles::Bytes(renamed) == "echo first\n" &&
-                frame->GetStatusBar()->GetStatusText().Contains(" | m4 | "),
+                TestFiles::Bytes(renamed) == "echo first\n" && StatusMetadata(frame).Contains(" | m4 | "),
             "All Files Save As must resolve the original m4 association");
     Choose(frame, "C Shell");
     Require(frame->Open(TestFiles::Filename(renamed)).status == OpenStatus::Opened &&
-                frame->GetStatusBar()->GetStatusText().Contains("C Shell (override)"),
+                StatusMetadata(frame).Contains("C Shell (override)"),
             "same-file reopen must retain a manual shell dialect");
     Choose(frame, "Automatic");
-    Require(frame->GetStatusBar()->GetStatusText().Contains(" | m4 | "),
-            "explicit Automatic must restore filename dialect selection");
+    Require(StatusMetadata(frame).Contains(" | m4 | "), "explicit Automatic must restore filename dialect selection");
     std::puts("PASS: native shell comments, brace matching, dialect shebangs, settings persistence and file-variable "
               "precedence");
 }
@@ -257,7 +255,7 @@ public:
                 auto* editor = frame->Editor();
                 Require(editor->Send(Message::GetLexer) == SCLEX_BASH, "shell extension must select pinned Bash lexer");
                 Style(editor, source.find("if"), SCE_SH_WORD);
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Bash | EOL: LF", "status must name Bash");
+                Require(StatusMetadata(frame) == "UTF-8 | Bash | EOL: LF", "status must name Bash");
                 Choose(frame, "C Shell");
                 Choose(frame, "m4");
                 Choose(frame, "Bash");
@@ -322,7 +320,7 @@ public:
                             "shell detection fixture must open");
                     Paint(frame);
                     std::printf("CASE: %s\n", fixture.name);
-                    Require(frame->GetStatusBar()->GetStatusText().Contains(" | " + wxString(fixture.language) + " | "),
+                    Require(StatusMetadata(frame).Contains(" | " + wxString(fixture.language) + " | "),
                             "filename and shebang precedence must match the original");
                     if (editor->Send(Message::GetLexer) == SCLEX_BASH)
                         Require(editor->Send(Message::GetPropertyInt, reinterpret_cast<uintptr_t>("lexer.lang")) ==
@@ -378,17 +376,17 @@ public:
                 const auto cgi = directory / "gated.cgi";
                 std::ofstream(cgi, std::ios::binary) << "#!/bin/csh\necho gated\n";
                 Require(gated->Open(TestFiles::Filename(cgi)).status == OpenStatus::Opened &&
-                            gated->GetStatusBar()->GetStatusText().Contains(" | Plain Text | "),
+                            StatusMetadata(gated).Contains(" | Plain Text | "),
                         "NoCGIGuess must suppress shell interpreter selection");
                 Require(gated->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                            gated->GetStatusBar()->GetStatusText().Contains(" | Bash | "),
+                            StatusMetadata(gated).Contains(" | Bash | "),
                         "NoCGIGuess must retain original filename associations");
                 gated->Destroy();
                 settings_->values.autoSelect = false;
                 gated = new EditorFrame(settings_.get());
                 gated->ShowWithoutActivating();
                 Require(gated->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                            gated->GetStatusBar()->GetStatusText().Contains(" | Plain Text | "),
+                            StatusMetadata(gated).Contains(" | Plain Text | "),
                         "AutoSelect=0 must suppress shell filename selection");
                 Choose(gated, "C Shell");
                 gated->Destroy();

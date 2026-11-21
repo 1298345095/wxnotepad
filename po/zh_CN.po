@@ -29,11 +29,12 @@ msgstr " (只读文件)"
 msgid " (Read Only Mode)"
 msgstr " (只读模式)"
 
-#: src/app/editor_frame.cpp
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT syntax-name suffix for a manually selected scheme, including its space.
+#: src/app/editor_frame_status.cpp
 msgid " (override)"
 msgstr " (手动指定)"
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid " | Sel %lld"
 msgstr " | 选中 %lld"
@@ -48,6 +49,13 @@ msgstr "“%s”是只读的。是否保存到另一个文件？"
 #, c-format
 msgid "%s - wxnotepad"
 msgstr "%s - wxnotepad"
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT document size; %s is the locale-formatted byte count.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "%s byte"
+msgid_plural "%s bytes"
+msgstr[0] "%s 字节"
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 #, c-format
@@ -64,14 +72,7 @@ msgstr "%s 制表符宽度"
 msgid "%s tabs as spaces"
 msgstr "%s 插入制表符为空格"
 
-#. TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
-#. optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
-#: src/app/editor_frame.cpp
-#, c-format
-msgid "%s%s | %s%s | EOL: %s"
-msgstr "%s%s | %s%s | 换行符: %s"
-
-#. TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+#. TRANSLATORS: Window title arguments: modified marker ("* " or empty), document name/path or untitled name,
 #. and optional read-only file/mode annotation.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -132,6 +133,16 @@ msgstr "为匹配的行添加书签(&M)"
 msgid "&Boundary:"
 msgstr "边界(&B):"
 
+#. TRANSLATORS: IDD_OPENWITH button selecting the directory containing available programs.
+#: src/app/document_tools.cpp
+msgid "&Browse Directory..."
+msgstr "浏览目录(&B)..."
+
+#. TRANSLATORS: IDD_RUN button opening the native program chooser.
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr "浏览(&B)..."
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -162,8 +173,19 @@ msgstr "列(留空或 1 - %lld)(&C):"
 msgid "&Column sort (rectangular selection)."
 msgstr "行列排序(矩形选择)(&C)。"
 
-# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
+#. TRANSLATORS: IDD_RUN command input label; the field accepts a program and its arguments.
+#. TRANSLATORS: IDD_RUN command input accessible name, matching its visible label.
+#: src/app/run_command.cpp
+msgid "&Command:"
+msgstr "命令(&C)："
+
+#. TRANSLATORS: IDR_POPUPMENU copy selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
+msgid "&Copy"
+msgstr "复制(&C)"
+
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
 msgstr "复制(&C)\tCtrl+C"
 
@@ -187,7 +209,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr "默认编码(&D)\tCtrl+Alt+F"
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr "默认级别(&D)\tShift+Alt+D"
 
@@ -203,6 +225,11 @@ msgstr "默认换行模式(&D):"
 #: src/app/editor_frame_commands.cpp
 msgid "&Default..."
 msgstr "默认(&D)..."
+
+#. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
+#: src/app/editor_frame_commands.cpp
+msgid "&Delete"
+msgstr "删除(&D)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Direct2D"
@@ -271,7 +298,7 @@ msgid "&Find All"
 msgstr "查找全部(&F)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FIND.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Find...\tCtrl+F"
 msgstr "查找(&F)...\tCtrl+F"
 
@@ -280,7 +307,7 @@ msgid "&Goto"
 msgstr "跳转(&G)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTOLINE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr "跳转到行(&G)...\tCtrl+G"
 
@@ -354,6 +381,11 @@ msgstr "长行标记(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小写(&L)\tCtrl+U"
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_MANUALLYDELETE checkbox; retain old backups for manual deletion.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr "手动删除备份(&M)。"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_MERGE_DUP.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
@@ -374,7 +406,7 @@ msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr "监听连续更新的文件(比如日志文件)(&M)。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_ENCODING_SELECT.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&More...\tF9"
 msgstr "更多(&M)...\tF9"
 
@@ -383,7 +415,7 @@ msgid "&Nanosecond (ns)"
 msgstr "纳秒(&n) (ns)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEW.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&New\tCtrl+N"
 msgstr "新建(&N)\tCtrl+N"
 
@@ -424,8 +456,17 @@ msgstr "旧版 Visual Studio(&O)"
 msgid "&One Page"
 msgstr "一页(&O)"
 
-# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_OPEN.
+#. TRANSLATORS: IDR_POPUPMENU open the selected or caret-local file, folder or link.
 #: src/app/editor_frame_commands.cpp
+msgid "&Open"
+msgstr "打开(&O)"
+
+#: src/app/open_targets.cpp
+msgid "&Open File, Folder, Link, etc."
+msgstr "打开文件、文件夹、链接等(&O)"
+
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_OPEN.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Open...\tCtrl+O"
 msgstr "打开(&O)...\tCtrl+O"
 
@@ -443,8 +484,13 @@ msgstr "其他时间戳(&O)"
 msgid "&Pad With Spaces\tAlt+P"
 msgstr "填充空格(&P)\tAlt+P"
 
-# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PASTE.
+#. TRANSLATORS: IDR_POPUPMENU paste clipboard text.
 #: src/app/editor_frame_commands.cpp
+msgid "&Paste"
+msgstr "粘贴(&P)"
+
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PASTE.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
 msgstr "粘贴(&P)\tCtrl+V"
 
@@ -463,8 +509,13 @@ msgstr "打印(&P)...\tCtrl+P"
 msgid "&Read Only Mode\tF10"
 msgstr "只读模式(&R)\tF10"
 
-# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REDO.
+#. TRANSLATORS: IDR_POPUPMENU redo editing command.
 #: src/app/editor_frame_commands.cpp
+msgid "&Redo"
+msgstr "重做(&R)"
+
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REDO.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr "重做(&R)\tCtrl+Y"
 
@@ -511,14 +562,29 @@ msgstr "还原(&V)\tF5"
 msgid "&Right."
 msgstr "右对齐(&R)。"
 
+#. TRANSLATORS: IDD_RUN affirmative button that launches the entered command.
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr "运行(&R)"
+
+#. TRANSLATORS: IDD_RUN menu command; retain the tab-separated keyboard shortcut.
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
+msgstr "运行命令(&R)...\tCtrl+R"
+
 #: src/app/editor_frame.cpp
 msgid "&Save"
 msgstr "保存(&S)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Save\tCtrl+S"
 msgstr "保存(&S)\tCtrl+S"
+
+#. TRANSLATORS: SaveBeforeRunningTools preference; ask about unsaved changes before external tool commands.
+#: src/app/document_tools.cpp
+msgid "&Save Before Running Tools"
+msgstr "运行工具前保存(&S)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Search menu.
 #: src/app/editor_frame_commands.cpp
@@ -587,8 +653,13 @@ msgstr "工具(&T)"
 msgid "&UTC Date Time"
 msgstr "UTC 日期和时间(&U)"
 
-# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNDO.
+#. TRANSLATORS: IDR_POPUPMENU undo editing command.
 #: src/app/editor_frame_commands.cpp
+msgid "&Undo"
+msgstr "撤销(&U)"
+
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNDO.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr "撤销(&U)\tCtrl+Z"
 
@@ -602,7 +673,7 @@ msgstr "反转义 C 字符(&U)\tCtrl+Alt+R"
 msgid "&Unindent"
 msgstr "减少缩进(&U)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Unix/macOS (LF)"
 msgstr "&Unix/macOS (LF)"
 
@@ -624,7 +695,7 @@ msgstr "&Visual Studio"
 msgid "&Wildcard search"
 msgstr "通配符搜索(&I)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Windows (CR+LF)"
 msgstr "&Windows (CR+LF)"
 
@@ -634,7 +705,7 @@ msgid "&With...\tAlt+Q"
 msgstr "自定义(&W)...\tAlt+Q"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAP.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr "自动换行(&R)\tCtrl+Shift+W"
 
@@ -694,6 +765,11 @@ msgstr "ASP.NET VB"
 msgid "ASS — Activate &symmetric swapping"
 msgstr "ASS — 启用对称交换(&S)"
 
+#. TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
+#: src/app/editor_frame_commands.cpp
+msgid "Action on &Selection"
+msgstr "对选中内容执行操作(&S)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ALIGN.
 #: src/app/editor_frame_commands.cpp
 msgid "Alig&n Lines...\tAlt+J"
@@ -707,6 +783,11 @@ msgstr "行对齐"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All Files (*)"
 msgstr "所有文件 (*)"
+
+#. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
+msgstr "所有文件 (*)|*"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All files (*.*)"
@@ -769,6 +850,16 @@ msgstr "自动闭合 HTML 和 XML 标签"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自动收缩水平滚动条"
 
+#. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr "自动保存设置"
+
+#. TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr "自动保存设置..."
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr "自动"
@@ -793,6 +884,16 @@ msgstr "退格键在缩进处删除到制表位"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
 msgstr "反引号"
+
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD label; the numeric interval is measured in seconds.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr "备份间隔（秒）(&S)："
+
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD accessible input name; units are seconds.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
+msgstr "备份间隔（秒）"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
@@ -881,6 +982,12 @@ msgstr "不区分大小写(&I)。"
 msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
 msgstr "当前文本中的某些字符在所选编码中不支持，如果保存将可能被替换为默认的占位字符。推荐选择其他文件编码。要继续吗？"
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based character position / line Unicode character count.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ch %s / %s"
+msgstr "字符 %s / %s"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Change &History Marker"
 msgstr "修改历史标记(&H)"
@@ -888,6 +995,16 @@ msgstr "修改历史标记(&H)"
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Change &background color."
 msgstr "改变背景色(&B)。"
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
+#: src/app/editor_frame_commands.cpp
+msgid "Change the disk file's read-only attribute. F10 controls editing only."
+msgstr "更改磁盘文件的只读属性。F10 仅控制编辑保护。"
+
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE help; owner-write changes affect the owner's other processes.
+#: src/app/editor_frame_commands.cpp
+msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
+msgstr "更改文件所有者的写入权限，也会影响该用户的其他程序。F10 仅控制编辑保护。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_CHANGE_LANG_RESTART (application name adapted).
 #: src/app/language_commands.cpp
@@ -918,7 +1035,12 @@ msgstr "请先选择文件名再保存。"
 msgid "Choose an existing file to open."
 msgstr "选择要打开的现有文件。"
 
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: IDD_RUN Browse action; title of the native executable chooser.
+#: src/app/run_command.cpp
+msgid "Choose program"
+msgstr "选择程序"
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr "经典 &Mac OS (CR)"
 
@@ -949,6 +1071,12 @@ msgstr "关闭"
 #, c-format
 msgid "Code page %d (unavailable)"
 msgstr "代码页 %d (不可用)"
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based visual column / line columns, including tab expansion.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Col %s / %s"
+msgstr "列 %s / %s"
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1041,6 +1169,29 @@ msgstr "复制选中文本作为查找文本"
 msgid "Copy as &RTF"
 msgstr "复制为富文本(&R)"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change file attributes: %s"
+msgstr "无法更改文件属性：%s"
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE error-dialog title.
+#: src/app/editor_frame_commands.cpp
+msgid "Could not change file protection"
+msgstr "无法更改文件保护"
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE failure; first %s is the path, second %s is the native error.
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Could not change read-only protection for %s. %s"
+msgstr "无法更改 %s 的只读保护。%s"
+
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change the file owner's write permission: %s"
+msgstr "无法更改文件所有者的写入权限：%s"
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "无法关闭已写入完毕的临时文件。"
@@ -1053,6 +1204,22 @@ msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问
 msgid "Could not determine the file size."
 msgstr "无法确定文件大小。"
 
+#. TRANSLATORS: IDM_FILE_LAUNCH error title; the message body contains the native launch error.
+#: src/app/document_tools.cpp
+msgid "Could not execute document"
+msgstr "无法执行文档"
+
+#. TRANSLATORS: Linux IDM_FILE_LAUNCH/OPENWITH error loading a native .desktop entry; no parameters.
+#. TRANSLATORS: Linux IDM_FILE_OPENWITH error loading a native .desktop program entry; no parameters.
+#: src/app/desktop_launch.cpp src/app/document_tools.cpp
+msgid "Could not load the desktop application entry."
+msgstr "无法加载桌面应用程序条目。"
+
+#. TRANSLATORS: IDM_FILE_OPENWITH error title; the message body contains the native launch error.
+#: src/app/document_tools.cpp
+msgid "Could not open document with program"
+msgstr "无法使用所选程序打开文档"
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -1062,6 +1229,16 @@ msgstr "无法打开文件"
 msgid "Could not open new window"
 msgstr "无法打开新窗口"
 
+#: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
+#: src/app/open_targets.cpp
+msgid "Could not open target"
+msgstr "无法打开目标"
+
+#. TRANSLATORS: Native containing-folder launch error and its dialog title; no parameters.
+#: src/app/editor_frame_commands.cpp
+msgid "Could not open the containing folder."
+msgstr "无法打开所在文件夹。"
+
 #: src/document/document_session.cpp
 msgid "Could not open the destination for writing."
 msgstr "无法打开目标文件以写入。"
@@ -1070,15 +1247,37 @@ msgstr "无法打开目标文件以写入。"
 msgid "Could not open the file for reading."
 msgstr "无法打开文件以读取。"
 
+#. TRANSLATORS: Selected file/folder/link launch failure and dialog title; no parameters.
+#: src/app/explorer_selections.cpp src/app/open_targets.cpp
+msgid "Could not open the selected target."
+msgstr "无法打开选中的目标。"
+
 #. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
 #: src/app/editor_print_job.cpp
 #, c-format
 msgid "Could not print \"%s\"."
 msgstr "无法打印“%s”。"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file attributes: %s"
+msgstr "无法读取文件属性：%s"
+
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file permissions: %s"
+msgstr "无法读取文件权限：%s"
+
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
 msgstr "无法完整读取文件。"
+
+#. TRANSLATORS: IDD_OPENWITH failure reading the selected program directory; no parameters.
+#: src/app/document_tools.cpp
+msgid "Could not read the program directory."
+msgstr "无法读取程序目录。"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Could not reload file"
@@ -1092,6 +1291,12 @@ msgstr "无法替换目标文件: %s"
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
 msgstr "无法重新启动 wxnotepad。"
+
+#. TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
+msgstr "无法运行命令：%s"
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
@@ -1115,8 +1320,13 @@ msgstr "无法写入 %s"
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
 
-# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUT.
+#. TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
+msgid "Cu&t"
+msgstr "剪切(&T)"
+
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUT.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr "剪切(&T)\tCtrl+X"
 
@@ -1220,6 +1430,11 @@ msgstr "在选区内绘制块状光标(&S)"
 msgid "Enable &Multiple Selection"
 msgstr "启用多选(&M)"
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_ENABLE checkbox; enable timed backup copies.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
+msgstr "启用定期备份(&P)。"
+
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Enclose Selection"
 msgstr "包围选中文本"
@@ -1256,6 +1471,11 @@ msgstr "转义 C 字符(&P)\tCtrl+Alt+E"
 #: src/app/editor_frame_commands.cpp
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "转义 HTML/XML 字符(&M)\tAlt+Shift+X"
+
+#. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
+#: src/app/document_tools.cpp
+msgid "Execute &Document\tCtrl+L"
+msgstr "执行文档(&D)\tCtrl+L"
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
@@ -1347,6 +1567,12 @@ msgstr "搜索字符串"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Finish completion (Esc cancels)"
 msgstr "用于执行自动完成的按键(使用 Esc 键取消)"
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; match count followed by " ..." while occurrence marking is pending.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Fnd %s%s"
+msgstr "匹配 %s%s"
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1665,10 +1891,16 @@ msgstr "竖线(宽度 &3)"
 msgid "Line ending conversion"
 msgstr "换行符转换"
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
 msgstr "行 %llu, 列 %llu"
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based line / total document lines, both formatted numbers.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ln %s / %s"
+msgstr "行 %s / %s"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_LOGICAL_NUMBER.
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1791,7 +2023,7 @@ msgid "New &GUID"
 msgstr "新的 &GUID"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEWWINDOW.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "New &Window\tAlt+N"
 msgstr "新建窗口(&W)\tAlt+N"
 
@@ -1825,6 +2057,11 @@ msgstr "无"
 msgid "Normal"
 msgstr "正常"
 
+#. TRANSLATORS: IDM_FILE_OPENWITH menu command; choose a program for the current document.
+#: src/app/document_tools.cpp
+msgid "O&pen Document With..."
+msgstr "打开文档方式(&P)..."
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM 美国 (DOS-437)"
@@ -1834,9 +2071,19 @@ msgstr "OEM 美国 (DOS-437)"
 msgid "On &Startup"
 msgstr "启动时进入全屏(&S)"
 
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
+#: src/document/document_session.cpp
+msgid "Only the file owner can change the owner's write permission."
+msgstr "只有文件所有者才能更改所有者的写入权限。"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr "仅使用当前文档中的单词"
+
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
+msgstr "打开文件夹(&F)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
@@ -1865,6 +2112,18 @@ msgstr "作为 UTF-16LE 打开..."
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
 msgstr "作为 Windows-1252 打开..."
+
+#. TRANSLATORS: Open the current document's containing directory in the native file manager.
+#. TRANSLATORS: Original Action on Selection commands; open the target or its containing directory.
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Open Containing &Folder"
+msgstr "打开所在文件夹(&F)"
+
+#. TRANSLATORS: IDD_OPENWITH title; choose a program to open the current document.
+#. TRANSLATORS: IDD_OPENWITH directory browser title.
+#: src/app/document_tools.cpp
+msgid "Open Document With"
+msgstr "打开文档方式"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
@@ -1966,6 +2225,11 @@ msgstr "打印缩放比例"
 msgid "Print zoom (%d%% to %d%%):"
 msgstr "打印缩放（%d%% 至 %d%%）："
 
+#. TRANSLATORS: IDD_RUN program browser filter; preserve wildcard patterns and vertical-bar separators.
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr "程序 (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|所有文件 (*.*)|*.*"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr "Property List"
@@ -1979,7 +2243,7 @@ msgid "Python"
 msgstr "Python"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REPLACE.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr "替换(&E)...\tCtrl+H"
 
@@ -2012,6 +2276,11 @@ msgstr "已到文档开头，从文档末尾重新搜索。"
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
 msgstr "已到文档末尾，从文档开头重新搜索。"
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE menu item; changes disk-file protection.
+#: src/app/editor_frame_commands.cpp
+msgid "Read Only &File"
+msgstr "只读文件(&F)"
 
 #: src/app/editor_frame.cpp
 msgid "Read only file"
@@ -2122,6 +2391,11 @@ msgstr "右页边距"
 msgid "Right:"
 msgstr "右："
 
+#. TRANSLATORS: IDD_RUN dialog title.
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr "运行命令"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
@@ -2150,7 +2424,7 @@ msgid "Sa&ve Find Text\tAlt+F3"
 msgstr "保存查找文本(&V)\tAlt+F3"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEAS.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save &As...\tF6"
 msgstr "另存为(&A)...\tF6"
 
@@ -2164,7 +2438,7 @@ msgid "Save Back&up"
 msgstr "保存备份(&U)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVECOPY.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr "保存副本(&Y)...\tCtrl+F6"
 
@@ -2210,6 +2484,14 @@ msgstr "重新加载前保存对 %s 的修改？"
 msgid "Save changes to %s before restarting?"
 msgstr "重新启动前保存对 %s 的修改？"
 
+#. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
+#. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
+#. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
+#: src/app/document_tools.cpp src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
+msgstr "运行工具前保存对 %s 的更改吗？"
+
 #: src/app/editor_frame.cpp
 msgid "Save changes?"
 msgstr "保存修改？"
@@ -2217,6 +2499,11 @@ msgstr "保存修改？"
 #: src/app/editor_frame.cpp
 msgid "Save file"
 msgstr "保存文件"
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
+#: src/document/document_session.cpp
+msgid "Save the document before changing file permissions."
+msgstr "请先保存文档，再更改文件权限。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEORIGINALTIMESTAMP.
 #: src/app/editor_frame_commands.cpp
@@ -2255,6 +2542,23 @@ msgstr "滚动超出末行(&L)"
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
 msgstr "搜索已循环"
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Sel %s / %s"
+msgstr "选区 %s / %s"
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; %s is the formatted number of selected logical lines.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "SelLn %s"
+msgstr "选中行 %s"
+
+#. TRANSLATORS: IDR_POPUPMENU select the complete document.
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All"
+msgstr "全选(&A)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Select &All\tCtrl+A"
@@ -2321,7 +2625,7 @@ msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
-msgstr "设置(&T)"
+msgstr "设置(&I)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_SAVEDSETTINGS.
 #: src/app/editor_frame_commands.cpp
@@ -2331,6 +2635,10 @@ msgstr "当前程序设置已被保存"
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
 msgstr "显示菜单(&M)\tAlt+F11"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Toolbar\tCtrl+F11"
+msgstr "显示工具栏(&T)\tCtrl+F11"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWWHITESPACE.
 #: src/app/editor_frame_commands.cpp
@@ -2539,6 +2847,16 @@ msgstr "插入制表符为空格"
 msgid "Text files (*.txt)"
 msgstr "文本文件 (*.txt)"
 
+#. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr "命令中有未闭合的引号。"
+
+#. TRANSLATORS: Linux IDD_RUN parser error; a trailing backslash has no following character.
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
+msgstr "命令以未完成的转义字符结尾。"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY2.
 #: src/app/editor_frame_file_watching.cpp
 msgid "The current file has been deleted. Save now?"
@@ -2596,6 +2914,12 @@ msgstr "所选编码(代码页 %u)尚未迁移。文档未作更改。"
 msgid "The specified text was not found."
 msgstr "未找到指定的文本。"
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
+#. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
+#: src/document/document_session.cpp
+msgid "This command changes a file, not a directory."
+msgstr "此命令只能更改文件，不能更改目录。"
+
 #: src/document/document_session.cpp
 msgid "This document already has a file name."
 msgstr "此文档已有文件名。"
@@ -2652,6 +2976,11 @@ msgstr "转十六进制(&H)\tCtrl+Alt+H"
 #: src/app/editor_frame_commands.cpp
 msgid "To &Octet"
 msgstr "转八进制(&O)"
+
+#. TRANSLATORS: IDR_POPUPMENU toggle the current fold block.
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle &Fold"
+msgstr "切换折叠(&F)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STREAMCOMMENT.
 #: src/app/editor_frame_commands.cpp
@@ -2919,17 +3248,17 @@ msgid "ZWSP — &Zero width space"
 msgstr "ZWSP — 零宽空格(&Z)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMIN.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr "放大(&I)\tCtrl++"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOM_LEVEL.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Zoom &Level..."
 msgstr "缩放级别(&L)..."
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMOUT.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr "缩小(&O)\tCtrl+-"
 
@@ -2949,6 +3278,14 @@ msgstr "缩放级别 (%d%% 到 %d%%):"
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+#, c-format
+#~ msgid "%s bytes"
+#~ msgstr "%s 字节"
+
+#, c-format
+#~ msgid "%s%s | %s%s | EOL: %s"
+#~ msgstr "%s%s | %s%s | 换行符: %s"
 
 #~ msgid "&Collapse All"
 #~ msgstr "全部折叠(&C)"

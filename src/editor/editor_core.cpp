@@ -388,10 +388,7 @@ uint64_t EditorControl::Core::SelectionRevision() const noexcept {
 }
 
 intptr_t EditorControl::Core::SelectionCharacterCount() {
-    if (WndProc(Message::GetSelectionMode, 0, 0) !=
-            static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)) ||
-        WndProc(Message::GetSelections, 0, 0) != 1)
-        return 0;
+    if (WndProc(Message::SelectionIsRectangle, 0, 0)) return 0;
     const auto start = WndProc(Message::GetSelectionStart, 0, 0);
     const auto end = WndProc(Message::GetSelectionEnd, 0, 0);
     if (start == end) return 0;
@@ -514,6 +511,9 @@ void EditorControl::Core::DpiChanged() {
     for (int marker = std::to_underlying(Scintilla::MarkerOutline::FolderEnd);
          marker <= std::to_underlying(Scintilla::MarkerOutline::FolderOpen); ++marker)
         WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
+    // Match ScintillaWin's DPI transition: style invalidation alone retains
+    // the native fonts realized at the previous monitor's resolution.
+    vs.fontsValid = false;
     InvalidateStyleRedraw();
     window_.lineNumberWidthDirty_ = true;
     window_.foldMarginWidthDirty_ = true;
@@ -663,7 +663,10 @@ void EditorControl::Core::Mouse(wxMouseEvent& event) {
     const core::Point point(event.GetX(), event.GetY());
     // Additional selection-shape payloads remain a separate migration slice.
     dragDropEnabled = sel.selType == core::Selection::SelTypes::stream && sel.Count() == 1;
-    if (event.GetEventType() == wxEVT_LEFT_DOWN) {
+    if (event.RightDown() || event.RightDClick()) {
+        window_.SetFocus();
+        RightButtonDownWithModifiers(point, MouseTime(), KeyModifiers(event));
+    } else if (event.GetEventType() == wxEVT_LEFT_DOWN) {
         window_.SetFocus();
         ButtonDownWithModifiers(point, MouseTime(), KeyModifiers(event));
         RepairFoldSelection();
@@ -821,6 +824,10 @@ void EditorControl::Core::Cut(bool, bool lineCopy) {
 
 bool EditorControl::Core::CanPaste() const noexcept {
     return core::Editor::CanPaste() && EditorClipboard::HasText();
+}
+
+bool EditorControl::Core::CanPasteText(bool clipboardHasText) const noexcept {
+    return core::Editor::CanPaste() && clipboardHasText;
 }
 
 void EditorControl::Core::Paste(bool) {

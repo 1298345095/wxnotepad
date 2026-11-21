@@ -66,7 +66,7 @@ wxString RecentFiles::ExpandPath(wxString path) {
     return filename.GetFullPath();
 }
 
-wxString RecentFiles::PortablePath(const wxString& path, bool relative, bool portableDocuments) {
+wxString RecentFiles::PortablePath(const wxString& path, bool relative, bool portableDocuments, PathKind kind) {
     if (!relative) return path;
     const wxString application = ApplicationDirectory();
     const wxString documents = DocumentsDirectory();
@@ -74,10 +74,11 @@ wxString RecentFiles::PortablePath(const wxString& path, bool relative, bool por
     // Reuse PathRelativeToApp's Documents, Windows-directory and environment rules.
     wchar_t converted[MAX_PATH]{};
     wxString result = path;
+    const DWORD attributes = kind == PathKind::Directory ? FILE_ATTRIBUTE_DIRECTORY : 0;
     bool substituted = false;
     if (portableDocuments && !documents.empty() && !PathIsPrefixW(documents.wc_str(), application.wc_str()) &&
         PathIsPrefixW(documents.wc_str(), path.wc_str()) &&
-        PathRelativePathToW(converted, documents.wc_str(), FILE_ATTRIBUTE_DIRECTORY, path.wc_str(), 0)) {
+        PathRelativePathToW(converted, documents.wc_str(), FILE_ATTRIBUTE_DIRECTORY, path.wc_str(), attributes)) {
         wchar_t combined[MAX_PATH]{};
         if (PathCombineW(combined, L"%CSIDL:MYDOCUMENTS%", converted)) {
             result = combined;
@@ -87,16 +88,17 @@ wxString RecentFiles::PortablePath(const wxString& path, bool relative, bool por
     wchar_t windows[MAX_PATH]{};
     if (!substituted && GetWindowsDirectoryW(windows, MAX_PATH) &&
         !PathCommonPrefixW(application.wc_str(), windows, nullptr) &&
-        PathRelativePathToW(converted, application.wc_str(), FILE_ATTRIBUTE_DIRECTORY, path.wc_str(), 0))
+        PathRelativePathToW(converted, application.wc_str(), FILE_ATTRIBUTE_DIRECTORY, path.wc_str(), attributes))
         result = converted;
     if (PathUnExpandEnvStringsW(result.wc_str(), converted, MAX_PATH)) result = converted;
     return result;
 #else
     wxFileName filename(path);
     const wxString prefix = documents + wxFileName::GetPathSeparator();
-    if (portableDocuments && !documents.empty() && application != documents && !application.StartsWith(prefix) &&
-        path.StartsWith(prefix))
-        return "%CSIDL:MYDOCUMENTS%/" + path.Mid(prefix.length());
+    if (portableDocuments && !documents.empty() && application != documents && !application.StartsWith(prefix)) {
+        if (kind == PathKind::Directory && path == documents) return "%CSIDL:MYDOCUMENTS%";
+        if (path.StartsWith(prefix)) return "%CSIDL:MYDOCUMENTS%/" + path.Mid(prefix.length());
+    }
     if (filename.MakeRelativeTo(application)) return filename.GetFullPath();
     return path;
 #endif

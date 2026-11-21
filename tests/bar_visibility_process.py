@@ -24,24 +24,25 @@ with ExitStack() as stack:
         environment["XDG_CONFIG_HOME"] = str(folder / "native-config")
     ini = config_folder / "Notepad4.ini"
 
-    def run(menu, status, action="keep", policy="exit"):
-        result = subprocess.run([str(executable), str(int(menu)), str(int(status)), action, policy],
+    def run(menu, status, toolbar=True, action="keep", policy="exit"):
+        result = subprocess.run([str(executable), str(int(menu)), str(int(status)), str(int(toolbar)), action, policy],
                                 env=environment, capture_output=True, text=True, timeout=20)
         assert result.returncode == 0, result.stdout + result.stderr
 
-    for menu, status in [(True, True), (True, False), (False, True), (False, False)]:
+    for menu, status, toolbar in [(menu, status, toolbar) for menu in (True, False)
+                                  for status in (True, False) for toolbar in (True, False)]:
         for save_on_exit, explicit in [(True, False), (False, False), (False, True)]:
             ini.write_text("[Settings]\n; retained\nCustom=保留\n" +
-                           f"ShowMenu={int(menu)}\nShowStatusbar={int(status)}\n" +
+                           f"ShowMenu={int(menu)}\nShowStatusbar={int(status)}\nShowToolbar={int(toolbar)}\n" +
                            ("" if save_on_exit else "SaveSettings=0\n") +
                            "[Other]\nShowMenu=unrelated\n", encoding="utf-16")
-            run(menu, status, "toggle", "explicit" if explicit else "exit")
+            run(menu, status, toolbar, "toggle", "explicit" if explicit else "exit")
             saved = ini.read_text(encoding="utf-16").replace("\r\n", "\n")
             assert "; retained" in saved and "Custom=保留" in saved
             assert "[Other]\nShowMenu=unrelated\n" in saved
-            expected = (not menu, not status) if save_on_exit or explicit else (menu, status)
+            expected = (not menu, not status, not toolbar) if save_on_exit or explicit else (menu, status, toolbar)
             section = saved.split("[Other]", 1)[0]
-            for key, visible in zip(("ShowMenu", "ShowStatusbar"), expected):
+            for key, visible in zip(("ShowMenu", "ShowStatusbar", "ShowToolbar"), expected):
                 entries = [line for line in section.splitlines() if line.startswith(key + "=")]
                 expected_entries = [] if visible and (save_on_exit or explicit) else [f"{key}={int(visible)}"]
                 assert entries == expected_entries, saved

@@ -340,13 +340,32 @@ public:
     ReviewFeedback() { Register(); }
     int response = wxID_CANCEL;
     std::vector<wxString> messages;
+    bool released = true;
+    bool responseBeforeRelease = false;
+    std::chrono::steady_clock::time_point releaseDeadline;
+
+    void Shortcut(EditorFrame* frame, bool control) {
+#ifndef __WXMSW__
+        released = false;
+#endif
+        NativeKeys::Shortcut(frame, WXK_F3, control, false, false, &released, "wxnotepad", &releaseDeadline);
+    }
 
     int Enter(wxDialog* dialog) override {
         if (dialog->GetName() != "Search feedback") return wxID_NONE;
         for (auto* child : dialog->GetChildren()) {
             if (auto* label = wxDynamicCast(child, wxStaticText)) messages.push_back(label->GetLabel());
         }
-        wxTheApp->CallAfter([this, dialog] { NativeSearch::Click(dialog, response); });
+        wxTheApp->CallAfter([this, dialog] {
+            // Closing the modal while F3 is still held can leave Wayland with
+            // no keyboard target for its release. Share the caller's deadline.
+            while (!released && std::chrono::steady_clock::now() < releaseDeadline) {
+                wxYield();
+                wxMilliSleep(10);
+            }
+            responseBeforeRelease |= !released;
+            NativeSearch::Click(dialog, response);
+        });
         return wxID_NONE;
     }
 };
@@ -355,17 +374,18 @@ void FeedbackTransitions(EditorFrame* frame) {
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "dog cat dog", 11, 8);
     ReviewFeedback feedback;
-    NativeKeys::Shortcut(frame, WXK_F3, true);
+    feedback.Shortcut(frame, true);
     RequireSelection(editor, 11, 8, "cancelling selection wrap preserves the reversed original range");
     feedback.response = wxID_OK;
-    NativeKeys::Shortcut(frame, WXK_F3, true);
+    feedback.Shortcut(frame, true);
     RequireSelection(editor, 0, 3, "accepting selection wrap selects the first original match");
     TestEditor::ResetStream(editor, "cat x", 0, 0);
-    NativeKeys::Shortcut(frame, WXK_F3, false);
+    feedback.Shortcut(frame, false);
     RequireSelection(editor, 0, 0, "a missing saved query preserves the untouched current range");
     const wxString wrap = "Reached the end of the document, restarting search at the beginning.";
     Require(feedback.messages == std::vector<wxString>{wrap, wrap, "The specified text was not found."},
             "selection continuation shows the original wrap and failure feedback in order");
+    Require(!feedback.responseBeforeRelease, "feedback responses must follow the opening shortcut's native release");
 }
 
 struct Scenario {
@@ -436,6 +456,7 @@ class ContinuationApp final : public wxApp {
                 }
                 CallAfter([this] { Next(); });
             } catch (const std::exception& error) {
+                std::fprintf(stderr, "Search continuation scenario: %zu/%zu\n", next_, scenarios.size());
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 if (!frame->IsBeingDeleted()) frame->Destroy();
                 ExitMainLoop();
@@ -446,6 +467,12 @@ class ContinuationApp final : public wxApp {
 public:
     bool OnInit() override {
         SetExitOnFrameDelete(false);
+        wxString mode;
+        if (wxGetEnv("WXNOTEPAD_SEARCH_FEEDBACK_RELEASE", &mode) && mode == "1") {
+            const auto scenario = std::find_if(scenarios.begin(), scenarios.end(),
+                                               [](const Scenario& item) { return item.run == FeedbackTransitions; });
+            next_ = static_cast<size_t>(scenario - scenarios.begin());
+        }
         Next();
         return true;
     }

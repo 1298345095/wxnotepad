@@ -8,7 +8,8 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [PR #225 analysis follow-up](#pr-225-analysis-follow-up), following
+Latest review: [PR #247 native workflows](#pr-247-native-workflows).
+Earlier review: [PR #225 analysis follow-up](#pr-225-analysis-follow-up), following
 [Array and raw-literal cleanup](#array-and-raw-literal-cleanup),
 on [`codex/sonar-arrays-raw-literals`](https://github.com/1298345095/wxnotepad/tree/codex/sonar-arrays-raw-literals).
 [PR #224](https://github.com/1298345095/wxnotepad/pull/224) was merged into main
@@ -1940,3 +1941,38 @@ serialized `new[]` target. The two changed test translation units also pass
 actual wxWidgets/GTK C++23 syntax compilation. Independent review caught and
 removed a const-qualified observer before validation. Final-head hosted results
 are recorded in the PR description when available.
+
+## PR #247 native workflows
+
+The processed analysis of `aa16285f` reports 84.5% new-code coverage and 0.0%
+duplication. Its initial reliability and security failures were reviewed against
+the actual source and pinned wxWidgets 3.3.3 ownership implementations. After
+the issue-specific dispositions below, that analysis reports an OK quality gate;
+subsequent source changes still require their own hosted analysis.
+
+The [disposition ledger](sonarqube-2026-11-20-pr247-dispositions.json) records 37
+individual false positives with their source-to-owner or source-to-sink proof:
+four framework registry lifetime reports, 26 framework-owned UI allocations,
+three GTK type-check macro reports, three intentional original HTTP target
+spellings, and one developer CLI directory argument. GTK predicates retain
+their original short-circuit behavior. URL commands preserve the original
+protocol and pass it to the native desktop handler; they do not implement an
+HTTP connection. The toolbar generator supplies its directory as the single
+argument consumed by fixed `git -C`, with a fixed command and pinned blob names.
+
+Meaningful code corrections include ownership of clipboard offers before their
+native transfer, noncopyable resource guards, explicit callback captures,
+cohesive command parsing and UI scenarios, and reporting native Explorer COM
+observation errors. The clipboard fixture follows the distinct pinned GTK and
+Windows ownership-transfer contracts, including failed publication. Native
+actions, assertions, deadlines, default concurrency, analysis scopes and quality
+thresholds remain in force. These changes are verified separately from the
+framework ownership dispositions; they are not evidence of leaks at those
+framework-owned sites.
+
+The hosted Explorer selection failure remains under investigation. Its actual
+shell call returned success with the requested PIDL path and matching process
+identities, while the exact visible selection was absent. Independent original
+and current native controls retain both results without changing that required
+selection assertion. Native and hosted results for the final source are recorded
+in the PR description.

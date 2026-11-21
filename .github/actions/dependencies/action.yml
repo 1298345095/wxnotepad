@@ -67,11 +67,8 @@ runs:
           *) printf 'Unknown dependency profile: %s\n' "$DEPENDENCY_PROFILE" >&2; exit 2 ;;
         esac
         printf 'Linux dependency profile: %s\n' "$DEPENDENCY_PROFILE"
-        for ubuntu_source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
-          if [[ -f "$ubuntu_source" ]]; then
-            sudo sed -i -E 's@https?://azure\.archive\.ubuntu\.com/ubuntu@https://archive.ubuntu.com/ubuntu@g' "$ubuntu_source"
-          fi
-        done
+        sudo bash .github/scripts/normalize-ubuntu-sources.sh \
+          /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources
         apt_archives="$GITHUB_WORKSPACE/.ci/apt-archives"
         mkdir -p "$apt_archives/partial"
         apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)

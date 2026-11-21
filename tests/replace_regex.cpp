@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
@@ -185,7 +186,7 @@ public:
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "中文" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
                         "empty expansion of empty match must leave history untouched");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found",
+                Require(frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Match found",
                         "an empty no-op resumes at the same original match");
                 std::puts("PASS: original empty replacement continuation, repeated EOF and empty no-op");
                 setup("a1 a2", "a([0-9])", "$1");
@@ -218,7 +219,7 @@ public:
                             editor->Send(Message::CanRedo),
                         "invalid regex Replace must preserve text, savepoint and redo history");
                 Require(editor->Send(Message::GetAnchor) == 1 && editor->Send(Message::GetCurrentPos) == 0 &&
-                            frame->GetStatusBar()->GetStatusText(2) == "Invalid regular expression",
+                            frame->GetStatusBar()->GetStatusText(StatusField::Feedback) == "Invalid regular expression",
                         "invalid regex Replace must preserve selection direction and report its error");
                 query->SetValue("(a)");
                 editor->Send(Message::GotoPos, 0);

@@ -21,6 +21,8 @@ public:
     void Stop();
     void FindAll(std::string text, Scintilla::FindOption flags, bool multiline, bool bookmarks);
     std::optional<size_t> FindAllCount() const;
+    size_t MatchCount() const { return matchCount_; }
+    bool Pending() const { return pending_; }
 
 private:
     EditorControl& editor_;

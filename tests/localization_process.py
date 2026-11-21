@@ -336,10 +336,14 @@ class Acceptance:
                 current = menus(app.state)
                 assert app.state['menu_top.6.label'] == {'en': '&Tools', 'zh_CN': '工具(&T)', 'zh_TW': '工具(&T)'}[code]
                 group = next(identity for identity, item in current.items() if item['label'] == '&Base64')
-                assert current[group]['path'] == '6/0', current[group]
+                # Approved tools can precede Base64; retain its direct Tools
+                # parent and the same observed group position in every language.
+                group_path = self.reference[group]['path']
+                assert group_path.rsplit('/', 1)[0] == '6', self.reference[group]
+                assert current[group]['path'] == group_path, current[group]
                 for index, identity in enumerate(identities):
                     assert current[identity]['label'] == captions[code][index]
-                    assert current[identity]['path'] == f'6/0/{index}'
+                    assert current[identity]['path'] == f'{group_path}/{index}'
                     assert '\t' not in current[identity]['label'], 'Base64 has no original shortcuts'
                     before = b'foo' if index < 3 else b'Zm9v'
                     expected = (b'Zm9v', b'Zm9v', b'<img src="data:image/png;base64,Zm9v" />', b'foo', b'66 6F 6F')[index]
@@ -609,9 +613,13 @@ class Acceptance:
         result = app.process.wait(timeout=10)
         assert result == 0, f'Restart parent exit={result}; process log={self.logs}'
         child = wait_child(self.observation, previous)
-        assert child.process.pid != app.process.pid
-        assert child.state['menu_top.0.label'] == TEXT['zh_CN']['file']
-        assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
+        try:
+            assert child.process.pid != app.process.pid
+            assert child.state['menu_top.0.label'] == TEXT['zh_CN']['file']
+            assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
+        except BaseException:
+            child.stop()
+            raise
         return child
 
     def errors(self):

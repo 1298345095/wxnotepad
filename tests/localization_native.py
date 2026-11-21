@@ -7,6 +7,8 @@ import time
 
 from resource_process import wait_state
 
+ATSPI_IPC_ERROR = 1  # ATSPI_ERROR_IPC; this native error enum is not exposed by the GI bindings.
+
 
 def plain(text):
     return text.replace('&', '').replace('_', '')
@@ -213,11 +215,33 @@ class Dialogs:
                     self.user.SendMessageW(child, 0x00F5, 0, 0)  # BM_CLICK
                     return
         else:
-            for child in self.children(window):
-                if child.get_role() in (self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX) and plain(child.get_name()) == caption:
-                    action = child.get_action_iface()
+            from gi.repository import GLib
+            deadline = time.monotonic() + 10
+            observed = []
+            while time.monotonic() < deadline:
+                # A removed descendant can leave children() with a partial tree.
+                # Refresh native roles/names before deciding the button is absent.
+                window.clear_cache()
+                observed = []
+                for child in self.children(window):
+                    try:
+                        role = child.get_role()
+                        if role not in (self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX):
+                            continue
+                        name = plain(child.get_name())
+                        observed.append((str(role), name))
+                        if name != caption:
+                            continue
+                        action = child.get_action_iface()
+                    except GLib.GError as error:
+                        if 'does not exist' not in str(error):
+                            raise
+                        continue
+                    # Lookup waits for publication; activation is attempted once.
                     assert action and action.do_action(0), caption
                     return
+                time.sleep(.03)
+            raise AssertionError(f'Native button {caption!r} not ready; observed button roles/names: {observed}')
         raise AssertionError(f'Native button {caption!r} not present: {self.texts(window)}')
 
     def wait_text(self, window, text):
@@ -242,10 +266,30 @@ class Dialogs:
 
     def set_input(self, window, name, text):
         if sys.platform != 'win32':
-            for child in self.children(window):
-                if child.get_role() in (self.atspi.Role.TEXT, self.atspi.Role.ENTRY) and child.get_name() == name:
-                    assert child.get_editable_text_iface().set_text_contents(text)
+            from gi.repository import GLib
+            deadline = time.monotonic() + 10
+            last_error = None
+            while time.monotonic() < deadline:
+                target = None
+                try:
+                    window.clear_cache()
+                    for child in self.children(window):
+                        if child.get_role() in (self.atspi.Role.TEXT, self.atspi.Role.ENTRY) and child.get_name() == name:
+                            target = child.get_editable_text_iface()
+                            break
+                except GLib.GError as error:
+                    if (error.domain != 'atspi_error' or error.code != ATSPI_IPC_ERROR or
+                            error.message != 'timeout from dbind'):
+                        raise
+                    if last_error is None:
+                        print(f'Native input {name!r} read-only lookup: {error}', file=sys.stderr, flush=True)
+                    last_error = str(error)
+                if target is not None:
+                    # A timed-out write may already have happened; never repeat it.
+                    assert target.set_text_contents(text)
                     return
+                time.sleep(.03)
+            raise AssertionError(f'Accessible input {name!r} not ready; last read-only error: {last_error}')
         else:
             entries = []
             for child in self.children(window):
@@ -380,6 +424,23 @@ class Dialogs:
             except AssertionError as error:
                 raise AssertionError(f'Native {key} expected {expected_state}; last app state: {latest}') from error
 
+    def chooser_lookup(self, query, deadline, description):
+        """Read a chooser snapshot; never repeat an action after an uncertain reply."""
+        from gi.repository import GLib
+        last_error = None
+        while time.monotonic() < deadline:
+            try:
+                return query()
+            except GLib.GError as error:
+                if (error.domain != 'atspi_error' or error.code != ATSPI_IPC_ERROR or
+                        error.message != 'timeout from dbind'):
+                    raise
+                if last_error is None:
+                    print(f'Native chooser {description} read-only lookup: {error}', file=sys.stderr, flush=True)
+                last_error = str(error)
+                time.sleep(.03)
+        raise AssertionError(f'Native chooser {description} lookup expired; last read-only error: {last_error}')
+
     def navigate_folder(self, app, window, folder):
         """Navigate the owned chooser to fixed disposable files before inspection."""
         import os
@@ -416,11 +477,15 @@ class Dialogs:
                     # still be disabled while the native folder model updates.
                     # Submit the actual chooser button once it can accept input.
                     while time.monotonic() < deadline:
-                        buttons = [child for child in self.children(window)
-                                   if child.get_role() == self.atspi.Role.PUSH_BUTTON
-                                   and child.get_name() == 'Open'
-                                   and child.get_state_set().contains(self.atspi.StateType.SENSITIVE)]
+                        buttons = self.chooser_lookup(
+                            lambda: [child for child in self.children(window)
+                                     if child.get_role() == self.atspi.Role.PUSH_BUTTON
+                                     and child.get_name() == 'Open'
+                                     and child.get_state_set().contains(self.atspi.StateType.SENSITIVE)],
+                            deadline, 'Open')
                         if buttons:
+                            # Read-only lookup can wait; this mutation stays outside
+                            # its handler and is never retried after an uncertain reply.
                             assert buttons[0].get_action_iface().do_action(0)
                             break
                         time.sleep(.03)
@@ -458,6 +523,49 @@ class Dialogs:
                 time.sleep(.03)
             raise AssertionError(('Native resize did not complete', width, height, size.x, size.y))
 
+    def wait_chooser_popup(self, control, showing, deadline):
+        def popup_showing():
+            control.clear_cache()
+            popup = control.get_child_at_index(0)
+            if popup is None:
+                return False
+            popup.clear_cache()
+            return popup.get_state_set().contains(self.atspi.StateType.SHOWING)
+
+        while time.monotonic() < deadline:
+            observed = self.chooser_lookup(popup_showing, deadline, 'filter popup')
+            if observed == showing:
+                return
+            time.sleep(.03)
+        raise AssertionError(f'Native chooser filter popup showing={showing} not observed')
+
+    def wait_chooser_filters(self, window, deadline):
+        observed = []
+
+        def actionable_controls():
+            observed.clear()
+            controls = []
+            for child in self.children(window):
+                child.clear_cache()
+                role = child.get_role()
+                action = child.get_action_iface() if role == self.atspi.Role.COMBO_BOX else None
+                observed.append((str(role), action is not None))
+                if action is not None:
+                    controls.append((child, action))
+            return controls
+
+        waiting_reported = False
+        while time.monotonic() < deadline:
+            controls = self.chooser_lookup(actionable_controls, deadline, 'filters')
+            if controls:
+                return controls
+            if not waiting_reported:
+                print(f'Native chooser filters not yet actionable; roles/interfaces: {observed}',
+                      file=sys.stderr, flush=True)
+                waiting_reported = True
+            time.sleep(.03)
+        raise AssertionError(f'Native chooser filter control not ready; last roles/interfaces: {observed}')
+
     def file_filters(self, window):
         if sys.platform == 'win32':
             filters = []
@@ -476,15 +584,19 @@ class Dialogs:
                     if '*.' in text.value:
                         filters.append(text.value)
             return filters
-        for child in self.children(window):
-            if child.get_role() == self.atspi.Role.COMBO_BOX:
-                action = child.get_action_iface()
-                if action:
-                    action.do_action(0)
-                    filters = [text for text in self.texts(window) if '*.' in text]
-                    action.do_action(0)
-                    if filters:
-                        return filters
+        # The chooser can still publish its filter controls after navigation.
+        # Give only this read-only snapshot a bounded readiness wait; the outer
+        # packaged-layout timeout and the native RPC timeout remain unchanged.
+        deadline = time.monotonic() + 10
+        controls = self.wait_chooser_filters(window, deadline)
+        for child, action in controls:
+            assert action.do_action(0), 'Native chooser filter popup Open action'
+            self.wait_chooser_popup(child, True, deadline)
+            filters = [text for text in self.texts(window) if '*.' in text]
+            assert action.do_action(0), 'Native chooser filter popup Close action'
+            self.wait_chooser_popup(child, False, deadline)
+            if filters:
+                return filters
         return [text for text in self.texts(window) if '*.' in text]
 
     def answer(self, process, choice, title='wxnotepad', window=None):

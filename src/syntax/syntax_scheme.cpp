@@ -42,8 +42,10 @@ void InstallFolding(EditorControl& editor, bool fold) {
                                static_cast<uintptr_t>(std::to_underlying(Scintilla::AutomaticFold::Click)) |
                                static_cast<uintptr_t>(std::to_underlying(Scintilla::AutomaticFold::Change));
     editor.Send(SetAutomaticFold, fold ? automatic : 0);
-    editor.Send(SetFoldMarginColour, 1, Colour(0xFFFFFF));
-    editor.Send(SetFoldMarginHiColour, 1, Colour(0xFFFFFF));
+    // Retain Scintilla/wxSTC's native chrome pattern instead of forcing a
+    // white strip beside the native line-number margin in Dark/High Contrast.
+    editor.Send(SetFoldMarginColour, 0);
+    editor.Send(SetFoldMarginHiColour, 0);
     const std::array<Scintilla::MarkerSymbol, 7> folders = {
         BoxPlusConnected, BoxMinusConnected, TCorner, LCorner, VLine, BoxPlus, BoxMinus};
     for (size_t index = 0; index < std::size(folders); ++index) {
@@ -103,6 +105,11 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
     ApplyFontSettings(editor, language);
     editor.Send(Message::StyleClearAll);
+    // ClearStyles uses native chrome for the margin background. Pair it with
+    // native chrome text even when document styles explicitly choose colors.
+    const auto marginText = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT);
+    editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
+                marginText.Red() | (marginText.Green() << 8U) | (marginText.Blue() << 16U));
     // Notepad4 89b8b36 stlDefault.cpp / Styles.cpp Fold Ellipsis:
     // size:-2 uses the selected global base, before scheme style overrides.
     constexpr auto foldDisplay = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::FoldDisplayText));

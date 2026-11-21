@@ -71,6 +71,9 @@ class LinuxBundle(unittest.TestCase):
             executable = runtime / 'wxnotepad'
             subprocess.run(['gcc', '-g', source, f'-L{libraries}', '-lbundle_probe',
                             f'-Wl,-rpath,{libraries}', '-o', executable], check=True)
+            helper = installed / 'x64-linux-ci/libexec/gio-launch-desktop'
+            helper.parent.mkdir()
+            shutil.copy2(executable, helper)
             original_bytes = executable.read_bytes()
             original_library_bytes = library.read_bytes()
 
@@ -82,7 +85,7 @@ class LinuxBundle(unittest.TestCase):
             self.assertEqual(library.read_bytes(), original_library_bytes)
             self.assertLess(distributed.stat().st_size, len(original_bytes))
             self.assertLess((artifact / 'lib/libbundle_probe.so').stat().st_size, len(original_library_bytes))
-            for relative in (Path('wxnotepad'), Path('lib/libbundle_probe.so')):
+            for relative in (Path('wxnotepad'), Path('lib/libbundle_probe.so'), Path('libexec/gio-launch-desktop')):
                 sections = subprocess.check_output(['readelf', '-SW', artifact / relative], text=True)
                 self.assertNotIn('.debug_info', sections)
                 self.assertIn('.gnu_debuglink', sections)
@@ -90,6 +93,8 @@ class LinuxBundle(unittest.TestCase):
                 shutil.copytree(work / 'symbols' / debug_directory,
                                 artifact / debug_directory, dirs_exist_ok=True)
             subprocess.run([distributed], env=dict(os.environ, LD_LIBRARY_PATH=str(artifact / 'lib')), check=True)
+            subprocess.run([artifact / 'libexec/gio-launch-desktop'],
+                           env=dict(os.environ, LD_LIBRARY_PATH=str(artifact / 'lib')), check=True)
             debugger = subprocess.run(['gdb', '-q', '-nx', '-batch', '-ex', f'file "{distributed}"',
                                        '-ex', 'info line main'], capture_output=True, text=True, check=True)
             self.assertIn('bundle-probe.c', debugger.stdout)

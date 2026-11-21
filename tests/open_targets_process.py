@@ -1,0 +1,156 @@
+"""Run native target actions with an owned source and independent editor children."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import time
+import shutil
+import json
+import base64
+from resource_process import process_windows
+
+
+def check_request_reader(folder):
+    """Read the actual request protocol while its native rename handle is open."""
+    import ctypes as c
+    from ctypes import wintypes as w
+    kernel = c.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateFileW.argtypes = [w.LPCWSTR, w.DWORD, w.DWORD, c.c_void_p, w.DWORD, w.DWORD, w.HANDLE]
+    kernel.CreateFileW.restype = w.HANDLE
+    kernel.SetFileInformationByHandle.argtypes = [w.HANDLE, c.c_int, c.c_void_p, w.DWORD]
+    kernel.SetFileInformationByHandle.restype = w.BOOL
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    kernel.CloseHandle.restype = w.BOOL
+    delete_access, share_read_write_delete, open_existing, file_rename_info = 0x10000, 7, 3, 3
+    helper = str(Path(__file__).with_name('open_target_request.ps1')).replace("'", "''")
+    for index, (item, cancelled) in enumerate((('目标, selected file.txt', False), ('', False), ('target.txt', True))):
+        staging = folder / f'request-reader-{index}.tmp'
+        published = folder / f'request-reader-{index}.ready'
+        directory = str(folder / '目标 directory')
+        selected = str(folder / item) if item else ''
+        payload = (directory + '\n' + selected + '\n' + str(os.getpid()) + '\n' +
+                   ('cancelled\n' if cancelled else '')).encode('utf-8')
+        staging.write_bytes(payload)
+        handle = kernel.CreateFileW(str(staging), delete_access, share_read_write_delete, None,
+                                    open_existing, 0, None)
+        assert handle != w.HANDLE(-1).value, c.WinError(c.get_last_error())
+        try:
+            name = str(published).encode('utf-16-le')
+            class RenameInfo(c.Structure):
+                _fields_ = [('replace', c.c_ubyte), ('root', w.HANDLE), ('length', w.DWORD),
+                            ('name', w.WCHAR * (len(name) // c.sizeof(w.WCHAR) + 1))]
+            info = RenameInfo()
+            info.length = len(name)
+            c.memmove(c.addressof(info) + RenameInfo.name.offset, name, len(name))
+            assert kernel.SetFileInformationByHandle(handle, file_rename_info, c.byref(info), c.sizeof(info)), \
+                c.WinError(c.get_last_error())
+            path = str(published).replace("'", "''")
+            command = (f"$ErrorActionPreference = 'Stop'; . '{helper}'; $lines = @(Read-ExplorerRequest '{path}'); "
+                       '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]::Join("`n", $lines) + "`n"))')
+            encoded = base64.b64encode(command.encode('utf-16-le')).decode('ascii')
+            result = subprocess.run(['pwsh', '-NoProfile', '-EncodedCommand', encoded],
+                                    capture_output=True, timeout=10, check=False)
+            assert result.returncode == 0, result.stderr.decode('utf-8', errors='replace')
+            assert result.stdout.strip() == base64.b64encode(payload), \
+                'actual observer reader must preserve every exact UTF-8 request byte while rename is open'
+        finally:
+            kernel.CloseHandle(handle)
+    print('PASS: actual observer reader preserves Unicode, empty item and cancellation request bytes under native rename',
+          flush=True)
+
+
+def main():
+    source = Path(sys.argv[1]).resolve()
+    with tempfile.TemporaryDirectory(prefix="wxnotepad-open-targets-") as name:
+        # Match native Document Open and Explorer's expansion of TEMP's 8.3 aliases.
+        folder = Path(name).resolve(strict=True)
+        executable = folder / source.name
+        shutil.copy2(source, executable)
+        if sys.platform == "win32":
+            # Shell association dispatch may come from the desktop process,
+            # whose environment does not include this fixture's PATH.
+            for library in source.parent.glob("*.dll"):
+                shutil.copy2(library, folder / library.name)
+        (folder / "parent.txt").write_bytes(b"parent fixture\n")
+        environment = dict(os.environ, WXNOTEPAD_OPEN_TARGET_ROOT=str(folder),
+                           PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
+        if sys.platform == "win32":
+            # Ordinary builds compile tracing out; the existing diagnostic build
+            # records the actual shell result without replacing the native call.
+            environment.update(WXNOTEPAD_DIAGNOSTICS="1", WXNOTEPAD_DIAGNOSTIC_LOG="stderr")
+        failure_output = Path(os.environ.get("WXNOTEPAD_OPEN_TARGET_FAILURE_DIR",
+                              Path(__file__).resolve().parents[1] / ".ci/reports/open-targets")) / folder.name
+        if sys.platform != "win32":
+            applications = folder / "data" / "applications"
+            applications.mkdir(parents=True)
+            config = folder / "config"
+            config.mkdir()
+            handler = Path(__file__).with_name("open_target_handler.py")
+            (applications / "wxnotepad-open-target.desktop").write_text(
+                "[Desktop Entry]\nType=Application\nName=Owned target recorder\n"
+                f'Exec="{sys.executable}" "{handler}" %u\n'
+                "MimeType=x-scheme-handler/wx242;x-scheme-handler/http;x-scheme-handler/https;"
+                "x-scheme-handler/mailto;inode/directory;text/plain;application/octet-stream;\n",
+                encoding="utf-8")
+            (config / "mimeapps.list").write_text("[Default Applications]\n" + "".join(
+                f"{kind}=wxnotepad-open-target.desktop;\n" for kind in (
+                    "x-scheme-handler/wx242", "x-scheme-handler/http", "x-scheme-handler/https",
+                    "x-scheme-handler/mailto", "inode/directory", "text/plain", "application/octet-stream")),
+                encoding="utf-8")
+            environment.update(XDG_DATA_HOME=str(applications.parent), XDG_CONFIG_HOME=str(config))
+        if sys.platform == "win32":
+            check_request_reader(folder)
+        manager = None
+        try:
+            if sys.platform == "win32":
+                manager = subprocess.Popen(["pwsh", "-NoProfile", "-File", str(Path(__file__).with_name("open_target_explorer.ps1")),
+                                            "-Root", str(folder), "-Evidence", str(failure_output)], env=environment)
+                deadline = time.monotonic() + 10
+                while not (folder / "explorer-ready").exists() and time.monotonic() < deadline:
+                    assert manager.poll() is None, "owned Explorer observer must stay running"
+                    time.sleep(0.01)
+                assert (folder / "explorer-ready").exists(), "owned Explorer observer must record its baseline"
+            else:
+                manager = subprocess.Popen([str(executable), "--file-manager"], env=environment)
+                deadline = time.monotonic() + 10
+                while not (folder / "filemanager-ready").exists() and time.monotonic() < deadline:
+                    assert manager.poll() is None, "owned file-manager service must stay running"
+                    time.sleep(0.01)
+                assert (folder / "filemanager-ready").exists(), "owned file-manager service must acquire its name"
+            app = subprocess.Popen([str(executable)], cwd=folder, env=environment)
+            try:
+                assert app.wait(timeout=45) == 0, "native target fixture must complete successfully"
+            except BaseException:
+                print("Owned native windows:", process_windows(app), flush=True)
+                if sys.platform == "win32":
+                    failure_output.mkdir(parents=True, exist_ok=True)
+                    for pattern in ("native-*.log", "folder-request-*", "folder-done-*", "received-*.txt"):
+                        for retained in folder.glob(pattern):
+                            shutil.copy2(retained, failure_output / retained.name)
+                    print("Owned target failure evidence:", failure_output, flush=True)
+                for log in sorted(folder.glob("native-*.log")):
+                    print(log.name + ":\n" + log.read_text(encoding="utf-8", errors="replace"), flush=True)
+                raise
+            finally:
+                if app.poll() is None:
+                    app.terminate()
+                    app.wait(timeout=10)
+            if sys.platform == "win32":
+                assert manager.wait(timeout=10) == 0, "actual Explorer folder/item observations must succeed"
+                for diagnostic in sorted(folder.glob("native-*.stderr.log")):
+                    for line in diagnostic.read_text(encoding="utf-8", errors="replace").splitlines():
+                        if "\tevent=shell.select-item\t" in line:
+                            print("Native shell diagnostic:", line, flush=True)
+            for received in sorted(folder.glob("received-*.txt")):
+                print("PASS: recorded desktop target " + json.dumps(received.read_text(encoding="utf-8")), flush=True)
+        finally:
+            if manager and manager.poll() is None:
+                manager.terminate()
+                manager.wait(timeout=10)
+        assert (folder / "parent.txt").read_bytes() == b"parent fixture\n"
+    print("PASS: native target actions preserve independently read source file")
+
+
+if __name__ == "__main__":
+    main()
