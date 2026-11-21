@@ -214,6 +214,46 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
 }
 #endif
 #ifndef __WXMSW__
+#ifdef __WXGTK__
+inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxString& focusFile,
+                                const wxString& intent, const wxString& lastPending, bool acknowledged,
+                                unsigned int surfaceId) {
+    const auto failedAt = g_get_monotonic_time();
+    auto* editor = frame->Editor();
+    if (!surfaceId) {
+        auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+        if (surface) surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+    }
+    std::fprintf(stderr,
+                 "Native activation failure: request=%s acknowledged=%d frameActive=%d "
+                 "editorFocus=%d ownedPid=%lu ownedSurface=%u\n",
+                 intent.BeforeFirst(':').utf8_str().data(), acknowledged, frame->IsActive(), editor->HasFocus(),
+                 wxGetProcessId(), surfaceId);
+    std::fflush(stderr);
+    unsigned long long gesture = 0;
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    gesture = DiagnosticTrace::Gesture();
+#endif
+    wxString failurePending;
+    wxFFile observed(focusFile, "rb");
+    const bool failureRead = observed.IsOpened() && observed.ReadAll(&failurePending);
+    const auto snapshot = wxString::Format(
+        "mono_us=%lld\tevent=driver.wait-failure\tgesture=%llu\trequest_kind=%s\tpending_kind=%s"
+        "\tacknowledged=%d\tframeActive=%d\teditorFocus=%d\townedPid=%lu\townedSurface=%u"
+        "\tfailure_pending_read=%d\tfailure_pending_empty=%d\tfailure_pending_kind=%s"
+        "\tpending_read_mono_us=%lld\n",
+        static_cast<long long>(failedAt), gesture, intent.BeforeFirst(':'), lastPending.BeforeFirst(':'), acknowledged,
+        frame->IsActive(), editor->HasFocus(), wxGetProcessId(), surfaceId, failureRead, failurePending.empty(),
+        failurePending.BeforeFirst(':'), static_cast<long long>(g_get_monotonic_time()));
+    bool written = false;
+    {
+        wxFFile marker(focusFile + ".failure.tmp", "wb");
+        written = marker.IsOpened() && marker.Write(snapshot);
+    }
+    if (!written || !wxRenameFile(focusFile + ".failure.tmp", focusFile + ".failure", true))
+        std::fputs("Could not publish native focus failure snapshot\n", stderr);
+}
+#endif
 inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString& focusFile) {
     using Clock = std::chrono::steady_clock;
     auto* editor = frame->Editor();
@@ -260,40 +300,7 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     if (!acknowledged || !frame->IsActive() || !editor->HasFocus()) {
 #ifdef __WXGTK__
         if (wayland) {
-            const auto failedAt = g_get_monotonic_time();
-            if (!surfaceId) {
-                auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
-                if (surface) surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
-            }
-            std::fprintf(stderr,
-                         "Native activation failure: request=%s acknowledged=%d frameActive=%d "
-                         "editorFocus=%d ownedPid=%lu ownedSurface=%u\n",
-                         intent.BeforeFirst(':').utf8_str().data(), acknowledged, frame->IsActive(), editor->HasFocus(),
-                         wxGetProcessId(), surfaceId);
-            std::fflush(stderr);
-            unsigned long long gesture = 0;
-#ifdef WXNOTEPAD_DIAGNOSTICS
-            gesture = DiagnosticTrace::Gesture();
-#endif
-            wxString failurePending;
-            wxFFile observed(focusFile, "rb");
-            const bool failureRead = observed.IsOpened() && observed.ReadAll(&failurePending);
-            const auto snapshot = wxString::Format(
-                "mono_us=%lld\tevent=driver.wait-failure\tgesture=%llu\trequest_kind=%s\tpending_kind=%s"
-                "\tacknowledged=%d\tframeActive=%d\teditorFocus=%d\townedPid=%lu\townedSurface=%u"
-                "\tfailure_pending_read=%d\tfailure_pending_empty=%d\tfailure_pending_kind=%s"
-                "\tpending_read_mono_us=%lld\n",
-                static_cast<long long>(failedAt), gesture, intent.BeforeFirst(':'), lastPending.BeforeFirst(':'),
-                acknowledged, frame->IsActive(), editor->HasFocus(), wxGetProcessId(), surfaceId, failureRead,
-                failurePending.empty(), failurePending.BeforeFirst(':'),
-                static_cast<long long>(g_get_monotonic_time()));
-            bool written = false;
-            {
-                wxFFile marker(focusFile + ".failure.tmp", "wb");
-                written = marker.IsOpened() && marker.Write(snapshot);
-            }
-            if (!written || !wxRenameFile(focusFile + ".failure.tmp", focusFile + ".failure", true))
-                std::fputs("Could not publish native focus failure snapshot\n", stderr);
+            ObserveFocusFailure(frame, widget, focusFile, intent, lastPending, acknowledged, surfaceId);
         }
 #endif
         throw std::runtime_error("private native input must activate the owned editor");
