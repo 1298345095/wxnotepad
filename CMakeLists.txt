@@ -1081,6 +1081,9 @@ if(BUILD_TESTING)
         add_test(NAME native_search_feedback_release COMMAND search_continuation)
         set_tests_properties(native_search_feedback_release PROPERTIES TIMEOUT 60
             ENVIRONMENT "WXNOTEPAD_SEARCH_FEEDBACK_RELEASE=1;WXNOTEPAD_NATIVE_KEY_DELAY_MS=150")
+        add_test(NAME native_localization_chooser_popup_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_chooser_readiness.py" --popup-delay)
+        set_tests_properties(native_localization_chooser_popup_readiness PROPERTIES TIMEOUT 30)
     endif()
 endif()
 

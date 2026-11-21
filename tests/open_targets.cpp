@@ -19,7 +19,7 @@
 #include <wx/weakref.h>
 #ifdef __WXMSW__
 #include <objbase.h>
-#include "explorer_acknowledgement.h"
+#include "native_published_file.h"
 #endif
 #ifdef __WXGTK__
 #include <gio/gio.h>
@@ -278,7 +278,7 @@ void PublishedAcknowledgement() {
     Require(SetFileInformationByHandle(rename.get(), FileRenameInfo, information, static_cast<DWORD>(storage.size())),
             "owned marker must publish while its rename handle remains open");
     Require(std::filesystem::exists(done), "published marker name must already be visible");
-    Require(ExplorerAcknowledgement::Read(done) == "ok\n",
+    Require(NativePublishedFile::Read(done) == "ok\n",
             "published acknowledgement must be readable before the rename handle closes");
     std::puts("PASS: exact acknowledgement bytes while its publication DELETE handle remains open");
 }
@@ -295,7 +295,7 @@ void WaitExplorerRequests(const std::filesystem::path& root, std::initializer_li
     }
     Require(finished(), "pending Explorer requests must complete within the original acknowledgement deadline");
     for (const int request : requests)
-        Require(ExplorerAcknowledgement::Read(root / ("folder-done-" + std::to_string(request))) == "ok\n",
+        Require(NativePublishedFile::Read(root / ("folder-done-" + std::to_string(request))) == "ok\n",
                 "pending request acknowledgement must retain its exact bytes");
 }
 void PendingFolderTargets(EditorFrame* frame, int& request) {
@@ -372,7 +372,7 @@ void FolderTarget(EditorFrame* frame) {
             wxMilliSleep(10);
         }
         const bool acknowledged = std::filesystem::exists(done);
-        const auto response = acknowledged ? ExplorerAcknowledgement::Read(done) : std::string{};
+        const auto response = acknowledged ? NativePublishedFile::Read(done) : std::string{};
         if (!acknowledged || response != "ok\n") {
             const auto elapsed =
                 std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started);

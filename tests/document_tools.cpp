@@ -17,6 +17,7 @@
 #include <chrono>
 #include <fstream>
 #ifdef __WXMSW__
+#include "native_published_file.h"
 #include <shlobj.h>
 #endif
 #ifdef __WXGTK__
@@ -42,6 +43,20 @@ std::filesystem::path Root() {
 wxString Name(const std::filesystem::path& path) {
     return TestFiles::Filename(path);
 }
+bool ReadChildRecord(const std::filesystem::path& marker, wxString& recorded) {
+#ifdef __WXMSW__
+    try {
+        recorded = wxString::FromUTF8(NativePublishedFile::Read(marker));
+        return true;
+    } catch (const std::runtime_error& error) {
+        std::fprintf(stderr, "Child record read: %s\n", error.what());
+        return false;
+    }
+#else
+    wxFFile file(Name(marker), "rb");
+    return file.ReadAll(&recorded, wxConvUTF8);
+#endif
+}
 void WaitForChild(const std::string& expected, const wxString& path, const wxString& cwd) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto marker = Root() / "record.txt";
@@ -50,16 +65,14 @@ void WaitForChild(const std::string& expected, const wxString& path, const wxStr
         wxMilliSleep(10);
     }
     Require(std::filesystem::exists(marker), "real child records launch");
-    wxFFile file(Name(marker), "rb");
     wxString recorded;
-    Require(file.ReadAll(&recorded, wxConvUTF8), "child record is readable");
+    Require(ReadChildRecord(marker, recorded), "child record is readable");
     std::fprintf(stderr, "recorded: %s\nexpected: %s | %s | %s\n", recorded.utf8_str().data(), path.utf8_str().data(),
                  cwd.utf8_str().data(), expected.c_str());
     std::fflush(stderr);
     Require(recorded ==
                 wxString::Format("%d\n%s\n%s\n%s", path.empty() ? 0 : 1, path, cwd, wxString::FromUTF8(expected)),
             "child argv, working directory and disk bytes match independent literals");
-    file.Close();
     std::filesystem::remove(marker);
 }
 class LaunchErrors final : public wxTimer {

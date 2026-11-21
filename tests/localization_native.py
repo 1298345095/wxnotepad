@@ -523,6 +523,22 @@ class Dialogs:
                 time.sleep(.03)
             raise AssertionError(('Native resize did not complete', width, height, size.x, size.y))
 
+    def wait_chooser_popup(self, control, showing, deadline):
+        def popup_showing():
+            control.clear_cache()
+            popup = control.get_child_at_index(0)
+            if popup is None:
+                return False
+            popup.clear_cache()
+            return popup.get_state_set().contains(self.atspi.StateType.SHOWING)
+
+        while time.monotonic() < deadline:
+            observed = self.chooser_lookup(popup_showing, deadline, 'filter popup')
+            if observed == showing:
+                return
+            time.sleep(.03)
+        raise AssertionError(f'Native chooser filter popup showing={showing} not observed')
+
     def file_filters(self, window):
         if sys.platform == 'win32':
             filters = []
@@ -544,15 +560,18 @@ class Dialogs:
         # The chooser can still publish its filter controls after navigation.
         # Give only this read-only snapshot a bounded readiness wait; the outer
         # packaged-layout timeout and the native RPC timeout remain unchanged.
+        deadline = time.monotonic() + 10
         controls = self.chooser_lookup(
             lambda: [child for child in self.children(window) if child.get_role() == self.atspi.Role.COMBO_BOX],
-            time.monotonic() + 10, 'filters')
+            deadline, 'filters')
         for child in controls:
             action = child.get_action_iface()
             if action:
-                action.do_action(0)
+                assert action.do_action(0), 'Native chooser filter popup Open action'
+                self.wait_chooser_popup(child, True, deadline)
                 filters = [text for text in self.texts(window) if '*.' in text]
-                action.do_action(0)
+                assert action.do_action(0), 'Native chooser filter popup Close action'
+                self.wait_chooser_popup(child, False, deadline)
                 if filters:
                     return filters
         return [text for text in self.texts(window) if '*.' in text]

@@ -215,3 +215,46 @@ messages, ranges and settings assertions, the three-second release budget and
 the sixty-second CTest guard remain. Controlled traces, failed setup attempts and
 the registered red regression are retained in the evidence directory above;
 only `feedback-permanent-red-05` is the completed held-input red acceptance run.
+
+## Follow-up hosted popup failure
+
+At `b6aba85`, all three hosted Linux test jobs failed the new chooser regression
+at `popup-closed`, while ordinary hosted Wayland and the original search cases
+passed. Sonar did not scan because coverage failed. Local full runs and a replay
+of the failed display's preceding 63 cases had passed; those results did not
+establish that the new popup observation was safe across native timing.
+
+A native ATK-action publisher that maps its real GTK menu 250 ms after the first
+action reproduces the same failure. Both action receipts observe the menu hidden
+and request Open; only one show transition occurs, with no close. The registered
+`native_localization_chooser_popup_readiness` reproduces this before the fix in
+17.42 seconds. The historical CI did not retain its provider's property state,
+so that state is a controlled reproduction, not a captured hosted observation.
+
+The driver now waits for the combo's actual accessible popup to be SHOWING after
+one Open action, then waits for it to be hidden after one Close action. Role and
+popup snapshots share the filter readiness deadline; actions are never retried.
+The immediate native-accessible case, both original popup property assertions,
+the exact action pair and all 30/180-second CTest guards remain. The delayed case
+adds two explicit action receipts and uses the existing publication-delay
+constant. Both backends pass the original/new regressions and real packaged
+layout after the correction. Failure output now retains provider messages and
+the relevant receipts.
+
+## Windows child-record publication
+
+The same hosted run failed `original_document_tools` at `child record is readable`
+and then its original 55-second process guard. It did not retain a native error
+code. An owned native control separately reproduces a concrete defect in that
+reader: after rename publishes a destination but before its DELETE-access handle
+closes, the CRT open used by wxFFile fails with Win32 error 32.
+
+Document-tool records now reuse the immutable-publication reader already used by
+Explorer acknowledgements, renamed `NativePublishedFile` for the two consumers.
+It shares DELETE access, reads exact bytes, and preserves native error details.
+Read failures still fail the original readable assertion, without leaving a
+deferred wxLogGui dialog. The ten-second publication wait and exact argument,
+directory and disk-byte assertions remain. The existing retained-rename-handle
+regression and original document-tool/Explorer workflows pass. This addresses a
+reproduced sharing defect; a fresh hosted run is still needed to determine
+whether it accounts for the historical failure.

@@ -8,7 +8,7 @@ import time
 from types import SimpleNamespace
 
 from localization_native import Dialogs
-from localization_button_readiness import COMMAND_POLL_MS, PROPERTY_BUSY_SECONDS, wait_marker
+from localization_button_readiness import BUTTON_PUBLICATION_DELAY_MS, COMMAND_POLL_MS, PROPERTY_BUSY_SECONDS, wait_marker
 
 TITLE = 'Owned chooser role readiness'
 
@@ -58,7 +58,26 @@ def publisher(root):
     class BusyFilter(Gtk.ComboBoxText):
         __gtype_name__ = 'NativeChooserReadinessBusyFilter'
 
-    BusyFilter.set_accessible_type(BusyFilterAccessible)
+    class DelayedFilterAccessible(BusyFilterAccessible, Atk.Action):
+        __gtype_name__ = 'NativeChooserReadinessDelayedFilterAccessible'
+
+        def do_do_action(self, index):
+            assert index == 0
+            receipt = root / 'filter-actions'
+            count = int(receipt.read_text()) if receipt.exists() else 0
+            receipt.write_text(str(count + 1))
+            combo = self.get_widget()
+            if combo.get_property('popup-shown'):
+                combo.popdown()
+            else:
+                def publish():
+                    combo.popup()
+                    return GLib.SOURCE_REMOVE
+                GLib.timeout_add(BUTTON_PUBLICATION_DELAY_MS, publish)
+            return True
+
+    delayed_popup = (root / 'delay-popup').exists()
+    BusyFilter.set_accessible_type(DelayedFilterAccessible if delayed_popup else BusyFilterAccessible)
     filters = BusyFilter()
     filters.append_text('Text files (*.txt)')
     filters.set_active(0)
@@ -124,6 +143,9 @@ def main():
     with tempfile.TemporaryDirectory(prefix='chooser-role-probe-') as folder:
         root = Path(folder)
         (root / 'owned-target').mkdir()
+        delayed_popup = sys.argv[1:] == ['--popup-delay']
+        if delayed_popup:
+            (root / 'delay-popup').touch()
         with (root / 'publisher.log').open('w') as output:
             child = subprocess.Popen([sys.executable, __file__, '--publisher', str(root)], stdout=output, stderr=subprocess.STDOUT)
             try:
@@ -160,8 +182,16 @@ def main():
                 assert (root / 'filter-blocked').exists() and (root / 'filter-resumed').exists()
                 wait_marker(root / 'popup-closed')
                 assert (root / 'popup-changes').read_text() == '2', (root / 'popup-changes').read_text()
+                if delayed_popup:
+                    assert (root / 'filter-actions').read_text() == '2'
                 (root / 'stop').touch()
                 assert child.wait(timeout=10) == 0
+            except Exception:
+                print('Chooser publisher log:', (root / 'publisher.log').read_text(), file=sys.stderr, flush=True)
+                names = ('changes', 'actions', 'popup-changes', 'filter-actions', 'popup-closed')
+                print('Chooser receipts:', {name: (root / name).read_text() for name in names
+                                            if (root / name).exists()}, file=sys.stderr, flush=True)
+                raise
             finally:
                 if child.poll() is None:
                     child.terminate()

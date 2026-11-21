@@ -7,10 +7,10 @@
 #include <stdexcept>
 #include <string>
 
-namespace ExplorerAcknowledgement {
+namespace NativePublishedFile {
 inline std::runtime_error Failure(const std::filesystem::path& path, const char* operation, DWORD error) {
     const auto utf8 = path.u8string();
-    return std::runtime_error(std::string("Explorer acknowledgement ") + operation + " failed (Win32 " +
+    return std::runtime_error(std::string("Native publication ") + operation + " failed (Win32 " +
                               std::to_string(error) + "): " + std::string(utf8.begin(), utf8.end()));
 }
 
@@ -32,4 +32,4 @@ inline std::string Read(const std::filesystem::path& path) {
         bytes.append(buffer.data(), count);
     }
 }
-} // namespace ExplorerAcknowledgement
+} // namespace NativePublishedFile
