@@ -91,12 +91,25 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
 
 class KeyRelease final : public wxEventFilter {
 public:
+    struct Observation {
+        const char* phase = "none";
+        int key = WXK_NONE;
+        int modifiers = wxMOD_NONE;
+        wxObject* target = nullptr;
+    };
+
     KeyRelease(int key, bool& received, bool* signal, wxWindow* intended = nullptr)
         : key_(key), received_(received), signal_(signal), intended_(intended) {
         wxEvtHandler::AddFilter(this);
     }
     ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
+    const Observation& LastKeyEvent() const { return lastKeyEvent_; }
     int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_KEY_DOWN || event.GetEventType() == wxEVT_KEY_UP) {
+            const auto& key = static_cast<wxKeyEvent&>(event);
+            lastKeyEvent_ = {event.GetEventType() == wxEVT_KEY_UP ? "up" : "down", key.GetKeyCode(), key.GetModifiers(),
+                             event.GetEventObject()};
+        }
         if (event.GetEventType() == wxEVT_KEY_UP &&
             UnshiftedPunctuation(static_cast<wxKeyEvent&>(event).GetKeyCode()) == key_ &&
             (!intended_ || event.GetEventObject() == intended_)) {
@@ -111,6 +124,7 @@ private:
     bool& received_;
     bool* signal_;
     wxWindow* intended_;
+    Observation lastKeyEvent_;
 };
 #ifdef __WXMSW__
 inline void DialogNavigation(wxDialog* dialog, int key) {
@@ -215,6 +229,36 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
 #endif
 #ifndef __WXMSW__
 #ifdef __WXGTK__
+inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& focusFile, const wxString& request,
+                                          int expectedKey, bool received, const KeyRelease::Observation& lastEvent) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
+    const auto failedAt = g_get_monotonic_time();
+    wxString pending;
+    wxFFile observed(focusFile, "rb");
+    const bool read = observed.IsOpened() && observed.ReadAll(&pending);
+    const auto snapshot = wxString::Format(
+        "mono_us=%lld\tevent=driver.key-release-failure\townedPid=%lu\trequest_kind=%s"
+        "\tcached_pending_source=last-write\tcached_pending_kind=%s\texpected_key=%d\trelease_received=%d"
+        "\tfresh_pending_read=%d\tfresh_pending_empty=%d\tfresh_pending_kind=%s\tpending_read_mono_us=%lld"
+        "\tlast_key_phase=%s\tlast_key_code=%d\tlast_modifiers=%d\tlast_target=%p\tcurrent_focus=%p"
+        "\towned_editor=%p\tframeActive=%d\teditorFocus=%d\n",
+        static_cast<long long>(failedAt), wxGetProcessId(), request.BeforeFirst(':'), request.BeforeFirst(':'),
+        expectedKey, received, read, pending.empty(), pending.BeforeFirst(':'),
+        static_cast<long long>(g_get_monotonic_time()), lastEvent.phase, lastEvent.key, lastEvent.modifiers,
+        static_cast<void*>(lastEvent.target), static_cast<void*>(wxWindow::FindFocus()),
+        static_cast<void*>(frame->Editor()), frame->IsActive(), frame->Editor()->HasFocus());
+    std::fprintf(stderr, "Native shortcut release failure: %s", snapshot.utf8_str().data());
+    std::fflush(stderr);
+    bool written = false;
+    {
+        wxFFile marker(focusFile + ".failure.tmp", "wb");
+        written = marker.IsOpened() && marker.Write(snapshot);
+    }
+    if (!written || !wxRenameFile(focusFile + ".failure.tmp", focusFile + ".failure", true))
+        std::fputs("Could not publish native shortcut release failure snapshot\n", stderr);
+}
+
 inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxString& focusFile,
                                 const wxString& intent, const wxString& lastPending, bool acknowledged,
                                 unsigned int surfaceId) {
@@ -366,18 +410,24 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     bool received = false;
     const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
     KeyRelease observer(key, received, releaseSignal, punctuation ? editor : nullptr);
+    wxString request;
     {
         wxFFile file(focusFile, "wb");
         const auto name = KeyName(key);
-        file.Write(NativeTrace::Request(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") +
-                                        (shift ? "shift+" : "") + name));
+        request = wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + name;
+        file.Write(NativeTrace::Request(request));
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     while (!received && Clock::now() < keyDeadline) {
         wxYield();
         wxMilliSleep(10);
     }
-    if (!received) throw std::runtime_error("native shortcut release must reach the owned editor or its dialog");
+    if (!received) {
+#ifdef __WXGTK__
+        ObserveShortcutReleaseFailure(frame, focusFile, request, key, received, observer.LastKeyEvent());
+#endif
+        throw std::runtime_error("native shortcut release must reach the owned editor or its dialog");
+    }
 #endif
     wxYield();
 }
