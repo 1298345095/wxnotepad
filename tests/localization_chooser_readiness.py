@@ -12,6 +12,22 @@ from localization_button_readiness import BUTTON_PUBLICATION_DELAY_MS, COMMAND_P
 
 TITLE = 'Owned chooser role readiness'
 
+
+class RoleDelayDialogs(Dialogs):
+    def __init__(self, root):
+        super().__init__()
+        self.root = root
+        self.role_delay_armed = False
+
+    def chooser_lookup(self, query, deadline, description):
+        if description == 'Open' and not self.role_delay_armed:
+            self.role_delay_armed = True
+            # The input write has returned. Arm before the first read-only
+            # role query; a GTK idle callback can run after that query.
+            (self.root / 'stall-role').touch()
+        return super().chooser_lookup(query, deadline, description)
+
+
 def publisher(root):
     sys.path.append('/usr/lib/python3/dist-packages')
     import gi
@@ -107,19 +123,12 @@ def publisher(root):
 
     filters.connect('notify::popup-shown', popup_changed)
     changes = actions = 0
-    armed = False
 
     def changed(entry):
-        nonlocal changes, armed
+        nonlocal changes
         if entry.get_text() == str(destination) + '/':
             changes += 1
             (root / 'changes').write_text(str(changes))
-            if not armed:
-                armed = True
-                def arm():
-                    (root / 'stall-role').touch()
-                    return GLib.SOURCE_REMOVE
-                GLib.idle_add(arm)
     field.connect('changed', changed)
 
     def clicked(unused):
@@ -161,7 +170,7 @@ def main():
         with (root / 'publisher.log').open('w') as output:
             child = subprocess.Popen([sys.executable, __file__, '--publisher', str(root)], stdout=output, stderr=subprocess.STDOUT)
             try:
-                dialogs = Dialogs()
+                dialogs = RoleDelayDialogs(root)
                 window = dialogs.wait(child, TITLE)
                 window.get_application().set_cache_mask(dialogs.atspi.Cache.NONE)
                 window.clear_cache()
