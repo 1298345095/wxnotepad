@@ -7,7 +7,57 @@ import tempfile
 import time
 import shutil
 import json
+import base64
 from resource_process import process_windows
+
+
+def check_request_reader(folder):
+    """Read the actual request protocol while its native rename handle is open."""
+    import ctypes as c
+    from ctypes import wintypes as w
+    kernel = c.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateFileW.argtypes = [w.LPCWSTR, w.DWORD, w.DWORD, c.c_void_p, w.DWORD, w.DWORD, w.HANDLE]
+    kernel.CreateFileW.restype = w.HANDLE
+    kernel.SetFileInformationByHandle.argtypes = [w.HANDLE, c.c_int, c.c_void_p, w.DWORD]
+    kernel.SetFileInformationByHandle.restype = w.BOOL
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    kernel.CloseHandle.restype = w.BOOL
+    delete_access, share_read_write_delete, open_existing, file_rename_info = 0x10000, 7, 3, 3
+    helper = str(Path(__file__).with_name('open_target_request.ps1')).replace("'", "''")
+    for index, (item, cancelled) in enumerate((('目标, selected file.txt', False), ('', False), ('target.txt', True))):
+        staging = folder / f'request-reader-{index}.tmp'
+        published = folder / f'request-reader-{index}.ready'
+        directory = str(folder / '目标 directory')
+        selected = str(folder / item) if item else ''
+        payload = (directory + '\n' + selected + '\n' + str(os.getpid()) + '\n' +
+                   ('cancelled\n' if cancelled else '')).encode('utf-8')
+        staging.write_bytes(payload)
+        handle = kernel.CreateFileW(str(staging), delete_access, share_read_write_delete, None,
+                                    open_existing, 0, None)
+        assert handle != w.HANDLE(-1).value, c.WinError(c.get_last_error())
+        try:
+            name = str(published).encode('utf-16-le')
+            class RenameInfo(c.Structure):
+                _fields_ = [('replace', c.c_ubyte), ('root', w.HANDLE), ('length', w.DWORD),
+                            ('name', w.WCHAR * (len(name) // c.sizeof(w.WCHAR) + 1))]
+            info = RenameInfo()
+            info.length = len(name)
+            c.memmove(c.addressof(info) + RenameInfo.name.offset, name, len(name))
+            assert kernel.SetFileInformationByHandle(handle, file_rename_info, c.byref(info), c.sizeof(info)), \
+                c.WinError(c.get_last_error())
+            path = str(published).replace("'", "''")
+            command = (f"$ErrorActionPreference = 'Stop'; . '{helper}'; $lines = @(Read-ExplorerRequest '{path}'); "
+                       '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]::Join("`n", $lines) + "`n"))')
+            encoded = base64.b64encode(command.encode('utf-16-le')).decode('ascii')
+            result = subprocess.run(['pwsh', '-NoProfile', '-EncodedCommand', encoded],
+                                    capture_output=True, timeout=10, check=False)
+            assert result.returncode == 0, result.stderr.decode('utf-8', errors='replace')
+            assert result.stdout.strip() == base64.b64encode(payload), \
+                'actual observer reader must preserve every exact UTF-8 request byte while rename is open'
+        finally:
+            kernel.CloseHandle(handle)
+    print('PASS: actual observer reader preserves Unicode, empty item and cancellation request bytes under native rename',
+          flush=True)
 
 
 def main():
@@ -49,6 +99,8 @@ def main():
                     "x-scheme-handler/mailto", "inode/directory", "text/plain", "application/octet-stream")),
                 encoding="utf-8")
             environment.update(XDG_DATA_HOME=str(applications.parent), XDG_CONFIG_HOME=str(config))
+        if sys.platform == "win32":
+            check_request_reader(folder)
         manager = None
         try:
             if sys.platform == "win32":
