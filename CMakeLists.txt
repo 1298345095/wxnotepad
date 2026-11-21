@@ -387,6 +387,18 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>"
             --cmake-dir "${CMAKE_BINARY_DIR}")
         set_tests_properties(packaged_document_tools_runtime PROPERTIES TIMEOUT 60)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            add_gui_program(document_tools_directory_readiness tests/document_tools.cpp app_shell)
+            target_sources(document_tools_directory_readiness PRIVATE tests/gtk_directory_load_order.cpp)
+            target_compile_definitions(document_tools_directory_readiness PRIVATE WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER)
+            target_link_libraries(document_tools_directory_readiness PRIVATE PkgConfig::GIO_UNIX)
+            target_link_options(document_tools_directory_readiness PRIVATE
+                -Wl,--wrap=g_file_enumerator_next_files_async -Wl,--wrap=g_file_enumerator_next_files_finish
+                -Wl,--wrap=g_file_query_info_async)
+            add_test(NAME native_document_tools_directory_readiness COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools_directory_readiness>")
+            set_tests_properties(native_document_tools_directory_readiness PROPERTIES TIMEOUT 60)
+        endif()
     endif()
     add_gui_program(new_window tests/new_window.cpp app_shell)
     add_gui_program(open_targets tests/open_targets.cpp app_shell)
