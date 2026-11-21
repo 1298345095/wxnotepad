@@ -6,6 +6,7 @@ All focus/input stays on xvfb-run's private DISPLAY. No WSLg/Windows bridge.
 Set WXNOTEPAD_DISPLAY_LOG_DIR to retain the full private Weston log.
 """
 import os
+import json
 from pathlib import Path
 import signal
 import shutil
@@ -66,6 +67,32 @@ def mapped_toplevel(scene, process, surface):
             if not re.search(r"\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]", section):
                 return True
     return False
+
+
+def retain_activation_failure(process, surface, expiry, scene, matched, queries, timed_out):
+    """Retain only observations already made by an unacknowledged activation."""
+    directory = os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR")
+    if not directory:
+        return
+    prefix = Path(directory) / f"wayland-{os.getpid()}-activation-{int(process)}-{int(surface)}-{int(expiry)}"
+    try:
+        prefix.parent.mkdir(parents=True, exist_ok=True)
+        # The expired request can still be present on the next driver iteration.
+        # Keep its first failure, including the last scene actually read for it.
+        if prefix.with_suffix(".json").exists():
+            return
+        if scene is not None:
+            prefix.with_suffix(".scene.txt").write_text(scene, encoding="utf-8")
+        prefix.with_suffix(".json").write_text(json.dumps({
+            "request_kind": "activate", "acknowledged": False,
+            "owned_pid": int(process), "owned_surface": int(surface),
+            "deadline_monotonic_us": int(expiry), "last_scene_matched": matched,
+            "scene_queries": queries, "scene_query_timed_out": timed_out,
+            "scene_file": prefix.with_suffix(".scene.txt").name if scene is not None else None,
+        }, indent=2) + "\n", encoding="utf-8")
+        print(f"Native activation failure observation: {prefix.with_suffix('.json')}", file=sys.stderr, flush=True)
+    except OSError as error:
+        print(f"Could not retain native activation failure observation: {error}", file=sys.stderr, flush=True)
 
 
 trace_gesture = "0"
@@ -189,22 +216,32 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                 elif request.startswith(("activate:", "prepare:")):
                     kind, process, surface, expiry = request.split(":")
                     deadline = int(expiry) / 1_000_000
+                    last_scene = matched = None
+                    queries = 0
+                    timed_out = acknowledged = False
                     while backend == "wayland" and time.monotonic() < deadline:
                         remaining = deadline - time.monotonic()
                         if remaining <= 0: break
                         try:
+                            queries += 1
                             scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
                                                    capture_output=True, text=True,
                                                    timeout=min(2, remaining), check=True).stdout
                         except subprocess.TimeoutExpired:
+                            timed_out = True
                             break
-                        if mapped_toplevel(scene, int(process), int(surface)):
+                        last_scene = scene
+                        matched = mapped_toplevel(scene, int(process), int(surface))
+                        if matched:
                             if time.monotonic() < deadline:
                                 if kind == "activate":
                                     xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
                                 acknowledge(focus)
+                                acknowledged = True
                             break
                         time.sleep(min(.03, max(0, deadline - time.monotonic())))
+                    if kind == "activate" and not acknowledged:
+                        retain_activation_failure(process, surface, expiry, last_scene, matched, queries, timed_out)
                 elif request.startswith("front:"):
                     front(request[6:])
                     acknowledge(focus)
