@@ -1950,9 +1950,9 @@ the actual source and pinned wxWidgets 3.3.3 ownership implementations. After
 the issue-specific dispositions below, that analysis reports an OK quality gate;
 subsequent source changes still require their own hosted analysis.
 
-The [disposition ledger](sonarqube-2026-11-20-pr247-dispositions.json) records 36
+The [disposition ledger](sonarqube-2026-11-20-pr247-dispositions.json) records 37
 individual false positives with their source-to-owner or source-to-sink proof:
-four framework registry lifetime reports, 25 framework-owned UI allocations,
+four framework registry lifetime reports, 26 framework-owned UI allocations,
 three GTK type-check macro reports, three intentional original HTTP target
 spellings, and one developer CLI directory argument. GTK predicates retain
 their original short-circuit behavior. URL commands preserve the original

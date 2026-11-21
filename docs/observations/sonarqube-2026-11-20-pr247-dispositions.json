@@ -219,6 +219,12 @@
       "rule": "cpp:S5025",
       "resolution": "FALSE_POSITIVE",
       "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/run_command.cpp:502. RunCommandApp's frame is a wx top-level window. Its AfterPresentation callback catches test exceptions, then unconditionally calls frame->Destroy() and ExitMainLoop(). wxWidgets owns deferred deletion through wxPendingDelete/ DeletePendingObjects; settings_ lives on the app through the loop. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaH1Ej-Xow3o9DjYuHMe",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive for PR247 key AaH1Ej-Xow3o9DjYuHMe (baseline aa16285f tests/open_targets.cpp:385; reviewed current d5e97a69283b94087ccc471239fd7a1d2d802801:395). EditorFrame is a wxFrame registered in wxTopLevelWindows by pinned wxWidgets3.3.3 (msw/toplevel.cpp:443). After initialization, both successful and caught std::exception test callbacks reach frame->Destroy and ExitMainLoop (current451-452); wx top-level Destroy queues pending deletion, and app cleanup deletes pending/remaining top-level windows. A startup exception before the callback is covered by wxEntryReal's wxSafeCall while its outer wxInitializer remains alive; final uninitialization reaches wxEntryCleanup, app.CleanUp and DeleteAllTLWs. The terminal desktop recorder std::exit branch393 and GTK file-manager branch381-385 occur before this allocation395 and cannot strand it. This is native framework ownership, not a default-delete unique_ptr responsibility. Exact source/exception-chain proof retained in 242/explorer-server-differential/sonar-editor-frame-owner.md. No allocation disguise, suppression or gate/scope change."
     }
   ]
 }
