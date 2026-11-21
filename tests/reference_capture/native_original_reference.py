@@ -61,8 +61,8 @@ def open_target_control(executable, mode, output):
                 if not (root / 'explorer-ready').exists():
                     raise RuntimeError('Independent Explorer observer baseline timed out')
                 caller = subprocess.Popen([owned_executable, root, mode], stdout=log, stderr=subprocess.STDOUT)
-                caller_result = caller.wait(timeout=30)
-                observer_result = observer.wait(timeout=10)
+                caller_result = caller.wait(timeout=40 if mode == 'single-item-ready' else 30)
+                observer_result = observer.wait(timeout=30 if mode == 'single-item-ready' else 10)
                 result = {'mode': mode, 'caller_exit': caller_result, 'observer_exit': observer_result,
                           'selected': caller_result == 0 and observer_result == 0}
             finally:
@@ -78,7 +78,7 @@ def open_target_control(executable, mode, output):
 
 def open_target_controls(executable, output):
     results = []
-    for mode in ('original', 'single-item'):
+    for mode in ('original', 'single-item', 'single-item-ready'):
         try:
             results.append(open_target_control(executable, mode, output / mode))
         except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
