@@ -109,7 +109,9 @@ public:
 };
 class ProgramDriver final : public wxTimer {
 public:
-    ProgramDriver(wxString program, bool cancel = false) : program_(std::move(program)), cancel_(cancel) { Start(50); }
+    explicit ProgramDriver(wxString program, bool cancel = false) : program_(std::move(program)), cancel_(cancel) {
+        Start(50);
+    }
     int choosers = 0;
     void Notify() override {
         for (auto* window : wxTopLevelWindows) {

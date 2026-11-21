@@ -18,6 +18,13 @@
 
 namespace {
 constexpr size_t SchemeMenuIndex = 4;
+int StatusFieldAtPoint(wxStatusBar& status, const wxPoint& position) {
+    for (int field = 0; field < StatusField::Count; ++field) {
+        wxRect rectangle;
+        if (status.GetFieldRect(field, rectangle) && rectangle.Contains(position)) return field;
+    }
+    return wxNOT_FOUND;
+}
 void ApplyNarrowNativeLayout(wxStatusBar* status) {
 #ifdef __WXMSW__
     // Notepad4's native SB_SETPARTS path permits coincident pane edges. wxMSW
@@ -206,36 +213,31 @@ void EditorFrame::CreatePositionStatus() {
     });
     status->Bind(wxEVT_LEFT_DCLICK, [this, status](wxMouseEvent& event) {
         int id = wxNOT_FOUND;
-        for (int field = 0; field < StatusField::Count; ++field) {
-            wxRect rectangle;
-            if (!status->GetFieldRect(field, rectangle) || !rectangle.Contains(event.GetPosition())) continue;
-            switch (field) {
-            case StatusField::Line:
-                id = FindMenuCommand(_("&Goto Line...\tCtrl+G"));
-                break;
-            case StatusField::Matches:
-                id = wxID_FIND;
-                break;
-            case StatusField::Encoding:
-                id = FindMenuCommand(_("&More...\tF9"));
-                break;
-            case StatusField::Scheme:
-                PopupMenu(GetMenuBar()->GetMenu(SchemeMenuIndex));
-                break;
-            case StatusField::Overtype:
-                editor_->Send(Scintilla::Message::EditToggleOvertype);
-                UpdatePositionStatus();
-                break;
-            case StatusField::Eol: {
-                const auto mode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-                id = FindMenuCommand(mode == Scintilla::EndOfLine::CrLf ? _("&Unix/macOS (LF)")
-                                     : mode == Scintilla::EndOfLine::Lf ? _("Classic &Mac OS (CR)")
-                                                                        : _("&Windows (CR+LF)"));
-                break;
-            }
-            default:
-                break;
-            }
+        switch (StatusFieldAtPoint(*status, event.GetPosition())) {
+        case StatusField::Line:
+            id = FindMenuCommand(_("&Goto Line...\tCtrl+G"));
+            break;
+        case StatusField::Matches:
+            id = wxID_FIND;
+            break;
+        case StatusField::Encoding:
+            id = FindMenuCommand(_("&More...\tF9"));
+            break;
+        case StatusField::Scheme:
+            PopupMenu(GetMenuBar()->GetMenu(SchemeMenuIndex));
+            break;
+        case StatusField::Overtype:
+            editor_->Send(Scintilla::Message::EditToggleOvertype);
+            UpdatePositionStatus();
+            break;
+        case StatusField::Eol: {
+            const auto mode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
+            id = FindMenuCommand(mode == Scintilla::EndOfLine::CrLf ? _("&Unix/macOS (LF)")
+                                 : mode == Scintilla::EndOfLine::Lf ? _("Classic &Mac OS (CR)")
+                                                                    : _("&Windows (CR+LF)"));
+            break;
+        }
+        default:
             break;
         }
         if (id != wxNOT_FOUND) {

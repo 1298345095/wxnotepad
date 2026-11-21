@@ -153,6 +153,7 @@ private:
     void AppendIndentationOptions(wxMenu* view);
     void AppendCompletionOptions(wxMenu* view);
     void AppendSelectionOptions(wxMenu* view);
+    void AppendAppearanceOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
     void AppendCallTipCommands(wxMenu* view);
