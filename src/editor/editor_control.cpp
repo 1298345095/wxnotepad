@@ -511,12 +511,13 @@ void EditorControl::SetLineNumbersVisible(bool visible) {
 void EditorControl::SetBookmarkMarginVisible(bool visible) {
     bookmarkMarginVisible_ = visible;
     // Original Styles.cpp::Style_SetBookmark at 89b8b36.
-    Send(Message::MarkerDefine, 0,
+    Send(Message::MarkerDefine, EditorMarker::Bookmark,
          static_cast<intptr_t>(std::to_underlying(visible ? Scintilla::MarkerSymbol::VerticalBookmark
                                                           : Scintilla::MarkerSymbol::Background)));
-    Send(Message::MarkerSetBackTranslucent, 0, visible ? 0xFF408040 : 0x2800FF00);
-    if (visible) Send(Message::MarkerSetForeTranslucent, 0, 0xFF408040);
-    Send(Message::MarkerSetLayer, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
+    Send(Message::MarkerSetBackTranslucent, EditorMarker::Bookmark, visible ? 0xFF408040 : 0x2800FF00);
+    if (visible) Send(Message::MarkerSetForeTranslucent, EditorMarker::Bookmark, 0xFF408040);
+    Send(Message::MarkerSetLayer, EditorMarker::Bookmark,
+         static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
     bookmarkMarginWidthDirty_ = true;
     UpdateBookmarkMargin();
 }

@@ -318,9 +318,11 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
     WndProc(Message::IndicSetFore, EditorIndicator::Occurrence,
             wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
     WndProc(Message::IndicSetAlpha, EditorIndicator::Occurrence, 25);
-    WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::MarkerSymbol::Background)));
-    WndProc(Message::MarkerSetBackTranslucent, 0, 0x2800FF00);
-    WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
+    WndProc(Message::MarkerDefine, EditorMarker::Bookmark,
+            static_cast<intptr_t>(std::to_underlying(Scintilla::MarkerSymbol::Background)));
+    WndProc(Message::MarkerSetBackTranslucent, EditorMarker::Bookmark, 0x2800FF00);
+    WndProc(Message::MarkerSetLayer, EditorMarker::Bookmark,
+            static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
     WndProc(Message::SetCaretStyle, static_cast<uintptr_t>(std::to_underlying(Scintilla::CaretStyle::Line)), 0);
     WndProc(Message::SetMarginWidthN, EditorMargin::Bookmark, 0);
     WndProc(Message::SetScrollWidth, 1, 0);
@@ -1015,11 +1017,12 @@ void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationD
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
         window_.occurrences_->Update(notification.updated);
     // Original bookmark-margin clicks use the clicked line and keep the caret.
-    if (notification.nmhdr.code == Scintilla::Notification::MarginClick && notification.margin == 1 &&
-        window_.BookmarkMarginVisible()) {
+    if (notification.nmhdr.code == Scintilla::Notification::MarginClick &&
+        notification.margin == EditorMargin::Bookmark && window_.BookmarkMarginVisible()) {
         const auto line = window_.Send(Message::LineFromPosition, notification.position);
-        window_.Send((window_.Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line,
-                     0);
+        window_.Send((window_.Send(Message::MarkerGet, line) & EditorMarker::BookmarkMask) ? Message::MarkerDelete
+                                                                                           : Message::MarkerAdd,
+                     line, EditorMarker::Bookmark);
     }
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
         (static_cast<unsigned>(std::to_underlying(notification.updated)) &

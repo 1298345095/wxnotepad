@@ -2,6 +2,7 @@
 #include "app/toolbar_art.h"
 #include "settings/settings_store.h"
 #include "editor/editor_control.h"
+#include <utility>
 #include <wx/menu.h>
 #include <wx/imagpng.h>
 #include <wx/toolbar.h>
@@ -12,6 +13,27 @@
 #endif
 
 namespace {
+// Indices in Notepad4 89b8b36's toolbar bitmap strips.
+enum class ToolbarIcon {
+    New = 0,
+    Open = 1,
+    Save = 3,
+    Undo = 4,
+    Redo = 5,
+    Cut = 6,
+    Copy = 7,
+    Paste = 8,
+    Find = 9,
+    Replace = 10,
+    WordWrap = 11,
+    ZoomIn = 12,
+    ZoomOut = 13,
+    SaveAs = 17,
+    SaveCopy = 18,
+    DefaultFoldLevels = 23,
+    NewWindow = 26,
+};
+
 wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& background) {
     // Notepad4 CreateBars/BitmapAlphaBlend, 89b8b36, for light chrome. Its dark
     // strokes disappear on dark chrome. Map source luminance between native
@@ -64,40 +86,40 @@ void EditorFrame::CreateDefaultToolbar() {
     toolbar->SetName("Main toolbar");
     // Notepad4 89b8b36 DefaultToolbarButtons order/groups. Only commands already
     // delivered by this host are included; images use that original strip index.
-    const auto add = [this, toolbar](int image, const wxString& label) {
+    const auto add = [this, toolbar](ToolbarIcon image, const wxString& label) {
         const auto id = FindMenuCommand(label);
         if (id == wxNOT_FOUND) return;
         auto* command = GetMenuBar()->FindItem(id);
-        const auto art = ToolbarArt::Icon(image);
+        const auto art = ToolbarArt::Icon(std::to_underlying(image));
         toolbar->AddTool(command->GetId(), command->GetItemLabelText(), art,
                          DisabledArtwork(art, wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE)),
                          command->IsCheckable() ? wxITEM_CHECK : wxITEM_NORMAL,
                          wxStripMenuCodes(label, wxStrip_Mnemonics), command->GetHelp());
     };
-    add(0, _("&New\tCtrl+N"));
-    add(26, _("New &Window\tAlt+N"));
-    add(1, _("&Open...\tCtrl+O"));
+    add(ToolbarIcon::New, _("&New\tCtrl+N"));
+    add(ToolbarIcon::NewWindow, _("New &Window\tAlt+N"));
+    add(ToolbarIcon::Open, _("&Open...\tCtrl+O"));
     toolbar->AddSeparator();
-    add(3, _("&Save\tCtrl+S"));
-    add(17, _("Save &As...\tF6"));
-    add(18, _("Save Cop&y...\tCtrl+F6"));
+    add(ToolbarIcon::Save, _("&Save\tCtrl+S"));
+    add(ToolbarIcon::SaveAs, _("Save &As...\tF6"));
+    add(ToolbarIcon::SaveCopy, _("Save Cop&y...\tCtrl+F6"));
     toolbar->AddSeparator();
-    add(4, _("&Undo\tCtrl+Z"));
-    add(5, _("&Redo\tCtrl+Y"));
+    add(ToolbarIcon::Undo, _("&Undo\tCtrl+Z"));
+    add(ToolbarIcon::Redo, _("&Redo\tCtrl+Y"));
     toolbar->AddSeparator();
-    add(6, _("Cu&t\tCtrl+X"));
-    add(7, _("&Copy\tCtrl+C"));
-    add(8, _("&Paste\tCtrl+V"));
+    add(ToolbarIcon::Cut, _("Cu&t\tCtrl+X"));
+    add(ToolbarIcon::Copy, _("&Copy\tCtrl+C"));
+    add(ToolbarIcon::Paste, _("&Paste\tCtrl+V"));
     toolbar->AddSeparator();
-    add(9, _("&Find...\tCtrl+F"));
-    add(10, _("R&eplace...\tCtrl+H"));
+    add(ToolbarIcon::Find, _("&Find...\tCtrl+F"));
+    add(ToolbarIcon::Replace, _("R&eplace...\tCtrl+H"));
     toolbar->AddSeparator();
-    add(11, _("&Word Wrap\tCtrl+Shift+W"));
+    add(ToolbarIcon::WordWrap, _("&Word Wrap\tCtrl+Shift+W"));
     toolbar->AddSeparator();
-    add(23, _("&Default Levels\tShift+Alt+D"));
+    add(ToolbarIcon::DefaultFoldLevels, _("&Default Levels\tShift+Alt+D"));
     toolbar->AddSeparator();
-    add(12, _("Zoom &In\tCtrl++"));
-    add(13, _("Zoom &Out\tCtrl+-"));
+    add(ToolbarIcon::ZoomIn, _("Zoom &In\tCtrl++"));
+    add(ToolbarIcon::ZoomOut, _("Zoom &Out\tCtrl+-"));
     toolbar->Realize();
 #ifdef __WXGTK__
     // A synchronous clipboard query yields inside GTK frame-clock dispatch:

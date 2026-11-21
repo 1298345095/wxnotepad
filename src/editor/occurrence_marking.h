@@ -1,5 +1,6 @@
 #pragma once
 
+#include "settings/original_settings_constants.h"
 #include <cstdint>
 #include <ScintillaTypes.h>
 #include <wx/timer.h>
@@ -27,7 +28,7 @@ public:
 private:
     EditorControl& editor_;
     wxTimer timer_;
-    int options_ = 1;
+    int options_ = MarkOccurrenceOption_Default;
     unsigned flags_ = 0;
     std::string text_;
     size_t matchCount_ = 0;

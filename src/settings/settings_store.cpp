@@ -70,12 +70,13 @@ wxString ParseDateTimeFormat(wxString value) {
         ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'"))))
         value = value.Mid(1, value.length() - 2);
     // IniGetString's original WCHAR[256] reserves one UTF-16 unit for NUL.
+    constexpr size_t MaxDateTimeFormatUtf16Units = 255;
     wxString truncated;
     size_t units = 0;
     for (const wxUniChar character : value) {
-        if (units == 255) break;
+        if (units == MaxDateTimeFormatUtf16Units) break;
         const size_t count = character.GetValue() >= 0x10000 ? 2 : 1;
-        if (units + count > 255) {
+        if (units + count > MaxDateTimeFormatUtf16Units) {
             truncated += wxUniChar(0xfffd);
             break;
         }

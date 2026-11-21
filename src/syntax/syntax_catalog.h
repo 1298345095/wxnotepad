@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/string.h>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -42,6 +43,12 @@ enum class SyntaxLanguage : uint8_t {
     MarkdownPandoc,
     Count
 };
+namespace SyntaxDetectionLimits {
+// Original Styles.cpp lookup lengths, excluding the terminating NUL.
+inline constexpr std::size_t PrefixBytes = 255;
+inline constexpr std::size_t DocTypeBytes = 3999;
+} // namespace SyntaxDetectionLimits
+
 struct SyntaxDetectionOptions {
     bool autoSelect = true;
     bool noCgiGuess = false;

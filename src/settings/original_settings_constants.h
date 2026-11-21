@@ -23,6 +23,14 @@ enum AutoInsertMask {
     AutoInsertMask_Default = 511,
 };
 
+enum MarkOccurrenceOption {
+    MarkOccurrenceOption_Enabled = 1,
+    MarkOccurrenceOption_MatchCase = 2,
+    MarkOccurrenceOption_WholeWord = 4,
+    MarkOccurrenceOption_Bookmark = 8,
+    MarkOccurrenceOption_Default = MarkOccurrenceOption_Enabled,
+};
+
 enum FullScreenMode {
     FullScreenMode_OnStartup = 1,
     FullScreenMode_HideTitle = 2,

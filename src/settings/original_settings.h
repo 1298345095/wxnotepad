@@ -70,7 +70,7 @@ struct OriginalSettings {
     int selectOption = SelectOption_Default;
     int autoInsertMask = AutoInsertMask_Default;
     WordCompletionSettings completion;
-    int markOccurrences = 1;
+    int markOccurrences = MarkOccurrenceOption_Default;
     bool saveFindReplace = false;
     bool saveRecentFiles = false;
     int maxRecentFiles = OriginalSettingLimits::MinRecentFiles;

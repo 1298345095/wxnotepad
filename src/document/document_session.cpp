@@ -1,6 +1,7 @@
 #include "document/document_session.h"
 #include <utility>
 #include "editor/editor_control.h"
+#include "editor/editor_ids.h"
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/chinese_codec.h"
@@ -512,8 +513,9 @@ void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
     editor.Send(SetSel, view.anchor, view.caret);
     // Original FileLoad compares the saved one-based line against the restored
     // zero-based line, then uses EditJumpTo/EditSelectEx.
+    constexpr intptr_t ReloadLineDisplacementTolerance = 5;
     const auto displacement = view.line + 1 - editor.Send(LineFromPosition, editor.Send(GetCurrentPos));
-    if (displacement > 5 || displacement < -5) {
+    if (displacement > ReloadLineDisplacementTolerance || displacement < -ReloadLineDisplacementTolerance) {
         const auto position = view.line >= editor.Send(GetLineCount) ? editor.Send(GetLength)
                                                                      : editor.Send(FindColumn, view.line, view.column);
         editor.JumpToPosition(position);
@@ -909,7 +911,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(SetUndoSelectionHistory, 0);
     editor_.Send(SetUndoCollection, 0);
     editor_.Send(ClearAll);
-    editor_.Send(MarkerDeleteAll, 0);
+    editor_.Send(MarkerDeleteAll, EditorMarker::Bookmark);
     if (raw.empty())
         editor_.Send(AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     else {
@@ -1020,7 +1022,7 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     // Pinned Styles.cpp::Style_SelectLexer sniffs only the canonical Web/XML
     // choices; explicit dialect choices retain the user's selected language.
     if (language == SyntaxLanguage::Html || language == SyntaxLanguage::Xml) {
-        std::array<char, 4000> prefix{};
+        std::array<char, SyntaxDetectionLimits::DocTypeBytes + 1> prefix{};
         editor_.Send(Scintilla::Message::GetText, prefix.size() - 1, reinterpret_cast<intptr_t>(prefix.data()));
         markupDialect_ = DetectMarkupDocType(prefix.data());
     }
@@ -1069,7 +1071,7 @@ bool DocumentSession::DetectAutomaticLanguage() {
     // Match original SciCall_GetText(255) with the original 256-byte buffer.
     // Style_GetDocTypeLanguage inspects a larger header than the 255-byte
     // filename/shebang/markup guess. DetectLanguage retains both limits.
-    std::array<char, 4000> prefix{};
+    std::array<char, SyntaxDetectionLimits::DocTypeBytes + 1> prefix{};
     editor_.Send(Scintilla::Message::GetText, prefix.size() - 1, reinterpret_cast<intptr_t>(prefix.data()));
     const auto detected = DetectLanguage(path_, prefix.data(), detection_);
     automaticLanguage_ = detected ? detected->schemeLanguage : SyntaxLanguage::PlainText;
