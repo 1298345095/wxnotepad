@@ -50,13 +50,34 @@ def xdo(*args):
         result.check_returncode()
     return result.stdout.strip()
 
-def acknowledge(focus):
+def acknowledge(focus, deadline_us=None):
     # Readers may already have the request open. Replace it so their ReadAll
     # observes a stable snapshot while new readers observe completion.
     pending = focus.with_suffix(".ack")
     pending.write_text("", encoding="utf-8")
+    if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
+        return False
     pending.replace(focus)
     driver_trace(focus, "driver.ack")
+    return True
+
+
+def focus_owned_window(focus, title, deadline_us=None):
+    # Reject expired requests before native input; acknowledge rechecks after
+    # X11's synchronous focus call and immediately before publishing the claim.
+    if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
+        driver_trace(focus, "driver.expired")
+        return True
+    if backend == "x11":
+        windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
+        if not windows:
+            return False
+        xdo("windowfocus", "--sync", windows[0])
+    if not acknowledge(focus, deadline_us):
+        driver_trace(focus, "driver.expired")
+    elif backend != "x11":
+        xdo("windowfocus", "--sync", weston_window)
+    return True
 
 
 def mapped_toplevel(scene, process, surface):
@@ -210,7 +231,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", "focus-until:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -281,8 +302,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                             if time.monotonic() < deadline:
                                 if kind == "activate":
                                     xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
-                                acknowledge(focus)
-                                acknowledged = True
+                                acknowledged = acknowledge(focus, int(expiry))
                             break
                         time.sleep(min(.03, max(0, deadline - time.monotonic())))
                     if kind == "activate" and not acknowledged:
@@ -347,16 +367,15 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         pending.replace(phase)
                     wait_drag_state(".drag-ended", "end")
                     acknowledge(focus)
-                elif request.startswith("focus:"):
-                    if backend == "x11":
-                        windows = xdo("search", "--onlyvisible", "--name", request[6:]).splitlines()
-                        if not windows: time.sleep(.03); continue
-                        # Finish native focus before the waiting test can open a popup.
-                        xdo("windowfocus", "--sync", windows[0])
-                        acknowledge(focus)
+                elif request.startswith(("focus:", "focus-until:")):
+                    if request.startswith("focus-until:"):
+                        _, expiry, title = request.split(":", 2)
+                        deadline_us = int(expiry)
                     else:
-                        acknowledge(focus)
-                        xdo("windowfocus", "--sync", weston_window)
+                        deadline_us, title = None, request[6:]
+                    if not focus_owned_window(focus, title, deadline_us):
+                        time.sleep(.03)
+                        continue
                 elif request.startswith("click:"):
                     x, y, button = map(int, request[6:].split(","))
                     if backend == "wayland":

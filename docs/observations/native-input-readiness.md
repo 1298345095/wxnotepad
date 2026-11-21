@@ -84,3 +84,36 @@ results are preserved on Windows at:
 The uninstrumented X11 peer failure and the intermediate successful diagnostic
 replays remain alongside the final comparisons. Final Windows and complete
 hosted-matrix results are recorded by the integration delivery.
+
+## Acknowledgement after a busy GUI callback
+
+CI run `44897603406`, Wayland coverage at `89e5fe1`, failed search continuation
+scenario 7/13 (`SelectionLimit`). Its failure history records a driver focus
+acknowledgement about 4.17 seconds before the assertion. The failure's fresh read
+also found an empty request, but the wait still held its earlier unacknowledged
+state. The history does not identify the GUI callback that prevented polling.
+
+A controlled native replay made a GUI callback outlast the original three-second
+focus deadline. The driver acknowledged at 266 ms, the actual editor had focus,
+and the original helper still failed. The permanent
+`native_focus_acknowledgement` regression also failed before the correction.
+
+Active GTK windows now publish `focus-until:<monotonic-expiry-us>:<title>`.
+The driver checks expiry before native focus and immediately before publishing
+its acknowledgement. Inactive Wayland activation retains its existing deadline;
+inactive X11 activation retains its existing `front:` route. After a callback
+outlasts polling, the helper reads the acknowledgement again only for these
+deadline-gated requests, then retains the actual frame/editor focus checks.
+The three-second deadline, native input route and failure assertion are unchanged.
+
+The regression exercises both an acknowledgement received before expiry while
+the GUI remains busy, and an expired request that the actual driver must reject.
+It observes the driver's rejection event before checking that the request remains
+unacknowledged. Removing either the fresh observation or the driver's deadline
+rejection produces a failing native regression. X11 and Wayland also retain the
+complete original 13-scenario search continuation test.
+
+Evidence, red controls and native results are retained at
+`F:/wxnotepad-evidence/toolbar-artwork-2026-11-21/focus-cache-control/`.
+This correction does not establish the cause of the separately observed
+scenario-13 key-release failure.

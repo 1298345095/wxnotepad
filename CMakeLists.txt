@@ -1071,6 +1071,7 @@ if(BUILD_TESTING)
         add_test(NAME original_shell_appearance_scale2 COMMAND shell_appearance)
         set_tests_properties(original_shell_appearance_scale2 PROPERTIES TIMEOUT 60
             ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=0.5")
+        add_editor_test(focus_acknowledgement native_focus_acknowledgement 20)
     endif()
 endif()
 
