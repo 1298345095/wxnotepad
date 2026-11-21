@@ -5,36 +5,16 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace {
 constexpr unsigned InitialEnumerationDelayMilliseconds = 200;
 constexpr unsigned InitialFolderQueryDelayMilliseconds = 200;
-std::string initialDirectory;
-std::string requestedParent;
-bool enumerationQueued = false;
-bool enumerationDelivered = false;
-bool enumerationFinished = false;
-bool parentQueued = false;
-bool parentDelivered = false;
-unsigned initialQueriesQueued = 0;
-unsigned initialQueriesDelivered = 0;
-std::function<void()> deferredParent;
-std::shared_ptr<GFileEnumerator> controlledEnumerator;
 
 template <typename T> std::shared_ptr<T> Retain(T* object) {
     return {object ? static_cast<T*>(g_object_ref(object)) : nullptr, [](T* value) {
                 if (value) g_object_unref(value);
             }};
-}
-void Defer(unsigned milliseconds, std::function<void()> action) {
-    auto pending = std::make_unique<std::function<void()>>(std::move(action));
-    g_timeout_add_full(
-        G_PRIORITY_DEFAULT, milliseconds,
-        [](gpointer data) -> gboolean {
-            (*static_cast<std::function<void()>*>(data))();
-            return G_SOURCE_REMOVE;
-        },
-        pending.release(), [](gpointer data) { delete static_cast<std::function<void()>*>(data); });
 }
 bool Matches(GFile* file, const std::string& expected) {
     if (expected.empty()) return false;
@@ -75,20 +55,56 @@ bool VisibleChooserModel(gpointer model) {
 } // namespace
 
 namespace NativeDialogs {
-void EnableDirectoryLoadOrder() {
-    initialDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath().utf8_string();
+struct DirectoryLoadOrder::State final : std::enable_shared_from_this<State> {
+    std::string initialDirectory;
+    std::string requestedParent;
+    bool enumerationQueued = false;
+    bool enumerationDelivered = false;
+    bool enumerationFinished = false;
+    bool parentQueued = false;
+    bool parentDelivered = false;
+    unsigned initialQueriesQueued = 0;
+    unsigned initialQueriesDelivered = 0;
+    std::function<void()> deferredParent;
+    std::shared_ptr<GFileEnumerator> controlledEnumerator;
+
+    struct DeferredCall {
+        std::shared_ptr<State> owner;
+        std::function<void()> action;
+    };
+    void Defer(unsigned milliseconds, std::function<void()> action) {
+        auto pending = std::make_unique<DeferredCall>(DeferredCall{shared_from_this(), std::move(action)});
+        g_timeout_add_full(
+            G_PRIORITY_DEFAULT, milliseconds,
+            [](gpointer data) -> gboolean {
+                static_cast<DeferredCall*>(data)->action();
+                return G_SOURCE_REMOVE;
+            },
+            pending.release(),
+            [](gpointer data) {
+                // GLib calls destroy-notify after execution or source removal.
+                // Only this callback reclaims the transferred call and context.
+                const std::unique_ptr<DeferredCall> completed(static_cast<DeferredCall*>(data));
+            });
+    }
+};
+
+DirectoryLoadOrder::DirectoryLoadOrder() : state_(std::make_shared<State>()) {
+    state_->initialDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath().utf8_string();
     wxString root;
     if (!wxGetEnv("WXNOTEPAD_DOCUMENT_TOOLS_ROOT", &root))
         throw std::runtime_error("directory load-order regression requires its owned document-tools root");
-    requestedParent = root.utf8_string();
+    state_->requestedParent = root.utf8_string();
 }
-bool DirectoryLoadOrderCompleted() {
-    std::fprintf(stderr, "directory load-order initial queries: %u/%u\n", initialQueriesQueued,
-                 initialQueriesDelivered);
-    std::fprintf(stderr, "directory load-order gates: enumeration=%d/%d/%d parent=%d/%d\n", enumerationQueued,
-                 enumerationDelivered, enumerationFinished, parentQueued, parentDelivered);
-    return initialQueriesQueued && initialQueriesQueued == initialQueriesDelivered && enumerationQueued &&
-           enumerationDelivered && enumerationFinished && parentQueued && parentDelivered;
+bool DirectoryLoadOrder::Completed() const {
+    const auto& state = *state_;
+    std::fprintf(stderr, "directory load-order initial queries: %u/%u\n", state.initialQueriesQueued,
+                 state.initialQueriesDelivered);
+    std::fprintf(stderr, "directory load-order gates: enumeration=%d/%d/%d parent=%d/%d\n", state.enumerationQueued,
+                 state.enumerationDelivered, state.enumerationFinished, state.parentQueued, state.parentDelivered);
+    return state.initialQueriesQueued && state.initialQueriesQueued == state.initialQueriesDelivered &&
+           state.enumerationQueued && state.enumerationDelivered && state.enumerationFinished && state.parentQueued &&
+           state.parentDelivered;
 }
 } // namespace NativeDialogs
 
@@ -97,17 +113,19 @@ extern "C" void __real_g_file_enumerator_next_files_async(GFileEnumerator*, int,
 extern "C" void __wrap_g_file_enumerator_next_files_async(GFileEnumerator* enumerator, int count, int priority,
                                                           GCancellable* cancel, GAsyncReadyCallback callback,
                                                           gpointer data) {
-    if (enumerationQueued || !Matches(g_file_enumerator_get_container(enumerator), initialDirectory) ||
-        !VisibleChooserModel(data)) {
+    const auto* fixture = NativeDialogs::CurrentDirectoryLoadOrder();
+    const auto state = fixture ? fixture->state_ : nullptr;
+    if (!state || state->enumerationQueued ||
+        !Matches(g_file_enumerator_get_container(enumerator), state->initialDirectory) || !VisibleChooserModel(data)) {
         __real_g_file_enumerator_next_files_async(enumerator, count, priority, cancel, callback, data);
         return;
     }
-    enumerationQueued = true;
-    controlledEnumerator = Retain(enumerator);
+    state->enumerationQueued = true;
+    state->controlledEnumerator = Retain(enumerator);
     std::fprintf(stderr, "directory load-order: deferring initial enumeration\n");
-    Defer(InitialEnumerationDelayMilliseconds, [enumerator = Retain(enumerator), count, priority,
-                                                cancel = Retain(cancel), callback, data] {
-        enumerationDelivered = true;
+    state->Defer(InitialEnumerationDelayMilliseconds, [context = state.get(), enumerator = Retain(enumerator), count,
+                                                       priority, cancel = Retain(cancel), callback, data] {
+        context->enumerationDelivered = true;
         __real_g_file_enumerator_next_files_async(enumerator.get(), count, priority, cancel.get(), callback, data);
     });
 }
@@ -116,12 +134,14 @@ extern "C" GList* __real_g_file_enumerator_next_files_finish(GFileEnumerator*, G
 extern "C" GList* __wrap_g_file_enumerator_next_files_finish(GFileEnumerator* enumerator, GAsyncResult* result,
                                                              GError** error) {
     auto* files = __real_g_file_enumerator_next_files_finish(enumerator, result, error);
-    if (!files && (!error || !*error) && enumerator == controlledEnumerator.get()) {
-        enumerationFinished = true;
+    const auto* fixture = NativeDialogs::CurrentDirectoryLoadOrder();
+    const auto state = fixture ? fixture->state_ : nullptr;
+    if (state && !files && (!error || !*error) && enumerator == state->controlledEnumerator.get()) {
+        state->enumerationFinished = true;
         std::fprintf(stderr, "directory load-order: initial enumeration finished\n");
         // Let GTK consume this EOF and finish the old model before delivering
         // the new parent info. Both are ordinary valid asynchronous completions.
-        if (deferredParent) Defer(0, std::move(deferredParent));
+        if (state->deferredParent) state->Defer(0, std::exchange(state->deferredParent, {}));
     }
     return files;
 }
@@ -131,35 +151,42 @@ extern "C" void __real_g_file_query_info_async(GFile*, const char*, GFileQueryIn
 extern "C" void __wrap_g_file_query_info_async(GFile* file, const char* attributes, GFileQueryInfoFlags flags,
                                                int priority, GCancellable* cancel, GAsyncReadyCallback callback,
                                                gpointer data) {
-    if (Matches(file, initialDirectory) && std::string(attributes) == "standard::type") {
-        // Exercise the first timer tick before GTK publishes its initial folder,
-        // including when the query began before the native cursor was realized.
-        ++initialQueriesQueued;
-        std::fprintf(stderr, "directory load-order: deferring initial folder info\n");
-        Defer(InitialFolderQueryDelayMilliseconds, [file = Retain(file), attributes = std::string(attributes), flags,
-                                                    priority, cancel = Retain(cancel), callback, data] {
-            ++initialQueriesDelivered;
-            __real_g_file_query_info_async(file.get(), attributes.c_str(), flags, priority, cancel.get(), callback,
-                                           data);
-        });
+    const auto* fixture = NativeDialogs::CurrentDirectoryLoadOrder();
+    const auto state = fixture ? fixture->state_ : nullptr;
+    if (!state) {
+        __real_g_file_query_info_async(file, attributes, flags, priority, cancel, callback, data);
         return;
     }
-    if (!enumerationQueued || parentQueued || !Matches(file, requestedParent) ||
+    if (Matches(file, state->initialDirectory) && std::string(attributes) == "standard::type") {
+        // Exercise the first timer tick before GTK publishes its initial folder,
+        // including when the query began before the native cursor was realized.
+        ++state->initialQueriesQueued;
+        std::fprintf(stderr, "directory load-order: deferring initial folder info\n");
+        state->Defer(InitialFolderQueryDelayMilliseconds,
+                     [context = state.get(), file = Retain(file), attributes = std::string(attributes), flags, priority,
+                      cancel = Retain(cancel), callback, data] {
+                         ++context->initialQueriesDelivered;
+                         __real_g_file_query_info_async(file.get(), attributes.c_str(), flags, priority, cancel.get(),
+                                                        callback, data);
+                     });
+        return;
+    }
+    if (!state->enumerationQueued || state->parentQueued || !Matches(file, state->requestedParent) ||
         std::string(attributes) != "standard::type") {
         __real_g_file_query_info_async(file, attributes, flags, priority, cancel, callback, data);
         return;
     }
-    parentQueued = true;
-    if (enumerationFinished) {
-        parentDelivered = true;
+    state->parentQueued = true;
+    if (state->enumerationFinished) {
+        state->parentDelivered = true;
         std::fprintf(stderr, "directory load-order: requested parent after initial load\n");
         __real_g_file_query_info_async(file, attributes, flags, priority, cancel, callback, data);
         return;
     }
     std::fprintf(stderr, "directory load-order: deferring requested parent until initial load completes\n");
-    deferredParent = [file = Retain(file), attributes = std::string(attributes), flags, priority,
-                      cancel = Retain(cancel), callback, data] {
-        parentDelivered = true;
+    state->deferredParent = [context = state.get(), file = Retain(file), attributes = std::string(attributes), flags,
+                             priority, cancel = Retain(cancel), callback, data] {
+        context->parentDelivered = true;
         std::fprintf(stderr, "directory load-order: delivering requested parent after initial load\n");
         __real_g_file_query_info_async(file.get(), attributes.c_str(), flags, priority, cancel.get(), callback, data);
     };

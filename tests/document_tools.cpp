@@ -534,6 +534,9 @@ Exec=/missing-wxnotepad-owned-program-244 %f
 }
 class ToolsApp final : public wxApp {
 public:
+#ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
+    NativeDialogs::DirectoryLoadOrder* DirectoryLoadOrderFixture() const { return directoryLoadOrder_.get(); }
+#endif
     bool OnInit() override {
         const bool fixture = argc == 2 && wxString(argv[1]) == "--fixture";
         const auto log = fixture ? wxString("fixture.log") : wxString::Format("child-%lu.log", wxGetProcessId());
@@ -561,7 +564,7 @@ public:
             return true;
         }
 #ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
-        NativeDialogs::EnableDirectoryLoadOrder();
+        directoryLoadOrder_ = std::make_unique<NativeDialogs::DirectoryLoadOrder>();
 #endif
         settings_ = std::make_unique<SettingsStore>(Name(Root() / "Notepad4.ini"));
         std::fprintf(stderr, "phase: constructing frame\n");
@@ -577,7 +580,7 @@ public:
                 Require(ready, "owned editor must be presented");
                 Actions(frame, *settings_);
 #ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
-                Require(NativeDialogs::DirectoryLoadOrderCompleted(), "both controlled native directory loads ran");
+                Require(directoryLoadOrder_->Completed(), "both controlled native directory loads ran");
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {
@@ -594,8 +597,19 @@ public:
     }
 
 private:
+#ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
+    std::unique_ptr<NativeDialogs::DirectoryLoadOrder> directoryLoadOrder_;
+#endif
     std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
+#ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
+namespace NativeDialogs {
+DirectoryLoadOrder* CurrentDirectoryLoadOrder() {
+    const auto* application = dynamic_cast<ToolsApp*>(wxTheApp);
+    return application ? application->DirectoryLoadOrderFixture() : nullptr;
+}
+} // namespace NativeDialogs
+#endif
 wxIMPLEMENT_APP(ToolsApp);
