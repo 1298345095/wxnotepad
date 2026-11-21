@@ -129,24 +129,6 @@ jobs:
           if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
             throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
           }
-      - name: Observe independent original and single-item Explorer controls
-        id: explorer_controls
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_display.outcome == 'success' }}
-        shell: bash
-        run: |
-          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/open-target-controls/process \
-            --timeout 180 -- python -X utf8 tests/reference_capture/native_original_reference.py \
-            --archive .ci/build/notepad4-source.tar --build-dir .ci/original-reference \
-            --open-targets-output-dir .ci/reports/open-target-controls --compiler-cache
-      - name: Preserve early Explorer control evidence
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.explorer_controls.outcome != 'skipped' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: explorer-controls-${{ matrix.artifact }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
-          path: .ci/reports/open-target-controls/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
       - name: Collect independent original GDI viewport reference
         id: original_reference
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_display.outcome == 'success' }}

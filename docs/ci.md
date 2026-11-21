@@ -77,20 +77,23 @@ All seventeen wxnotepad fields are compared exactly. The source archive hash,
 frozen tables, complete inputs and native output remain in evidence. See
 `docs/observations/word-wrap-settings.md` for the approved reference-source change.
 
-Windows also observes two independent one-call Explorer controls before the
-ordinary suite: the verbatim containing-folder helper read from the existing
-pinned upstream Git object and the documented single-item shell call. Each uses
-a fresh owned directory and the same exact-item observer and deadlines as the
-application test. Both verdicts and the original helper's source hashes are
-retained even if the first control fails; neither substitutes for the required
-application assertion. A third control opens its own fresh folder and observes
-native readiness before making its single selection call, isolating cold-view
-delivery from delivery to an existing view. The controller performs that initial
-navigation; the selection observer remains read-only. These reports are also
-uploaded immediately, before the ordinary suite, using the existing artifact action.
-An additional fresh cold-root control submits the original disabled fallback's
-single Explorer startup request with a quoted target. Its owned path includes
-Unicode, a comma and a space so the native parameter grammar is exercised.
+Independent Windows Explorer investigation controls remain available manually:
+
+```text
+python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/open-target-controls/process --timeout 180 -- python -X utf8 tests/reference_capture/native_original_reference.py --archive .ci/build/notepad4-source.tar --build-dir .ci/original-reference --open-targets-output-dir .ci/reports/open-target-controls --compiler-cache
+```
+
+Each uses a fresh owned directory and the read-only exact-item observer with the
+application test's observation deadlines. Reports retain every verdict and the
+pinned original helper's source hashes, even when an earlier control fails.
+Actual Windows Server evidence showed the pinned helper and documented
+single-item cold-view calls losing selection, while the same one-call selection
+succeeded after native folder readiness. The additional cold Explorer startup
+control exercises the original disabled fallback's quoted target grammar with
+Unicode, a comma and a space. The temporary automatic investigation steps have
+been removed; the ordinary product suite, original references and failure
+captures remain required. These historical cold-control failures are retained
+as evidence and are not passing product acceptance checks.
 
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
