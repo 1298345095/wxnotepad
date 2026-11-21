@@ -8,6 +8,7 @@
 
 namespace {
 constexpr unsigned InitialEnumerationDelayMilliseconds = 200;
+constexpr unsigned InitialFolderQueryDelayMilliseconds = 200;
 std::string initialDirectory;
 std::string requestedParent;
 bool enumerationQueued = false;
@@ -15,6 +16,8 @@ bool enumerationDelivered = false;
 bool enumerationFinished = false;
 bool parentQueued = false;
 bool parentDelivered = false;
+unsigned initialQueriesQueued = 0;
+unsigned initialQueriesDelivered = 0;
 std::function<void()> deferredParent;
 std::shared_ptr<GFileEnumerator> controlledEnumerator;
 
@@ -80,9 +83,12 @@ void EnableDirectoryLoadOrder() {
     requestedParent = root.utf8_string();
 }
 bool DirectoryLoadOrderCompleted() {
+    std::fprintf(stderr, "directory load-order initial queries: %u/%u\n", initialQueriesQueued,
+                 initialQueriesDelivered);
     std::fprintf(stderr, "directory load-order gates: enumeration=%d/%d/%d parent=%d/%d\n", enumerationQueued,
                  enumerationDelivered, enumerationFinished, parentQueued, parentDelivered);
-    return enumerationQueued && enumerationDelivered && enumerationFinished && parentQueued && parentDelivered;
+    return initialQueriesQueued && initialQueriesQueued == initialQueriesDelivered && enumerationQueued &&
+           enumerationDelivered && enumerationFinished && parentQueued && parentDelivered;
 }
 } // namespace NativeDialogs
 
@@ -125,6 +131,19 @@ extern "C" void __real_g_file_query_info_async(GFile*, const char*, GFileQueryIn
 extern "C" void __wrap_g_file_query_info_async(GFile* file, const char* attributes, GFileQueryInfoFlags flags,
                                                int priority, GCancellable* cancel, GAsyncReadyCallback callback,
                                                gpointer data) {
+    if (Matches(file, initialDirectory) && std::string(attributes) == "standard::type") {
+        // Exercise the first timer tick before GTK publishes its initial folder,
+        // including when the query began before the native cursor was realized.
+        ++initialQueriesQueued;
+        std::fprintf(stderr, "directory load-order: deferring initial folder info\n");
+        Defer(InitialFolderQueryDelayMilliseconds, [file = Retain(file), attributes = std::string(attributes), flags,
+                                                    priority, cancel = Retain(cancel), callback, data] {
+            ++initialQueriesDelivered;
+            __real_g_file_query_info_async(file.get(), attributes.c_str(), flags, priority, cancel.get(), callback,
+                                           data);
+        });
+        return;
+    }
     if (!enumerationQueued || parentQueued || !Matches(file, requestedParent) ||
         std::string(attributes) != "standard::type") {
         __real_g_file_query_info_async(file, attributes, flags, priority, cancel, callback, data);

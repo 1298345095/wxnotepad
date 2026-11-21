@@ -208,6 +208,12 @@ public:
             if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
             ObserveChooser(widget);
             if (!selected_) {
+                // The initial query can start before realization, so a mapped
+                // chooser may still have no folder and no busy cursor.
+                char* initialFolder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+                const bool folderReady = initialFolder != nullptr;
+                g_free(initialFolder);
+                if (!folderReady) continue;
                 // An older folder model can consume the pending selection
                 // while the requested folder is still being queried by GTK.
                 if (NativeDialogs::FileChooserBusy(widget)) continue;
