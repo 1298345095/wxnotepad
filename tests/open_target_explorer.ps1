@@ -1,4 +1,5 @@
-param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Evidence)
+param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Evidence,
+      [ValidateRange(1, 4)][int]$Requests = 4)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $taskComErrors = @{}
@@ -24,7 +25,7 @@ foreach ($taskWindow in $taskShell.Windows()) { $taskExisting[[string]$taskWindo
 [System.IO.File]::WriteAllText((Join-Path $Root 'explorer-ready'), 'ready')
 $taskRequested = @{}
 try {
-for ($taskIndex = 1; $taskIndex -le 4; $taskIndex++) {
+for ($taskIndex = 1; $taskIndex -le $Requests; $taskIndex++) {
     $taskRequest = Join-Path $Root "folder-request-$taskIndex"
     $taskWatch = [System.Diagnostics.Stopwatch]::StartNew()
     while (-not (Test-Path -LiteralPath $taskRequest)) {

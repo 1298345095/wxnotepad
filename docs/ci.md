@@ -75,6 +75,14 @@ All seventeen wxnotepad fields are compared exactly. The source archive hash,
 frozen tables, complete inputs and native output remain in evidence. See
 `docs/observations/word-wrap-settings.md` for the approved reference-source change.
 
+Windows also observes two independent one-call Explorer controls after the
+ordinary suite: the verbatim containing-folder helper read from the existing
+pinned upstream Git object and the documented single-item shell call. Each uses
+a fresh owned directory and the same exact-item observer and deadlines as the
+application test. Both verdicts and the original helper's source hashes are
+retained even if the first control fails; neither substitutes for the required
+application assertion.
+
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.
