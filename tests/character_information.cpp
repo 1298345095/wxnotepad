@@ -11,6 +11,49 @@
 
 namespace {
 using enum Scintilla::Message;
+constexpr char PriorClipboardOffer[] = "owned previous offer";
+#ifdef __WXMSW__
+struct ClipboardObservation {
+    HWND owner = nullptr;
+    HWND openHolder = nullptr;
+    DWORD ownerProcess = 0;
+    DWORD ownerThread = 0;
+    DWORD openHolderProcess = 0;
+    DWORD openHolderThread = 0;
+    DWORD sequence = 0;
+    BOOL unicodeAvailable = false;
+};
+ClipboardObservation ObserveClipboard() {
+    ClipboardObservation state;
+    state.owner = GetClipboardOwner();
+    state.ownerThread = GetWindowThreadProcessId(state.owner, &state.ownerProcess);
+    state.openHolder = GetOpenClipboardWindow();
+    state.openHolderThread = GetWindowThreadProcessId(state.openHolder, &state.openHolderProcess);
+    state.sequence = GetClipboardSequenceNumber();
+    state.unicodeAvailable = IsClipboardFormatAvailable(CF_UNICODETEXT);
+    return state;
+}
+void ReportClipboard(const ClipboardObservation& state, const char* fixture, const char* phase) {
+    std::fprintf(stderr,
+                 "Character Info clipboard [%s] phase=%s owner=%p ownerPid=%lu ownerThread=%lu "
+                 "openHolder=%p openHolderPid=%lu openHolderThread=%lu sequence=%lu unicodeAvailable=%d\n",
+                 fixture, phase, static_cast<void*>(state.owner), state.ownerProcess, state.ownerThread,
+                 static_cast<void*>(state.openHolder), state.openHolderProcess, state.openHolderThread, state.sequence,
+                 state.unicodeAvailable);
+}
+const char* ClassifyClipboard(bool received, const wxString& text, const wxString& expected) {
+    if (!received) return "read-failed";
+    if (text == expected) return "expected";
+    if (text == PriorClipboardOffer) return "owned-prior-offer";
+    for (const auto& fixture : CharacterInfoFixtures) {
+        const auto payload = wxString::FromUTF8(fixture.payload.data(), fixture.payload.size());
+        const auto withoutMetadata = fixture.payload.substr(0, fixture.payload.find("\nName:"));
+        if (text == payload || text == wxString::FromUTF8(withoutMetadata.data(), withoutMetadata.size()))
+            return fixture.name;
+    }
+    return "other";
+}
+#endif
 void Progress(const char* phase, const char* fixture = "suite") {
     std::fprintf(stderr, "Character Info [%s]: %s\n", fixture, phase);
     std::fflush(stderr);
@@ -137,6 +180,9 @@ void Rectangles(EditorFrame* frame) {
 class Feedback final : public wxTimer {
 public:
     Feedback() { Start(20); }
+#ifdef __WXMSW__
+    ClipboardObservation visibleClipboard;
+#endif
     wxString payload;
     int shown = 0;
     void Notify() override {
@@ -148,6 +194,9 @@ public:
             Stop();
             ++shown;
             payload = text->GetLabelText();
+#ifdef __WXMSW__
+            visibleClipboard = ObserveClipboard();
+#endif
             NativeSearch::Click(dialog, wxID_OK);
             return;
         }
@@ -160,9 +209,12 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const c
     {
         wxClipboardLocker lock;
         if (!lock) throw TestEditor::Failure("open native clipboard for owned fixture");
-        Require(wxTheClipboard->SetData(new wxTextDataObject("owned previous offer")),
+        Require(wxTheClipboard->SetData(new wxTextDataObject(PriorClipboardOffer)),
                 "own a distinct native clipboard offer before the command");
     }
+#ifdef __WXMSW__
+    const auto seededClipboard = ObserveClipboard();
+#endif
     Feedback feedback;
     Progress("dispatch menu command and accept native feedback", fixture);
     NativeSearch::Command(frame, id);
@@ -176,8 +228,27 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const c
     {
         wxClipboardLocker lock;
         if (!lock) throw TestEditor::Failure("open native clipboard to observe command result");
-        Require(wxTheClipboard->GetData(clipboard) && clipboard.GetText() == expected,
-                "real system clipboard replaces previous offer with the same original technical payload");
+#ifdef __WXMSW__
+        const auto beforeRead = ObserveClipboard();
+#endif
+        const bool received = wxTheClipboard->GetData(clipboard);
+        const bool matches = received && clipboard.GetText() == expected;
+#ifdef __WXMSW__
+        const auto afterRead = ObserveClipboard();
+        if (!matches) {
+            std::fprintf(stderr,
+                         "Character Info clipboard [%s] received=%d classification=%s expectedOwner=%p "
+                         "expectedOwnerPid=%lu\n",
+                         fixture, received, ClassifyClipboard(received, clipboard.GetText(), expected),
+                         static_cast<void*>(frame->Editor()->GetHandle()), GetCurrentProcessId());
+            ReportClipboard(seededClipboard, fixture, "owned-seed");
+            ReportClipboard(feedback.visibleClipboard, fixture, "dialog-visible");
+            ReportClipboard(beforeRead, fixture, "before-read");
+            ReportClipboard(afterRead, fixture, "after-read");
+            std::fflush(stderr);
+        }
+#endif
+        Require(matches, "real system clipboard replaces previous offer with the same original technical payload");
     }
 }
 void CharacterInfo(EditorFrame* frame, const CharacterInfoFixture& fixture, bool readonly = false,

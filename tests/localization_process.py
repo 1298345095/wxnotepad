@@ -613,9 +613,13 @@ class Acceptance:
         result = app.process.wait(timeout=10)
         assert result == 0, f'Restart parent exit={result}; process log={self.logs}'
         child = wait_child(self.observation, previous)
-        assert child.process.pid != app.process.pid
-        assert child.state['menu_top.0.label'] == TEXT['zh_CN']['file']
-        assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
+        try:
+            assert child.process.pid != app.process.pid
+            assert child.state['menu_top.0.label'] == TEXT['zh_CN']['file']
+            assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
+        except BaseException:
+            child.stop()
+            raise
         return child
 
     def errors(self):
