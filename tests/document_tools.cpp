@@ -4,6 +4,9 @@
 #include "file_command_driver.h"
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
+#ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
+#include "gtk_directory_load_order.h"
+#endif
 #include <wx/wx.h>
 #include <wx/listbox.h>
 #include <wx/stattext.h>
@@ -205,6 +208,9 @@ public:
             if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
             ObserveChooser(widget);
             if (!selected_) {
+                // An older folder model can consume the pending selection
+                // while the requested folder is still being queried by GTK.
+                if (NativeDialogs::FileChooserBusy(widget)) continue;
                 selected_ = true;
                 Phase("directory native selection request enter");
                 gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(widget), directory_.utf8_str());
@@ -548,6 +554,9 @@ public:
             CallAfter([this] { ExitMainLoop(); });
             return true;
         }
+#ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
+        NativeDialogs::EnableDirectoryLoadOrder();
+#endif
         settings_ = std::make_unique<SettingsStore>(Name(Root() / "Notepad4.ini"));
         std::fprintf(stderr, "phase: constructing frame\n");
         std::fflush(stderr);
@@ -561,6 +570,9 @@ public:
             try {
                 Require(ready, "owned editor must be presented");
                 Actions(frame, *settings_);
+#ifdef WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER
+                Require(NativeDialogs::DirectoryLoadOrderCompleted(), "both controlled native directory loads ran");
+#endif
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
