@@ -1,0 +1,224 @@
+{
+  "projectKey": "1298345095_wxnotepad",
+  "pullRequest": "247",
+  "reviewedRevision": "aa16285ff988dc3a8f0160c2e66ca43de8fe7157",
+  "policy": "Issue-specific source and framework ownership review; no rule, gate, source, coverage, or duplication scope changes.",
+  "dispositions": [
+    {
+      "key": "AaH1EkFIow3o9DjYuHOI",
+      "rule": "cpp:S3584",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157. tests/context_menu.cpp:794 installs new wxLogStderr through wxLog::SetActiveTarget; the reported primary line795 follows that registration. In pinned wxWidgets3.3.3 src/common/log.cpp:531-542 SetActiveTarget stores the supplied logger in wxLog::ms_pLogger and returns only the previous target. src/common/init.cpp:411-416 clears the initialization target before the application's first-statement OnInit registration. wxEntryReal's wxInitializer cleanup scope reaches wxEntryCleanup even on failed initialization; wxAppBase::CleanUp in src/common/appcmn.cpp:148-164 deletes the active target with delete wxLog::SetActiveTarget(nullptr). Normal/caught test callbacks call frame->Destroy and ExitMainLoop. This is retained framework ownership, not a lost allocation. The intentional launch-child std::exit path terminates that child process and is separately reclaimed by the OS; it cannot strand a live parent allocation. Source ownership and shutdown excerpts are retained in final-review/sonar-lifetimes/source-evidence.json; no ownership-disguising code/suppression/gate change."
+    },
+    {
+      "key": "AaH1Ej52ow3o9DjYuHLt",
+      "rule": "cpp:S3584",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157. tests/observer_acknowledgement.cpp:33 passes new wxLogStderr to wxLog::SetActiveTarget immediately before reported line34. wxWidgets3.3.3 log.cpp:531-542 retains it in wxLog::ms_pLogger; the initializer logger was cleared before OnInit (init.cpp:411-416). Final wxEntryCleanup calls wxAppBase::CleanUp, which deletes the active target (appcmn.cpp:164). ObserverApp's success and caught failure paths also call Finish, which resets ProcessObserver before frame->Destroy/ExitMainLoop; ProcessObserver destruction stops its timer and unbinds the frame handler. Deferred top-level windows are deleted during pending-object/final top-level cleanup. The registered logger and native frame remain framework-owned. Exact pinned source excerpts are retained in final-review/sonar-lifetimes/source-evidence.json; no independent owner is missing."
+    },
+    {
+      "key": "AaH1Ej_Uow3o9DjYuHNA",
+      "rule": "cpp:S3584",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157. tests/shell_appearance.cpp:146 installs new wxLogStderr via wxLog::SetActiveTarget before reported line147. Pinned wxWidgets3.3.3 SetActiveTarget stores this pointer in ms_pLogger (src/common/log.cpp:531-542); wxAppBase::CleanUp deletes the active logger with delete wxLog::SetActiveTarget(nullptr) (appcmn.cpp:164). The initialization target is cleared before OnInit, and wxEntryReal retains its wxInitializer cleanup scope through application initialization/run failure. Both success and caught presentation-callback failures destroy the frame and exit the event loop; pending/final top-level cleanup deletes the window. The report misses the framework registry/cleanup lifecycle. Source excerpts and callback paths are retained in final-review/sonar-lifetimes/source-evidence.json. This classification is separate from the real pre-transfer ClipboardOffer exception-ownership gap being fixed in the same fixture."
+    },
+    {
+      "key": "AaH1Ejziow3o9DjYuHLO",
+      "rule": "cpp:S3584",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157. src/app/editor_frame_toolbar.cpp:62 transfers new wxPNGHandler to wxImage::AddHandler before reported line63. Pinned wxWidgets3.3.3 image.cpp:3093-3111 appends the handler to sm_handlers (or deletes a duplicate immediately); wxImageModule::OnExit at3968-3977 calls CleanUpHandlers, which deletes every handler at3205-3216. The CreateToolBar allocation at reported line63 is also owned: framecmn.cpp:649-719 creates a child toolbar and stores it via SetToolBar in m_frameToolBar; frame destruction calls DeleteAllBars and deletes it (182-212). Toolbar/frame callbacks borrow these native owners and do not create owning cycles. Both adjacent allocations therefore have concrete framework release paths. Exact source fingerprints/excerpts are retained in final-review/sonar-lifetimes/source-evidence.json; independent smart-pointer deletion would conflict with native ownership."
+    },
+    {
+      "key": "AaH1EkJ6ow3o9DjYuHOT",
+      "rule": "pythonsecurity:S8705",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed at wxnotepad aa16285ff988dc3a8f0160c2e66ca43de8fe7157. tools/prepare_toolbar_art.py accepts a developer-selected Notepad4 source checkout and passes str(Path(sys.argv[1])) as exactly one argv element immediately following Git's fixed -C option, using subprocess.check_output with its default shell=False. The executable is fixed 'git', command fixed 'show', and every revision/blob argument is the pinned 89b8b36e0ee2c23f73be922315f17261ccfbbe1a:res/Toolbar{16,24,32,40,48}.bmp. -C consumes its following value as a directory, so a value beginning with an option cannot add a Git option; installed Git 2.56.1 test `git -C --version show <fixed-blob>` fails 'cannot change to --version' rather than processing --version. Whitespace and shell syntax are not split or evaluated by this argv call. No untrusted document data reaches the command. Constraining this intentional local directory input to ASCII would break valid source paths without closing an injection boundary. Source: https://github.com/1298345095/wxnotepad/blob/aa16285ff988dc3a8f0160c2e66ca43de8fe7157/tools/prepare_toolbar_art.py#L13-L19"
+    },
+    {
+      "key": "AaH1EjcNow3o9DjYuHKZ",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/document_tools.cpp:53. OpenWithDialog's wxBoxSizer is installed by SetSizer(layout) at line65; wxWindowBase destruction deletes m_windowSizer. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaH1EjcNow3o9DjYuHKa",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/document_tools.cpp:54. The wxTextCtrl is constructed with OpenWithDialog this as parent; AddChild registers it and native parent destruction destroys it. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaH1EjcNow3o9DjYuHKb",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/document_tools.cpp:57. The wxListBox is constructed with OpenWithDialog this as parent and is destroyed by that registered native parent. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaH1EjcNow3o9DjYuHKc",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/document_tools.cpp:61. The wxButton is constructed with OpenWithDialog this as parent and is destroyed by that registered native parent. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHzR0yJ47OHiKTEQETY",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/dialogs/auto_save_settings_dialog.cpp:22. The outer wxBoxSizer is transferred to the stack dialog by SetSizerAndFit(layout) at line57; the dialog destructor deletes its installed sizer. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHzR0yJ47OHiKTEQETZ",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/dialogs/auto_save_settings_dialog.cpp:24. The wxCheckBox's parent is the stack dialog; destruction of that dialog destroys this registered child. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHzR0yJ47OHiKTEQETa",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/dialogs/auto_save_settings_dialog.cpp:28. The row wxBoxSizer is transferred to outer layout->Add(row, ...) at line41; wxSizer's child-item cleanup calls wxSizerItem::Free, which deletes the nested m_sizer. The outer layout belongs to the dialog. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHzR0yJ47OHiKTEQETb",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/dialogs/auto_save_settings_dialog.cpp:35. The wxTextCtrl's parent is the stack dialog; native parent destruction destroys this registered child. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHzR0yJ47OHiKTEQETc",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/dialogs/auto_save_settings_dialog.cpp:43. The wxCheckBox's parent is the stack dialog; native parent destruction destroys this registered child. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHzR0yJ47OHiKTEQETd",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, src/app/dialogs/auto_save_settings_dialog.cpp:48. The wxButton's parent is the stack dialog; native parent destruction destroys this registered child. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaH1Ej9jow3o9DjYuHMK",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, tests/document_tools.cpp:552. Both successful and caught-failure callbacks call EditorFrame->Destroy at line568 and then ExitMainLoop; wxTopLevelWindowBase::Destroy queues deferred deletion and wxApp cleanup drains pending objects and all remaining top-level windows. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaHy5A-WBmN7mENbqAvQ",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive, reviewed against wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157, tests/read_only_file.cpp:262. Both successful and caught-failure callbacks call EditorFrame->Destroy at line275 and then ExitMainLoop; wxTopLevelWindowBase::Destroy queues deferred deletion and wxApp cleanup drains pending objects and all remaining top-level windows. Pinned wxWidgets3.3.3 source confirms AddChild registration (wincmn.cpp:1302-1312), registered native child destruction (msw/window.cpp:421; gtk/window.cpp:3110; wincmn.cpp:586-605), installed-sizer destruction (wincmn.cpp:512,2403-2429), nested-sizer deletion (sizer.cpp:517-537,903-906), and top-level pending/final cleanup (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-145), as applicable to this specific owner. Independent smart-pointer deletion would conflict with that framework ownership. Exact per-allocation evidence is retained in final-review/sonar-documents-ui/dispositions.md and wx-ownership-source.txt. No source suppression, rule/gate/scope change or ownership-disguising rewrite."
+    },
+    {
+      "key": "AaH1Ej9jow3o9DjYuHLy",
+      "rule": "cpp:S912",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/document_tools.cpp:95. The RHS GTK_IS_MESSAGE_DIALOG(widget) is a GTK runtime type predicate after the intentional !gtk_widget_get_visible(widget) short circuit. It does not respond to a dialog, select a file, increment test counters, or perform another test action that must always run. The installed GTK macro expands to G_TYPE_CHECK_INSTANCE_TYPE; GLib gtype.h:2683-2692 uses a GNU statement expression assigning only its local _inst/_t/_r temporaries. The slower g_type_check_instance_is_a path (pinned gtype.c:3891-3910) checks the instance/class/type graph and returns its boolean result. A type getter can lazily register its framework type, but no required fixture mutation is lost for a hidden widget. The macro-local assignments trigger this diagnostic; moving/caching the predicate just to hide it would not improve the guard. Actual installed headers, pinned source excerpts and the original predicate are retained in final-review/sonar-documents-ui/dispositions.md. All assertions and short-circuit behavior remain intact."
+    },
+    {
+      "key": "AaH1Ej9jow3o9DjYuHL_",
+      "rule": "cpp:S912",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/document_tools.cpp:203. The RHS GTK_IS_FILE_CHOOSER(widget) is a GTK runtime type predicate after the intentional !gtk_widget_get_visible(widget) short circuit. It does not respond to a dialog, select a file, increment test counters, or perform another test action that must always run. The installed GTK macro expands to G_TYPE_CHECK_INSTANCE_TYPE; GLib gtype.h:2683-2692 uses a GNU statement expression assigning only its local _inst/_t/_r temporaries. The slower g_type_check_instance_is_a path (pinned gtype.c:3891-3910) checks the instance/class/type graph and returns its boolean result. A type getter can lazily register its framework type, but no required fixture mutation is lost for a hidden widget. The macro-local assignments trigger this diagnostic; moving/caching the predicate just to hide it would not improve the guard. Actual installed headers, pinned source excerpts and the original predicate are retained in final-review/sonar-documents-ui/dispositions.md. All assertions and short-circuit behavior remain intact."
+    },
+    {
+      "key": "AaH1EjuQow3o9DjYuHKy",
+      "rule": "cpp:S5332",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 src/app/open_targets.cpp:353. ExternalTarget interprets the user's explicitly selected URL/protocol text and forwards it to the registered native desktop handler only on the Open command; this code does not implement HTTP transport. Explicit schemes are preserved; only scheme-less leading // and www. receive the original Notepad4 prefix. Pinned Notepad4 89b8b36 src/Edit.cpp:6889-6894 prefixes // with http:, and7056-7059 prefixes www. with http:// before ShellExecute at7065. Replacing with HTTPS would change the specified original target bytes and protocol-handler semantics rather than repair an application HTTP connection. Native controlled handler tests independently assert the original literal targets without network access. The actual responsibility is faithful user-selected native target dispatch, not silently selecting a different protocol. No literal splitting, suppression, gate or analysis-scope change."
+    },
+    {
+      "key": "AaH1Ej-Xow3o9DjYuHMX",
+      "rule": "cpp:S5332",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/open_targets.cpp:206. This example.invalid URL is fixed protocol fixture data for the original Notepad4 www./leading-// target rules. The test invokes a controlled local recording handler and independently compares the exact target bytes; it does not establish an HTTP network connection. Pinned Notepad489b8b36 src/Edit.cpp:6889-6894,7056-7059 explicitly supplies the http:/http:// prefixes before native ShellExecute. Forcing HTTPS would change the behavior under test and conceal a compatibility regression. The fixture intentionally verifies user-selected native handler dispatch, with no source suppression or gate/scope changes."
+    },
+    {
+      "key": "AaH1Ej-Xow3o9DjYuHMY",
+      "rule": "cpp:S5332",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/open_targets.cpp:207. The fixed HTTP spelling is an expected original-target byte string in the independent controlled local protocol-handler test, not an HTTP transport call. The companion input covers the original scheme-less URL prefix mapping; the recorded local handler receipt must equal the unchanged literal. Pinned Notepad489b8b36 src/Edit.cpp:6889-6894,7056-7059 supplies these exact HTTP prefixes before ShellExecute. Altering this expected value to HTTPS would stop testing the required original behavior. Explicit user schemes remain unchanged, and this test performs no network transfer. No source suppression, literal disguise or quality-gate change."
+    },
+    {
+      "key": "AaH1EkFIow3o9DjYuHN1",
+      "rule": "cpp:S912",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at aa16285f tests/context_menu.cpp:442 NativeMenuState. selected && GTK_IS_MENU_ITEM(selected) is an intentional null guard followed by a native runtime type query, not a conditional test action. The actual pinned SDK gtkmenuitem.h:40 expands to G_TYPE_CHECK_INSTANCE_TYPE. gtype.h:2682-2692 assigns only block-local _inst/_t/_r in its GNU statement expression; its fallback g_type_check_instance_is_a is declared G_GNUC_PURE at2636-2637. No menu selection, response, fixture counter or other application state is mutated on this RHS. Rearranging it solely to hide the macro diagnostic would preserve the same semantics while obscuring the guard. Detailed native source evidence is retained in final-review/sonar-lifetimes/implementation.md."
+    },
+    {
+      "key": "AaH1EkFIow3o9DjYuHOE",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at aa16285f tests/context_menu.cpp:819. This parent EditorFrame is a registered wxApp top-level window. Both successful and caught-failure presentation callbacks reach frame->Destroy and ExitMainLoop. wxWidgets3.3.3 wxTopLevelWindowBase::Destroy queues wxPendingDelete (toplvcmn.cpp:102-119), DeletePendingObjects deletes queued objects (appbase.cpp:643-659), and final app cleanup deletes remaining top-level windows (appcmn.cpp:129-153). This object follows that native deferred-deletion contract, not an independent C++ owner. Adding a smart pointer with default deletion would conflict with framework ownership. Exact source and callback paths retained in final-review/sonar-lifetimes/review.md."
+    },
+    {
+      "key": "AaH1EkFIow3o9DjYuHOA",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at aa16285f tests/context_menu.cpp:803. This is the independent receipt-only launch child EditorFrame registered as a wxApp top-level window. That child reads its own loaded document, publishes its fixed receipt and then deliberately terminates its process with std::exit(0). This special terminal branch does not call Destroy or unwind ordinary wx cleanup; its process memory is reclaimed by the operating system and no continuing parent/callback retains this allocation. Other parent fixture paths use native deferred Destroy/final wx cleanup. Rewriting this IPC child lifetime solely to replace new would change the established process protocol without fixing a live allocation leak. Exact distinction/source proof retained in final-review/sonar-lifetimes/{review.md,implementation.md}."
+    },
+    {
+      "key": "AaH1Ej52ow3o9DjYuHLi",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at aa16285f tests/observer_acknowledgement.cpp:35. ObserverApp's EditorFrame is registered with wxApp as a top-level window. Finish resets ProcessObserver before frame->Destroy and ExitMainLoop on successful and caught-failure paths. ProcessObserver's destructor stops the timer and unbinds its frame handler. Pinned wxWidgets3.3.3 queues top-level Destroy in wxPendingDelete (toplvcmn.cpp:102-119), deletes pending objects (appbase.cpp:643-659), and removes any remaining top-level windows during final cleanup (appcmn.cpp:129-153). The frame is framework-owned throughout; independent smart-pointer deletion is not appropriate. Exact callback and release-chain proof retained in final-review/sonar-lifetimes/review.md."
+    },
+    {
+      "key": "AaH1Ej_Uow3o9DjYuHM2",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at aa16285f tests/shell_appearance.cpp:149. AppearanceApp's EditorFrame is a wxApp-owned top-level window. Both successful and caught-failure callbacks reach Destroy and ExitMainLoop; wxWidgets3.3.3 deferred deletion and final top-level cleanup delete it (toplvcmn.cpp:102-119; appbase.cpp:643-659; appcmn.cpp:129-153). Its settings object is app-owned and outlives window cleanup because wxEntryCleanup calls CleanUp before deleting the app. This is framework ownership, distinct from the real pre-transfer clipboard-data exception gap fixed in this fixture. No independent smart-pointer owner should also delete this native window. Source proof retained in final-review/sonar-lifetimes/review.md."
+    },
+    {
+      "key": "AaHzR1Cb47OHiKTEQEUK",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/periodic_backup.cpp:509. PeriodicBackupApp's frame is a wx top-level window. Its CallAfter callback catches test exceptions, then unconditionally calls frame->Destroy() and ExitMainLoop(). wxWidgets owns deferred deletion through wxPendingDelete/ DeletePendingObjects; store_ remains owned by the app. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR0-J47OHiKTEQETk",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 src/app/run_command.cpp:235. contents is a wxBoxSizer installed by dialog.SetSizerAndFit(contents). wxWindowBase::SetSizerAndFit calls SetSizer; wxWindowBase::~wxWindowBase deletes m_windowSizer. contents owns its wxSizerItem entries. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR0-J47OHiKTEQETl",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 src/app/run_command.cpp:239. input is a wxTextCtrl constructed with &dialog as its wxWindow parent. The stack dialog owns its children; wxWindowGTK and wxWindowMSW destructors both call DestroyChildren(). The pointer is only borrowed by sizer items and callbacks. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR0-J47OHiKTEQETm",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 src/app/run_command.cpp:243. commandRow is a wxBoxSizer added to contents, which is installed on dialog. wxSizer::~wxSizer deletes its item list; wxSizerItem::Free deletes Item_Sizer m_sizer. The dialog destroys the outer sizer. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR0-J47OHiKTEQETn",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 src/app/run_command.cpp:246. browse is a wxButton constructed with &dialog as its wxWindow parent. The dialog owns the button and native lifetime. Its callback only borrows input and dialog. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR0-J47OHiKTEQETo",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 src/app/run_command.cpp:255. feedback is a wxStaticText constructed with &dialog as its wxWindow parent. The stack dialog owns and destroys it through DestroyChildren(). Sizer and callback pointers borrow it. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR1C547OHiKTEQEUi",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/run_command.cpp:311. importedFrame is a wx top-level frame registered with wxWidgets. WidthPersistence explicitly calls importedFrame->Destroy() after its modal command and settings assertions. wxTopLevelWindowBase::Destroy appends it to wxPendingDelete; wxAppConsoleBase::DeletePendingObjects deletes it at idle/cleanup. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR1C547OHiKTEQEUm",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/run_command.cpp:337. other is a wx top-level frame managed by wxWidgets. WidthPersistence explicitly calls other->Destroy() after its recalled-width modal command and assertions; wxPendingDelete/ DeletePendingObjects completes its deletion. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    },
+    {
+      "key": "AaHzR1C547OHiKTEQEUt",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "False positive at wxnotepad PR247 revision aa16285ff988dc3a8f0160c2e66ca43de8fe7157 tests/run_command.cpp:502. RunCommandApp's frame is a wx top-level window. Its AfterPresentation callback catches test exceptions, then unconditionally calls frame->Destroy() and ExitMainLoop(). wxWidgets owns deferred deletion through wxPendingDelete/ DeletePendingObjects; settings_ lives on the app through the loop. Pinned wxWidgets3.3.3 confirms registered child destruction in src/gtk/window.cpp:3110 and src/msw/window.cpp:421, installed-sizer deletion in wincmn.cpp:512/2403/2425, nested-sizer deletion in sizer.cpp:523/903, and top-level deferred/final cleanup in toplvcmn.cpp:102 and appbase.cpp:643, as applicable to this concrete owner. These pointers are borrowed/handed to native UI owners; independent default-delete smart pointers would conflict with that lifecycle. Exact per-key owner/source evidence is retained in final-review/sonar-run-backup/dispositions.json. No suppression, gate/scope change, or source rewrite just to disguise allocation."
+    }
+  ]
+}

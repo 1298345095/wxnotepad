@@ -96,7 +96,7 @@ void LaunchArguments(EditorFrame* frame) {
         frame->DocumentPath().empty() ? startup : wxFileName(frame->DocumentPath()).GetPath();
     wxSetWorkingDirectory(TestFiles::Filename(directory));
     const auto id = frame->GetMenuBar()->FindMenuItem("Tools", "Run Command...");
-    DialogDriver driver([&](wxDialog* dialog) {
+    DialogDriver driver([frame, &child, &arguments](wxDialog* dialog) {
         auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
         wxString program = child.GetFullPath();
         if (!frame->DocumentPath().empty()) {
@@ -193,7 +193,7 @@ void BrowseProgram(EditorFrame* frame) {
     const wxString arguments = " \"${WXNOTEPAD_RUN_VALUE}\" \"\" tail";
     const wxString expectedArguments = arguments;
 #endif
-    DialogDriver driver([&](wxDialog* dialog) {
+    DialogDriver driver([&child, &arguments, &expectedArguments](wxDialog* dialog) {
         auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
         auto* browse = wxDynamicCast(wxWindow::FindWindowByName("Browse programs", dialog), wxButton);
         Require(browse, "Run Command offers the native executable browser");
@@ -271,8 +271,8 @@ void NamedAndFailure(EditorFrame* frame) {
     Require(frame->Open(TestFiles::Filename(document)).status == OpenStatus::Opened, "open named tool document");
     TestEditor::Append(frame, " dirty");
     bool released = false;
-    DialogDriver driver([&](wxDialog* dialog) {
-        NativeKeys::AfterPresentation(dialog, [&, dialog](bool presented) {
+    DialogDriver driver([frame](wxDialog* dialog) {
+        NativeKeys::AfterPresentation(dialog, [frame, dialog](bool presented) {
             try {
                 Require(presented, "compositor presents Ctrl+R dialog");
                 auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
@@ -309,13 +309,13 @@ void WidthPersistence(EditorFrame* frame, SettingsStore& settings) {
     TestFiles::WriteBytes(importedPath, originalSection.utf8_string());
     SettingsStore imported(TestFiles::Filename(importedPath));
     auto* importedFrame = new EditorFrame(&imported);
-    DialogDriver import([&](wxDialog* dialog) {
+    DialogDriver importedWidth([](wxDialog* dialog) {
         Require(dialog->GetClientSize().x == dialog->ConvertDialogToPixels(wxSize(500, 0)).x,
                 "import original normalized client width through native dialog units");
         NativeSearch::Click(dialog, wxID_CANCEL);
     });
     NativeSearch::Command(importedFrame, importedFrame->GetMenuBar()->FindMenuItem("Tools", "Run Command..."));
-    import.Check();
+    importedWidth.Check();
     Require(imported.Save(true), "save imported width through shared settings");
     const auto savedBytes = TestFiles::Bytes(importedPath);
     const wxString savedOriginal(savedBytes.data(), wxMBConvUTF16LE(), savedBytes.size());
@@ -325,7 +325,7 @@ void WidthPersistence(EditorFrame* frame, SettingsStore& settings) {
     importedFrame->Destroy();
     const auto id = frame->GetMenuBar()->FindMenuItem("Tools", "Run Command...");
     int wanted = 0;
-    DialogDriver resize([&](wxDialog* dialog) {
+    DialogDriver resize([&wanted](wxDialog* dialog) {
         wanted = dialog->ToDIP(dialog->GetSize()).x + 180;
         dialog->SetSize(dialog->FromDIP(wxSize(wanted, dialog->ToDIP(dialog->GetSize()).y)));
         NativeSearch::Click(dialog, wxID_CANCEL);
@@ -335,7 +335,7 @@ void WidthPersistence(EditorFrame* frame, SettingsStore& settings) {
     Require(settings.Save(true), "save shared settings after resizing Run Command");
     SettingsStore reloaded(settings.Path());
     auto* other = new EditorFrame(&reloaded);
-    DialogDriver recall([&](wxDialog* dialog) {
+    DialogDriver recall([&wanted](wxDialog* dialog) {
         Require(dialog->ToDIP(dialog->GetSize()).x == wanted,
                 "Run Command width survives settings reload at native DPI");
         NativeSearch::Click(dialog, wxID_CANCEL);
@@ -411,7 +411,7 @@ void SaveBeforeTools(EditorFrame* frame, SettingsStore& settings) {
     }
     {
         SaveDecision discard(wxID_NO);
-        DialogDriver run([&](wxDialog* dialog) {
+        DialogDriver run([&discard, frame](wxDialog* dialog) {
             Require(discard.confirmations == 1 && frame->DocumentIsModified(),
                     "discard decision precedes Run and preserves dirty buffer");
             NativeSearch::Click(dialog, wxID_CANCEL);
@@ -422,7 +422,7 @@ void SaveBeforeTools(EditorFrame* frame, SettingsStore& settings) {
     }
     {
         SaveDecision save(wxID_YES);
-        DialogDriver run([&](wxDialog* dialog) {
+        DialogDriver run([&save, frame, &original](wxDialog* dialog) {
             Require(save.confirmations == 1 && !frame->DocumentIsModified(),
                     "successful save completes before Run appears");
             const auto bytes = TestFiles::Bytes(TestFiles::Utf8Path(frame->DocumentPath().utf8_string()));

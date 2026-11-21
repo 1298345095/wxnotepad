@@ -6,7 +6,7 @@
 #include <fstream>
 
 // A real private-bus FileManager1 peer records the public ShowItems boundary.
-inline void RunOwnedFileManager(const std::filesystem::path& directory) {
+inline void RunOwnedFileManager(std::filesystem::path directory) {
     constexpr const char* xml =
         "<node><interface name='org.freedesktop.FileManager1'><method name='ShowItems'>"
         "<arg type='as' direction='in'/><arg type='s' direction='in'/></method></interface></node>";
@@ -37,16 +37,15 @@ inline void RunOwnedFileManager(const std::filesystem::path& directory) {
         nullptr,
         nullptr,
         {nullptr}};
-    const auto registered =
-        g_dbus_connection_register_object(connection, "/org/freedesktop/FileManager1", information->interfaces[0],
-                                          &table, const_cast<std::filesystem::path*>(&directory), nullptr, nullptr);
+    const auto registered = g_dbus_connection_register_object(
+        connection, "/org/freedesktop/FileManager1", information->interfaces[0], &table, &directory, nullptr, nullptr);
     if (!registered) std::exit(3);
     const auto owner = g_bus_own_name_on_connection(
         connection, "org.freedesktop.FileManager1", G_BUS_NAME_OWNER_FLAGS_NONE,
         +[](GDBusConnection*, const gchar*, gpointer data) {
             std::ofstream(*static_cast<const std::filesystem::path*>(data) / "filemanager-ready") << "ready";
         },
-        nullptr, const_cast<std::filesystem::path*>(&directory), nullptr);
+        nullptr, &directory, nullptr);
     auto* loop = g_main_loop_new(nullptr, FALSE);
     g_main_loop_run(loop);
     g_main_loop_unref(loop);
