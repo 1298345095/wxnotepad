@@ -539,6 +539,33 @@ class Dialogs:
             time.sleep(.03)
         raise AssertionError(f'Native chooser filter popup showing={showing} not observed')
 
+    def wait_chooser_filters(self, window, deadline):
+        observed = []
+
+        def actionable_controls():
+            observed.clear()
+            controls = []
+            for child in self.children(window):
+                child.clear_cache()
+                role = child.get_role()
+                action = child.get_action_iface() if role == self.atspi.Role.COMBO_BOX else None
+                observed.append((str(role), action is not None))
+                if action is not None:
+                    controls.append((child, action))
+            return controls
+
+        waiting_reported = False
+        while time.monotonic() < deadline:
+            controls = self.chooser_lookup(actionable_controls, deadline, 'filters')
+            if controls:
+                return controls
+            if not waiting_reported:
+                print(f'Native chooser filters not yet actionable; roles/interfaces: {observed}',
+                      file=sys.stderr, flush=True)
+                waiting_reported = True
+            time.sleep(.03)
+        raise AssertionError(f'Native chooser filter control not ready; last roles/interfaces: {observed}')
+
     def file_filters(self, window):
         if sys.platform == 'win32':
             filters = []
@@ -561,19 +588,15 @@ class Dialogs:
         # Give only this read-only snapshot a bounded readiness wait; the outer
         # packaged-layout timeout and the native RPC timeout remain unchanged.
         deadline = time.monotonic() + 10
-        controls = self.chooser_lookup(
-            lambda: [child for child in self.children(window) if child.get_role() == self.atspi.Role.COMBO_BOX],
-            deadline, 'filters')
-        for child in controls:
-            action = child.get_action_iface()
-            if action:
-                assert action.do_action(0), 'Native chooser filter popup Open action'
-                self.wait_chooser_popup(child, True, deadline)
-                filters = [text for text in self.texts(window) if '*.' in text]
-                assert action.do_action(0), 'Native chooser filter popup Close action'
-                self.wait_chooser_popup(child, False, deadline)
-                if filters:
-                    return filters
+        controls = self.wait_chooser_filters(window, deadline)
+        for child, action in controls:
+            assert action.do_action(0), 'Native chooser filter popup Open action'
+            self.wait_chooser_popup(child, True, deadline)
+            filters = [text for text in self.texts(window) if '*.' in text]
+            assert action.do_action(0), 'Native chooser filter popup Close action'
+            self.wait_chooser_popup(child, False, deadline)
+            if filters:
+                return filters
         return [text for text in self.texts(window) if '*.' in text]
 
     def answer(self, process, choice, title='wxnotepad', window=None):

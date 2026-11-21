@@ -1084,6 +1084,9 @@ if(BUILD_TESTING)
         add_test(NAME native_localization_chooser_popup_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_chooser_readiness.py" --popup-delay)
         set_tests_properties(native_localization_chooser_popup_readiness PROPERTIES TIMEOUT 30)
+        add_test(NAME native_localization_chooser_role_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_chooser_readiness.py" --role-delay)
+        set_tests_properties(native_localization_chooser_role_readiness PROPERTIES TIMEOUT 30)
     endif()
 endif()
 

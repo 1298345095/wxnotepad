@@ -258,3 +258,27 @@ directory and disk-byte assertions remain. The existing retained-rename-handle
 regression and original document-tool/Explorer workflows pass. This addresses a
 reproduced sharing defect; a fresh hosted run is still needed to determine
 whether it accounts for the historical failure.
+
+## Actionable filter controls after metadata recovery
+
+At `421158b`, hosted Windows and X11 coverage passed, but ordinary X11 and
+Wayland coverage still failed the immediate chooser regression. The delayed-popup
+case passed. Retained receipts contained only the location write and Open action,
+with no popup transition. These records did not identify the failed role or
+interface snapshot.
+
+A native role publisher reproduces the same receipt set: after its timed-out
+getter resumes, it reports UNKNOWN for 250 ms before publishing COMBO_BOX. The
+previous filter code accepted the empty successful snapshot and returned selected
+caption text without performing either popup action. The permanent
+`native_localization_chooser_role_readiness` fails before the correction in
+17.30 seconds with the same `popup-closed` error.
+
+Filter readiness now requires a combo plus its non-null Action interface. Cache
+refreshes and polling stay within the same ten-second deadline used by the role
+and popup snapshots. One diagnostic snapshot identifies missing roles/interfaces;
+an empty snapshot cannot take the caption fallback. The original immediate and
+delayed-popup cases, all close/property/action assertions and native deadlines
+remain. The new role case also checks publication and the absence of a popup
+before the role became ready. Both backends pass all three native cases and the
+real packaged layout; the role-case output records UNKNOWN followed by success.

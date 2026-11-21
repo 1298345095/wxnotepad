@@ -25,6 +25,7 @@ def publisher(root):
     field = Gtk.Entry()
     contents.pack_start(field, True, True, 0)
     destination = root / 'owned-target'
+    delayed_role = (root / 'delay-role').exists()
 
     class BusyButtonAccessible(Gtk.ButtonAccessible):
         __gtype_name__ = 'NativeChooserReadinessBusyButtonAccessible'
@@ -53,7 +54,15 @@ def publisher(root):
                 (root / 'filter-blocked').touch()
                 time.sleep(PROPERTY_BUSY_SECONDS)
                 (root / 'filter-resumed').touch()
-            return Atk.Role.COMBO_BOX
+                if delayed_role:
+                    (root / 'filter-role-pending').touch()
+                    def publish_role():
+                        (root / 'popup-before-role').write_text(str((root / 'popup-changes').exists()))
+                        (root / 'filter-role-pending').unlink()
+                        (root / 'filter-role-published').touch()
+                        return GLib.SOURCE_REMOVE
+                    GLib.timeout_add(BUTTON_PUBLICATION_DELAY_MS, publish_role)
+            return Atk.Role.UNKNOWN if (root / 'filter-role-pending').exists() else Atk.Role.COMBO_BOX
 
     class BusyFilter(Gtk.ComboBoxText):
         __gtype_name__ = 'NativeChooserReadinessBusyFilter'
@@ -146,6 +155,9 @@ def main():
         delayed_popup = sys.argv[1:] == ['--popup-delay']
         if delayed_popup:
             (root / 'delay-popup').touch()
+        delayed_role = sys.argv[1:] == ['--role-delay']
+        if delayed_role:
+            (root / 'delay-role').touch()
         with (root / 'publisher.log').open('w') as output:
             child = subprocess.Popen([sys.executable, __file__, '--publisher', str(root)], stdout=output, stderr=subprocess.STDOUT)
             try:
@@ -184,6 +196,9 @@ def main():
                 assert (root / 'popup-changes').read_text() == '2', (root / 'popup-changes').read_text()
                 if delayed_popup:
                     assert (root / 'filter-actions').read_text() == '2'
+                if delayed_role:
+                    assert (root / 'filter-role-published').exists()
+                    assert (root / 'popup-before-role').read_text() == 'False'
                 (root / 'stop').touch()
                 assert child.wait(timeout=10) == 0
             except Exception:
