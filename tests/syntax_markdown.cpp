@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor/editor_control.h"
@@ -71,7 +72,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                     "Markdown styles retain the base font and the original smaller Fold Ellipsis font");
         }
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                    frame->GetStatusBar()->GetStatusText().Contains(wxString(dialect.name) + " (override)"),
+                    StatusMetadata(frame).Contains(wxString(dialect.name) + " (override)"),
                 "same-path reopen retains the explicit Markdown dialect");
         Choose(frame, "Plain Text");
         Require(editor->Send(GetLexer) == SCLEX_NULL && !editor->Send(StyleGetStrike, SCE_MARKDOWN_STRIKEOUT) &&
@@ -131,23 +132,22 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                 "ordinary Markdown Save preserves BOM, Unicode and mixed EOL bytes");
         const auto current = TestFiles::TemporaryDirectory("current.txt");
         Require(frame->SaveAs(TestFiles::Filename(current)).status == SaveStatus::Saved &&
-                    frame->GetStatusBar()->GetStatusText().Contains(dialect.name) && TestFiles::Bytes(current) == bytes,
+                    StatusMetadata(frame).Contains(dialect.name) && TestFiles::Bytes(current) == bytes,
                 "current-scheme Save As retains explicit dialect and exact saved bytes");
         const auto renamed = TestFiles::TemporaryDirectory("renamed.md");
         Require(frame->SaveAs(TestFiles::Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved &&
-                    frame->GetStatusBar()->GetStatusText().Contains("GitHub GFM") && TestFiles::Bytes(renamed) == bytes,
+                    StatusMetadata(frame).Contains("GitHub GFM") && TestFiles::Bytes(renamed) == bytes,
                 "All Files Save As recognizes Markdown with original default GitHub dialect");
         const auto explicitPath = TestFiles::TemporaryDirectory("explicit.txt");
         Require(frame->SaveAs(TestFiles::Filename(explicitPath), {}, dialect.language).status == SaveStatus::Saved &&
-                    frame->GetStatusBar()->GetStatusText().Contains(dialect.name) &&
-                    TestFiles::Bytes(explicitPath) == bytes,
+                    StatusMetadata(frame).Contains(dialect.name) && TestFiles::Bytes(explicitPath) == bytes,
                 "explicit Markdown Save As type overrides conflicting extension and preserves bytes");
         Require(frame->NewDocument(), "clean Markdown allows New");
         Choose(frame, dialect.name);
         TestEditor::Append(frame, text);
         const auto first = TestFiles::TemporaryDirectory("first.md");
         Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
-                    frame->GetStatusBar()->GetStatusText().Contains(dialect.name) && TestFiles::Bytes(first) == text,
+                    StatusMetadata(frame).Contains(dialect.name) && TestFiles::Bytes(first) == text,
                 "first Save retains selected dialect and typed Markdown bytes");
         const auto nativePath = TestFiles::TemporaryDirectory(std::string(dialect.name) + ".md");
         NativeDialogs::FileCommandDriver nativeSave(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL,
@@ -156,7 +156,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         nativeSave.Stop();
         Require(nativeSave.choosers == 1 && nativeSave.initialType.StartsWith("Markdown (*.") &&
                     nativeSave.initialType.Contains("*.md") && TestFiles::Bytes(nativePath) == text &&
-                    frame->GetStatusBar()->GetStatusText().Contains(dialect.name),
+                    StatusMetadata(frame).Contains(dialect.name),
                 "native Save As uses the shared Markdown extension filter and preserves selected dialect");
     }
     for (const auto* extension : {"md", "MARKDOWN", "mdown", "mkdn", "mkd", "litcoffee", "rmd", "jmd"}) {
@@ -167,7 +167,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         TestSyntax::Command(frame, wxID_OPEN);
         open.Stop();
         Require(open.choosers == 1 && editor->Send(GetLexer) == SCLEX_MARKDOWN &&
-                    frame->GetStatusBar()->GetStatusText().Contains("GitHub GFM"),
+                    StatusMetadata(frame).Contains("GitHub GFM"),
                 "all original Markdown extensions take precedence over markup header sniffing in native Open");
     }
     std::puts(

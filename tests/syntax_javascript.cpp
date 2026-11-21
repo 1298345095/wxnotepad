@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
@@ -25,7 +26,7 @@ void Choose(EditorFrame* frame, const char* name) {
     const int id = frame->GetMenuBar()->FindMenuItem("Scheme", name);
     Require(id != wxNOT_FOUND, "native Scheme menu must offer JavaScript, JSX, TypeScript and TSX");
     TestSyntax::Command(frame, id);
-    Require(frame->GetStatusBar()->GetStatusText().Contains(name), "status must identify the effective dialect");
+    Require(StatusMetadata(frame).Contains(name), "status must identify the effective dialect");
 }
 void Compare(EditorFrame* frame, std::span<const int> styles, std::span<const int> folds) {
     using enum Scintilla::Message;
@@ -72,26 +73,24 @@ void Workflows(EditorFrame* frame, const std::filesystem::path& directory) {
     }
     Choose(frame, "JSX");
     const auto destination = TestFiles::Filename(directory / "association.TsX");
-    Require(frame->Open(destination).status == OpenStatus::Opened &&
-                frame->GetStatusBar()->GetStatusText().Contains("JSX"),
+    Require(frame->Open(destination).status == OpenStatus::Opened && StatusMetadata(frame).Contains("JSX"),
             "same-path reopen preserves manual dialect");
     Require(frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
                 frame->SaveAs(TestFiles::Filename(directory / "missing/failed.ts")).status == SaveStatus::Failed &&
-                frame->GetStatusBar()->GetStatusText().Contains("JSX"),
+                StatusMetadata(frame).Contains("JSX"),
             "failed/cancelled Save As retain the manual dialect");
     Require(frame->SaveAs(destination, {}, SyntaxLanguage::Tsx).status == SaveStatus::Saved &&
-                frame->GetStatusBar()->GetStatusText().Contains("TSX"),
+                StatusMetadata(frame).Contains("TSX"),
             "same-path Save As applies explicit TSX filter");
     Choose(frame, "JavaScript");
     Require(frame->SaveAs(destination, {}, SaveType::AllFiles).status == SaveStatus::Saved &&
-                frame->GetStatusBar()->GetStatusText().Contains("TSX"),
+                StatusMetadata(frame).Contains("TSX"),
             "All Files restores automatic extension selection");
     TestSyntax::Command(frame, wxID_NEW);
     TestEditor::Append(frame, "const first = 1;\n");
     const auto first = directory / "first.mts";
     Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
-                frame->GetStatusBar()->GetStatusText().Contains("TypeScript") &&
-                TestFiles::Bytes(first) == "const first = 1;\n",
+                StatusMetadata(frame).Contains("TypeScript") && TestFiles::Bytes(first) == "const first = 1;\n",
             "first Save selects TypeScript and preserves disk bytes");
     std::puts("PASS: all original extensions, same-path reopen, Save As failure/cancel/filter and first Save");
     for (const auto* interpreter :
@@ -99,12 +98,11 @@ void Workflows(EditorFrame* frame, const std::filesystem::path& directory) {
         const auto path = directory / "node-script.unknown";
         TestFiles::WriteBytes(path, std::string(interpreter) + "const value = 1;\n");
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                    frame->GetStatusBar()->GetStatusText().Contains("JavaScript"),
+                    StatusMetadata(frame).Contains("JavaScript"),
                 "original node shebang selects JavaScript");
         Choose(frame, "Plain Text");
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic"));
-        Require(frame->GetStatusBar()->GetStatusText().Contains("JavaScript"),
-                "Automatic restores original node sniffing");
+        Require(StatusMetadata(frame).Contains("JavaScript"), "Automatic restores original node sniffing");
     }
 }
 void SharedCommands(EditorFrame* frame) {
@@ -236,8 +234,7 @@ public:
                     TestFiles::WriteBytes(path, bytes);
                     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
                             "fixture Open must succeed");
-                    Require(frame->GetStatusBar()->GetStatusText().Contains(fixture.name),
-                            "extension selects the original dialect");
+                    Require(StatusMetadata(frame).Contains(fixture.name), "extension selects the original dialect");
                     Compare(frame, fixture.styles, fixture.folds);
                     Require(editor->Send(GetTabWidth) == 2 && editor->Send(GetIndent) == 2 && !editor->Send(GetUseTabs),
                             "all JS/TS dialects default to two spaces");

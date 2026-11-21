@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "editor/editor_ids.h"
@@ -76,15 +77,14 @@ void ManualCanonicalMarkup(EditorFrame* frame) {
     // Pinned Styles.cpp::Style_SelectLexer sniffs the canonical Web choice;
     // its independently specified HtmlOption_HtmlVBScript bytes are 0e20.
     Require(std::string(property.data()) == "\x{0e}\x{20}" &&
-                frame->GetStatusBar()->GetStatusText().Contains("ASP VBScript (override)") &&
-                TestEditor::Text(editor) == text && !frame->DocumentIsModified() && !editor->Send(Message::CanUndo) &&
-                TestFiles::Bytes(path) == text,
+                StatusMetadata(frame).Contains("ASP VBScript (override)") && TestEditor::Text(editor) == text &&
+                !frame->DocumentIsModified() && !editor->Send(Message::CanUndo) && TestFiles::Bytes(path) == text,
             "canonical Web menu choice sniffs VBScript without changing clean text, history or disk");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "ASP JavaScript"));
     editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
                  reinterpret_cast<intptr_t>(property.data()));
     Require(std::string(property.data()) == "\x{0e}\x{10}" &&
-                frame->GetStatusBar()->GetStatusText().Contains("ASP JavaScript (override)"),
+                StatusMetadata(frame).Contains("ASP JavaScript (override)"),
             "explicit dialect choice overrides the conflicting document directive");
     const auto xml = TestFiles::TemporaryDirectory("manual-schema.txt");
     TestFiles::WriteBytes(xml, "<!DOCTYPE schema><schema/>");
@@ -93,8 +93,7 @@ void ManualCanonicalMarkup(EditorFrame* frame) {
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "XML Document"));
     editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
                  reinterpret_cast<intptr_t>(property.data()));
-    Require(std::string(property.data()) == "\x{01}\x{10}" &&
-                frame->GetStatusBar()->GetStatusText().Contains("XML Schema (override)") &&
+    Require(std::string(property.data()) == "\x{01}\x{10}" && StatusMetadata(frame).Contains("XML Schema (override)") &&
                 !frame->DocumentIsModified() && !editor->Send(Message::CanUndo),
             "canonical XML menu choice sniffs schema while retaining original XML options and clean state");
 }
@@ -123,14 +122,14 @@ void ManualMarkupFamilies(EditorFrame* frame) {
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
                      reinterpret_cast<intptr_t>(property.data()));
         if (std::string(property.data()) != fixture.options ||
-            !frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)") ||
+            !StatusMetadata(frame).Contains(wxString(fixture.dialect) + " (override)") ||
             editor->Send(Message::GetTabWidth) != fixture.tabWidth)
             std::fprintf(stderr, "Markup family: file=%s choice=%s property=%02x%02x tabs=%zd status='%s'\n",
                          fixture.name, fixture.choice, static_cast<unsigned char>(property[0]),
                          static_cast<unsigned char>(property[1]), editor->Send(Message::GetTabWidth),
-                         frame->GetStatusBar()->GetStatusText().utf8_str().data());
+                         StatusMetadata(frame).utf8_str().data());
         Require(editor->Send(Message::GetLexer) == SCLEX_HTML && std::string(property.data()) == fixture.options &&
-                    frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)") &&
+                    StatusMetadata(frame).Contains(wxString(fixture.dialect) + " (override)") &&
                     editor->Send(Message::GetTabWidth) == fixture.tabWidth,
                 "canonical markup retains chosen lexer family/settings while displaying sniffed dialect");
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
@@ -151,7 +150,7 @@ void ManualMarkupFamilies(EditorFrame* frame) {
                          save.initialType.utf8_str().data());
         Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.choice) + " (") &&
                     TestFiles::Bytes(saved) == fixture.text &&
-                    frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)"),
+                    StatusMetadata(frame).Contains(wxString(fixture.dialect) + " (override)"),
                 "saving with current family filter preserves sniffed dialect and exact bytes");
     }
 }
@@ -170,8 +169,8 @@ void AutomaticMarkupFamilies(EditorFrame* frame) {
         const bool isXml = path == xml;
         const wxString family = isXml ? "XML Document" : "Web Source Code";
         Require(std::string(property.data()) == (isXml ? "\x{01}\x{10}" : "\x{0e}\x{10}") &&
-                    frame->GetStatusBar()->GetStatusText().Contains(isXml ? "ASP VBScript" : "Web Source Code") &&
-                    !frame->GetStatusBar()->GetStatusText().Contains("override") &&
+                    StatusMetadata(frame).Contains(isXml ? "ASP VBScript" : "Web Source Code") &&
+                    !StatusMetadata(frame).Contains("override") &&
                     frame->Editor()->Send(Message::GetTabWidth) == (isXml ? 4 : 2),
                 "automatic XML sniff retains filename family and HTML does not acquire a manual-only sniff");
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
@@ -212,11 +211,10 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
         if (std::string(property.data()) != fixture.options || editor->Send(Message::GetTabWidth) != fixture.tabWidth)
             std::fprintf(stderr, "Automatic markup: file=%s property=%02x%02x tabs=%zd status='%s'\n", fixture.name,
                          static_cast<unsigned char>(property[0]), static_cast<unsigned char>(property[1]),
-                         editor->Send(Message::GetTabWidth), frame->GetStatusBar()->GetStatusText().utf8_str().data());
+                         editor->Send(Message::GetTabWidth), StatusMetadata(frame).utf8_str().data());
         Require(std::string(property.data()) == fixture.options &&
                     editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
-                    frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
-                    !frame->GetStatusBar()->GetStatusText().Contains("override"),
+                    StatusMetadata(frame).Contains(fixture.dialect) && !StatusMetadata(frame).Contains("override"),
                 "automatic header sniff preserves selected family/options/settings and effective dialect");
         NativeDialogs::FileCommandDriver cancel(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
         TestSyntax::Command(frame, wxID_SAVEAS);
@@ -242,7 +240,7 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
         Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.family) + " (") &&
                     std::string(property.data()) == fixture.options &&
                     editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
-                    frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
+                    StatusMetadata(frame).Contains(fixture.dialect) &&
                     frame->DocumentPath() == TestFiles::Filename(saved) && TestFiles::Bytes(saved) == fixture.text &&
                     !frame->DocumentIsModified(),
                 "automatic current-family Save As retains effective dialect/options/settings and exact bytes");
@@ -438,25 +436,24 @@ void NativeFiles(EditorFrame* frame) {
         Require(driver.choosers == 1, "file command must use one native file dialog");
     };
     file(wxID_SAVE, html, "All Files");
-    Require(TestFiles::Bytes(html) == text && frame->GetStatusBar()->GetStatusText().Contains("Web Source Code"),
+    Require(TestFiles::Bytes(html) == text && StatusMetadata(frame).Contains("Web Source Code"),
             "native first Save selects HTML and preserves independent disk bytes");
     file(wxID_SAVEAS, xml, "XML Document");
-    Require(TestFiles::Bytes(xml) == text && frame->GetStatusBar()->GetStatusText().Contains("XML Document (override)"),
+    Require(TestFiles::Bytes(xml) == text && StatusMetadata(frame).Contains("XML Document (override)"),
             "native XML filter forces XML with exact saved bytes");
     file(wxID_SAVEAS, {}, "Web Source Code");
     Require(frame->DocumentPath() == TestFiles::Filename(xml) &&
-                frame->GetStatusBar()->GetStatusText().Contains("XML Document (override)"),
+                StatusMetadata(frame).Contains("XML Document (override)"),
             "native cancelled Save As preserves current markup dialect");
     file(wxID_OPEN, html, "");
-    Require(frame->GetStatusBar()->GetStatusText().Contains("Web Source Code") &&
-                !frame->GetStatusBar()->GetStatusText().Contains("override"),
+    Require(StatusMetadata(frame).Contains("Web Source Code") && !StatusMetadata(frame).Contains("override"),
             "native different-path Open resets markup to Automatic");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "SVG"));
     Require(frame->Open(TestFiles::Filename(html)).status == OpenStatus::Opened &&
-                frame->GetStatusBar()->GetStatusText().Contains("SVG (override)"),
+                StatusMetadata(frame).Contains("SVG (override)"),
             "same-path reopen retains the selected markup dialect");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic"));
-    Require(frame->GetStatusBar()->GetStatusText().Contains("Web Source Code") && TestEditor::Text(editor) == text,
+    Require(StatusMetadata(frame).Contains("Web Source Code") && TestEditor::Text(editor) == text,
             "explicit Automatic restores HTML without changing text");
     std::puts("PASS: native first Save, XML filter, cancel, Open, same-path override and Automatic");
 }

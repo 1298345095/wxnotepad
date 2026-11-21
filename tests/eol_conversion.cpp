@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "native_search_helpers.h"
 #include <array>
 #include "native_fold_helpers.h"
@@ -57,7 +58,7 @@ void History(EditorFrame* frame) {
                 editor->Send(CanRedo),
             "one Undo must restore exact mixed bytes and the original save point");
     Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
-                frame->GetStatusBar()->GetStatusText().Contains("EOL: LF"),
+                StatusMetadata(frame).Contains("EOL: LF"),
             "Undo must retain the chosen insertion preference and truthful status");
     Convert(frame, "LF");
     Require(NativeSearch::Text(editor) == "中文\nsecond\nthird\nlast",
@@ -184,7 +185,7 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
     Require(frame->NewDocument() &&
                 editor->Send(Message::GetEOLMode) ==
                     static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)) &&
-                NativeSearch::Text(editor).empty() && frame->GetStatusBar()->GetStatusText().Contains("EOL: CRLF"),
+                NativeSearch::Text(editor).empty() && StatusMetadata(frame).Contains("EOL: CRLF"),
             "successful New must restore the existing CRLF default and status");
     std::puts("PASS: cancelled/failed file operations retain mode; New restores the original default");
 }
@@ -247,7 +248,7 @@ public:
                             "native conversion must normalize mixed endings without adding a final newline");
                     Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode.mode)),
                             "conversion must choose the original core insertion mode");
-                    Require(frame->GetStatusBar()->GetStatusText().Contains(wxString("EOL: ") + mode.label),
+                    Require(StatusMetadata(frame).Contains(wxString("EOL: ") + mode.label),
                             "status must explicitly identify the insertion mode");
                     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                     Require(frame->GetMenuBar()->FindItem(id)->IsChecked(), "chosen conversion must be checked");

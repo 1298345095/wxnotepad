@@ -146,7 +146,9 @@ target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPA
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/app_icon.cpp
     src/app/dialogs/auto_completion_settings_dialog.cpp
+    src/app/dialogs/auto_save_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/word_wrap_settings_dialog.cpp
@@ -164,18 +166,29 @@ add_library(app_shell STATIC
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
     src/app/dialogs/tab_settings_dialog.cpp
+    src/app/editor_frame_status.cpp
+    src/app/editor_frame_toolbar.cpp
     src/app/editor_frame.cpp
     src/app/file_change_monitor.cpp
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
     src/app/editor_printing.cpp
     src/app/editor_print_job.cpp
+    src/app/native_launch.cpp
+    src/app/desktop_launch.cpp
+    src/app/document_tools.cpp
     src/app/new_window.cpp
+    src/app/open_targets.cpp
+    src/app/run_command.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)
+string(REGEX REPLACE "(..)" "0x\\1," WXNOTEPAD_ICON_DATA "${WXNOTEPAD_ICON_HEX}")
+configure_file(src/app/app_icon_data.h.in generated/app_icon_data.h @ONLY)
+target_include_directories(app_shell PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 if(WIN32)
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
     set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
@@ -191,7 +204,8 @@ if(WIN32)
     target_compile_definitions(editor_runtime PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
     target_link_libraries(editor_features PRIVATE advapi32 shell32 ole32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
-    target_link_libraries(app_shell PRIVATE shell32 ole32 comdlg32)
+    target_sources(app_shell PRIVATE src/app/explorer_selections.cpp)
+    target_link_libraries(app_shell PRIVATE shell32 ole32 oleaut32 uuid comdlg32)
 endif()
 
 # The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.
@@ -206,6 +220,8 @@ if(UNIX AND NOT APPLE)
     target_sources(editor_runtime PRIVATE src/editor/platform/text_measurement_gtk.cpp)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+    pkg_check_modules(GIO_UNIX REQUIRED IMPORTED_TARGET gio-unix-2.0)
+    target_link_libraries(app_shell PRIVATE PkgConfig::GIO_UNIX)
     pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
     target_link_libraries(editor_runtime PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
 endif()
@@ -215,6 +231,7 @@ function(add_gui_program target source)
     target_link_libraries(${target} PRIVATE ${ARGN})
     if(WIN32)
         target_sources(${target} PRIVATE src/app/windows.rc)
+        target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
     endif()
     if(MSVC)
         target_compile_options(${target} PRIVATE /utf-8)
@@ -228,6 +245,12 @@ include(cmake/Localization.cmake)
 
 include(CTest)
 if(BUILD_TESTING)
+    add_gui_program(run_command tests/run_command.cpp app_shell)
+    add_executable(run_command_child tests/run_command_child.cpp)
+    target_link_libraries(run_command_child PRIVATE wx::base)
+    add_dependencies(run_command run_command_child)
+    add_test(NAME original_run_command COMMAND run_command)
+    set_tests_properties(original_run_command PROPERTIES TIMEOUT 90)
     add_executable(date_time_format tests/date_time_format.cpp)
     target_link_libraries(date_time_format PRIVATE editor_runtime)
     if(MSVC)
@@ -324,6 +347,12 @@ if(BUILD_TESTING)
         set_tests_properties(packaged_ui_localization_${scenario} PROPERTIES TIMEOUT 180)
     endforeach()
     if(NOT WIN32)
+        add_test(NAME native_localization_button_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py")
+        set_tests_properties(native_localization_button_readiness PROPERTIES TIMEOUT 30)
+        add_test(NAME native_localization_input_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py" --input)
+        set_tests_properties(native_localization_input_readiness PROPERTIES TIMEOUT 30)
         add_test(NAME packaged_ui_localization_regional COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
             --cmake-dir "${CMAKE_BINARY_DIR}"
@@ -345,7 +374,42 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_gui_program(document_tools tests/document_tools.cpp app_shell)
+    add_test(NAME original_document_tools COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>")
+    set_tests_properties(original_document_tools PROPERTIES TIMEOUT 60)
+    add_test(NAME packaged_document_tools_localization COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_localization.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/document-tools-localization")
+    set_tests_properties(packaged_document_tools_localization PROPERTIES TIMEOUT 120)
+    if(UNIX)
+        target_link_libraries(document_tools PRIVATE PkgConfig::GIO_UNIX)
+        add_test(NAME packaged_document_tools_runtime COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools>"
+            --cmake-dir "${CMAKE_BINARY_DIR}")
+        set_tests_properties(packaged_document_tools_runtime PROPERTIES TIMEOUT 60)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            add_gui_program(document_tools_directory_readiness tests/document_tools.cpp app_shell)
+            target_sources(document_tools_directory_readiness PRIVATE tests/gtk_directory_load_order.cpp)
+            target_compile_definitions(document_tools_directory_readiness PRIVATE WXNOTEPAD_TEST_DIRECTORY_LOAD_ORDER)
+            target_link_libraries(document_tools_directory_readiness PRIVATE PkgConfig::GIO_UNIX)
+            target_link_options(document_tools_directory_readiness PRIVATE
+                -Wl,--wrap=g_file_enumerator_next_files_async -Wl,--wrap=g_file_enumerator_next_files_finish
+                -Wl,--wrap=g_file_query_info_async)
+            add_test(NAME native_document_tools_directory_readiness COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/document_tools_process.py" "$<TARGET_FILE:document_tools_directory_readiness>")
+            set_tests_properties(native_document_tools_directory_readiness PROPERTIES TIMEOUT 60)
+        endif()
+    endif()
     add_gui_program(new_window tests/new_window.cpp app_shell)
+    add_gui_program(open_targets tests/open_targets.cpp app_shell)
+    add_test(NAME original_open_targets COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/open_targets_process.py" "$<TARGET_FILE:open_targets>")
+    set_tests_properties(original_open_targets PROPERTIES TIMEOUT 60)
+    add_test(NAME original_open_target_startup COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/open_target_startup.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_CURRENT_BINARY_DIR}")
+    set_tests_properties(original_open_target_startup PROPERTIES TIMEOUT 90)
     add_test(NAME original_new_window COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario normal)
     set_tests_properties(original_new_window PROPERTIES TIMEOUT 45)
@@ -357,6 +421,12 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/scroll_past_last_line_process.py" "$<TARGET_FILE:scroll_past_last_line>")
     set_tests_properties(original_scroll_past_last_line_lifecycle PROPERTIES TIMEOUT 120)
     add_editor_test(menu_hierarchy original_menu_hierarchy 60)
+    add_editor_test(context_menu original_editor_context_menu 60)
+    add_dependencies(context_menu wxnotepad_catalogs)
+    foreach(language zh_CN zh_TW)
+        add_test(NAME original_editor_context_menu_${language} COMMAND context_menu --localized ${language})
+        set_tests_properties(original_editor_context_menu_${language} PROPERTIES TIMEOUT 60)
+    endforeach()
     add_editor_test(printing original_printing 90)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         pkg_check_modules(GTK_UNIX_PRINT REQUIRED gtk+-unix-print-3.0)
@@ -390,6 +460,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv")
     set_tests_properties(original_special_insertion_process PROPERTIES TIMEOUT 90)
     add_editor_test(path_text original_path_text_insertion 90)
+    add_editor_test(read_only_file original_read_only_file 120)
     add_editor_test(read_only original_read_only_mode 120)
     target_compile_definitions(read_only PRIVATE
         "READ_ONLY_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/read_only_reference.tsv\"")
@@ -405,6 +476,11 @@ if(BUILD_TESTING)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
     add_editor_test(save_backup original_save_backup 30)
+    add_editor_test(periodic_backup original_periodic_backup 90)
+    add_test(NAME original_periodic_backup_process COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/periodic_backup_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}")
+    set_tests_properties(original_periodic_backup_process PROPERTIES TIMEOUT 180)
     add_editor_test(current_encoding original_current_encoding 90)
     add_test(NAME original_current_encoding_native_keys COMMAND current_encoding)
     set_tests_properties(original_current_encoding_native_keys PROPERTIES TIMEOUT 90
@@ -435,6 +511,7 @@ if(BUILD_TESTING)
     set_tests_properties(revert_current_document PROPERTIES TIMEOUT 60)
 
     add_gui_program(clipboard_peer tests/clipboard_peer.cpp wx::core wx::base)
+    add_dependencies(context_menu clipboard_peer)
     if(UNIX AND NOT APPLE)
         target_link_libraries(clipboard_peer PRIVATE PkgConfig::GTK)
     endif()
@@ -623,7 +700,7 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(word_wrap word_wrap_view 60)
     if(WIN32)
-        foreach(target IN ITEMS clipboard_smoke word_wrap)
+        foreach(target IN ITEMS clipboard_smoke word_wrap context_menu)
             target_compile_definitions(${target} PRIVATE
                 "NATIVE_FAILURE_PYTHON=\"${Python3_EXECUTABLE}\""
                 "NATIVE_FAILURE_SCRIPT=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_failure_capture.py\"")
@@ -808,6 +885,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_wrap_process.py" "$<TARGET_FILE:search_wrap>")
     set_tests_properties(original_search_message_settings PROPERTIES TIMEOUT 60)
     add_editor_test(goto_line go_to_logical_line 30)
+    add_editor_test(shell_appearance original_shell_appearance 60)
     add_editor_test(position_status live_position_selection_status 60)
     add_editor_test(search_regex find_regular_expression 30)
     add_editor_test(replace_regex replace_regular_expression 30)
@@ -953,6 +1031,7 @@ if(BUILD_TESTING)
     endif()
 
     add_editor_test(bar_visibility original_bar_visibility 60)
+    add_editor_test(observer_acknowledgement native_observer_unchanged_acknowledgement 45)
     add_editor_test(file_change_monitor native_file_watcher_lifetime 30)
     add_test(NAME original_bar_visibility_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/bar_visibility_process.py" "$<TARGET_FILE:bar_visibility>")
@@ -986,6 +1065,14 @@ if(BUILD_TESTING)
     add_editor_test(search_continuation original_search_continuation 60)
     add_test(NAME original_rtf_clipboard COMMAND clipboard_smoke)
     set_tests_properties(original_rtf_clipboard PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=rtf")
+    if(UNIX AND NOT APPLE)
+        # Retain existing registration order; cover native borders with small
+        # rendered status text at GTK scale 2 using the same full-paint checks.
+        add_test(NAME original_shell_appearance_scale2 COMMAND shell_appearance)
+        set_tests_properties(original_shell_appearance_scale2 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=0.5")
+        add_editor_test(focus_acknowledgement native_focus_acknowledgement 20)
+    endif()
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
 #include "app/editor_print_job.h"
 #include "app/localization.h"
@@ -15,6 +16,7 @@
 #include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
+#include "editor/platform/popup_placement.h"
 #include "app/dialogs/document_dialogs.h"
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
@@ -25,6 +27,7 @@
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
+#include "app/status_fields.h"
 #include <wx/translation.h>
 #include <wx/combobox.h>
 #include <wx/dialog.h>
@@ -35,6 +38,10 @@
 #include <wx/strconv.h>
 #include <cstdlib>
 #include "app/dialogs/modify_lines_dialog.h"
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#include <gdk/gdkwayland.h>
+#endif
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -87,10 +94,78 @@ void EditorFrame::CreateMenus() {
     menus->Append(CreateSettingsMenu(), _("Sett&ings"));
     menus->Append(CreateToolsMenu(), _("&Tools"));
     SetMenuBar(menus);
+    // As in Notepad4.cpp::WM_CONTEXTMENU, the application owns the popup.
+    editor_->Bind(wxEVT_CONTEXT_MENU, &EditorFrame::ShowEditorContextMenu, this);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Clear); }, wxID_DELETE);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        wxID_DELETE);
+}
+
+void EditorFrame::ShowEditorContextMenu(wxContextMenuEvent& event) {
+    // Original Notepad4 89b8b36 IDR_POPUPMENU: preserve the command groups,
+    // hit-test only an empty selection, and anchor keyboard invocation at caret.
+    using enum Scintilla::Message;
+    auto point = event.GetPosition();
+    if (point == wxDefaultPosition) {
+        const auto caret = editor_->Send(GetCurrentPos);
+        point = wxPoint(static_cast<int>(editor_->Send(PointXFromPosition, 0, caret)),
+                        static_cast<int>(editor_->Send(PointYFromPosition, 0, caret)));
+    } else {
+        point = editor_->ScreenToClient(point);
+        if (editor_->Send(GetSelectionEmpty))
+            editor_->Send(GotoPos, editor_->Send(PositionFromPoint, point.x, point.y));
+    }
+    wxMenu menu;
+    // TRANSLATORS: IDR_POPUPMENU undo editing command.
+    menu.Append(wxID_UNDO, _("&Undo"));
+    // TRANSLATORS: IDR_POPUPMENU redo editing command.
+    menu.Append(wxID_REDO, _("&Redo"));
+    menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
+    menu.Append(wxID_CUT, _("Cu&t"));
+    // TRANSLATORS: IDR_POPUPMENU copy selection to the clipboard.
+    menu.Append(wxID_COPY, _("&Copy"));
+    // TRANSLATORS: IDR_POPUPMENU paste clipboard text.
+    menu.Append(wxID_PASTE, _("&Paste"));
+    // TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
+    menu.Append(wxID_DELETE, _("&Delete"));
+    menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU select the complete document.
+    menu.Append(wxID_SELECTALL, _("Select &All"));
+    menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU toggle the current fold block.
+    menu.Append(currentBlockFoldId_, _("Toggle &Fold"));
+    menu.AppendSeparator();
+    // TRANSLATORS: IDR_POPUPMENU open the selected or caret-local file, folder or link.
+    menu.Append(openSelectionId_, _("&Open"));
+    // Keep the editor as the native popup's invoking window and focus owner.
+    auto screen = editor_->ClientToScreen(point + wxPoint(1, 1));
+#ifdef __WXGTK__
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(menu.m_menu))) {
+        // Some compositors leave even constrained xdg_popups beyond the edge.
+        // Measure the native menu inside its unmapped GTK parent, then reuse
+        // the completion/CallTip work-area placement. No popup is mapped here.
+        gtk_widget_show(menu.m_menu);
+        GtkRequisition natural{};
+        gtk_widget_get_preferred_size(menu.m_menu, nullptr, &natural);
+        gtk_widget_hide(menu.m_menu);
+        screen = NativePopup::FitToWorkArea(*this, screen, wxSize(natural.width, natural.height)).GetPosition();
+    }
+#endif
+    editor_->PopupMenu(&menu, editor_->ScreenToClient(screen));
 }
 
 wxMenu* EditorFrame::CreateToolsMenu() {
     auto* tools = new wxMenu;
+    AppendDocumentTools(tools);
+    AppendRunCommand(tools);
+    tools->AppendSeparator();
+    auto* selection = new wxMenu;
+    AppendOpenTargetCommands(selection);
+    // TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
+    tools->AppendSubMenu(selection, _("Action on &Selection"));
     auto* base64 = new wxMenu;
     for (const auto& [label, command] :
          {std::pair{wxTRANSLATE("Standard &Encode"), Base64Conversion::Encode},
@@ -250,6 +325,43 @@ wxMenu* EditorFrame::CreateFileMenu() {
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, updateTime);
     file->AppendSeparator();
     auto* mode = new wxMenu;
+    const int readOnlyFile = wxWindow::NewControlId();
+#ifdef __WXMSW__
+    // TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
+    const wxString fileProtectionHelp = _("Change the disk file's read-only attribute. F10 controls editing only.");
+#else
+    const wxString fileProtectionHelp =
+        // TRANSLATORS: Linux IDM_FILE_READONLY_FILE help; owner-write changes affect the owner's other processes.
+        _("Change the file owner's write permission for this user's other programs too. F10 controls editing only.");
+#endif
+    // TRANSLATORS: IDM_FILE_READONLY_FILE menu item; changes disk-file protection.
+    auto* readOnlyFileItem = mode->AppendCheckItem(readOnlyFile, _("Read Only &File"), fileProtectionHelp);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto error = document_.ToggleReadOnlyFile();
+            UpdateDocumentState();
+            UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            if (!error.empty())
+                wxMessageBox(
+                    // TRANSLATORS: IDM_FILE_READONLY_FILE failure; first %s is the path, second %s is the native error.
+                    wxString::Format(_("Could not change read-only protection for %s. %s"), document_.Path(), error),
+                    // TRANSLATORS: IDM_FILE_READONLY_FILE error-dialog title.
+                    _("Could not change file protection"), wxOK | wxICON_ERROR, this);
+        },
+        readOnlyFile);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this, readOnlyFileItem, fileProtectionHelp](wxUpdateUIEvent& event) {
+            const bool previous = document_.IsReadOnlyFile();
+            document_.RefreshReadOnlyFile();
+            event.Check(document_.ReadOnlyFileFlag());
+            event.Enable(document_.ReadOnlyFileChangeError().empty());
+            readOnlyFileItem->SetHelp(
+                document_.ReadOnlyFileChangeError().empty() ? fileProtectionHelp : document_.ReadOnlyFileChangeError());
+            if (previous != document_.IsReadOnlyFile()) UpdateDocumentState();
+        },
+        readOnlyFile);
     const int readOnly = wxWindow::NewControlId();
     mode->AppendCheckItem(readOnly, _("&Read Only Mode\tF10"));
     file->AppendSubMenu(mode, _("File &Mode"));
@@ -347,6 +459,20 @@ wxMenu* EditorFrame::CreateFileMenu() {
         wxID_PRINT);
     file->AppendSeparator();
     file->Append(updateTime, _("Update File Time"));
+    const int containingFolder = wxWindow::NewControlId();
+    // TRANSLATORS: Open the current document's containing directory in the native file manager.
+    file->Append(containingFolder, _("Open Containing &Folder"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!OpenContainingFolder())
+                // TRANSLATORS: Native containing-folder launch error and its dialog title; no parameters.
+                wxMessageBox(_("Could not open the containing folder."), _("Could not open target"),
+                             wxOK | wxICON_ERROR, this);
+        },
+        containingFolder);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, containingFolder);
     AppendRecentFilesCommand(file);
     return file;
 }
@@ -1396,6 +1522,7 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     auto* folds = new wxMenu;
     const auto addFoldCommand = [this, folds](const wxString& label, FoldCommand command, int level = 0) {
         const int id = wxWindow::NewControlId();
+        if (command == FoldCommand::CurrentBlock) currentBlockFoldId_ = id;
         folds->Append(id, label);
         Bind(
             wxEVT_MENU,
@@ -1545,9 +1672,10 @@ void EditorFrame::AppendSettingsCommands(wxMenu* view) {
         Bind(
             wxEVT_MENU,
             [this](wxCommandEvent&) {
-                if (SaveSettings(true))
-                    SetStatusText(_("Settings saved"));
-                else
+                if (SaveSettings(true)) {
+                    SetStatusText(_("Settings saved"), StatusField::Feedback);
+                    UpdateStatusWidths();
+                } else
                     wxMessageBox(wxString::Format(_("Could not write %s"), settings_->Path()),
                                  _("Could not save settings"), wxOK | wxICON_ERROR, this);
             },
@@ -1876,6 +2004,10 @@ void EditorFrame::HandleFullScreenKey(int modifiers) {
         preferences.showMenu = !preferences.showMenu;
         ApplyBarVisibility();
         break;
+    case wxMOD_CONTROL:
+        preferences.showToolbar = !preferences.showToolbar;
+        ApplyBarVisibility();
+        break;
     case wxMOD_SHIFT:
         preferences.showStatusbar = !preferences.showStatusbar;
         ApplyBarVisibility();
@@ -1958,6 +2090,8 @@ bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
         return true;
     }
     if (event.GetKeyCode() == WXK_F10) {
+        // Leave the native context-menu gesture to wx/GTK/DefWindowProc.
+        if (event.GetModifiers() == wxMOD_SHIFT) return false;
         if (!event.HasAnyModifiers()) ToggleReadOnlyMode();
         return true;
     }
@@ -2139,6 +2273,17 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
 
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
+    const int autoSave = wxWindow::NewControlId();
+    // TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
+    view->Append(autoSave, _("AutoSave Settings..."));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoSaveSettingsDialog(this, preferences.autoSave))
+                document_.ConfigureAutoSave(preferences.autoSave);
+        },
+        autoSave);
     AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
     const int wordWrapSettings = wxWindow::NewControlId();
@@ -2176,9 +2321,71 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
     AppendSelectionOptions(view);
     view->AppendSeparator();
+    AppendAppearanceOptions(view);
+    const int fileChanges = wxWindow::NewControlId();
+    view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(fileWatchingOptions_.mode != FileWatchingMode::None); },
+        fileChanges);
+    if (settings_) {
+        auto* other = new wxMenu;
+        const int saveFind = wxWindow::NewControlId();
+        other->AppendCheckItem(saveFind, _("Remember &Search Options"));
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveFindReplace = !settings_->values.saveFindReplace; },
+            saveFind);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
+            saveFind);
+        const int saveRecent = wxWindow::NewControlId();
+        other->AppendCheckItem(saveRecent, _("Remember &Recent Files"));
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveRecentFiles = !settings_->values.saveRecentFiles; },
+            saveRecent);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveRecentFiles); },
+            saveRecent);
+        view->AppendSubMenu(other, _("Other Sett&ings"));
+    }
+#ifdef __WXMSW__
+    view->AppendSeparator();
+    auto* advanced = new wxMenu;
+    auto* rendering = new wxMenu;
+    for (const auto& [label, technology] : {std::pair{wxTRANSLATE("&Legacy GDI"), Scintilla::Technology::Default},
+                                            std::pair{wxTRANSLATE("&Direct2D"), Scintilla::Technology::DirectWrite}}) {
+        const int id = wxWindow::NewControlId();
+        rendering->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, technology](wxCommandEvent&) {
+                editor_->Send(Scintilla::Message::SetTechnology,
+                              static_cast<uintptr_t>(std::to_underlying(technology)));
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, technology](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetTechnology) ==
+                            static_cast<intptr_t>(std::to_underlying(technology)));
+            },
+            id);
+    }
+    advanced->AppendSubMenu(rendering, _("Ren&dering Technology"));
+    view->AppendSubMenu(advanced, _("A&dvanced Settings"));
+#endif
+    AppendSettingsCommands(view);
+    return view;
+}
+
+void EditorFrame::AppendAppearanceOptions(wxMenu* view) {
     auto* appearance = new wxMenu;
     for (const auto& [label, member] :
          {std::pair{wxTRANSLATE("Show &Menu	Alt+F11"), &OriginalSettings::showMenu},
+          std::pair{wxTRANSLATE("Show &Toolbar	Ctrl+F11"), &OriginalSettings::showToolbar},
           std::pair{wxTRANSLATE("Show Stat&usbar	Shift+F11"), &OriginalSettings::showStatusbar}}) {
         const int id = wxWindow::NewControlId();
         appearance->AppendCheckItem(id, wxGetTranslation(label));
@@ -2253,63 +2460,6 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoShrinkScrollWidth()); },
         shrinkScrollWidth);
     view->AppendSubMenu(appearance, _("Appea&rance"));
-    const int fileChanges = wxWindow::NewControlId();
-    view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);
-    Bind(
-        wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) { event.Check(fileWatchingOptions_.mode != FileWatchingMode::None); },
-        fileChanges);
-    if (settings_) {
-        auto* other = new wxMenu;
-        const int saveFind = wxWindow::NewControlId();
-        other->AppendCheckItem(saveFind, _("Remember &Search Options"));
-        Bind(
-            wxEVT_MENU,
-            [this](wxCommandEvent&) { settings_->values.saveFindReplace = !settings_->values.saveFindReplace; },
-            saveFind);
-        Bind(
-            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
-            saveFind);
-        const int saveRecent = wxWindow::NewControlId();
-        other->AppendCheckItem(saveRecent, _("Remember &Recent Files"));
-        Bind(
-            wxEVT_MENU,
-            [this](wxCommandEvent&) { settings_->values.saveRecentFiles = !settings_->values.saveRecentFiles; },
-            saveRecent);
-        Bind(
-            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveRecentFiles); },
-            saveRecent);
-        view->AppendSubMenu(other, _("Other Sett&ings"));
-    }
-#ifdef __WXMSW__
-    view->AppendSeparator();
-    auto* advanced = new wxMenu;
-    auto* rendering = new wxMenu;
-    for (const auto& [label, technology] : {std::pair{wxTRANSLATE("&Legacy GDI"), Scintilla::Technology::Default},
-                                            std::pair{wxTRANSLATE("&Direct2D"), Scintilla::Technology::DirectWrite}}) {
-        const int id = wxWindow::NewControlId();
-        rendering->AppendRadioItem(id, wxGetTranslation(label));
-        Bind(
-            wxEVT_MENU,
-            [this, technology](wxCommandEvent&) {
-                editor_->Send(Scintilla::Message::SetTechnology,
-                              static_cast<uintptr_t>(std::to_underlying(technology)));
-            },
-            id);
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this, technology](wxUpdateUIEvent& event) {
-                event.Check(editor_->Send(Scintilla::Message::GetTechnology) ==
-                            static_cast<intptr_t>(std::to_underlying(technology)));
-            },
-            id);
-    }
-    advanced->AppendSubMenu(rendering, _("Ren&dering Technology"));
-    view->AppendSubMenu(advanced, _("A&dvanced Settings"));
-#endif
-    AppendSettingsCommands(view);
-    return view;
 }
 
 void EditorFrame::AppendMarginCommands(wxMenu* view) {

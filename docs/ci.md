@@ -23,7 +23,9 @@ concurrently without sharing native dialogs or clipboard ownership. Xvfb allocat
 its own display number with `-displayfd` and reports readiness before the command
 starts; each session retains its own authentication cookie. If allocation selects
 the reserved primary display `:0`, that owned server stays alive while a second
-server allocates the test display. The native-input primary-desktop guard remains
+server allocates the test display. Xvfb uses `-noreset` to keep new connections
+available when sequential GUI processes close the display's last client. The
+native-input primary-desktop guard remains
 in force. This avoids
 `xvfb-run -a` exhausting its ten display-number retries and then launching a client
 against another session's display. A dedicated step after dependency installation
@@ -75,6 +77,24 @@ All seventeen wxnotepad fields are compared exactly. The source archive hash,
 frozen tables, complete inputs and native output remain in evidence. See
 `docs/observations/word-wrap-settings.md` for the approved reference-source change.
 
+Independent Windows Explorer investigation controls remain available manually:
+
+```text
+python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/open-target-controls/process --timeout 180 -- python -X utf8 tests/reference_capture/native_original_reference.py --archive .ci/build/notepad4-source.tar --build-dir .ci/original-reference --open-targets-output-dir .ci/reports/open-target-controls --compiler-cache
+```
+
+Each uses a fresh owned directory and the read-only exact-item observer with the
+application test's observation deadlines. Reports retain every verdict and the
+pinned original helper's source hashes, even when an earlier control fails.
+Actual Windows Server evidence showed the pinned helper and documented
+single-item cold-view calls losing selection, while the same one-call selection
+succeeded after native folder readiness. The additional cold Explorer startup
+control exercises the original disabled fallback's quoted target grammar with
+Unicode, a comma and a space. The temporary automatic investigation steps have
+been removed; the ordinary product suite, original references and failure
+captures remain required. These historical cold-control failures are retained
+as evidence and are not passing product acceptance checks.
+
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.
@@ -86,7 +106,9 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   clang-tidy, and `gui` for the build/test matrix. GUI display tools and fonts
   are installed by the `gui` profile, also used by coverage; the analyzer is installed by `tidy`.
 - Linux jobs use Ubuntu's official HTTPS archive in place of the Azure archive
-  mirror. APT uses finite connection/read timeouts and retries. Downloaded `.deb`
+  mirror or the runner's `/etc/apt/apt-mirrors.txt` mirror-list URI in legacy
+  `.list` and Deb822 `.sources` files. Suites, components and signing keys are
+  preserved. APT uses finite connection/read timeouts and retries. Downloaded `.deb`
   archives are cached with the existing official cache action, while APT installs
   the packages and runs their configuration scripts on each fresh runner. The
   cache excludes installed system files, package database state and partial downloads.
@@ -380,11 +402,22 @@ output includes non-system vcpkg shared libraries and a README describing its
 Ubuntu 24.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
 
-Linux packaging strips only the distribution copies of the executable and
+Linux packaging also copies the selected SDK's `libexec/gio-launch-desktop`,
+which GLib uses to launch desktop entries. The vcpkg GLib binary's compiled
+helper prefix names its disposable package staging tree, so it cannot locate
+the installed or relocated helper by that prefix after dependency cleanup.
+The canonical Linux test runner sets `GIO_LAUNCH_DESKTOP` to the selected
+CMake SDK's helper. Packaged checks instead select the artifact's own helper.
+The artifact's `README.txt` supplies the explicit `GIO_LAUNCH_DESKTOP` and
+`LD_LIBRARY_PATH` command; running the bare ELF does not set these paths.
+
+Linux packaging strips only the distribution copies of the executable, helper and
 bundled shared libraries. Their matching separate debug files are retained under
 `.ci/symbols/` in the evidence artifact, with GNU debug links in the distributed
 binaries. Copy `.ci/symbols/.debug/` beside the executable and `.ci/symbols/lib/.debug/`
-inside its `lib/` directory for GDB to find them. The ordinary unstripped
+inside its `lib/` directory for GDB to find them; the helper's symbols use
+`libexec/.debug/`. Both ELF dependency inventories are retained, and SDK libraries
+needed by either binary are included. The ordinary unstripped
 executable is also retained under `.ci/build/cmake/wxnotepad` in the evidence artifact;
 the separately compiled diagnostic executable remains preserved as before.
 The ordinary test binaries keep their debug information, and build.json records

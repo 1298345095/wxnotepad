@@ -18,6 +18,7 @@ REPORTS = WORK / 'reports'
 VCPKG = WORK / 'vcpkg'
 BUILD = WORK / 'build'
 BUILD_RECORD = 'build.json'
+GIO_LAUNCH_HELPER = Path('libexec/gio-launch-desktop')
 WINDOWS = sys.platform == 'win32'
 TRIPLET = 'x64-windows-ci' if WINDOWS else 'x64-linux-ci'
 
@@ -262,6 +263,17 @@ def windows_desktop_names():
         user.CloseDesktop(input_desktop)
 
 
+def require_windows_test_desktop(jobs, reports):
+    if jobs != 1:
+        raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
+    desktop = windows_desktop_names()
+    (reports / 'windows-desktop.json').write_text(json.dumps(desktop, indent=2) + '\n', encoding='utf-8')
+    if any(value.casefold() != 'default' for value in desktop.values()):
+        raise SystemExit('Windows native tests require the Default input desktop; '
+                         f'thread={desktop["thread"]}, input={desktop["input"]}. '
+                         'Run ci.py test directly from a terminal on the normal desktop.')
+
+
 def test(backend, cmake_dir, expression, jobs, report_prefix='', report_directory=None):
     if (backend == 'windows') != WINDOWS:
         raise SystemExit('The requested test backend does not match this host')
@@ -271,14 +283,7 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
     except FileExistsError:
         raise SystemExit('Report directory already exists; choose a fresh directory to retain earlier evidence')
     if WINDOWS:
-        if jobs != 1:
-            raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
-        desktop = windows_desktop_names()
-        (reports / 'windows-desktop.json').write_text(json.dumps(desktop, indent=2) + '\n', encoding='utf-8')
-        if any(value.casefold() != 'default' for value in desktop.values()):
-            raise SystemExit('Windows native tests require the Default input desktop; '
-                             f'thread={desktop["thread"]}, input={desktop["input"]}. '
-                             'Run ci.py test directly from a terminal on the normal desktop.')
+        require_windows_test_desktop(jobs, reports)
     report = report_prefix + backend
     command = ['ctest', '--test-dir', cmake_dir, '-C', 'Release', '--parallel', '1',
                '--output-on-failure', '--no-tests=error',
@@ -294,6 +299,15 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
                 shutil.copytree(temporary, reports / f'{report}-ctest', dirs_exist_ok=True)
         return
 
+    environment = dict(os.environ)
+    # CTest-only display probes have no application SDK. A cache selecting the
+    # application or either SDK field must still validate its complete helper path.
+    if (cmake_dir / 'CMakeCache.txt').exists():
+        cache = _cmake_cache(cmake_dir)
+        if (cache.get('CMAKE_PROJECT_NAME') == 'wxnotepad' or
+                'VCPKG_INSTALLED_DIR' in cache or 'VCPKG_TARGET_TRIPLET' in cache):
+            environment['GIO_LAUNCH_DESKTOP'] = str(linux_gio_helper(cache))
+
     shards = test_shards(cmake_dir.resolve(), expression, jobs, reports / report)
     print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
           f'{len(shards)} concurrent sessions', flush=True)
@@ -306,11 +320,11 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
         selected = ['ctest', '--test-dir', workspace, '-C', 'Release', '--parallel', '1',
                     '--output-on-failure', '--no-tests=error', '-R', selection,
                     '--output-junit', workspace / 'tests.xml']
-        environment = dict(os.environ, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
+        child_environment = dict(environment, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
         isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
-        return run(isolated, reports / f'{report}-shard-{index}-ctest.log', environment, check=False)
+        return run(isolated, reports / f'{report}-shard-{index}-ctest.log', child_environment, check=False)
 
     with ThreadPoolExecutor(max_workers=len(shards)) as workers:
         results = list(workers.map(run_shard, enumerate(shards, 1)))
@@ -331,8 +345,18 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
                        '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
                        *compiler_launcher_arguments(compiler_cache)]), 'diagnostic-configure.log')
+    targets = ['wxnotepad', 'editing_keys', 'close_smoke']
+    if WINDOWS:
+        targets.append('open_targets')
     run(cmake_command(['--build', directory, '--config', 'Release', '--parallel', str(jobs),
-                       '--target', 'wxnotepad', 'editing_keys', 'close_smoke']), 'diagnostic-build.log')
+                       '--target', *targets]), 'diagnostic-build.log')
+
+
+def diagnostic_test(backend):
+    expression = '^native_diagnostic_'
+    if backend == 'windows':
+        expression = '(^native_diagnostic_|^original_open_targets$)'
+    test(backend, (BUILD / 'diagnostic-cmake').resolve(), expression, 1, 'diagnostic-')
 
 
 def split_linux_symbols(binary, symbols):
@@ -346,18 +370,31 @@ def split_linux_symbols(binary, symbols):
 
 
 def bundle_linux_runtime(executable, destination, symbols, installed, reports):
-    split_linux_symbols(destination / executable.name, symbols)
-    dependencies = subprocess.check_output(['ldd', str(executable)], text=True)
-    (reports / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
     libraries = destination / 'lib'
     libraries.mkdir(exist_ok=True)
-    for line in dependencies.splitlines():
-        if '=> ' not in line:
-            continue
-        name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
-        if name.is_absolute() and name.resolve().is_relative_to(installed):
-            shutil.copy2(name, libraries / name.name)
-            split_linux_symbols(libraries / name.name, symbols / 'lib')
+    for relative, report in ((Path(executable.name), 'runtime-libraries.txt'),
+                             (GIO_LAUNCH_HELPER, 'gio-launch-desktop-libraries.txt')):
+        binary = destination / relative
+        split_linux_symbols(binary, symbols / relative.parent)
+        dependencies = subprocess.check_output(['ldd', str(binary)], text=True)
+        (reports / report).write_text(dependencies, encoding='utf-8')
+        for line in dependencies.splitlines():
+            if '=> ' not in line:
+                continue
+            name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
+            target = libraries / name.name
+            if name.is_absolute() and name.resolve().is_relative_to(installed) and not target.exists():
+                shutil.copy2(name, target)
+                split_linux_symbols(target, symbols / 'lib')
+
+
+def linux_gio_helper(cache):
+    # GLib's compiled libexec prefix points into vcpkg's disposable package
+    # staging tree. Select the helper from this build's actual installed SDK.
+    helper = Path(cache['VCPKG_INSTALLED_DIR']) / cache['VCPKG_TARGET_TRIPLET'] / GIO_LAUNCH_HELPER
+    if not helper.is_file() or not os.access(helper, os.X_OK):
+        raise FileNotFoundError(f'Required executable GLib desktop launch helper: {helper}')
+    return helper.resolve()
 
 
 def _cmake_cache(directory):
@@ -390,6 +427,9 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         for library in directory.glob('*.dll'):
             shutil.copy2(library, destination / library.name)
     else:
+        helper = destination / GIO_LAUNCH_HELPER
+        helper.parent.mkdir(exist_ok=True)
+        shutil.copy2(linux_gio_helper(cache), helper)
         bundle_linux_runtime(executable, destination, symbols, installed, reports)
     languages = json.loads((source_root / 'po/languages.json').read_text(encoding='utf-8'))
     for language in languages['languages']:
@@ -419,9 +459,10 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         'See build.json for the tested source and executable checksum.\n'
         'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
         'Linux: Ubuntu 24.04 x64 desktop libraries are required; run from this directory with\n'
+        'GIO_LAUNCH_DESKTOP="$PWD/libexec/gio-launch-desktop" \\\n'
         'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'
         'The matching Linux symbols/ directory is retained with the build evidence.\n'
-        'Copy its .debug/ and lib/.debug/ directories here for GDB.\n',
+        'Copy its .debug/, lib/.debug/ and libexec/.debug/ directories here for GDB.\n',
         encoding='utf-8')
     return destination / executable.name
 
@@ -501,7 +542,7 @@ def main():
         configure(False, coverage=True)
         build(False, arguments.jobs, coverage=True)
     elif arguments.command == 'diagnostic-test':
-        test(arguments.backend, (BUILD / 'diagnostic-cmake').resolve(), '^native_diagnostic_', 1, 'diagnostic-')
+        diagnostic_test(arguments.backend)
     else:
         globals()[arguments.command]()
 

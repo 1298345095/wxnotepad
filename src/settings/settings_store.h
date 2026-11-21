@@ -11,6 +11,7 @@ public:
     const wxString& Path() const { return path_; }
     bool Save(bool explicitSave);
     bool SaveUILanguage(int language);
+    int OriginalRunCommandWidth(int screenWidth, int screenHeight) const;
     bool SaveSchemeTabs(SyntaxLanguage language);
     int MessageSuppression(const wxString& key);
     bool SuppressMessage(const wxString& key);

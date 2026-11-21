@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #pragma once
 
 #include "native_search_helpers.h"
@@ -52,7 +53,7 @@ inline std::string ResumeHighlighting(EditorFrame* frame, const SchemeFixture& f
                 !frame->DocumentIsModified(),
             "manual scheme restores highlighting without changing text or save point");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                frame->GetStatusBar()->GetStatusText().Contains("(override)"),
+                StatusMetadata(frame).Contains("(override)"),
             "same-path reopen retains the explicit scheme");
     return original;
 }

@@ -56,7 +56,7 @@ void TogglePreservesDocument(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n!" && editor->Send(GetModify),
             "pending Redo remains executable after toggling off");
     Toggle(frame);
-    Require(editor->Send(GetModify) && frame->GetTitle() == "*Untitled (Read Only Mode) - wxnotepad",
+    Require(editor->Send(GetModify) && frame->GetTitle() == "* Untitled (Read Only Mode) - wxnotepad",
             "dirty untitled mode preserves modification state and its title feedback");
     Toggle(frame);
     std::puts("PASS: native menu/F10, title and unchanged text, selection, save point and history");
@@ -205,6 +205,116 @@ std::vector<intptr_t> Selections(EditorControl* editor) {
             state.push_back(editor->Send(message, index));
     return state;
 }
+#ifdef __WXGTK__
+// Shift+F10 now opens the owned editor popup. Complete the physical gesture
+// there, then dismiss it, before checking that it did not toggle protection.
+class ModifiedF10Popup final : public wxTimer {
+public:
+    explicit ModifiedF10Popup(EditorFrame* frame) : frame_(frame) {
+        frame_->Bind(wxEVT_MENU_OPEN, &ModifiedF10Popup::Opened, this);
+        frame_->Editor()->Bind(wxEVT_KEY_UP, &ModifiedF10Popup::EditorReleased, this);
+    }
+    ~ModifiedF10Popup() override {
+        Stop();
+        frame_->Unbind(wxEVT_MENU_OPEN, &ModifiedF10Popup::Opened, this);
+        frame_->Editor()->Unbind(wxEVT_KEY_UP, &ModifiedF10Popup::EditorReleased, this);
+        if (menu_) {
+            if (tick_) gtk_widget_remove_tick_callback(menu_, tick_);
+            g_signal_handlers_disconnect_by_data(menu_, this);
+            g_object_unref(menu_);
+        }
+    }
+    void Run() {
+        NativeKeys::FocusEditor(frame_, "wxnotepad", focusFile_);
+        deadline_ = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        Start(10);
+        Request("keydown:shift+F10");
+        // Native menu hide can precede the compositor's keyboard focus return.
+        // Observe that return within this gesture's existing deadline.
+        while ((!closed_ || !f10Released_ || !shiftReleased_ || !frame_->IsActive() || !frame_->Editor()->HasFocus()) &&
+               !expired_) {
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Stop();
+        Require(!failed_ && !expired_ && opened_ == 1 && closed_,
+                "modified F10 opens and natively dismisses exactly one owned editor popup");
+        Require(f10Released_ && shiftReleased_, "modified F10 and Shift releases reach the owned popup or editor");
+        Require(frame_->IsActive() && frame_->Editor()->HasFocus(), "popup Escape restores owned editor focus");
+    }
+
+private:
+    EditorFrame* frame_;
+    GtkWidget* menu_ = nullptr;
+    guint tick_ = 0;
+    wxString focusFile_;
+    std::chrono::steady_clock::time_point deadline_;
+    int opened_ = 0;
+    bool closed_ = false, failed_ = false, expired_ = false;
+    bool releaseRequested_ = false, f10Released_ = false, shiftReleased_ = false;
+    bool dismissRequested_ = false;
+    void Request(const wxString& command) {
+        {
+            wxFFile file(focusFile_ + ".tmp", "wb");
+            if (!file.IsOpened() || !file.Write(command)) failed_ = true;
+        }
+        if (!wxRenameFile(focusFile_ + ".tmp", focusFile_, true)) failed_ = true;
+    }
+    void Release() {
+        if (releaseRequested_) return;
+        releaseRequested_ = true;
+        Request("keyup:shift+F10");
+    }
+    void Released(int key) {
+        if (key == WXK_F10) f10Released_ = true;
+        if (key == WXK_SHIFT) shiftReleased_ = true;
+        if (f10Released_ && shiftReleased_ && !closed_ && !dismissRequested_) {
+            dismissRequested_ = true;
+            Request("key:Escape");
+        }
+    }
+    void EditorReleased(wxKeyEvent& event) {
+        Released(event.GetKeyCode());
+        event.Skip();
+    }
+    void Opened(wxMenuEvent& event) {
+        event.Skip();
+        auto* menu = event.GetMenu();
+        if (!event.IsPopup() || !menu || menu->GetInvokingWindow() != frame_->Editor()) return;
+        ++opened_;
+        menu_ = GTK_WIDGET(g_object_ref(menu->m_menu));
+        g_signal_connect(
+            menu_, "hide",
+            G_CALLBACK(+[](GtkWidget*, gpointer data) { static_cast<ModifiedF10Popup*>(data)->closed_ = true; }), this);
+        g_signal_connect(menu_, "key-release-event",
+                         G_CALLBACK(+[](GtkWidget*, GdkEventKey* key, gpointer data) -> gboolean {
+                             auto* popup = static_cast<ModifiedF10Popup*>(data);
+                             if (key->keyval == GDK_KEY_F10) popup->Released(WXK_F10);
+                             if (key->keyval == GDK_KEY_Shift_L) popup->Released(WXK_SHIFT);
+                             return FALSE;
+                         }),
+                         this);
+        // The first native frame follows the popup's map/configure on both
+        // backends. Holding the press until then preserves Wayland's grab serial.
+        tick_ = gtk_widget_add_tick_callback(
+            menu_,
+            +[](GtkWidget*, GdkFrameClock*, gpointer data) -> gboolean {
+                auto* popup = static_cast<ModifiedF10Popup*>(data);
+                popup->tick_ = 0;
+                popup->Release();
+                return G_SOURCE_REMOVE;
+            },
+            this, nullptr);
+    }
+    void Notify() override {
+        if (std::chrono::steady_clock::now() < deadline_) return;
+        expired_ = true;
+        Release();
+        if (menu_ && !closed_) gtk_menu_popdown(GTK_MENU(menu_));
+        Stop();
+    }
+};
+#endif
 void SelectionShapes(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
@@ -236,9 +346,24 @@ void SelectionShapes(EditorFrame* frame) {
     editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
     editor->Send(ClearSelections);
     for (const int modifiers : std::array<int, 4>{wxMOD_CONTROL, wxMOD_ALT, wxMOD_SHIFT, wxMOD_CONTROL | wxMOD_SHIFT}) {
-        NativeKeys::Shortcut(frame, WXK_F10, (modifiers & wxMOD_CONTROL) != 0, (modifiers & wxMOD_ALT) != 0,
-                             (modifiers & wxMOD_SHIFT) != 0);
+        const auto before = Selections(editor);
+        const auto revision = editor->DocumentRevision();
+        const auto undoCurrent = editor->Send(GetUndoCurrent);
+        const auto undoSavePoint = editor->Send(GetUndoSavePoint);
+#ifdef __WXGTK__
+        if (modifiers == wxMOD_SHIFT) {
+            ModifiedF10Popup popup(frame);
+            popup.Run();
+        } else
+#endif
+            NativeKeys::Shortcut(frame, WXK_F10, (modifiers & wxMOD_CONTROL) != 0, (modifiers & wxMOD_ALT) != 0,
+                                 (modifiers & wxMOD_SHIFT) != 0);
         Require(!editor->Send(GetReadOnly), "modified F10 does not alias the original unmodified accelerator");
+        Require(Selections(editor) == before && TestEditor::Text(editor) == "alpha\r\nbeta\r\n" &&
+                    !editor->Send(GetModify) && editor->Send(GetUndoActions) == 0 &&
+                    editor->Send(GetUndoCurrent) == undoCurrent && editor->Send(GetUndoSavePoint) == undoSavePoint &&
+                    editor->DocumentRevision() == revision,
+                "modified F10 preserves selection, bytes, save point and history");
     }
     std::puts("PASS: rectangle/multiple-selection mode transitions and exact F10 modifiers");
 }

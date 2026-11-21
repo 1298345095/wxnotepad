@@ -8,6 +8,7 @@
 #include "print_surface.h"
 #include "text_measurement.h"
 #include "native_drawing_error.h"
+#include "popup_placement.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
@@ -381,15 +382,9 @@ void SCICALL Window::SetPosition(PRectangle r) noexcept {
 void SCICALL Window::SetPositionRelative(PRectangle r, const Window* relative) noexcept {
     if (wid) {
         auto point = Host(relative->wid)->ClientToScreen(wxPoint(r.left, r.top));
-        int display = wxDisplay::GetFromPoint(point);
-        if (display == wxNOT_FOUND) display = wxDisplay::GetFromWindow(Host(relative->wid));
-        if (display == wxNOT_FOUND) display = 0;
-        const auto bounds = wxDisplay(display).GetClientArea();
-        const int width = std::min(static_cast<int>(r.Width()), bounds.width);
-        const int height = std::min(static_cast<int>(r.Height()), bounds.height);
-        point.x = std::clamp(point.x, bounds.x, bounds.GetRight() + 1 - width);
-        point.y = std::clamp(point.y, bounds.y, bounds.GetBottom() + 1 - height);
-        Host(wid)->SetSize(point.x, point.y, width, height);
+        const auto placed = NativePopup::FitToWorkArea(
+            *Host(relative->wid), point, wxSize(static_cast<int>(r.Width()), static_cast<int>(r.Height())));
+        Host(wid)->SetSize(placed);
     }
 }
 PRectangle Window::GetClientPosition() const noexcept {
@@ -615,10 +610,12 @@ int64_t QueryPerformanceCounter() noexcept {
 }
 namespace Platform {
 ColourRGBA Chrome() noexcept {
-    return ColourRGBA(240, 240, 240);
+    const auto colour = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    return ColourRGBA(colour.Red(), colour.Green(), colour.Blue());
 }
 ColourRGBA ChromeHighlight() noexcept {
-    return ColourRGBA(255, 255, 255);
+    const auto colour = wxSystemSettings::GetColour(wxSYS_COLOUR_3DHIGHLIGHT);
+    return ColourRGBA(colour.Red(), colour.Green(), colour.Blue());
 }
 const char* DefaultFont() noexcept {
 #ifdef _WIN32

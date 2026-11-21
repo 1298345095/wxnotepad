@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "syntax_test_helpers.h"
 #include "editor/editor_control.h"
@@ -37,7 +38,7 @@ void Language(EditorFrame* frame, SyntaxLanguage expected) {
     Paint(frame);
     Require(frame->Editor()->Send(Message::GetLexer) == SyntaxFor(expected).lexer,
             "real lexer must match the original filename/interpreter precedence");
-    Require(frame->GetStatusBar()->GetStatusText().Contains(" | " + LanguageName(expected) + " | "),
+    Require(StatusMetadata(frame).Contains(" | " + LanguageName(expected) + " | "),
             "status must match automatic language without an explicit override");
     const int id = frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic");
     Require(id != wxNOT_FOUND && frame->GetMenuBar()->FindItem(id)->IsChecked(),
@@ -64,7 +65,7 @@ public:
                         "extensionless Python interpreter must select Python");
                 Require(frame->Editor()->Send(Message::GetStyleIndexAt, bytes.find("return")) == SCE_PY_WORD,
                         "detected Python must install the real token style");
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python | EOL: LF",
+                Require(StatusMetadata(frame) == "UTF-8 | Python | EOL: LF",
                         "status must report detected Python without an override");
                 Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
                         "detection and save must preserve exact file bytes");
@@ -157,7 +158,7 @@ public:
                 auto* editor = frame->Editor();
                 Choose(frame, "C/C++");
                 Require(editor->Send(Message::GetLexer) == SCLEX_CPP &&
-                            frame->GetStatusBar()->GetStatusText().Contains("C/C++ (override)"),
+                            StatusMetadata(frame).Contains("C/C++ (override)"),
                         "explicit language must take precedence over Python interpreter");
                 editor->Send(Message::SetSel, 0, 0);
                 editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("x"));

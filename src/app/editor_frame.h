@@ -9,11 +9,15 @@
 #include "editor/indentation_settings.h"
 #include "editor/align_lines.h"
 #include "app/file_change_monitor.h"
+#include "app/status_fields.h"
 
 class EditorControl;
 class FindReplaceDialog;
 class SettingsStore;
 class wxMenu;
+#ifdef __WXMSW__
+class ExplorerSelections;
+#endif
 
 class EditorFrame final : public wxFrame {
 public:
@@ -21,6 +25,7 @@ public:
     ~EditorFrame() override;
 #ifdef __WXMSW__
     bool MSWTranslateMessage(WXMSG* message) override;
+    bool Destroy() override;
 #endif
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
@@ -51,7 +56,12 @@ public:
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
     bool NewWindow();
+    bool OpenSelection(bool containingFolder = false);
+    bool OpenContainingFolder();
+    void AppendOpenTargetCommands(wxMenu* menu);
     bool Restart();
+    bool ExecuteDocument();
+    bool OpenDocumentWith();
     OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                    std::optional<SyntaxLanguage> language, bool readOnly, Scintilla::Position line,
                                    Scintilla::Position column);
@@ -80,6 +90,13 @@ private:
     int saveCopyId_;
     OpenResult ReloadQuickEncoding(QuickReloadEncoding encoding);
     int recentFilesId_;
+    int openSelectionId_ = wxID_NONE;
+    int selectionFolderId_ = wxID_NONE;
+    bool ShowContainingFolder(const wxString& path);
+#ifdef __WXMSW__
+    std::unique_ptr<ExplorerSelections> explorerSelections_;
+#endif
+    int currentBlockFoldId_ = wxID_NONE;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();
     int revertId_;
@@ -106,6 +123,10 @@ private:
     void ShowWordWrapSettings();
     void ApplyWrapSymbols();
     void CreateMenus();
+    void CreateDefaultToolbar();
+    int FindMenuCommand(const wxString& label) const;
+    void CreatePositionStatus();
+    void ShowEditorContextMenu(wxContextMenuEvent& event);
     void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
@@ -116,6 +137,9 @@ private:
     wxMenu* CreateSearchMenu();
     wxMenu* CreateSettingsMenu();
     wxMenu* CreateToolsMenu();
+    void AppendDocumentTools(wxMenu* tools);
+    void AppendRunCommand(wxMenu* tools);
+    void ShowRunCommand();
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);
@@ -137,6 +161,7 @@ private:
     void AppendIndentationOptions(wxMenu* view);
     void AppendCompletionOptions(wxMenu* view);
     void AppendSelectionOptions(wxMenu* view);
+    void AppendAppearanceOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
     void AppendCallTipCommands(wxMenu* view);
@@ -183,6 +208,15 @@ private:
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     void UpdatePositionStatus();
+    void UpdateStatusWidths();
+    intptr_t statusLine_ = -1;
+    uint64_t statusRevision_ = 0;
+    intptr_t statusTabWidth_ = 0;
+    intptr_t statusLineCharacters_ = 0;
+    intptr_t statusLineColumns_ = 0;
+    std::array<int, StatusField::Count> statusPreferredWidths_{};
+    wxSize statusMeasuredSize_;
+    int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);

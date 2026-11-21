@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "native_search_helpers.h"
@@ -148,7 +149,7 @@ void SavedBytes(EditorFrame* frame) {
         Toggle(frame);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "comment Save preserves exact encoding, BOM, EOL bytes and final newline");
-        Require(frame->GetStatusBar()->GetStatusText().Contains("C/C++"), "comment retains document language");
+        Require(StatusMetadata(frame).Contains("C/C++"), "comment retains document language");
         editor->Send(Undo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "one Undo restores independent original disk bytes");
@@ -234,8 +235,8 @@ public:
                     const auto actual = TestEditor::Text(editor);
                     if (actual != expected)
                         std::fprintf(stderr, "Ctrl+/ language=%s status=%s expected=<%s> actual=<%s> focusEditor=%d\n",
-                                     language, frame->GetStatusBar()->GetStatusText().utf8_str().data(),
-                                     expected.c_str(), actual.c_str(), wxWindow::FindFocus() == editor);
+                                     language, StatusMetadata(frame).utf8_str().data(), expected.c_str(),
+                                     actual.c_str(), wxWindow::FindFocus() == editor);
                     Require(actual == expected, "actual Ctrl+/ uses scheme prefix and settings spacing");
                     NativeKey(editor, true);
                     Require(TestEditor::Text(editor) == "  value\nnext",

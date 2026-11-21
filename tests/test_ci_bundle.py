@@ -98,13 +98,21 @@ class DistributionBundle(unittest.TestCase):
         subprocess.run(['g++', '-g', '-fPIC', '-shared', library_source, '-o', library], check=True)
         subprocess.run(['g++', '-g', source, '-L' + str(library.parent), '-lbundle_fixture',
                         '-Wl,-rpath,' + str(library.parent), '-o', executable], check=True)
-        originals = {path: path.read_bytes() for path in (executable, library)}
+        helper = self.installed / self.triplet / 'libexec/gio-launch-desktop'
+        helper.parent.mkdir()
+        helper_library = library.with_name('libhelper_fixture.so')
+        subprocess.run(['g++', '-g', '-fPIC', '-shared', library_source, '-o', helper_library], check=True)
+        subprocess.run(['g++', '-g', source, '-L' + str(library.parent), '-lhelper_fixture',
+                        '-Wl,-rpath,' + str(library.parent), '-o', helper], check=True)
+        originals = {path: path.read_bytes() for path in (executable, library, helper, helper_library)}
         packaged = CI.bundle(self.cmake, executable, self.work, report_dir=self.reports)
         destination = self.work / 'artifact'
         self.assertEqual(packaged, destination / 'wxnotepad')
         self.assertTrue((self.reports / 'runtime-libraries.txt').is_file())
-        self.assertEqual({path.name for path in (destination / 'lib').iterdir()}, {library.name})
-        for original, relative in ((executable, Path('wxnotepad')), (library, Path('lib') / library.name)):
+        self.assertEqual({path.name for path in (destination / 'lib').iterdir()}, {library.name, helper_library.name})
+        for original, relative in ((executable, Path('wxnotepad')), (library, Path('lib') / library.name),
+                                   (helper_library, Path('lib') / helper_library.name),
+                                   (helper, Path('libexec/gio-launch-desktop'))):
             self.assertEqual(original.read_bytes(), originals[original])
             binary = destination / relative
             debug = self.work / 'symbols' / relative.parent / '.debug' / (relative.name + '.debug')
@@ -118,6 +126,8 @@ class DistributionBundle(unittest.TestCase):
         self.assertEqual((destination / 'build.json').read_bytes(), (self.work / 'symbols/build.json').read_bytes())
         with mock.patch.dict(os.environ, LD_LIBRARY_PATH=str(destination / 'lib')):
             self.assertEqual(CI.probe([destination / 'wxnotepad'], self.work / 'probe', 10, 1, destination), 0)
+            self.assertEqual(subprocess.run([destination / 'libexec/gio-launch-desktop']).returncode, 0)
+        self.assertTrue((self.reports / 'gio-launch-desktop-libraries.txt').is_file())
 
     @unittest.skipUnless(sys.platform == 'linux' and all(shutil.which(tool) for tool in
                          ('g++', 'objcopy', 'strip', 'ldd')), 'Requires the Linux native binary tools')
@@ -126,6 +136,9 @@ class DistributionBundle(unittest.TestCase):
         source.write_text('int main() { return 0; }\n', encoding='utf-8')
         executable = self.directory / 'wxnotepad'
         subprocess.run(['g++', '-g', source, '-o', executable], check=True)
+        helper = self.installed / self.triplet / 'libexec/gio-launch-desktop'
+        helper.parent.mkdir(parents=True)
+        shutil.copy2(executable, helper)
         original = executable.read_bytes()
         output = self.work / 'cli bundle output'
         reports = self.work / 'retained cli reports'

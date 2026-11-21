@@ -436,6 +436,7 @@ class ContinuationApp final : public wxApp {
                 }
                 CallAfter([this] { Next(); });
             } catch (const std::exception& error) {
+                std::fprintf(stderr, "Search continuation scenario: %zu/%zu\n", next_, scenarios.size());
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 if (!frame->IsBeingDeleted()) frame->Destroy();
                 ExitMainLoop();

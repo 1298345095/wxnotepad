@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -275,9 +276,9 @@ void Destination(EditorFrame* frame, bool native) {
             }
             driver.Stop();
             Require(driver.shown == 1 && driver.found && frame->DocumentEncoding() == codec.encoding &&
-                        frame->GetStatusBar()->GetStatusText().Contains(codec.sourceLabel) &&
-                        TestEditor::Text(frame) == "中\r\n" && frame->Editor()->Send(Message::CanRedo) &&
-                        frame->Editor()->Send(Message::GetCurrentPos) == 3 && frame->DocumentIsModified(),
+                        StatusMetadata(frame).Contains(codec.sourceLabel) && TestEditor::Text(frame) == "中\r\n" &&
+                        frame->Editor()->Send(Message::CanRedo) && frame->Editor()->Send(Message::GetCurrentPos) == 3 &&
+                        frame->DocumentIsModified(),
                     "F9 original Chinese destination retains rich text, selection, redo and distinct status");
         }
         {

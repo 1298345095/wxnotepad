@@ -24,11 +24,12 @@ msgstr ""
 msgid " (Read Only Mode)"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT syntax-name suffix for a manually selected scheme, including its space.
+#: src/app/editor_frame_status.cpp
 msgid " (override)"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid " | Sel %lld"
 msgstr ""
@@ -42,6 +43,14 @@ msgstr ""
 #, c-format
 msgid "%s - wxnotepad"
 msgstr ""
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT document size; %s is the locale-formatted byte count.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "%s byte"
+msgid_plural "%s bytes"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 #, c-format
@@ -58,14 +67,7 @@ msgstr ""
 msgid "%s tabs as spaces"
 msgstr ""
 
-#. TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
-#. optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
-#: src/app/editor_frame.cpp
-#, c-format
-msgid "%s%s | %s%s | EOL: %s"
-msgstr ""
-
-#. TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+#. TRANSLATORS: Window title arguments: modified marker ("* " or empty), document name/path or untitled name,
 #. and optional read-only file/mode annotation.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -123,6 +125,16 @@ msgstr ""
 msgid "&Boundary:"
 msgstr ""
 
+#. TRANSLATORS: IDD_OPENWITH button selecting the directory containing available programs.
+#: src/app/document_tools.cpp
+msgid "&Browse Directory..."
+msgstr ""
+
+#. TRANSLATORS: IDD_RUN button opening the native program chooser.
+#: src/app/run_command.cpp
+msgid "&Browse..."
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr ""
@@ -148,7 +160,18 @@ msgstr ""
 msgid "&Column sort (rectangular selection)."
 msgstr ""
 
+#. TRANSLATORS: IDD_RUN command input label; the field accepts a program and its arguments.
+#. TRANSLATORS: IDD_RUN command input accessible name, matching its visible label.
+#: src/app/run_command.cpp
+msgid "&Command:"
+msgstr ""
+
+#. TRANSLATORS: IDR_POPUPMENU copy selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
+msgid "&Copy"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Copy\tCtrl+C"
 msgstr ""
 
@@ -171,7 +194,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr ""
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr ""
 
@@ -185,6 +208,11 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Default..."
+msgstr ""
+
+#. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
+#: src/app/editor_frame_commands.cpp
+msgid "&Delete"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -243,7 +271,7 @@ msgstr ""
 msgid "&Find All"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Find...\tCtrl+F"
 msgstr ""
 
@@ -251,7 +279,7 @@ msgstr ""
 msgid "&Goto"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr ""
 
@@ -316,6 +344,11 @@ msgstr ""
 msgid "&Lower Case\tCtrl+U"
 msgstr ""
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_MANUALLYDELETE checkbox; retain old backups for manual deletion.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "&Manually delete backups."
+msgstr ""
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
 msgstr ""
@@ -332,7 +365,7 @@ msgstr ""
 msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&More...\tF9"
 msgstr ""
 
@@ -340,7 +373,7 @@ msgstr ""
 msgid "&Nanosecond (ns)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&New\tCtrl+N"
 msgstr ""
 
@@ -381,7 +414,16 @@ msgstr ""
 msgid "&One Page"
 msgstr ""
 
+#. TRANSLATORS: IDR_POPUPMENU open the selected or caret-local file, folder or link.
 #: src/app/editor_frame_commands.cpp
+msgid "&Open"
+msgstr ""
+
+#: src/app/open_targets.cpp
+msgid "&Open File, Folder, Link, etc."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Open...\tCtrl+O"
 msgstr ""
 
@@ -397,7 +439,12 @@ msgstr ""
 msgid "&Pad With Spaces\tAlt+P"
 msgstr ""
 
+#. TRANSLATORS: IDR_POPUPMENU paste clipboard text.
 #: src/app/editor_frame_commands.cpp
+msgid "&Paste"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Paste\tCtrl+V"
 msgstr ""
 
@@ -414,7 +461,12 @@ msgstr ""
 msgid "&Read Only Mode\tF10"
 msgstr ""
 
+#. TRANSLATORS: IDR_POPUPMENU redo editing command.
 #: src/app/editor_frame_commands.cpp
+msgid "&Redo"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr ""
 
@@ -454,12 +506,27 @@ msgstr ""
 msgid "&Right."
 msgstr ""
 
+#. TRANSLATORS: IDD_RUN affirmative button that launches the entered command.
+#: src/app/run_command.cpp
+msgid "&Run"
+msgstr ""
+
+#. TRANSLATORS: IDD_RUN menu command; retain the tab-separated keyboard shortcut.
+#: src/app/run_command.cpp
+msgid "&Run Command...\tCtrl+R"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Save"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Save\tCtrl+S"
+msgstr ""
+
+#. TRANSLATORS: SaveBeforeRunningTools preference; ask about unsaved changes before external tool commands.
+#: src/app/document_tools.cpp
+msgid "&Save Before Running Tools"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -519,7 +586,12 @@ msgstr ""
 msgid "&UTC Date Time"
 msgstr ""
 
+#. TRANSLATORS: IDR_POPUPMENU undo editing command.
 #: src/app/editor_frame_commands.cpp
+msgid "&Undo"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr ""
 
@@ -531,7 +603,7 @@ msgstr ""
 msgid "&Unindent"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Unix/macOS (LF)"
 msgstr ""
 
@@ -551,7 +623,7 @@ msgstr ""
 msgid "&Wildcard search"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "&Windows (CR+LF)"
 msgstr ""
 
@@ -559,7 +631,7 @@ msgstr ""
 msgid "&With...\tAlt+Q"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr ""
 
@@ -619,6 +691,11 @@ msgstr ""
 msgid "ASS — Activate &symmetric swapping"
 msgstr ""
 
+#. TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
+#: src/app/editor_frame_commands.cpp
+msgid "Action on &Selection"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Alig&n Lines...\tAlt+J"
 msgstr ""
@@ -629,6 +706,11 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "All Files (*)"
+msgstr ""
+
+#. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
+#: src/app/run_command.cpp
+msgid "All files (*)|*"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -690,6 +772,16 @@ msgstr ""
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr ""
 
+#. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "AutoSave Settings"
+msgstr ""
+
+#. TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
+#: src/app/editor_frame_commands.cpp
+msgid "AutoSave Settings..."
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Automatic"
 msgstr ""
@@ -712,6 +804,16 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Backticks"
+msgstr ""
+
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD label; the numeric interval is measured in seconds.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period (in &seconds):"
+msgstr ""
+
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_PERIOD accessible input name; units are seconds.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Backup period in seconds"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -800,12 +902,28 @@ msgstr ""
 msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
 msgstr ""
 
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based character position / line Unicode character count.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ch %s / %s"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Change &History Marker"
 msgstr ""
 
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Change &background color."
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
+#: src/app/editor_frame_commands.cpp
+msgid "Change the disk file's read-only attribute. F10 controls editing only."
+msgstr ""
+
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE help; owner-write changes affect the owner's other processes.
+#: src/app/editor_frame_commands.cpp
+msgid "Change the file owner's write permission for this user's other programs too. F10 controls editing only."
 msgstr ""
 
 #: src/app/language_commands.cpp
@@ -836,7 +954,12 @@ msgstr ""
 msgid "Choose an existing file to open."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: IDD_RUN Browse action; title of the native executable chooser.
+#: src/app/run_command.cpp
+msgid "Choose program"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr ""
 
@@ -863,6 +986,12 @@ msgstr ""
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format
 msgid "Code page %d (unavailable)"
+msgstr ""
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based visual column / line columns, including tab expansion.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Col %s / %s"
 msgstr ""
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
@@ -948,6 +1077,29 @@ msgstr ""
 msgid "Copy as &RTF"
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change file attributes: %s"
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE error-dialog title.
+#: src/app/editor_frame_commands.cpp
+msgid "Could not change file protection"
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE failure; first %s is the path, second %s is the native error.
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Could not change read-only protection for %s. %s"
+msgstr ""
+
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not change the file owner's write permission: %s"
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr ""
@@ -960,6 +1112,22 @@ msgstr ""
 msgid "Could not determine the file size."
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_LAUNCH error title; the message body contains the native launch error.
+#: src/app/document_tools.cpp
+msgid "Could not execute document"
+msgstr ""
+
+#. TRANSLATORS: Linux IDM_FILE_LAUNCH/OPENWITH error loading a native .desktop entry; no parameters.
+#. TRANSLATORS: Linux IDM_FILE_OPENWITH error loading a native .desktop program entry; no parameters.
+#: src/app/desktop_launch.cpp src/app/document_tools.cpp
+msgid "Could not load the desktop application entry."
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_OPENWITH error title; the message body contains the native launch error.
+#: src/app/document_tools.cpp
+msgid "Could not open document with program"
+msgstr ""
+
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp
 msgid "Could not open file"
@@ -967,6 +1135,16 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Could not open new window"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
+#: src/app/open_targets.cpp
+msgid "Could not open target"
+msgstr ""
+
+#. TRANSLATORS: Native containing-folder launch error and its dialog title; no parameters.
+#: src/app/editor_frame_commands.cpp
+msgid "Could not open the containing folder."
 msgstr ""
 
 #: src/document/document_session.cpp
@@ -977,14 +1155,36 @@ msgstr ""
 msgid "Could not open the file for reading."
 msgstr ""
 
+#. TRANSLATORS: Selected file/folder/link launch failure and dialog title; no parameters.
+#: src/app/explorer_selections.cpp src/app/open_targets.cpp
+msgid "Could not open the selected target."
+msgstr ""
+
 #. TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
 #: src/app/editor_print_job.cpp
 #, c-format
 msgid "Could not print \"%s\"."
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file attributes: %s"
+msgstr ""
+
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not read file permissions: %s"
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
+msgstr ""
+
+#. TRANSLATORS: IDD_OPENWITH failure reading the selected program directory; no parameters.
+#: src/app/document_tools.cpp
+msgid "Could not read the program directory."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -998,6 +1198,12 @@ msgstr ""
 
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
+msgstr ""
+
+#. TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
+#: src/app/run_command.cpp
+#, c-format
+msgid "Could not run command: %s"
 msgstr ""
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
@@ -1022,7 +1228,12 @@ msgstr ""
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr ""
 
+#. TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
+msgid "Cu&t"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr ""
 
@@ -1120,6 +1331,11 @@ msgstr ""
 msgid "Enable &Multiple Selection"
 msgstr ""
 
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_ENABLE checkbox; enable timed backup copies.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Enable &periodic backup."
+msgstr ""
+
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Enclose Selection"
 msgstr ""
@@ -1154,6 +1370,11 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
+#: src/app/document_tools.cpp
+msgid "Execute &Document\tCtrl+L"
 msgstr ""
 
 #: src/editor/special_insert.h
@@ -1238,6 +1459,12 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Finish completion (Esc cancels)"
+msgstr ""
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; match count followed by " ..." while occurrence marking is pending.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Fnd %s%s"
 msgstr ""
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
@@ -1534,9 +1761,15 @@ msgstr ""
 msgid "Line ending conversion"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
+msgstr ""
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; current one-based line / total document lines, both formatted numbers.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Ln %s / %s"
 msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1653,7 +1886,7 @@ msgstr ""
 msgid "New &GUID"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "New &Window\tAlt+N"
 msgstr ""
 
@@ -1684,6 +1917,11 @@ msgstr ""
 msgid "Normal"
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_OPENWITH menu command; choose a program for the current document.
+#: src/app/document_tools.cpp
+msgid "O&pen Document With..."
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr ""
@@ -1693,8 +1931,18 @@ msgstr ""
 msgid "On &Startup"
 msgstr ""
 
+#. TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
+#: src/document/document_session.cpp
+msgid "Only the file owner can change the owner's write permission."
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
+msgstr ""
+
+#. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
+#: src/app/dialogs/auto_save_settings_dialog.cpp
+msgid "Open &Folder"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1723,6 +1971,18 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Open As Windows-1252..."
+msgstr ""
+
+#. TRANSLATORS: Open the current document's containing directory in the native file manager.
+#. TRANSLATORS: Original Action on Selection commands; open the target or its containing directory.
+#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+msgid "Open Containing &Folder"
+msgstr ""
+
+#. TRANSLATORS: IDD_OPENWITH title; choose a program to open the current document.
+#. TRANSLATORS: IDD_OPENWITH directory browser title.
+#: src/app/document_tools.cpp
+msgid "Open Document With"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1824,6 +2084,11 @@ msgstr ""
 msgid "Print zoom (%d%% to %d%%):"
 msgstr ""
 
+#. TRANSLATORS: IDD_RUN program browser filter; preserve wildcard patterns and vertical-bar separators.
+#: src/app/run_command.cpp
+msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr ""
@@ -1836,7 +2101,7 @@ msgstr ""
 msgid "Python"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr ""
 
@@ -1866,6 +2131,11 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE menu item; changes disk-file protection.
+#: src/app/editor_frame_commands.cpp
+msgid "Read Only &File"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -1971,6 +2241,11 @@ msgstr ""
 msgid "Right:"
 msgstr ""
 
+#. TRANSLATORS: IDD_RUN dialog title.
+#: src/app/run_command.cpp
+msgid "Run Command"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr ""
@@ -1996,7 +2271,7 @@ msgstr ""
 msgid "Sa&ve Find Text\tAlt+F3"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save &As...\tF6"
 msgstr ""
 
@@ -2009,7 +2284,7 @@ msgstr ""
 msgid "Save Back&up"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr ""
 
@@ -2055,12 +2330,25 @@ msgstr ""
 msgid "Save changes to %s before restarting?"
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
+#. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
+#. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
+#: src/app/document_tools.cpp src/app/run_command.cpp
+#, c-format
+msgid "Save changes to %s before running tools?"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "Save changes?"
 msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Save file"
+msgstr ""
+
+#. TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
+#: src/document/document_session.cpp
+msgid "Save the document before changing file permissions."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2097,6 +2385,23 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
+msgstr ""
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "Sel %s / %s"
+msgstr ""
+
+#. TRANSLATORS: IDS_STATUSITEM_FORMAT; %s is the formatted number of selected logical lines.
+#: src/app/editor_frame_status.cpp
+#, c-format
+msgid "SelLn %s"
+msgstr ""
+
+#. TRANSLATORS: IDR_POPUPMENU select the complete document.
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2165,6 +2470,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Toolbar\tCtrl+F11"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2356,6 +2665,16 @@ msgstr ""
 msgid "Text files (*.txt)"
 msgstr ""
 
+#. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
+#: src/app/run_command.cpp
+msgid "The command contains an unfinished quote."
+msgstr ""
+
+#. TRANSLATORS: Linux IDD_RUN parser error; a trailing backslash has no following character.
+#: src/app/run_command.cpp
+msgid "The command ends with an unfinished escape."
+msgstr ""
+
 #: src/app/editor_frame_file_watching.cpp
 msgid "The current file has been deleted. Save now?"
 msgstr ""
@@ -2409,6 +2728,12 @@ msgstr ""
 msgid "The specified text was not found."
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
+#. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
+#: src/document/document_session.cpp
+msgid "This command changes a file, not a directory."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "This document already has a file name."
 msgstr ""
@@ -2454,6 +2779,11 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "To &Octet"
+msgstr ""
+
+#. TRANSLATORS: IDR_POPUPMENU toggle the current fold block.
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle &Fold"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2709,15 +3039,15 @@ msgstr ""
 msgid "ZWSP — &Zero width space"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Zoom &Level..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr ""
 

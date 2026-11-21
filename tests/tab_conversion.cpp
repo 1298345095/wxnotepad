@@ -1,3 +1,4 @@
+#include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "native_search_helpers.h"
@@ -243,8 +244,7 @@ void SavedBytes(EditorFrame* frame) {
         Menu(frame, fixture.command);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "Save preserves independent encoding/BOM bytes, mixed EOLs and final newline");
-        Require(frame->DocumentEncoding() == fixture.encoding &&
-                    frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
+        Require(frame->DocumentEncoding() == fixture.encoding && StatusMetadata(frame).Contains("C/C++"),
                 "conversion preserves document encoding and language");
         editor->Send(Undo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
