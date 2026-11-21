@@ -49,11 +49,12 @@ bool EditorFrame::Restart() {
     const auto& preferences = settings_ ? settings_->values : defaults_;
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before restarting?")))
         return false;
+    // Finish all parent settings writes before the child reads its startup INI.
+    SaveSettings(false);
     if (!LaunchWindow(true)) {
         wxMessageBox(_("Could not restart wxnotepad."), _("Restart failed"), wxOK | wxICON_ERROR, this);
         return false;
     }
-    SaveSettings(false);
     fileChangeMonitor_.Stop();
     Destroy();
     return true;
