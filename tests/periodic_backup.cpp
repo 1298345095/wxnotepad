@@ -106,7 +106,7 @@ void Pump(long milliseconds) {
         wxMilliSleep(5);
     }
 }
-void Wait(const std::function<bool()>& condition, const char* message) {
+template <typename Condition> void Wait(const Condition& condition, const char* message) {
     TestClock::StopWatch clock;
     while (!condition() && clock.Time() < 2000)
         Pump(5);
@@ -128,7 +128,7 @@ void RealPeriodicTimer(EditorFrame& frame, const fs::path& root) {
     Pump(300);
     Require(Backups(folder).empty(), "unchanged document produces no periodic backup");
     TestEditor::Append(&frame, "first");
-    Wait([&] { return Backups(folder).size() == 1; }, "first edit starts actual periodic backup timer");
+    Wait([&folder] { return Backups(folder).size() == 1; }, "first edit starts actual periodic backup timer");
     const auto first = Backups(folder).front();
     Require(TestFiles::Bytes(first) == "seed\nfirst", "periodic backup writes complete live bytes");
     const auto name = TestFiles::Filename(first.filename());
@@ -160,7 +160,7 @@ void Rotation(EditorFrame& frame, const fs::path& root) {
         expected += ch;
         TestEditor::Append(&frame, std::string(1, ch));
         Wait(
-            [&] {
+            [&folder, &expected] {
                 for (const auto& path : Backups(folder))
                     if (TestFiles::Bytes(path) == expected) return true;
                 return false;
@@ -177,7 +177,7 @@ void Rotation(EditorFrame& frame, const fs::path& root) {
             "ordinary Save deletes managed entries while preserving manual Save Backup");
 }
 void SetOptions(EditorFrame& frame, bool enabled, bool retained, const char* seconds = "0.125") {
-    Settings(frame, [=](wxDialog* dialog) {
+    Settings(frame, [enabled, retained, seconds](wxDialog* dialog) {
         auto* periodic = Check(dialog, "Periodic backup");
         auto* manual = Check(dialog, "Manually delete backups");
         if (periodic->GetValue() != enabled) Click(periodic);
@@ -199,13 +199,13 @@ void IntervalReset(EditorFrame& frame, const fs::path& root) {
     SetOptions(frame, true, false, "0.3");
     Pump(200);
     Require(Backups(folder).empty(), "changing interval resets the running timer rather than keeping its old deadline");
-    Wait([&] { return Backups(folder).size() == 1; }, "changed interval produces a backup at its new deadline");
+    Wait([&folder] { return Backups(folder).size() == 1; }, "changed interval produces a backup at its new deadline");
     SetOptions(frame, true, false, "0");
     TestEditor::Append(&frame, "zero");
     Pump(300);
     Require(Backups(folder).size() == 1, "zero period stops scheduling while retaining tracked files");
     SetOptions(frame, true, false);
-    Wait([&] { return Backups(folder).size() == 2; }, "nonzero interval restores pending revision eligibility");
+    Wait([&folder] { return Backups(folder).size() == 2; }, "nonzero interval restores pending revision eligibility");
     Require(frame.Save().status == SaveStatus::Saved && Backups(folder).empty(),
             "Save cleans entries tracked before and after a zero-period pause");
 }
@@ -220,13 +220,13 @@ void RetentionAndBoundaries(EditorFrame& frame, SettingsStore& store, const fs::
     for (size_t index = 0; index < 8; ++index) {
         expected += '!';
         TestEditor::Append(&frame, "!");
-        Wait([&] { return Backups(folder).size() == index + 1; }, "retention keeps rotated files");
+        Wait([&folder, index] { return Backups(folder).size() == index + 1; }, "retention keeps rotated files");
     }
     Require(frame.Save().status == SaveStatus::Saved && Backups(folder).size() == 8,
             "manual retention keeps tracked and previously rotated files on Save");
     SetOptions(frame, true, false);
     TestEditor::Append(&frame, "x");
-    Wait([&] { return Backups(folder).size() == 9; }, "new lifecycle can create a managed backup");
+    Wait([&folder] { return Backups(folder).size() == 9; }, "new lifecycle can create a managed backup");
     SetOptions(frame, false, false);
     Require(Backups(folder).size() == 8, "disabling backups cleans only currently managed files");
     TestEditor::Append(&frame, "disabled");
@@ -249,14 +249,14 @@ void RetentionAndBoundaries(EditorFrame& frame, SettingsStore& store, const fs::
         Require(saved.Contains(wxString::Format("AutoSavePeriod=%d", milliseconds)),
                 "defined float-second boundary preserves original truncation and signed INI bits");
     }
-    Wait([&] { return Backups(folder).size() == 9; }, "restoring nonzero period restarts live scheduling");
+    Wait([&folder] { return Backups(folder).size() == 9; }, "restoring nonzero period restarts live scheduling");
     Settings(frame, [](wxDialog* dialog) {
         Period(dialog)->SetValue("0");
         Click(Check(dialog, "Periodic backup"));
         Click(dialog->FindWindow(wxID_CANCEL));
     });
     TestEditor::Append(&frame, "after-cancel");
-    Wait([&] { return Backups(folder).size() == 10; }, "Cancel leaves live repeating scheduler enabled");
+    Wait([&folder] { return Backups(folder).size() == 10; }, "Cancel leaves live repeating scheduler enabled");
     Require(frame.Save().status == SaveStatus::Saved && Backups(folder).size() == 8,
             "old manually retained files remain unrelated to later cleanup");
 }
@@ -267,7 +267,7 @@ void Lifecycle(EditorFrame& frame, const fs::path& root) {
     TestFiles::WriteBytes(source, "lifecycle");
     Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "opens lifecycle fixture");
     TestEditor::Append(&frame, "one");
-    Wait([&] { return Backups(folder).size() == 1; }, "lifecycle starts with managed backup");
+    Wait([&folder] { return Backups(folder).size() == 1; }, "lifecycle starts with managed backup");
     const auto first = Backups(folder).front();
     Require(frame.SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
                 frame.SaveAs(TestFiles::Filename(folder)).status == SaveStatus::Failed &&
@@ -276,12 +276,13 @@ void Lifecycle(EditorFrame& frame, const fs::path& root) {
                 fs::exists(first),
             "cancelled or failed file actions retain managed backups");
     TestEditor::Append(&frame, "two");
-    Wait([&] { return Backups(folder).size() == 2; }, "failed actions leave scheduler and revision eligibility intact");
+    Wait([&folder] { return Backups(folder).size() == 2; },
+         "failed actions leave scheduler and revision eligibility intact");
     Require(frame.SaveCopy(TestFiles::Filename(folder / "copy.txt")).status == SaveStatus::Saved &&
                 Backups(folder).empty() && frame.DocumentIsModified(),
             "successful Save Copy stops and cleans managed backups without changing the live save point");
     TestEditor::Append(&frame, "after-copy");
-    Wait([&] { return Backups(folder).size() == 1; }, "editing restarts scheduler after Save Copy");
+    Wait([&folder] { return Backups(folder).size() == 1; }, "editing restarts scheduler after Save Copy");
     Require(frame.ReloadCurrentFile().status == OpenStatus::Opened && Backups(folder).empty(),
             "successful same-file reload deletes managed entries");
     TestEditor::Append(&frame, "manual");
@@ -289,11 +290,11 @@ void Lifecycle(EditorFrame& frame, const fs::path& root) {
     Pump(300);
     Require(Backups(folder).size() == 1, "successful manual backup suppresses automatic backup of that revision");
     TestEditor::Append(&frame, "next");
-    Wait([&] { return Backups(folder).size() == 2; }, "next edit becomes eligible after manual backup");
+    Wait([&folder] { return Backups(folder).size() == 2; }, "next edit becomes eligible after manual backup");
     Require(frame.Save().status == SaveStatus::Saved && Backups(folder).size() == 1,
             "manual backup remains untracked through later ordinary save");
     TestEditor::Append(&frame, "discard");
-    Wait([&] { return Backups(folder).size() == 2; }, "new managed backup before discard");
+    Wait([&folder] { return Backups(folder).size() == 2; }, "new managed backup before discard");
     {
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, wxID_CANCEL);
         Require(!frame.NewDocument() && driver.prompts == 1 && Backups(folder).size() == 2,
@@ -306,13 +307,13 @@ void Lifecycle(EditorFrame& frame, const fs::path& root) {
     }
     Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "reopens lifecycle fixture");
     TestEditor::Append(&frame, "undo");
-    Wait([&] { return Backups(folder).size() == 2; }, "undo lifecycle has managed backup");
+    Wait([&folder] { return Backups(folder).size() == 2; }, "undo lifecycle has managed backup");
     frame.Editor()->Send(Message::Undo);
     Require(!frame.DocumentIsModified() && frame.NewDocument() && Backups(folder).size() == 2,
             "New from unmodified revision retains original lifecycle backups");
     Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "reopens before different-file load");
     TestEditor::Append(&frame, "different");
-    Wait([&] { return Backups(folder).size() == 3; }, "different-file lifecycle has managed backup");
+    Wait([&folder] { return Backups(folder).size() == 3; }, "different-file lifecycle has managed backup");
     frame.Editor()->Send(Message::Undo);
     const auto other = folder / "other.txt";
     TestFiles::WriteBytes(other, "other");
@@ -360,7 +361,7 @@ void PeriodicPayloads(EditorFrame& frame, SettingsStore& settings, const fs::pat
         editor->Send(Message::SetSel, 3, 1);
         const auto recent = settings.values.recentFiles;
         const auto folded = editor->Send(Message::GetFoldExpanded, 0);
-        Wait([&] { return Backups(folder).size() == 1; }, "actual periodic timer saves encoded live revision");
+        Wait([&folder] { return Backups(folder).size() == 1; }, "actual periodic timer saves encoded live revision");
         Require(TestFiles::Bytes(Backups(folder).front()) == fixture.expected + "!" &&
                     TestFiles::Bytes(source) == fixture.source,
                 "periodic payload preserves native ANSI versus UTF-8, embedded NUL/EOL and untouched source bytes");
@@ -394,7 +395,7 @@ void UntitledAndFallback(EditorFrame& frame, const fs::path& root) {
     const auto folder = Fallback(root);
     fs::create_directories(folder);
     const auto suffix = wxString::Format("%lu.bak", wxGetProcessId());
-    const auto owned = [&] {
+    const auto owned = [&folder, &suffix] {
         std::vector<fs::path> result;
         for (const auto& item : fs::directory_iterator(folder)) {
             const auto name = TestFiles::Filename(item.path().filename());
@@ -408,7 +409,7 @@ void UntitledAndFallback(EditorFrame& frame, const fs::path& root) {
     const auto payload = "untitled-" + root.filename().string();
     TestEditor::Append(&frame, payload);
     frame.Editor()->Send(Message::SetSel, 5, 1);
-    Wait([&] { return owned().size() == 1; }, "changed untitled document uses application data backup folder");
+    Wait([&owned] { return owned().size() == 1; }, "changed untitled document uses application data backup folder");
     Require(TestFiles::Bytes(owned().front()) == payload && frame.DocumentPath().empty() && frame.DocumentIsModified(),
             "untitled automatic backup preserves literal payload and live identity/save point");
     TestEditor::RequireSelection(frame.Editor(), 5, 1, "periodic backup preserves backwards selection");
@@ -432,6 +433,8 @@ public:
         if (error)
             std::fprintf(stderr, "FAIL: restore private backup directory permissions: %s\n", error.message().c_str());
     }
+    BackupDirectoryWriteBlock(const BackupDirectoryWriteBlock&) = delete;
+    BackupDirectoryWriteBlock& operator=(const BackupDirectoryWriteBlock&) = delete;
     void Restore() const { fs::permissions(directory_, original_); }
 
 private:
@@ -470,7 +473,8 @@ void FailedBackupRetry(EditorFrame& frame, const fs::path& root) {
         fallbackBlocked.Restore();
     }
     frame.SetSize(originalSize);
-    Wait([&] { return Backups(folder).size() == 1; }, "failed backup keeps same revision eligible for later period");
+    Wait([&folder] { return Backups(folder).size() == 1; },
+         "failed backup keeps same revision eligible for later period");
     Require(TestFiles::Bytes(Backups(folder).front()) == "originalnew-revision" &&
                 TestFiles::Bytes(source) == "original" && frame.DocumentIsModified(),
             "retry produces complete bytes without touching source/save point");
@@ -490,6 +494,8 @@ public:
         std::error_code error;
         fs::remove_all(path_, error);
     }
+    PeriodicFixtureRoot(const PeriodicFixtureRoot&) = delete;
+    PeriodicFixtureRoot& operator=(const PeriodicFixtureRoot&) = delete;
     const fs::path& Path() const { return path_; }
 
 private:
