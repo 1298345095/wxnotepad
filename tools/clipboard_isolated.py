@@ -22,6 +22,7 @@ WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
 FAILURE_HISTORY_EVENTS = 256
 FOCUS_UNTIL_PREFIX = "focus-until:"
+KEY_DELAY_PREFIX = "key-delay:"
 
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
@@ -232,7 +233,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "key-delay:", "keydown:", "keyup:", "click:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -393,10 +394,10 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     driver_trace(focus, "driver.inject-begin", phase)
                     xdo(phase, key)
                     driver_trace(focus, "driver.inject-complete", phase)
-                elif request.startswith(("key:", "key-delay:")):
+                elif request.startswith(("key:", KEY_DELAY_PREFIX)):
                     acknowledge(focus)
                     driver_trace(focus, "driver.inject-begin", "key-press-release")
-                    if request.startswith("key-delay:"):
+                    if request.startswith(KEY_DELAY_PREFIX):
                         _, delay, keys = request.split(":", 2)
                         xdo("key", "--clearmodifiers", "--delay", delay, keys)
                     else:
