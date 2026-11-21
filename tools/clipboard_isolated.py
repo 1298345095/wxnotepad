@@ -21,6 +21,7 @@ from collections import deque
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
 FAILURE_HISTORY_EVENTS = 256
+FOCUS_UNTIL_PREFIX = "focus-until:"
 
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
@@ -231,7 +232,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", "focus-until:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -367,8 +368,8 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         pending.replace(phase)
                     wait_drag_state(".drag-ended", "end")
                     acknowledge(focus)
-                elif request.startswith(("focus:", "focus-until:")):
-                    if request.startswith("focus-until:"):
+                elif request.startswith(("focus:", FOCUS_UNTIL_PREFIX)):
+                    if request.startswith(FOCUS_UNTIL_PREFIX):
                         _, expiry, title = request.split(":", 2)
                         deadline_us = int(expiry)
                     else:

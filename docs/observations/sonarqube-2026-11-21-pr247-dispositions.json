@@ -1,0 +1,21 @@
+{
+  "projectKey": "1298345095_wxnotepad",
+  "pullRequest": "247",
+  "reviewedRevision": "4c9512decda67c9e229d4242b52a482542d07bca",
+  "policy": "Issue-specific native ownership review. No rule, gate, source, coverage, duplication, assertion, timeout or concurrency changes.",
+  "evidence": "F:/wxnotepad-evidence/toolbar-artwork-2026-11-21/sonar-followup/",
+  "dispositions": [
+    {
+      "key": "AaH-Fk4R0xKWwBM58FbH",
+      "rule": "cpp:S3584",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "Reviewed tests/focus_acknowledgement.cpp:88-103 at 4c9512d. The reported line89 creates the test's EditorFrame immediately after wxLogStderr registration. Both allocations have native owners. Pinned wxWidgets3.3.3 src/gtk/toplevel.cpp:720 registers the frame in wxTopLevelWindows. Both successful and caught-failure presentation callbacks reach frame->Destroy() at line101; toplvcmn.cpp:102-117 queues deferred deletion, and appcmn.cpp:129-153 deletes remaining top-level windows during final cleanup. The logger is retained by SetActiveTarget in log.cpp:531-542 and deleted by appcmn.cpp:164. The canonical probe entry point ran the real GCC-coverage test on a private Wayland display under GDB: it exited0 and reached PASS. Its frame destructor breakpoints report one unique EditorFrame address (complete/deleting destructor locations); its non-null log-target registration and wxLogStderr destructor report the same logger address, followed by a cleared target. The constructor breakpoint spelling was unresolved, so registration provenance comes from the pinned source, not a claimed constructor observation. There is no demonstrated lost allocation; this is framework-owned deferred cleanup. Retained trace: native-ownership/run-001.log. No allocation rewrite or analysis suppression was used."
+    },
+    {
+      "key": "AaH-Fk4R0xKWwBM58FbE",
+      "rule": "cpp:S5025",
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "Reviewed tests/focus_acknowledgement.cpp:89 at 4c9512d. EditorFrame is a wxFrame registered and retained by wxWidgets, not an unmanaged local allocation. The actual presentation callback uses the framework's Destroy() route on both success and caught test failure; wxPendingDelete/final top-level cleanup owns deletion. Pinned wxWidgets3.3.3 gtk/toplevel.cpp:720, common/toplvcmn.cpp:102-117 and common/appcmn.cpp:129-153 establish the owner and cleanup chain. The real native coverage test under GDB exited0, printed its original PASS, and invoked the EditorFrame destructor for one unique object address. This follows the repository's existing source-specific wxWindow ownership dispositions. The trace is retained in native-ownership/run-001.log. No manual independent owner, blanket suppression, source-scope change or gate change is introduced."
+    }
+  ]
+}
