@@ -2,6 +2,7 @@ param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Eviden
       [ValidateRange(1, 8)][int]$Requests = 8)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+. "$PSScriptRoot/open_target_request.ps1"
 $taskComErrors = @{}
 function Write-ExplorerPollingError([System.Management.Automation.ErrorRecord]$Failure, [string]$Operation,
                                     [switch]$DuringCleanup) {
@@ -32,7 +33,7 @@ for ($taskIndex = 1; $taskIndex -le $Requests; $taskIndex++) {
         if ($taskWatch.Elapsed.TotalSeconds -gt 30) { throw 'Owned folder request did not arrive' }
         Start-Sleep -Milliseconds 20
     }
-    $taskLines = [System.IO.File]::ReadAllLines($taskRequest, [System.Text.Encoding]::UTF8)
+    $taskLines = @(Read-ExplorerRequest $taskRequest)
     $taskDirectory = $taskLines[0]
     $taskRequested[$taskDirectory] = $true
     $taskItem = $taskLines[1]

@@ -224,6 +224,40 @@ void DesktopTarget(EditorFrame* frame, const wxString& scheme, const wxString& e
     std::puts("PASS: controlled real desktop handlers preserve URI ports, encoding and unsupported files");
 }
 #ifdef __WXMSW__
+void PublishExplorerRequest(const std::filesystem::path& path, const std::string& bytes) {
+    auto staging = path;
+    staging += ".tmp";
+    std::ofstream output;
+    output.exceptions(std::ios::badbit | std::ios::failbit);
+    output.open(staging, std::ios::binary);
+    output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    output.close();
+    // The observer must never see the final name while its writer is open.
+    std::filesystem::rename(staging, path);
+}
+void PublishedExplorerRequest() {
+    const auto path = Directory() / "request-publication.check";
+    auto staging = path;
+    staging += ".tmp";
+    const std::string bytes = "directory/目标\n\n1234\ncancelled\n";
+    const auto raw =
+        CreateFileW(staging.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+    Require(raw != INVALID_HANDLE_VALUE, "owned request staging lock must open");
+    std::unique_ptr<void, decltype(&CloseHandle)> lock(raw, &CloseHandle);
+    bool rejected = false;
+    try {
+        PublishExplorerRequest(path, bytes);
+    } catch (const std::ios_base::failure&) {
+        rejected = true;
+    }
+    Require(rejected && !std::filesystem::exists(path), "failed staging write must not publish a request name");
+    lock.reset();
+    std::filesystem::remove(staging);
+    PublishExplorerRequest(path, bytes);
+    Require(!std::filesystem::exists(staging) && TestFiles::Bytes(path) == bytes,
+            "closed request publication must preserve the complete UTF-8 payload and empty item line");
+    std::puts("PASS: closed staging publishes exact request bytes and failed staging leaves no request");
+}
 void PublishedAcknowledgement() {
     const auto root = Directory();
     const auto staging = root / "acknowledgement.tmp";
@@ -271,11 +305,9 @@ void PendingFolderTargets(EditorFrame* frame, int& request) {
         std::filesystem::create_directory(parent);
         std::ofstream(parent / "target.txt") << "owned pending target\n";
         const auto target = TestFiles::Filename(parent / "target.txt");
-        std::ofstream marker(root / ("folder-request-" + std::to_string(++request)), std::ios::binary);
-        marker << TestFiles::Filename(parent).utf8_string() << '\n'
-               << target.utf8_string() << '\n'
-               << GetCurrentProcessId() << '\n';
-        if (cancelled) marker << "cancelled\n";
+        const auto bytes = TestFiles::Filename(parent).utf8_string() + "\n" + target.utf8_string() + "\n" +
+                           std::to_string(GetCurrentProcessId()) + "\n" + (cancelled ? "cancelled\n" : "");
+        PublishExplorerRequest(root / ("folder-request-" + std::to_string(++request)), bytes);
         return target;
     };
     const auto first = prepare("pending-first", false);
@@ -325,10 +357,10 @@ void FolderTarget(EditorFrame* frame) {
             "Native Explorer caller pid=%lu thread=%lu com_result=%08lx apartment=%d qualifier=%d attributes=%08lx\n",
             GetCurrentProcessId(), GetCurrentThreadId(), static_cast<unsigned long>(apartmentResult),
             static_cast<int>(apartment), static_cast<int>(qualifier), GetFileAttributesW(target.wc_str()));
-        std::ofstream(root / ("folder-request-" + std::to_string(request)), std::ios::binary)
-            << (openDirectory ? target : wxFileName(target).GetPath()).utf8_string() << '\n'
-            << (openDirectory ? wxString{} : target).utf8_string() << '\n'
-            << GetCurrentProcessId() << '\n';
+        PublishExplorerRequest(root / ("folder-request-" + std::to_string(request)),
+                               (openDirectory ? target : wxFileName(target).GetPath()).utf8_string() + "\n" +
+                                   (openDirectory ? wxString{} : target).utf8_string() + "\n" +
+                                   std::to_string(GetCurrentProcessId()) + "\n");
         NativeSearch::Command(frame,
                               frame->GetMenuBar()->FindMenuItem(menu, openDirectory ? "Open File, Folder, Link, etc."
                                                                                     : "Open Containing Folder"));
@@ -496,6 +528,7 @@ public:
         if (argc == 1) {
             try {
                 PublishedAcknowledgement();
+                PublishedExplorerRequest();
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 return false;
