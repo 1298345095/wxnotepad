@@ -213,6 +213,9 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const c
                 "own a distinct native clipboard offer before the command");
     }
 #ifdef __WXMSW__
+    // Materialize our seed before testing Copy, so delayed rendering on this
+    // same GUI thread cannot become part of the command's clipboard write.
+    Require(wxTheClipboard->Flush(), "materialize the owned clipboard offer before the command");
     const auto seededClipboard = ObserveClipboard();
 #endif
     Feedback feedback;
