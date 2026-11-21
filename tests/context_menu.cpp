@@ -5,6 +5,7 @@
 #include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "native_paint_helpers.h"
+#include "windows_failure_capture.h"
 #include <wx/wx.h>
 #include <wx/menu.h>
 #include <wx/clipbrd.h>
@@ -16,6 +17,9 @@
 #include <chrono>
 #include <functional>
 #include <set>
+#ifdef __WXMSW__
+#include <commctrl.h>
+#endif
 
 namespace {
 using enum Scintilla::Message;
@@ -45,6 +49,132 @@ void NativeRequest(const wxString& command) {
     }
     Require(wxRenameFile(focusFile + ".tmp", focusFile, true), "atomically publish native-input request");
 }
+#endif
+
+#ifdef __WXMSW__
+// Observe this fixture's native delivery without intercepting or retrying it.
+class MouseReceipts final {
+public:
+    explicit MouseReceipts(EditorFrame* frame)
+        : windows_{static_cast<HWND>(frame->GetHandle()), static_cast<HWND>(frame->Editor()->GetHandle())} {
+        for (const auto window : windows_) {
+            if (!SetWindowSubclass(window, Observe, Identity(), reinterpret_cast<DWORD_PTR>(this))) {
+                Remove();
+                throw std::runtime_error("observe owned context-menu native messages");
+            }
+            ++installed_;
+        }
+    }
+    MouseReceipts(const MouseReceipts&) = delete;
+    MouseReceipts& operator=(const MouseReceipts&) = delete;
+    ~MouseReceipts() { Remove(); }
+    void Begin(unsigned invocation, wxPoint point) noexcept {
+        invocation_ = invocation;
+        point_ = POINT{point.x, point.y};
+        count_ = 0;
+        omitted_ = 0;
+        Record("before-invoke");
+    }
+    void Record(const char* phase, HWND recipient = nullptr, UINT message = 0, WPARAM word = 0,
+                LPARAM parameter = 0) noexcept {
+        if (count_ == records_.size()) {
+            ++omitted_;
+            return;
+        }
+        auto& record = records_[count_++];
+        record = {};
+        record.phase = phase;
+        record.recipient = recipient;
+        record.message = message;
+        record.word = word;
+        record.parameter = parameter;
+        record.time = GetTickCount();
+        record.messageTime = GetMessageTime();
+        record.messagePosition = GetMessagePos();
+        record.extra = GetMessageExtraInfo();
+        record.cursorValid = GetCursorPos(&record.cursor);
+        record.hit = WindowFromPoint(record.cursor);
+        record.plannedHit = WindowFromPoint(point_);
+        record.foreground = GetForegroundWindow();
+        record.localFocus = ::GetFocus();
+        record.localCapture = GetCapture();
+        record.gui.cbSize = sizeof(record.gui);
+        record.guiValid = GetGUIThreadInfo(0, &record.gui);
+        GetWindowRect(windows_[1], &record.editor);
+        record.left = GetAsyncKeyState(VK_LBUTTON);
+        record.right = GetAsyncKeyState(VK_RBUTTON);
+        record.control = GetAsyncKeyState(VK_CONTROL);
+        record.shift = GetAsyncKeyState(VK_SHIFT);
+        record.alt = GetAsyncKeyState(VK_MENU);
+    }
+    void Dump() const {
+        std::fprintf(stderr,
+                     "Popup native receipts invocation=%u planned=%ld,%ld frame=%p editor=%p count=%zu omitted=%u\n",
+                     invocation_, point_.x, point_.y, windows_[0], windows_[1], count_, omitted_);
+        for (size_t index = 0; index < count_; ++index) {
+            const auto& record = records_[index];
+            std::fprintf(stderr,
+                         "Popup native receipt invocation=%u seq=%zu phase=%s tick=%lu messageTime=%ld "
+                         "recipient=%p message=%u word=%llu parameter=%lld messagePos=%lu extra=%lld "
+                         "cursorValid=%d cursor=%ld,%ld hit=%p plannedHit=%p foreground=%p localFocus=%p "
+                         "localCapture=%p guiValid=%d active=%p focus=%p capture=%p menuOwner=%p "
+                         "editor=%ld,%ld,%ld,%ld buttons=%d,%d modifiers=%d,%d,%d\n",
+                         invocation_, index, record.phase, record.time, record.messageTime, record.recipient,
+                         record.message, static_cast<unsigned long long>(record.word),
+                         static_cast<long long>(record.parameter), record.messagePosition,
+                         static_cast<long long>(record.extra), record.cursorValid, record.cursor.x, record.cursor.y,
+                         record.hit, record.plannedHit, record.foreground, record.localFocus, record.localCapture,
+                         record.guiValid, record.gui.hwndActive, record.gui.hwndFocus, record.gui.hwndCapture,
+                         record.gui.hwndMenuOwner, record.editor.left, record.editor.top, record.editor.right,
+                         record.editor.bottom, record.left, record.right, record.control, record.shift, record.alt);
+        }
+        std::fflush(stderr);
+    }
+
+private:
+    struct Receipt {
+        const char* phase;
+        HWND recipient;
+        UINT message;
+        WPARAM word;
+        LPARAM parameter;
+        DWORD time;
+        LONG messageTime;
+        DWORD messagePosition;
+        LPARAM extra;
+        BOOL cursorValid;
+        POINT cursor;
+        HWND hit;
+        HWND plannedHit;
+        HWND foreground;
+        HWND localFocus;
+        HWND localCapture;
+        BOOL guiValid;
+        GUITHREADINFO gui;
+        RECT editor;
+        SHORT left, right, control, shift, alt;
+    };
+    static LRESULT CALLBACK Observe(HWND window, UINT message, WPARAM word, LPARAM parameter, UINT_PTR,
+                                    DWORD_PTR data) {
+        if (message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK ||
+            message == WM_CONTEXTMENU)
+            reinterpret_cast<MouseReceipts*>(data)->Record("native-message", window, message, word, parameter);
+        return DefSubclassProc(window, message, word, parameter);
+    }
+    UINT_PTR Identity() const noexcept { return reinterpret_cast<UINT_PTR>(this); }
+    void Remove() noexcept {
+        while (installed_)
+            RemoveWindowSubclass(windows_[--installed_], Observe, Identity());
+    }
+    static constexpr size_t ReceiptCapacity = 16;
+    std::array<HWND, 2> windows_;
+    size_t installed_ = 0;
+    std::array<Receipt, ReceiptCapacity> records_{};
+    size_t count_ = 0;
+    unsigned omitted_ = 0;
+    unsigned invocation_ = 0;
+    POINT point_{};
+};
 #endif
 void NativeClick(EditorFrame* frame, wxPoint screen, unsigned button) {
 #ifdef __WXMSW__
@@ -175,6 +305,9 @@ public:
     }
     void Open(const wxPoint& screen, int key = 0) {
         if (screen == wxDefaultPosition && key == 0) key = WXK_MENU;
+#ifdef __WXMSW__
+        mouseReceipts_.Begin(++invocation_, screen);
+#endif
         std::printf("BEGIN: popup key=%d point=%d,%d action=%d\n", key, screen.x, screen.y, action);
         std::fflush(stdout);
         observed_ = 0;
@@ -198,6 +331,9 @@ public:
         } else {
             NativeClick(frame_, screen, 3);
         }
+#ifdef __WXMSW__
+        mouseReceipts_.Record("after-invoke");
+#endif
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
 #ifdef __WXGTK__
         invocationDeadline_ = deadline;
@@ -206,6 +342,13 @@ public:
             wxYield();
             wxMilliSleep(10);
         } while (!observed_ && std::chrono::steady_clock::now() < deadline);
+#ifdef __WXMSW__
+        if (failure_ || observed_ != 1 || (action != wxID_NONE && dispatches_ != 1)) {
+            mouseReceipts_.Record("failed-before-capture");
+            mouseReceipts_.Dump();
+            NativeFailure::Capture("context-menu", {static_cast<long>(wxGetProcessId())});
+        }
+#endif
         if (failure_) std::rethrow_exception(failure_);
         if (observed_ != 1)
             std::fprintf(stderr, "Observed native popup count: %d; right double-clicks: %d\n", observed_, rightDouble_);
@@ -273,6 +416,10 @@ private:
 
     EditorFrame* frame_;
     unsigned language_;
+#ifdef __WXMSW__
+    MouseReceipts mouseReceipts_{frame_};
+    unsigned invocation_ = 0;
+#endif
     int observed_ = 0;
     int dispatches_ = 0;
     void Command(wxCommandEvent& event) {
