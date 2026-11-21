@@ -25,7 +25,7 @@ bool CompleteLatex(EditorControl& editor) {
         --ptr;
         *ptr = ch;
     } while (position >= 0 && ptr != buffer.data());
-    if (ch != 92) return false;
+    if (ch != '\\') return false;
     const auto length = buffer.data() + buffer.size() - 1 - ptr;
     const uint32_t character = GetLaTeXInputUnicodeCharacter(ptr, length);
     if (!character) return false;

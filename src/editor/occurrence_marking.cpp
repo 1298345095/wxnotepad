@@ -83,7 +83,7 @@ void MarkRanges(EditorControl& editor, const std::array<Range, 240>& ranges, siz
         const auto last = flags & Multiline ? editor.Send(LineFromPosition, range.start + range.length) : line;
         line = std::max(line, bookmarkLine + 1);
         for (; line <= last; ++line)
-            editor.Send(MarkerAdd, line, 0);
+            editor.Send(MarkerAdd, line, EditorMarker::Bookmark);
         bookmarkLine = last;
     }
 }
@@ -108,7 +108,7 @@ void OccurrenceMarking::Reset(unsigned flags, std::string text) {
     }
     if ((bookmarkLine_ >= 0 || bookmarkForFindAll_) && ((flags | flags_) & Bookmark) &&
         ((flags & (Bookmark | FromFindAll)) || !bookmarkForFindAll_))
-        editor_.Send(Message::MarkerDeleteAll, 0);
+        editor_.Send(Message::MarkerDeleteAll, EditorMarker::Bookmark);
     flags_ = flags;
     text_ = std::move(text);
     pending_ = false;
@@ -138,7 +138,7 @@ void OccurrenceMarking::Stop() {
 
 void OccurrenceMarking::SetOptions(int options) {
     options_ = options;
-    if (options & 1)
+    if (options & MarkOccurrenceOption_Enabled)
         MarkSelection(false);
     else
         Clear();
@@ -152,7 +152,7 @@ void OccurrenceMarking::Update(Scintilla::Update updated) {
             ignoreSelectionUpdate_ = false;
             return;
         }
-        if (!(options_ & 1)) return;
+        if (!(options_ & MarkOccurrenceOption_Enabled)) return;
         if (!editor_.Send(Message::GetSelectionEmpty)) {
             MarkSelection(value & static_cast<unsigned>(std::to_underlying(Content)));
             return;
@@ -171,8 +171,8 @@ void OccurrenceMarking::MarkSelection(bool changed) {
         Clear();
         return;
     }
-    unsigned flags = (options_ & 8) << 10;
-    if (options_ & 4) {
+    unsigned flags = (options_ & MarkOccurrenceOption_Bookmark) ? Bookmark : 0;
+    if (options_ & MarkOccurrenceOption_WholeWord) {
         flags |= static_cast<unsigned>(std::to_underlying(Scintilla::FindOption::WholeWord));
         const auto wordEnd = editor_.Send(Message::WordEndPosition, start, true);
         if (wordEnd != end || !editor_.Send(Message::IsRangeWord, start, wordEnd)) {
@@ -184,7 +184,7 @@ void OccurrenceMarking::MarkSelection(bool changed) {
     std::string text(static_cast<size_t>(length) + 1, '\0');
     editor_.Send(Message::GetSelText, 0, reinterpret_cast<intptr_t>(text.data()));
     text.resize(static_cast<size_t>(length));
-    if ((options_ & 2) || !CaseSensitiveSelection(text))
+    if ((options_ & MarkOccurrenceOption_MatchCase) || !CaseSensitiveSelection(text))
         flags |= static_cast<unsigned>(std::to_underlying(Scintilla::FindOption::MatchCase));
     Start(changed, flags, std::move(text));
 }

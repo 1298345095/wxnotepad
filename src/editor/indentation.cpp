@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/editor_ids.h"
 #include <utility>
 #include <ScintillaTypes.h>
 #include <string>
@@ -56,9 +57,9 @@ void EditorControl::AutoIndent() {
     if (line <= 0) return;
     const auto previousStart = Send(Message::PositionFromLine, line - 1);
     const auto previousEnd = Send(Message::GetLineEndPosition, line - 1);
-    if (previousEnd == previousStart && (Send(Message::MarkerGet, line - 1) & 1)) {
-        Send(Message::MarkerDelete, line - 1, 0);
-        Send(Message::MarkerAdd, line, 0);
+    if (previousEnd == previousStart && (Send(Message::MarkerGet, line - 1) & EditorMarker::BookmarkMask)) {
+        Send(Message::MarkerDelete, line - 1, EditorMarker::Bookmark);
+        Send(Message::MarkerAdd, line, EditorMarker::Bookmark);
     }
     const auto length = Send(Message::LineLength, line - 1);
     if (length < 2) return;

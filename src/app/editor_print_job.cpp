@@ -1,6 +1,7 @@
 #include "editor_print_job.h"
 
 #include "diagnostics/trace.h"
+#include "editor/display_units.h"
 #include "editor/editor_control.h"
 #include "editor/font_settings.h"
 #include "editor/platform/native_drawing_error.h"
@@ -69,7 +70,6 @@ wxString DateLabel(PrintHeader header) {
 }
 
 // Bridge.cpp expresses cell heights and insets in printer device units.
-constexpr int PointsPerInch = 72;
 constexpr int LabelInset = 5;
 constexpr int RuleWidth = 1;
 
@@ -138,7 +138,7 @@ int DecorationLineHeight(wxDC& dc, const wxFont& font) {
 }
 
 wxFont DecorationFont(wxDC& dc, const wxString& face, int size) {
-    constexpr int pointUnitsPerInch = PointsPerInch * Scintilla::FontSizeMultiplier;
+    constexpr int pointUnitsPerInch = DisplayUnits::PointsPerInch * Scintilla::FontSizeMultiplier;
 #ifdef __WXMSW__
     // Positive LOGFONT height requests the complete cell, including internal leading.
     wxNativeFontInfo native;
@@ -432,11 +432,11 @@ struct GtkPrintJob {
         double left = 0;
         double right = 0;
         if (!gtk_print_context_get_hard_margins(context, &top, &bottom, &left, &right)) return {paper, paper};
-        constexpr double pointsPerInch = 72;
-        const int x = static_cast<int>(std::ceil(left * dpi.x / pointsPerInch));
-        const int y = static_cast<int>(std::ceil(top * dpi.y / pointsPerInch));
-        return {paper, wxRect(x, y, paper.width - x - static_cast<int>(std::ceil(right * dpi.x / pointsPerInch)),
-                              paper.height - y - static_cast<int>(std::ceil(bottom * dpi.y / pointsPerInch)))};
+        const int x = static_cast<int>(std::ceil(left * dpi.x / DisplayUnits::PointsPerInch));
+        const int y = static_cast<int>(std::ceil(top * dpi.y / DisplayUnits::PointsPerInch));
+        return {paper,
+                wxRect(x, y, paper.width - x - static_cast<int>(std::ceil(right * dpi.x / DisplayUnits::PointsPerInch)),
+                       paper.height - y - static_cast<int>(std::ceil(bottom * dpi.y / DisplayUnits::PointsPerInch)))};
     }
 };
 

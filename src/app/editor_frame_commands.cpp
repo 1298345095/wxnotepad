@@ -13,6 +13,7 @@
 #include "app/dialogs/word_wrap_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
+#include "editor/editor_ids.h"
 #include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
@@ -1101,7 +1102,10 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->GoToBookmark(true); }, bookmarkNext);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->GoToBookmark(false); }, bookmarkPrevious);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectAllBookmarks(); }, bookmarkSelect);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::MarkerDeleteAll, 0); }, bookmarkClear);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::MarkerDeleteAll, EditorMarker::Bookmark); },
+        bookmarkClear);
     auto* goTo = new wxMenu;
     const int goToLine = wxWindow::NewControlId();
     goTo->Append(goToLine, _("&Goto Line...\tCtrl+G"));
@@ -1244,9 +1248,10 @@ wxMenu* EditorFrame::CreateViewMenu() {
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->VisualBraceMatching()); }, matchBraces);
     AppendCurrentLineCommands(view);
     auto* occurrences = new wxMenu;
-    for (const auto& [label, bit] :
-         {std::pair{wxTRANSLATE("&Off"), 1}, std::pair{wxTRANSLATE("Match &Case"), 2},
-          std::pair{wxTRANSLATE("Match &Whole Word Only"), 4}, std::pair{wxTRANSLATE("&Bookmark Matched Line"), 8}}) {
+    for (const auto& [label, bit] : {std::pair{wxTRANSLATE("&Off"), MarkOccurrenceOption_Enabled},
+                                     std::pair{wxTRANSLATE("Match &Case"), MarkOccurrenceOption_MatchCase},
+                                     std::pair{wxTRANSLATE("Match &Whole Word Only"), MarkOccurrenceOption_WholeWord},
+                                     std::pair{wxTRANSLATE("&Bookmark Matched Line"), MarkOccurrenceOption_Bookmark}}) {
         const int id = wxWindow::NewControlId();
         occurrences->AppendCheckItem(id, wxGetTranslation(label));
         Bind(
@@ -1257,8 +1262,9 @@ wxMenu* EditorFrame::CreateViewMenu() {
             wxEVT_UPDATE_UI,
             [this, bit](wxUpdateUIEvent& event) {
                 const int options = editor_->Occurrences().Options();
-                event.Check(bit == 1 ? !(options & 1) : (options & bit) != 0);
-                event.Enable(bit == 1 || (options & 1));
+                event.Check(bit == MarkOccurrenceOption_Enabled ? !(options & MarkOccurrenceOption_Enabled)
+                                                                : (options & bit) != 0);
+                event.Enable(bit == MarkOccurrenceOption_Enabled || (options & MarkOccurrenceOption_Enabled));
             },
             id);
     }
@@ -1945,7 +1951,7 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
         if (event.ControlDown() && !event.ShiftDown() && !event.AltDown())
             editor_->ToggleBookmark();
         else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown())
-            editor_->Send(Scintilla::Message::MarkerDeleteAll, 0);
+            editor_->Send(Scintilla::Message::MarkerDeleteAll, EditorMarker::Bookmark);
         else if (!event.ControlDown() && !event.AltDown())
             editor_->GoToBookmark(!event.ShiftDown());
         // Consume unmatched modifiers so native menu lookup cannot drop them.

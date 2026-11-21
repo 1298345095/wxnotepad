@@ -340,7 +340,7 @@ std::string_view InterpreterToken(std::string_view text, size_t& position) {
 // rules intentionally accept py*/ipy* and do not parse env options or quotes.
 std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
     using enum SyntaxLanguage;
-    text = text.substr(0, 255);
+    text = text.substr(0, SyntaxDetectionLimits::PrefixBytes);
     if (!text.starts_with("#!")) return std::nullopt;
     size_t position = 2;
     auto name = InterpreterToken(text, position);
@@ -367,7 +367,7 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
 // header lookup precedes the ASP language directive and does not parse XML.
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view text) {
     using enum SyntaxLanguage;
-    std::string lower(text.substr(0, 3999));
+    std::string lower(text.substr(0, SyntaxDetectionLimits::DocTypeBytes));
     for (auto& ch : lower) {
         if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
     }
@@ -435,7 +435,7 @@ std::optional<SyntaxLanguage> SniffMarkupFamily(std::string_view prefix, Filenam
     using enum SyntaxLanguage;
     // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
     // inspect markup, and Config only accepts the exact XML declaration.
-    auto head = prefix.substr(0, 255);
+    auto head = prefix.substr(0, SyntaxDetectionLimits::PrefixBytes);
     while (!head.empty() && Space(head.front()))
         head.remove_prefix(1);
     if (!head.starts_with("<")) return std::nullopt;

@@ -849,13 +849,14 @@ bool EditorFrame::SelectEncoding(EncodingChoice choice) {
 bool EditorFrame::CanDiscardUntitledWhitespace() const {
     // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
     // documents bypass the lifecycle prompt; explicit Save still writes them.
+    constexpr intptr_t UntitledWhitespacePromptThresholdBytes = 2048;
     if (!document_.Path().empty()) return false;
     const auto length = editor_->Send(Scintilla::Message::GetLength);
-    if (length >= 2048) return false;
+    if (length >= UntitledWhitespacePromptThresholdBytes) return false;
     const auto* bytes = reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
     for (intptr_t index = 0; bytes && index < length; ++index) {
         const char ch = bytes[index];
-        if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) return false;
+        if (!(ch == ' ' || (ch >= '\t' && ch <= '\r'))) return false;
     }
     return true;
 }
