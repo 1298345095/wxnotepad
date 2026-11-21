@@ -16,9 +16,11 @@ import sys
 import tempfile
 import time
 import threading
+from collections import deque
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
+FAILURE_HISTORY_EVENTS = 256
 
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
@@ -40,8 +42,10 @@ def stop(process):
         process.wait()
 
 def xdo(*args):
+    driver_trace(runtime / "focus", "driver.native-begin", args[0])
     result = subprocess.run(["xdotool", *args], env=environment,
                             capture_output=True, text=True, timeout=2)
+    driver_trace(runtime / "focus", "driver.native-complete", f"{args[0]}:{result.returncode}")
     if args[0] != "search":
         result.check_returncode()
     return result.stdout.strip()
@@ -99,11 +103,21 @@ trace_gesture = "0"
 trace_sequence = 0
 trace_started = 0
 trace_failed = False
+failure_history = deque(maxlen=FAILURE_HISTORY_EVENTS)
+failure_sequence = 0
+request_kind = ""
+read_sequence = 0
 
 
 def driver_trace(focus, event, kind=""):
-    """Trace only explicitly tagged native requests; never retain request text."""
-    global trace_sequence, trace_started, trace_failed
+    """Keep boundary history in memory; persist untagged events only on failure."""
+    global trace_sequence, trace_started, trace_failed, failure_sequence
+    kind = kind or request_kind
+    observed = time.monotonic_ns() // 1000
+    failure_sequence += 1
+    failure_history.append((observed,
+        f"mono_us={observed}\tpid={os.getpid()}\ttid={threading.get_native_id()}"
+        f"\tseq={failure_sequence}\tevent={event}\tgesture={trace_gesture}\treadSeq={read_sequence}\tkind={kind}\n"))
     if trace_gesture == "0" or trace_failed:
         return
     def row(name, fields):
@@ -126,6 +140,29 @@ def driver_trace(focus, event, kind=""):
     except OSError:
         trace_failed = True
         print("Could not write native driver diagnostic log", file=sys.stderr, flush=True)
+
+
+def retain_focus_failure(focus):
+    marker = focus.with_suffix(".failure")
+    directory = os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR")
+    if not directory or not marker.exists():
+        return
+    try:
+        snapshot = marker.read_text(encoding="utf-8")
+        failed_at = int(re.search(r"\bmono_us=(\d+)", snapshot).group(1))
+        process = int(re.search(r"\bownedPid=(\d+)", snapshot).group(1))
+        destination = Path(directory) / f"{backend}-{os.getpid()}-focus-failure-{process}-{failed_at}.log"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        before = ''.join(row for stamp, row in failure_history if stamp <= failed_at)
+        after = ''.join(row for stamp, row in failure_history if stamp > failed_at)
+        # A native call may complete only after the fixture's deadline. Keep its
+        # unmatched begin at the failure instant, then the actual later events.
+        destination.write_text(before + snapshot + after +
+            f"mono_us={time.monotonic_ns() // 1000}\tevent=driver.failure-observed\n", encoding="utf-8")
+        marker.unlink()
+        print(f"Native focus failure history: {destination}", file=sys.stderr, flush=True)
+    except OSError as error:
+        print(f"Could not retain native focus failure history: {error}", file=sys.stderr, flush=True)
 
 with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     runtime = Path(folder)
@@ -158,13 +195,21 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         print(f"Private native {backend}: DISPLAY={environment['DISPLAY']}; runtime mode={oct(runtime.stat().st_mode & 0o777)}", flush=True)
         test = subprocess.Popen(command, env=environment, start_new_session=True)
         last_switch = 0.0
+        last_read = None
         while test.poll() is None:
             focus = runtime / "focus"
+            retain_focus_failure(focus)
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
             trace_gesture = "0"
             if request.startswith("trace:"):
                 _, identity, request = request.split(":", 2)
                 trace_gesture = identity if identity.isdecimal() else "0"
+            request_kind = request.split(":", 1)[0] if request else "empty"
+            if request != last_read:
+                if request:
+                    read_sequence += 1
+                driver_trace(focus, "driver.read")
+                last_read = request
             if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
@@ -354,6 +399,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
             time.sleep(.03)
         result = test.returncode
     finally:
+        retain_focus_failure(runtime / "focus")
         stop(test)
         stop(weston)
         log.close()
