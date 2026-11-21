@@ -14,9 +14,12 @@
 #include <filesystem>
 #include <fstream>
 #include <chrono>
+#include <cstring>
+#include <vector>
 #include <wx/weakref.h>
 #ifdef __WXMSW__
 #include <objbase.h>
+#include "explorer_acknowledgement.h"
 #endif
 #ifdef __WXGTK__
 #include <gio/gio.h>
@@ -221,6 +224,30 @@ void DesktopTarget(EditorFrame* frame, const wxString& scheme, const wxString& e
     std::puts("PASS: controlled real desktop handlers preserve URI ports, encoding and unsupported files");
 }
 #ifdef __WXMSW__
+void PublishedAcknowledgement() {
+    const auto root = Directory();
+    const auto staging = root / "acknowledgement.tmp";
+    const auto done = root / "acknowledgement.ready";
+    TestFiles::WriteBytes(staging, "ok\n");
+    const auto raw = CreateFileW(staging.c_str(), DELETE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                 nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    Require(raw != INVALID_HANDLE_VALUE, "owned marker rename handle must open");
+    const std::unique_ptr<void, decltype(&CloseHandle)> rename(raw, &CloseHandle);
+    const auto destination = done.wstring();
+    const auto nameBytes = static_cast<DWORD>(destination.size() * sizeof(wchar_t));
+    std::vector<unsigned char> storage(sizeof(FILE_RENAME_INFO) + nameBytes);
+    auto* information = reinterpret_cast<FILE_RENAME_INFO*>(storage.data());
+    information->ReplaceIfExists = FALSE;
+    information->RootDirectory = nullptr;
+    information->FileNameLength = nameBytes;
+    std::memcpy(information->FileName, destination.data(), nameBytes);
+    Require(SetFileInformationByHandle(rename.get(), FileRenameInfo, information, static_cast<DWORD>(storage.size())),
+            "owned marker must publish while its rename handle remains open");
+    Require(std::filesystem::exists(done), "published marker name must already be visible");
+    Require(ExplorerAcknowledgement::Read(done) == "ok\n",
+            "published acknowledgement must be readable before the rename handle closes");
+    std::puts("PASS: exact acknowledgement bytes while its publication DELETE handle remains open");
+}
 void WaitExplorerRequests(const std::filesystem::path& root, std::initializer_list<int> requests) {
     const auto finished = [&] {
         for (const int request : requests)
@@ -234,7 +261,7 @@ void WaitExplorerRequests(const std::filesystem::path& root, std::initializer_li
     }
     Require(finished(), "pending Explorer requests must complete within the original acknowledgement deadline");
     for (const int request : requests)
-        Require(TestFiles::Bytes(root / ("folder-done-" + std::to_string(request))) == "ok\n",
+        Require(ExplorerAcknowledgement::Read(root / ("folder-done-" + std::to_string(request))) == "ok\n",
                 "pending request acknowledgement must retain its exact bytes");
 }
 void PendingFolderTargets(EditorFrame* frame, int& request) {
@@ -313,7 +340,7 @@ void FolderTarget(EditorFrame* frame) {
             wxMilliSleep(10);
         }
         const bool acknowledged = std::filesystem::exists(done);
-        const auto response = acknowledged ? TestFiles::Bytes(done) : std::string{};
+        const auto response = acknowledged ? ExplorerAcknowledgement::Read(done) : std::string{};
         if (!acknowledged || response != "ok\n") {
             const auto elapsed =
                 std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started);
@@ -465,6 +492,16 @@ public:
             std::filesystem::rename(Directory() / "desktop-received.tmp", Directory() / "desktop-received");
             std::exit(0);
         }
+#ifdef __WXMSW__
+        if (argc == 1) {
+            try {
+                PublishedAcknowledgement();
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                return false;
+            }
+        }
+#endif
         auto* frame = new EditorFrame;
         const bool child = argc > 1 && wxString(argv[1]) == "--startup-file";
         if (child) {
