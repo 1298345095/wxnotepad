@@ -31,5 +31,5 @@ if(NOTEPAD4_OPEN_FOLDER)
     target_compile_definitions(native_original_open_target PRIVATE
         UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00 NOMINMAX WIN32_LEAN_AND_MEAN STRICT_TYPED_ITEMIDS)
     target_compile_options(native_original_open_target PRIVATE /utf-8)
-    target_link_libraries(native_original_open_target PRIVATE user32 shlwapi ole32 shell32)
+    target_link_libraries(native_original_open_target PRIVATE user32 shlwapi ole32 oleaut32 shell32 uuid)
 endif()

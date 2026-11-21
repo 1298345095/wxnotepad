@@ -83,7 +83,11 @@ pinned upstream Git object and the documented single-item shell call. Each uses
 a fresh owned directory and the same exact-item observer and deadlines as the
 application test. Both verdicts and the original helper's source hashes are
 retained even if the first control fails; neither substitutes for the required
-application assertion.
+application assertion. A third control opens its own fresh folder and observes
+native readiness before making its single selection call, isolating cold-view
+delivery from delivery to an existing view. The controller performs that initial
+navigation; the selection observer remains read-only. These reports are also
+uploaded immediately, before the ordinary suite, using the existing artifact action.
 
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
