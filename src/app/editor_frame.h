@@ -15,6 +15,9 @@ class EditorControl;
 class FindReplaceDialog;
 class SettingsStore;
 class wxMenu;
+#ifdef __WXMSW__
+class ExplorerSelections;
+#endif
 
 class EditorFrame final : public wxFrame {
 public:
@@ -22,6 +25,7 @@ public:
     ~EditorFrame() override;
 #ifdef __WXMSW__
     bool MSWTranslateMessage(WXMSG* message) override;
+    bool Destroy() override;
 #endif
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
@@ -88,6 +92,10 @@ private:
     int recentFilesId_;
     int openSelectionId_ = wxID_NONE;
     int selectionFolderId_ = wxID_NONE;
+    bool ShowContainingFolder(const wxString& path);
+#ifdef __WXMSW__
+    std::unique_ptr<ExplorerSelections> explorerSelections_;
+#endif
     int currentBlockFoldId_ = wxID_NONE;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();

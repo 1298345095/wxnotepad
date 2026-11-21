@@ -1,4 +1,7 @@
 #include "app/editor_frame.h"
+#ifdef __WXMSW__
+#include "app/explorer_selections.h"
+#endif
 #include "app/app_icon.h"
 #include <utility>
 #include "syntax/syntax_scheme.h"
@@ -234,6 +237,11 @@ EditorFrame::~EditorFrame() {
 }
 
 #ifdef __WXMSW__
+bool EditorFrame::Destroy() {
+    if (explorerSelections_) explorerSelections_->Close();
+    return wxFrame::Destroy();
+}
+
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     const bool keyDown = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
     const auto handle = static_cast<HWND>(GetHandle());

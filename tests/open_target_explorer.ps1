@@ -1,5 +1,5 @@
 param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Evidence,
-      [ValidateRange(1, 4)][int]$Requests = 4)
+      [ValidateRange(1, 8)][int]$Requests = 8)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $taskComErrors = @{}
@@ -37,6 +37,7 @@ for ($taskIndex = 1; $taskIndex -le $Requests; $taskIndex++) {
     $taskRequested[$taskDirectory] = $true
     $taskItem = $taskLines[1]
     $taskCaller = if ($taskLines.Length -gt 2) { [uint32]$taskLines[2] } else { 0 }
+    $taskCancelled = $taskLines.Length -gt 3 -and $taskLines[3] -eq 'cancelled'
     if (-not ([System.IO.Path]::GetFullPath($taskDirectory).StartsWith([System.IO.Path]::GetFullPath($Root), [StringComparison]::OrdinalIgnoreCase))) {
         throw 'Folder observation must remain inside the owned fixture root'
     }
@@ -52,6 +53,13 @@ for ($taskIndex = 1; $taskIndex -le $Requests; $taskIndex++) {
                 $taskSelected = @($taskWindow.Document.SelectedItems() | ForEach-Object { $_.Path })
                 $taskObserved[[string]$taskWindow.HWND] = @{ directory = $taskActualDirectory; selected = $taskSelected }
                 if ($taskActualDirectory -ine $taskDirectory) { continue }
+                if ($taskCancelled) {
+                    if ($taskSelected.Count -ne 0) { throw 'Destroyed owner must cancel its pending item selection' }
+                    $taskCancellationObservationMilliseconds = 500
+                    if ($taskWatch.Elapsed.TotalMilliseconds -lt $taskCancellationObservationMilliseconds) { continue }
+                    $taskMatched = $taskWindow
+                    break
+                }
                 if ([string]::IsNullOrEmpty($taskItem) -or $taskSelected -contains $taskItem) { $taskMatched = $taskWindow; break }
             } catch { Write-ExplorerPollingError $_ 'selection' }
         }
@@ -64,7 +72,9 @@ for ($taskIndex = 1; $taskIndex -le $Requests; $taskIndex++) {
             -Directory $taskDirectory -Item $taskItem -Request $taskIndex -CallerPid $taskCaller -Shell $taskShell -Existing $taskExisting
         throw "Native Explorer did not select the owned item: $taskItem"
     }
-    $taskRecord = [ordered]@{ hwnd = [string]$taskMatched.HWND; directory = $taskDirectory; selected = $taskItem }
+    $taskRecord = [ordered]@{ hwnd = [string]$taskMatched.HWND; directory = $taskDirectory;
+        selected = $taskItem; cancelled = $taskCancelled }
+    if ($taskCancelled) { $taskRecord.selected = @() }
     Write-Host ('PASS: native Explorer ' + ($taskRecord | ConvertTo-Json -Compress))
     # Reverify immediately before closing only the newly created owned-folder window.
     if (-not $taskExisting.ContainsKey([string]$taskMatched.HWND) -and $taskMatched.Document.Folder.Self.Path -ieq $taskDirectory) {

@@ -11,9 +11,10 @@
 #include <wx/menu.h>
 #include <wx/translation.h>
 #include <string>
+#include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
-#include <shlobj.h>
+#include "app/explorer_selections.h"
 #include <shlwapi.h>
 #elif defined(__WXGTK__)
 #include <gio/gio.h>
@@ -217,64 +218,18 @@ Location FileLocation(wxString target) {
     result.present = true;
     return result;
 }
-bool ShowContainingFolder(wxWindow* parent, const wxString& path) {
-#ifdef __WXMSW__
-    const bool rootDirectory = PathIsRootW(path.wc_str()) != FALSE;
-#else
-    const bool rootDirectory = wxFileName::DirName(path).GetDirCount() == 0;
-#endif
-    if (wxDirExists(path) && rootDirectory) {
-        wxString error;
-        return LaunchDesktopTarget(parent, path, path, error);
-    }
-    const auto directory = wxFileName(path).GetPath();
-    if (!wxDirExists(directory)) return false;
-#ifdef __WXMSW__
-    // The shell's documented single-item form opens the parent and selects
-    // this complete item PIDL. Keep native association opening as the fallback.
-    auto* item = ILCreateFromPathW(path.wc_str());
-    const HRESULT result = item ? SHOpenFolderAndSelectItems(item, 0, nullptr, 0) : E_FAIL;
-#ifdef WXNOTEPAD_DIAGNOSTICS
-    // HRESULT is authoritative; tracing preserves the thread's last-error state.
-    const auto nativeError = GetLastError();
-    if (DiagnosticTrace::Enabled()) {
-        constexpr size_t NativePathCharacters = 32768;
-        wchar_t nativePath[NativePathCharacters]{};
-        const bool decoded = item && SHGetPathFromIDListEx(item, nativePath, NativePathCharacters, GPFIDL_DEFAULT);
-        DiagnosticTrace::Write(
-            "shell.select-item",
-            "\texpected=%s\tnative=%s\tdecoded=%d\tpidl_bytes=%u\tcidl=0\tflags=0\thresult=%08lx\tlast_error=%lu",
-            path.utf8_str().data(), wxString(nativePath).utf8_str().data(), decoded, item ? ILGetSize(item) : 0,
-            static_cast<unsigned long>(result), nativeError);
-    }
-    SetLastError(nativeError);
-#endif
-    CoTaskMemFree(item);
-    if (SUCCEEDED(result)) return true;
-#elif defined(__WXGTK__)
-    GError* failure = nullptr;
-    auto* connection = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &failure);
-    if (connection) {
-        auto* file = g_file_new_for_path(path.utf8_str());
-        char* uri = g_file_get_uri(file);
-        const char* items[] = {uri, nullptr};
-        constexpr int FileManagerRequestTimeoutMilliseconds = 5000;
-        auto* result = g_dbus_connection_call_sync(
-            connection, "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1",
-            "ShowItems", g_variant_new("(^ass)", items, ""), nullptr, G_DBUS_CALL_FLAGS_NONE,
-            FileManagerRequestTimeoutMilliseconds, nullptr, &failure);
-        g_free(uri);
-        g_object_unref(file);
-        g_object_unref(connection);
-        if (result) {
-            g_variant_unref(result);
-            return true;
-        }
-    }
-    if (failure) g_error_free(failure);
-#endif
-    wxString error;
-    return LaunchDesktopTarget(parent, directory, directory, error);
+struct ResolvedPath {
+    std::optional<wxString> path;
+    Location location;
+};
+ResolvedPath ResolvePath(const wxString& target, const wxString& document) {
+    auto path = ExistingPath(target, document);
+    auto location = FileLocation(target);
+    if (!path && location.present)
+        path = ExistingPath(location.file, document);
+    else
+        location.present = false;
+    return {std::move(path), std::move(location)};
 }
 wxString TrimSchemePrefix(wxString target) {
     // Original EditOpenSelection ignores punctuation before a scheme/drive name.
@@ -311,6 +266,48 @@ wxString ExternalTarget(const wxString& target, const std::optional<wxString>& p
 }
 } // namespace
 
+bool EditorFrame::ShowContainingFolder(const wxString& path) {
+    auto* parent = this;
+#ifdef __WXMSW__
+    const bool rootDirectory = PathIsRootW(path.wc_str()) != FALSE;
+#else
+    const bool rootDirectory = wxFileName::DirName(path).GetDirCount() == 0;
+#endif
+    if (wxDirExists(path) && rootDirectory) {
+        wxString error;
+        return LaunchDesktopTarget(parent, path, path, error);
+    }
+    const auto directory = wxFileName(path).GetPath();
+    if (!wxDirExists(directory)) return false;
+#ifdef __WXMSW__
+    if (!explorerSelections_) explorerSelections_ = std::make_unique<ExplorerSelections>(*this);
+    if (explorerSelections_->Start(path)) return true;
+#elif defined(__WXGTK__)
+    GError* failure = nullptr;
+    auto* connection = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &failure);
+    if (connection) {
+        auto* file = g_file_new_for_path(path.utf8_str());
+        char* uri = g_file_get_uri(file);
+        const char* items[] = {uri, nullptr};
+        constexpr int FileManagerRequestTimeoutMilliseconds = 5000;
+        auto* result = g_dbus_connection_call_sync(
+            connection, "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1",
+            "ShowItems", g_variant_new("(^ass)", items, ""), nullptr, G_DBUS_CALL_FLAGS_NONE,
+            FileManagerRequestTimeoutMilliseconds, nullptr, &failure);
+        g_free(uri);
+        g_object_unref(file);
+        g_object_unref(connection);
+        if (result) {
+            g_variant_unref(result);
+            return true;
+        }
+    }
+    if (failure) g_error_free(failure);
+#endif
+    wxString error;
+    return LaunchDesktopTarget(parent, directory, directory, error);
+}
+
 void EditorFrame::AppendOpenTargetCommands(wxMenu* menu) {
     for (const bool folder : {false, true}) {
         int& id = folder ? selectionFolderId_ : openSelectionId_;
@@ -338,14 +335,19 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
     if (target.empty()) return true;
     if (target.EndsWith(".")) target.RemoveLast();
     if (target.empty()) return true;
-    target = TrimSchemePrefix(target);
-    auto path = ExistingPath(target, document_.Path());
-    auto location = FileLocation(target);
-    if (!path && location.present)
-        path = ExistingPath(location.file, document_.Path());
-    else
-        location.present = false;
-    if (containingFolder && path) return ShowContainingFolder(this, *path);
+    // A selected filename with spaces can end in a location suffix. Resolve
+    // that existing file before interpreting its final word as a URI scheme.
+    auto resolved = ResolvePath(target, document_.Path());
+    if (!resolved.path) {
+        const auto normalized = TrimSchemePrefix(target);
+        if (normalized != target) {
+            target = normalized;
+            resolved = ResolvePath(target, document_.Path());
+        }
+    }
+    const auto& path = resolved.path;
+    const auto& location = resolved.location;
+    if (containingFolder && path) return ShowContainingFolder(*path);
     if (path && !wxDirExists(*path)) {
         const wxFileName name(*path);
         const auto extension = name.GetExt().Lower();
@@ -373,5 +375,5 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
     return true;
 }
 bool EditorFrame::OpenContainingFolder() {
-    return !document_.Path().empty() && ShowContainingFolder(this, document_.Path());
+    return !document_.Path().empty() && ShowContainingFolder(document_.Path());
 }
