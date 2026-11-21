@@ -114,6 +114,7 @@ jobs:
           mkdir -p .ci/reports/cores
           sudo sysctl -w "kernel.core_pattern=$PWD/.ci/reports/cores/core.%p.%E"
       - name: Prepare Windows native test display
+        id: windows_display
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -128,8 +129,17 @@ jobs:
           if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
             throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
           }
+      - name: Observe independent original and single-item Explorer controls
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_display.outcome == 'success' }}
+        shell: bash
+        run: |
+          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/open-target-controls/process \
+            --timeout 180 -- python -X utf8 tests/reference_capture/native_original_reference.py \
+            --archive .ci/build/notepad4-source.tar --build-dir .ci/original-reference \
+            --open-targets-output-dir .ci/reports/open-target-controls --compiler-cache
       - name: Collect independent original GDI viewport reference
-        if: runner.os == 'Windows'
+        id: original_reference
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_display.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -140,7 +150,8 @@ jobs:
             --word-wrap-output-dir .ci/reports/original-word-wrap \
             2>&1 | tee .ci/reports/original-gdi-reference.log
       - name: Capture Windows visual brace and mixed-EOL crash dumps
-        if: runner.os == 'Windows'
+        id: windows_crash_capture
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.original_reference.outcome == 'success' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -158,20 +169,12 @@ jobs:
           }
           $dumpSettings | ConvertTo-Json | Tee-Object -FilePath .ci/reports/windows-crash-dumps.json
       - name: Test Windows
-        if: runner.os == 'Windows'
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_crash_capture.outcome == 'success' }}
         shell: bash
         env:
           WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
           WXNOTEPAD_ORIGINAL_WRAP_REFERENCE: ${{ github.workspace }}/.ci/reports/original-word-wrap
         run: python -X utf8 .github/scripts/ci.py test --backend windows
-      - name: Observe independent original and single-item Explorer controls
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
-        shell: bash
-        run: |
-          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/open-target-controls/process \
-            --timeout 180 -- python -X utf8 tests/reference_capture/native_original_reference.py \
-            --archive .ci/build/notepad4-source.tar --build-dir .ci/original-reference \
-            --open-targets-output-dir .ci/reports/open-target-controls --compiler-cache
       - name: Repeat Windows visual brace regression with crash evidence
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
         shell: pwsh
