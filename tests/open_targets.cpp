@@ -351,6 +351,16 @@ void NoopAndFailure(EditorFrame* frame, TargetFeedback& feedback) {
     TestEditor::RequireSelection(editor, 0, 10, "failed launch preserves source selection");
     std::puts("PASS: original no-op shapes and observable launch failure retain a usable source document");
 }
+void OpenChildDocument(EditorFrame* frame, const wxString& path, const std::optional<wxString>& caret) {
+    long long line = 0, column = 0;
+    if (caret) {
+        const auto location = wxSplit(*caret, ',');
+        Require(location.size() == 2 && location[0].ToLongLong(&line) && location[1].ToLongLong(&column),
+                "child location uses real startup line,column syntax");
+    }
+    Require(frame->OpenRestartDocument(path, {}, {}, false, line, column).status == OpenStatus::Opened,
+            "child reuses ordinary startup document loading");
+}
 class OpenTargetApp final : public wxApp {
     int result_ = 1;
 
@@ -387,14 +397,7 @@ public:
         if (child) {
             Require((argc == 3 || argc == 5) && (argc == 3 || wxString(argv[3]) == "--startup-caret"),
                     "child receives ordinary startup file and one-based caret arguments");
-            long long line = 0, column = 0;
-            if (argc == 5) {
-                const auto location = wxSplit(wxString(argv[4]), ',');
-                Require(location.size() == 2 && location[0].ToLongLong(&line) && location[1].ToLongLong(&column),
-                        "child location uses real startup line,column syntax");
-            }
-            Require(frame->OpenRestartDocument(argv[2], {}, {}, false, line, column).status == OpenStatus::Opened,
-                    "child reuses ordinary startup document loading");
+            OpenChildDocument(frame, argv[2], argc == 5 ? std::optional(wxString(argv[4])) : std::nullopt);
         }
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame, child, standard, mail](bool ready) {

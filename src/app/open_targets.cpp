@@ -29,60 +29,66 @@ std::string Range(EditorControl& editor, intptr_t start, intptr_t end) {
     text.pop_back();
     return text;
 }
+std::string MarkdownTarget(EditorControl& editor, intptr_t caret, intptr_t start, intptr_t end) {
+    constexpr auto flags = static_cast<uintptr_t>(Scintilla::FindOption::RegExp | Scintilla::FindOption::Posix);
+    Scintilla::TextToFindFull find{};
+    // Original Markdown URL: [alt](url), including balanced URL parentheses.
+    auto searchStart = start;
+    auto searchEnd = end;
+    find.chrg.cpMax = end;
+    find.lpstrText = "\\(\\w*:?\\.*/";
+    while (searchStart < searchEnd) {
+        find.chrg.cpMin = searchStart;
+        const auto position = editor.Send(Message::FindTextFull, flags, reinterpret_cast<intptr_t>(&find));
+        if (position < 0) break;
+        searchStart = position + 1;
+        const auto match = editor.Send(Message::BraceMatch, position, find.chrgText.cpMax);
+        searchEnd = match < 0 ? end : match;
+        if (caret >= searchStart && caret <= searchEnd) {
+            start = searchStart;
+            end = searchEnd;
+            break;
+        }
+        searchStart = find.chrgText.cpMax;
+    }
+    return Range(editor, start, end);
+}
+std::string CaretTarget(EditorControl& editor) {
+    const auto caret = editor.Send(Message::GetCurrentPos);
+    const auto line = editor.Send(Message::LineFromPosition, caret);
+    auto start = editor.Send(Message::PositionFromLine, line);
+    auto end = editor.Send(Message::GetLineEndPosition, line);
+    if (start == end) return {};
+    const auto style = editor.Send(Message::GetStyleIndexAt, caret);
+    if (editor.Send(Message::StyleGetHotSpot, style)) {
+        start = caret;
+        while (start > 0 && editor.Send(Message::GetStyleIndexAt, start - 1) == style)
+            --start;
+        end = caret;
+        const auto length = editor.Send(Message::GetLength);
+        while (end < length && editor.Send(Message::GetStyleIndexAt, end) == style)
+            ++end;
+        return Range(editor, start, end);
+    }
+    constexpr auto flags = static_cast<uintptr_t>(Scintilla::FindOption::RegExp | Scintilla::FindOption::Posix);
+    Scintilla::TextToFindFull find{{caret, end}, "[\\s'`\"<>|*,;]", 0, {0, 0}};
+    if (caret < end && editor.Send(Message::FindTextFull, flags, reinterpret_cast<intptr_t>(&find)) >= 0) {
+        const auto position = find.chrgText.cpMax;
+        const auto ch = editor.Send(Message::GetCharAt, position);
+        end = editor.Send(Message::GetCharAt, position - 1) == ',' && ch >= '0' && ch <= '9'
+                  ? editor.Send(Message::WordEndPosition, position, true)
+                  : editor.Send(Message::PositionBefore, position);
+    }
+    find.chrg = {caret, start};
+    if (caret > start && editor.Send(Message::FindTextFull, flags, reinterpret_cast<intptr_t>(&find)) >= 0)
+        start = editor.Send(Message::PositionAfter, find.chrgText.cpMin);
+    return MarkdownTarget(editor, caret, start, end);
+}
 std::string SelectedTarget(EditorControl& editor) {
     // Adapted from Notepad4 89b8b36 EditGetStringAroundCaret/EditOpenSelection.
     // See licenses/Notepad4.txt. The native core always exposes UTF-8 bytes.
     const auto selectionLength = editor.Send(Message::GetSelText);
-    if (selectionLength == 0) {
-        const auto caret = editor.Send(Message::GetCurrentPos);
-        const auto line = editor.Send(Message::LineFromPosition, caret);
-        auto start = editor.Send(Message::PositionFromLine, line);
-        auto end = editor.Send(Message::GetLineEndPosition, line);
-        if (start == end) return {};
-        const auto style = editor.Send(Message::GetStyleIndexAt, caret);
-        if (editor.Send(Message::StyleGetHotSpot, style)) {
-            start = caret;
-            while (start > 0 && editor.Send(Message::GetStyleIndexAt, start - 1) == style)
-                --start;
-            end = caret;
-            const auto length = editor.Send(Message::GetLength);
-            while (end < length && editor.Send(Message::GetStyleIndexAt, end) == style)
-                ++end;
-            return Range(editor, start, end);
-        }
-        constexpr auto flags = static_cast<uintptr_t>(Scintilla::FindOption::RegExp | Scintilla::FindOption::Posix);
-        Scintilla::TextToFindFull find{{caret, end}, "[\\s'`\"<>|*,;]", 0, {0, 0}};
-        if (caret < end && editor.Send(Message::FindTextFull, flags, reinterpret_cast<intptr_t>(&find)) >= 0) {
-            const auto position = find.chrgText.cpMax;
-            const auto ch = editor.Send(Message::GetCharAt, position);
-            end = editor.Send(Message::GetCharAt, position - 1) == ',' && ch >= '0' && ch <= '9'
-                      ? editor.Send(Message::WordEndPosition, position, true)
-                      : editor.Send(Message::PositionBefore, position);
-        }
-        find.chrg = {caret, start};
-        if (caret > start && editor.Send(Message::FindTextFull, flags, reinterpret_cast<intptr_t>(&find)) >= 0)
-            start = editor.Send(Message::PositionAfter, find.chrgText.cpMin);
-        // Original Markdown URL: [alt](url), including balanced URL parentheses.
-        auto searchStart = start;
-        auto searchEnd = end;
-        find.chrg.cpMax = end;
-        find.lpstrText = "\\(\\w*:?\\.*/";
-        while (searchStart < searchEnd) {
-            find.chrg.cpMin = searchStart;
-            const auto position = editor.Send(Message::FindTextFull, flags, reinterpret_cast<intptr_t>(&find));
-            if (position < 0) break;
-            searchStart = position + 1;
-            const auto match = editor.Send(Message::BraceMatch, position, find.chrgText.cpMax);
-            searchEnd = match < 0 ? end : match;
-            if (caret >= searchStart && caret <= searchEnd) {
-                start = searchStart;
-                end = searchEnd;
-                break;
-            }
-            searchStart = find.chrgText.cpMax;
-        }
-        return Range(editor, start, end);
-    }
+    if (selectionLength == 0) return CaretTarget(editor);
     std::string text(static_cast<size_t>(selectionLength) + 1, '\0');
     editor.Send(Message::GetSelText, 0, reinterpret_cast<intptr_t>(text.data()));
     text.resize(text.find_first_of("\r\n\t\0", 0, 4));
@@ -270,6 +276,39 @@ bool ShowContainingFolder(wxWindow* parent, const wxString& path) {
     wxString error;
     return LaunchDesktopTarget(parent, directory, directory, error);
 }
+wxString TrimSchemePrefix(wxString target) {
+    // Original EditOpenSelection ignores punctuation before a scheme/drive name.
+    // Preserve absolute native paths that legitimately contain a location colon.
+    if (const auto colon = target.find(':');
+        colon != wxString::npos && (target.Contains("://") || !wxFileName(target).IsAbsolute())) {
+        auto first = colon;
+        const auto schemeChar = [](wxUniChar ch) {
+            return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '+' ||
+                   ch == '-' || ch == '.';
+        };
+        while (first > 0 && schemeChar(target[first - 1]))
+            --first;
+        while (first < colon &&
+               !((target[first] >= 'a' && target[first] <= 'z') || (target[first] >= 'A' && target[first] <= 'Z')))
+            ++first;
+        if (first < colon) target = target.Mid(first);
+    }
+    return target;
+}
+wxString ExternalTarget(const wxString& target, const std::optional<wxString>& path) {
+    wxString external;
+    if (path)
+        external = *path;
+    else if (target.StartsWith("//"))
+        external = "http:" + target;
+    else if (target.Contains(':'))
+        external = target;
+    else if (target.Contains('@'))
+        external = "mailto:" + target;
+    else if (target.StartsWith("www."))
+        external = "http://" + target;
+    return external;
+}
 } // namespace
 
 void EditorFrame::AppendOpenTargetCommands(wxMenu* menu) {
@@ -299,22 +338,7 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
     if (target.empty()) return true;
     if (target.EndsWith(".")) target.RemoveLast();
     if (target.empty()) return true;
-    // Original EditOpenSelection ignores punctuation before a scheme/drive name.
-    // Preserve absolute native paths that legitimately contain a location colon.
-    if (const auto colon = target.find(':');
-        colon != wxString::npos && (target.Contains("://") || !wxFileName(target).IsAbsolute())) {
-        auto first = colon;
-        const auto schemeChar = [](wxUniChar ch) {
-            return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '+' ||
-                   ch == '-' || ch == '.';
-        };
-        while (first > 0 && schemeChar(target[first - 1]))
-            --first;
-        while (first < colon &&
-               !((target[first] >= 'a' && target[first] <= 'z') || (target[first] >= 'A' && target[first] <= 'Z')))
-            ++first;
-        if (first < colon) target = target.Mid(first);
-    }
+    target = TrimSchemePrefix(target);
     auto path = ExistingPath(target, document_.Path());
     auto location = FileLocation(target);
     if (!path && location.present)
@@ -340,17 +364,7 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
             return true;
         }
     }
-    wxString external;
-    if (path)
-        external = *path;
-    else if (target.StartsWith("//"))
-        external = "http:" + target;
-    else if (target.Contains(':'))
-        external = target;
-    else if (target.Contains('@'))
-        external = "mailto:" + target;
-    else if (target.StartsWith("www."))
-        external = "http://" + target;
+    const auto external = ExternalTarget(target, path);
     if (!external.empty()) {
         wxString error;
         return LaunchDesktopTarget(this, external, path ? wxFileName(*path).GetPath() : wxGetCwd(), error);

@@ -25,11 +25,11 @@ target_link_options(native_original_viewport PRIVATE /MANIFEST:NO)
 
 # Compile the pinned helper verbatim, independently of application adapters.
 if(NOTEPAD4_OPEN_FOLDER)
-get_filename_component(original_folder_directory "${NOTEPAD4_OPEN_FOLDER}" DIRECTORY)
-add_executable(native_original_open_target open_target.cpp)
-target_include_directories(native_original_open_target PRIVATE "${original_folder_directory}")
-target_compile_definitions(native_original_open_target PRIVATE
-    UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00 NOMINMAX WIN32_LEAN_AND_MEAN STRICT_TYPED_ITEMIDS)
-target_compile_options(native_original_open_target PRIVATE /utf-8)
-target_link_libraries(native_original_open_target PRIVATE user32 shlwapi ole32 shell32)
+    get_filename_component(original_folder_directory "${NOTEPAD4_OPEN_FOLDER}" DIRECTORY)
+    add_executable(native_original_open_target open_target.cpp)
+    target_include_directories(native_original_open_target PRIVATE "${original_folder_directory}")
+    target_compile_definitions(native_original_open_target PRIVATE
+        UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00 NOMINMAX WIN32_LEAN_AND_MEAN STRICT_TYPED_ITEMIDS)
+    target_compile_options(native_original_open_target PRIVATE /utf-8)
+    target_link_libraries(native_original_open_target PRIVATE user32 shlwapi ole32 shell32)
 endif()
