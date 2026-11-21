@@ -1075,6 +1075,12 @@ if(BUILD_TESTING)
         add_test(NAME native_file_drop_overlap COMMAND stream_drag --file-drop)
         set_tests_properties(native_file_drop_overlap PROPERTIES TIMEOUT 90
             ENVIRONMENT "WXNOTEPAD_FILE_DROP_OVERLAP=1")
+        add_test(NAME native_localization_chooser_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_chooser_readiness.py")
+        set_tests_properties(native_localization_chooser_readiness PROPERTIES TIMEOUT 30)
+        add_test(NAME native_search_feedback_release COMMAND search_continuation)
+        set_tests_properties(native_search_feedback_release PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_SEARCH_FEEDBACK_RELEASE=1;WXNOTEPAD_NATIVE_KEY_DELAY_MS=150")
     endif()
 endif()
 

@@ -394,7 +394,8 @@ inline wxString KeyName(int key) {
 }
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
-                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
+                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad",
+                     [[maybe_unused]] std::chrono::steady_clock::time_point* releaseDeadline = nullptr) {
     const NativeTrace::Gesture trace(*frame->Editor(), key,
                                      (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
@@ -431,9 +432,12 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         wxFFile file(focusFile, "wb");
         const auto name = KeyName(key);
         request = wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + name;
+        wxString delay;
+        if (wxGetEnv("WXNOTEPAD_NATIVE_KEY_DELAY_MS", &delay)) request = "key-delay:" + delay + ":" + request.Mid(4);
         file.Write(NativeTrace::Request(request));
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
+    if (releaseDeadline) *releaseDeadline = keyDeadline;
     while (!received && Clock::now() < keyDeadline) {
         wxYield();
         wxMilliSleep(10);

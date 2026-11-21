@@ -232,7 +232,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "keydown:", "keyup:", "click:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "key-delay:", "keydown:", "keyup:", "click:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -393,10 +393,14 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     driver_trace(focus, "driver.inject-begin", phase)
                     xdo(phase, key)
                     driver_trace(focus, "driver.inject-complete", phase)
-                elif request.startswith("key:"):
+                elif request.startswith(("key:", "key-delay:")):
                     acknowledge(focus)
                     driver_trace(focus, "driver.inject-begin", "key-press-release")
-                    xdo("key", "--clearmodifiers", request[4:])
+                    if request.startswith("key-delay:"):
+                        _, delay, keys = request.split(":", 2)
+                        xdo("key", "--clearmodifiers", "--delay", delay, keys)
+                    else:
+                        xdo("key", "--clearmodifiers", request[4:])
                     driver_trace(focus, "driver.inject-complete", "key-press-release")
                 elif request == "gesture":
                     # Native events can make the receiver publish its next

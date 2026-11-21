@@ -155,3 +155,63 @@ driver phase wait, eight-second caller wait, ninety-second CTest guard and defau
 parallel test policy are unchanged. No application drag/drop code is modified.
 Replays, mutation diffs and native reports are retained at
 `F:/wxnotepad-evidence/toolbar-artwork-2026-11-21/wayland-drag-followup/`.
+
+## File chooser property publication
+
+The first full local Wayland run at `6551630` failed packaged localization layout
+while reading the Open button's role after setting the chooser location. A later
+X11 layout run failed reading the filter combo's role after navigation. Both
+reported the native `atspi_error`, `ATSPI_ERROR_IPC` code 1, `timeout from dbind`.
+Neither failure was a rejected application action.
+
+A controlled GTK publisher reproduces each blocked role query for 3.5 seconds
+through the actual AT-SPI driver. The Open-query regression failed before the
+correction; the extended filter-query regression also failed with the same native
+error, before opening its popup. The publisher contains real entry, button and
+combo widgets; it does not substitute for the actual packaged file chooser.
+
+The driver retries only the two read-only chooser snapshots for this exact native
+timeout. Open lookup uses the existing navigation deadline. Filter lookup, which
+previously had no readiness loop, now has a ten-second bound. The one-second
+native RPC timeout and the 180-second packaged-layout guard remain unchanged.
+Text writes, Open activation and each filter-popup action remain outside the
+retry handler. Unrecognized errors still propagate.
+
+The registered `native_localization_chooser_readiness` case requires both property
+stalls to occur and recover, one location write, one Open activation and exactly
+one popup-open/popup-close pair. Both backends pass the native readiness cases
+and the real packaged-layout test. Full ordinary Wayland passes all 258 registered
+cases in the default 20 private sessions. Red controls and complete logs are in
+the same evidence directory above. This correction does not establish the cause
+of the separate coverage scenario-13 F3-release failure.
+
+## Search feedback and the opening key release
+
+CI run `44920255937` at `6551630` passed ordinary Linux and Windows, but Wayland
+coverage failed `FeedbackTransitions` (scenario 13/13). The driver had injected
+the key; the observer never received F3-up and last saw Control-up. Historical
+driver records identify only `key`, not which of the three feedback shortcuts
+was active. The accompanying AT-SPI warning alone does not establish a cause.
+
+The isolated feedback scenario passed twenty ordinary-input controls. Scanning
+native key durations then reproduced the same release failure with a 16 ms
+xdotool delay. GTK/wx tracing showed the second feedback auto-response completing
+before F3-up, with no later F3 release delivered to a widget. A 150 ms held-key
+regression reliably exposes the early-response ordering even when release later
+reaches the editor. Before the fix it fails in 2.53 seconds with
+`feedback responses must follow the opening shortcut's native release`.
+
+The feedback fixture now observes the opening shortcut's actual release before
+clicking its response. It uses the existing shortcut deadline, published after
+the input request is written, instead of starting another three-second wait when
+the modal opens. On expiry it unwinds the modal so the original release assertion
+can fail. The Windows shortcut remains synchronous and does not wait for a
+physical release. Application search and feedback code are unchanged.
+
+`native_search_feedback_release` selects the feedback scenario with held native
+input. Its explicit `key-delay:<milliseconds>:<keys>` driver request leaves normal
+`key:` delivery unchanged. The full original thirteen-scenario case, all search
+messages, ranges and settings assertions, the three-second release budget and
+the sixty-second CTest guard remain. Controlled traces, failed setup attempts and
+the registered red regression are retained in the evidence directory above;
+only `feedback-permanent-red-05` is the completed held-input red acceptance run.

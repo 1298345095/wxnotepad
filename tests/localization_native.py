@@ -424,6 +424,23 @@ class Dialogs:
             except AssertionError as error:
                 raise AssertionError(f'Native {key} expected {expected_state}; last app state: {latest}') from error
 
+    def chooser_lookup(self, query, deadline, description):
+        """Read a chooser snapshot; never repeat an action after an uncertain reply."""
+        from gi.repository import GLib
+        last_error = None
+        while time.monotonic() < deadline:
+            try:
+                return query()
+            except GLib.GError as error:
+                if (error.domain != 'atspi_error' or error.code != ATSPI_IPC_ERROR or
+                        error.message != 'timeout from dbind'):
+                    raise
+                if last_error is None:
+                    print(f'Native chooser {description} read-only lookup: {error}', file=sys.stderr, flush=True)
+                last_error = str(error)
+                time.sleep(.03)
+        raise AssertionError(f'Native chooser {description} lookup expired; last read-only error: {last_error}')
+
     def navigate_folder(self, app, window, folder):
         """Navigate the owned chooser to fixed disposable files before inspection."""
         import os
@@ -460,11 +477,15 @@ class Dialogs:
                     # still be disabled while the native folder model updates.
                     # Submit the actual chooser button once it can accept input.
                     while time.monotonic() < deadline:
-                        buttons = [child for child in self.children(window)
-                                   if child.get_role() == self.atspi.Role.PUSH_BUTTON
-                                   and child.get_name() == 'Open'
-                                   and child.get_state_set().contains(self.atspi.StateType.SENSITIVE)]
+                        buttons = self.chooser_lookup(
+                            lambda: [child for child in self.children(window)
+                                     if child.get_role() == self.atspi.Role.PUSH_BUTTON
+                                     and child.get_name() == 'Open'
+                                     and child.get_state_set().contains(self.atspi.StateType.SENSITIVE)],
+                            deadline, 'Open')
                         if buttons:
+                            # Read-only lookup can wait; this mutation stays outside
+                            # its handler and is never retried after an uncertain reply.
                             assert buttons[0].get_action_iface().do_action(0)
                             break
                         time.sleep(.03)
@@ -520,15 +541,20 @@ class Dialogs:
                     if '*.' in text.value:
                         filters.append(text.value)
             return filters
-        for child in self.children(window):
-            if child.get_role() == self.atspi.Role.COMBO_BOX:
-                action = child.get_action_iface()
-                if action:
-                    action.do_action(0)
-                    filters = [text for text in self.texts(window) if '*.' in text]
-                    action.do_action(0)
-                    if filters:
-                        return filters
+        # The chooser can still publish its filter controls after navigation.
+        # Give only this read-only snapshot a bounded readiness wait; the outer
+        # packaged-layout timeout and the native RPC timeout remain unchanged.
+        controls = self.chooser_lookup(
+            lambda: [child for child in self.children(window) if child.get_role() == self.atspi.Role.COMBO_BOX],
+            time.monotonic() + 10, 'filters')
+        for child in controls:
+            action = child.get_action_iface()
+            if action:
+                action.do_action(0)
+                filters = [text for text in self.texts(window) if '*.' in text]
+                action.do_action(0)
+                if filters:
+                    return filters
         return [text for text in self.texts(window) if '*.' in text]
 
     def answer(self, process, choice, title='wxnotepad', window=None):
