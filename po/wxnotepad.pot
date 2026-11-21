@@ -1137,7 +1137,8 @@ msgstr ""
 msgid "Could not open new window"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+#: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
+#: src/app/open_targets.cpp
 msgid "Could not open target"
 msgstr ""
 
@@ -1155,7 +1156,7 @@ msgid "Could not open the file for reading."
 msgstr ""
 
 #. TRANSLATORS: Selected file/folder/link launch failure and dialog title; no parameters.
-#: src/app/open_targets.cpp
+#: src/app/explorer_selections.cpp src/app/open_targets.cpp
 msgid "Could not open the selected target."
 msgstr ""
 

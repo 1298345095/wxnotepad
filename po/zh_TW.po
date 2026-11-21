@@ -1324,7 +1324,8 @@ msgstr "無法開啟檔案"
 msgid "Could not open new window"
 msgstr "無法開啟新視窗"
 
-#: src/app/editor_frame_commands.cpp src/app/open_targets.cpp
+#: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
+#: src/app/open_targets.cpp
 msgid "Could not open target"
 msgstr "無法開啟目標"
 
@@ -1342,7 +1343,7 @@ msgid "Could not open the file for reading."
 msgstr "無法開啟檔案進行讀取。"
 
 #. TRANSLATORS: Selected file/folder/link launch failure and dialog title; no parameters.
-#: src/app/open_targets.cpp
+#: src/app/explorer_selections.cpp src/app/open_targets.cpp
 msgid "Could not open the selected target."
 msgstr "無法開啟選取的目標。"
 
