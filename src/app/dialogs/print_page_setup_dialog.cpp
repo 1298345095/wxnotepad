@@ -1,4 +1,5 @@
 #include "app/dialogs/print_page_setup_dialog.h"
+#include "app/dialogs/zoom_input.h"
 #include "app/editor_printing.h"
 #include "app/localization.h"
 #include <wx/button.h>
@@ -12,7 +13,6 @@
 #include <wx/statbox.h>
 #include <wx/stattext.h>
 #include <cmath>
-#include <cstdlib>
 #include <limits>
 #include <utility>
 
@@ -25,15 +25,6 @@ wxChoice* AddChoices(wxDialog& dialog, wxSizer& fields, const wxString& label, c
     AppLocalization::SetAccessibleName(*choice, accessibleName);
     fields.Add(choice, 1, wxEXPAND);
     return choice;
-}
-
-int ParseZoom(const wxComboBox& input) {
-    const auto text = input.GetValue().ToStdString(wxConvUTF8);
-    char* end = nullptr;
-    const long value = std::strtol(text.c_str(), &end, 10);
-    return end != text.c_str() && value >= Scintilla::MinZoomLevel && value <= Scintilla::MaxZoomLevel
-               ? static_cast<int>(value)
-               : PrintOptions{}.zoom;
 }
 } // namespace
 
@@ -160,13 +151,10 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
         // TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
         _("Print zoom (%d%% to %d%%):"), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
     fields->Add(new wxStaticText(&dialog, wxID_ANY, zoomLabel), 0, wxALIGN_CENTER_VERTICAL);
-    auto* zoom = new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", options.zoom));
+    auto* zoom = CreateZoomInput(&dialog, options.zoom);
     zoom->SetName("Print zoom");
     // TRANSLATORS: Screen reader name for the IDC_PAGESETUP_ZOOMLEVEL percentage field.
     AppLocalization::SetAccessibleName(*zoom, _("Print zoom"));
-    zoom->SetMaxLength(8);
-    for (int level : {500, 450, 400, 350, 300, 250, 200, 175, 150, 125, 100, 75, 50, 25})
-        zoom->Append(wxString::Format("%d%%", level));
     fields->Add(zoom, 1, wxEXPAND);
     content->Add(fields, 0, wxEXPAND | wxALL, padding);
     content->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, padding);
@@ -177,7 +165,7 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
     options.header = static_cast<PrintHeader>(header->GetSelection());
     options.footer = static_cast<PrintFooter>(footer->GetSelection());
     options.colour = static_cast<Scintilla::PrintOption>(colour->GetSelection());
-    options.zoom = ParseZoom(*zoom);
+    options.zoom = ReadZoomLevel(*zoom).value_or(PrintOptions{}.zoom);
     for (const auto& [control, option] : marginInputs)
         option = static_cast<int>(std::lround(control.GetValue() * units.unitsPerDisplayUnit));
     return draft;

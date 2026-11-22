@@ -6,6 +6,7 @@ import sys
 import time
 
 from resource_process import wait_state
+from weston_scene import mapped_toplevel
 
 ATSPI_IPC_ERROR = 1  # ATSPI_ERROR_IPC; this native error enum is not exposed by the GI bindings.
 
@@ -157,23 +158,12 @@ class Dialogs:
         raise AssertionError(f'Native dialog {title!r} not ready: {[self.title(w) for w in observed]}')
 
     def wayland_mapping(self, pid, title, deadline):
-        import re
         import subprocess
         remaining = deadline - time.monotonic()
         assert remaining > 0, 'Native dialog mapping deadline expired'
         result = subprocess.run(['weston-debug', 'scene-graph'], capture_output=True, text=True,
                                 timeout=min(2, remaining), check=True)
-        layered = False
-        for section in re.split(r'(?=^Layer |^	View )', result.stdout, flags=re.MULTILINE):
-            if section.startswith('Layer '):
-                layered = True
-            if not layered or not re.match(rf'	View \d+ \(role xdg_toplevel, PID {pid}, surface ID \d+, ', section):
-                continue
-            if f"top-level window '{title}' of " not in section.splitlines()[0]:
-                continue
-            if not re.search(r'\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]', section):
-                return True, result.stdout
-        return False, result.stdout
+        return mapped_toplevel(result.stdout, pid, title=title), result.stdout
 
     def retain_native_scene(self, pid, phase, scene):
         if self.evidence is not None:

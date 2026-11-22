@@ -3,6 +3,7 @@
 #include "app/localization.h"
 #include "app/native_launch.h"
 #include "settings/settings_store.h"
+#include "settings/environment_expansion.h"
 #include <wx/button.h>
 #include <wx/dialog.h>
 #include <wx/menu.h>
@@ -48,13 +49,6 @@ CommandParts SplitProgram(wxString command) {
     const auto programStart = command[0] == '"' ? 1 : 0;
     return {command.Mid(programStart, end - programStart).Strip(wxString::both),
             command.Mid(end + 1).Strip(wxString::both)};
-}
-wxString ExpandEnvironment(const wxString& value) {
-    const auto length = ExpandEnvironmentStringsW(value.wc_str(), nullptr, 0);
-    if (!length) return value;
-    std::vector<wchar_t> expanded(length);
-    const auto written = ExpandEnvironmentStringsW(value.wc_str(), expanded.data(), length);
-    return written && written <= length ? wxString(expanded.data()) : value;
 }
 #else
 struct NativeCommand {
@@ -148,8 +142,8 @@ void BrowseCommand(wxDialog& parent, wxTextCtrl& input) {
     wxString arguments;
 #ifdef __WXMSW__
     const auto parts = SplitProgram(input.GetValue());
-    program = ExpandEnvironment(parts.program);
-    arguments = ExpandEnvironment(parts.arguments);
+    program = ExpandWindowsEnvironment(parts.program);
+    arguments = ExpandWindowsEnvironment(parts.arguments);
     // TRANSLATORS: IDD_RUN program browser filter; preserve wildcard patterns and vertical-bar separators.
     const wxString filter = _("Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*");
 #else
@@ -186,7 +180,7 @@ bool IsSelfAlias(const wxString& program) {
 bool LaunchCommand(wxDialog& dialog, const wxString& command, const wxString& directory, wxString& error) {
 #ifdef __WXMSW__
     auto parts = SplitProgram(command);
-    parts.arguments = ExpandEnvironment(parts.arguments);
+    parts.arguments = ExpandWindowsEnvironment(parts.arguments);
     const bool self = IsSelfAlias(parts.program);
     if (self) parts.program = wxStandardPaths::Get().GetExecutablePath();
     SHELLEXECUTEINFOW launch{};

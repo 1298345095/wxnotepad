@@ -17,6 +17,7 @@ import tempfile
 import time
 import threading
 from collections import deque
+from weston_scene import mapped_toplevel
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
@@ -80,20 +81,6 @@ def focus_owned_window(focus, title, deadline_us=None):
     elif backend != "x11":
         xdo("windowfocus", "--sync", weston_window)
     return True
-
-
-def mapped_toplevel(scene, process, surface):
-    """Match the current owned shell view, including already-presented views."""
-    layered = False
-    for section in re.split(r"(?=^Layer |^\tView )", scene, flags=re.MULTILINE):
-        if section.startswith("Layer "):
-            layered = True
-        if not layered or not section.startswith("\tView "):
-            continue
-        if re.match(rf"\tView \d+ \(role xdg_toplevel, PID {process}, surface ID {surface}, top-level window '", section):
-            if not re.search(r"\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]", section):
-                return True
-    return False
 
 
 def retain_activation_failure(process, surface, expiry, scene, matched, queries, timed_out):

@@ -272,6 +272,8 @@ void CheckZoom(EditorFrame* frame) {
     Require(editor->Send(GetZoom) == 175, "Zoom Level accepts original numeric prefix");
     Level(frame, "501", wxID_OK);
     Require(editor->Send(GetZoom) == 175, "out-of-range OK closes without changing zoom");
+    Level(frame, "invalid", wxID_OK);
+    Require(editor->Send(GetZoom) == 175, "nonnumeric OK keeps the current screen zoom");
     Level(frame, "50", wxID_CANCEL);
     Require(editor->Send(GetZoom) == 175, "Cancel leaves unapplied value unchanged");
     Level(frame, "125%", wxID_CANCEL, true);

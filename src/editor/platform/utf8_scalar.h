@@ -2,7 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <UniConversion.h>
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 namespace WindowsUtf8 {
@@ -37,5 +39,15 @@ inline Scalar ReadScalar(std::string_view text) {
             valid = false;
     }
     return {valid ? value : 0xfffd, consumed, valid};
+}
+
+// Append a UTF-16-derived scalar, replacing lone surrogates as Win32 does.
+inline void AppendScalar(std::string& output, uint32_t value) {
+    using namespace Scintilla::Internal;
+    if (IsSurrogate(value)) value = unicodeReplacementChar;
+    char bytes[UTF8MaxBytes + 1];
+    UTF8FromUTF32Character(static_cast<int>(value), bytes);
+    // The core encoder writes a terminator; retain U+0000 as one data byte.
+    output.append(bytes, static_cast<size_t>(UTF8BytesOfLead(static_cast<unsigned char>(bytes[0]))));
 }
 } // namespace WindowsUtf8

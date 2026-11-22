@@ -2,6 +2,8 @@
 #include "search/search_limits.h"
 #include "search/find_text.h"
 #include "editor/editor_control.h"
+#include "editor/ascii_character.h"
+#include "editor/platform/utf8_scalar.h"
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -11,35 +13,11 @@
 namespace {
 // Adapted from Notepad4 89b8b36, src/EditEncoding.cpp TransformBackslashes
 // (BSD-3-Clause; see licenses/Notepad4.txt). The editor uses UTF-8 on every host.
-int HexDigit(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    return -1;
-}
-void AppendUtf8(std::string& output, unsigned value) {
-    if (value >= 0xd800 && value <= 0xdfff) value = 0xfffd;
-    if (value < 0x80) {
-        output.push_back(static_cast<char>(value));
-    } else if (value < 0x800) {
-        output.push_back(static_cast<char>(0xc0 | (value >> 6)));
-        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
-    } else if (value < 0x10000) {
-        output.push_back(static_cast<char>(0xe0 | (value >> 12)));
-        output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
-        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
-    } else {
-        output.push_back(static_cast<char>(0xf0 | (value >> 18)));
-        output.push_back(static_cast<char>(0x80 | ((value >> 12) & 0x3f)));
-        output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
-        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
-    }
-}
 int ReadHexEscape(std::string_view input, size_t start, size_t count) {
     if (start + count > input.size()) return -1;
     int value = 0;
     for (size_t index = start; index < start + count; ++index) {
-        const auto digit = HexDigit(input[index]);
+        const auto digit = Ascii::HexDigit(input[index]);
         if (digit < 0) return -1;
         value = (value << 4) | digit;
     }
@@ -49,20 +27,20 @@ int ReadHexEscape(std::string_view input, size_t start, size_t count) {
 void AppendUnicodeEscape(std::string_view input, size_t& index, int value, std::string& output) {
     if (value < 0xd800 || value > 0xdbff || index + 2 >= input.size() || input[index + 1] != '\\' ||
         input[index + 2] != 'u') {
-        AppendUtf8(output, value);
+        WindowsUtf8::AppendScalar(output, value);
         return;
     }
     const int second = ReadHexEscape(input, index + 3, 4);
     if (second < 0 || (second >= 0xd800 && second <= 0xdbff)) {
-        AppendUtf8(output, value);
+        WindowsUtf8::AppendScalar(output, value);
         return;
     }
     index += 6;
     if (second >= 0xdc00 && second <= 0xdfff) {
-        AppendUtf8(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
+        WindowsUtf8::AppendScalar(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
     } else {
-        AppendUtf8(output, value);
-        AppendUtf8(output, second);
+        WindowsUtf8::AppendScalar(output, value);
+        WindowsUtf8::AppendScalar(output, second);
     }
 }
 

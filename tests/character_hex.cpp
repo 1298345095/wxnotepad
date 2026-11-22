@@ -58,9 +58,11 @@ void ReferenceFixtures(EditorFrame* frame) {
     }
     std::puts("PASS: 18 independent original Character/Hex byte fixtures, endpoints and Undo/Redo");
 }
-void InvalidUtf8Boundaries() {
+void UnicodeBoundaries() {
     Require(::CharacterToHex("\x{e2}\x{82}A\x{c2}\x{c3}\x{a9}") == "\\uFFFD\\x41\\uFFFD\\xE9",
             "invalid UTF-8 prefixes leave the following ASCII or valid leading byte for the next character");
+    Require(::HexToCharacter(R"(\u0000\uD800\u0041\U0010FFFF)") == std::string("\0\u{FFFD}A\u{10FFFF}", 9),
+            "NUL, lone surrogate and the highest scalar preserve their explicit UTF-8 byte lengths");
 }
 void RectangleConversion(EditorFrame* frame, bool encode, int id, const char* rectangle, bool reverse) {
     using enum Scintilla::Message;
@@ -253,7 +255,7 @@ public:
                 Require(presented, "private compositor must present the owned editor before native scenarios");
                 CharacterToHex(frame);
                 ReferenceFixtures(frame);
-                InvalidUtf8Boundaries();
+                UnicodeBoundaries();
                 SelectionAndHistory(frame);
                 NativeCommands(frame);
                 SavedBytes(frame);

@@ -1,5 +1,6 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 #include "editor/platform/character_hex.h"
+#include "editor/ascii_character.h"
 #include "editor/platform/utf8_scalar.h"
 #include <cstdint>
 #include <format>
@@ -22,12 +23,6 @@ std::u16string Utf16(std::string_view text) {
     }
     return result;
 }
-int HexDigit(char16_t character) {
-    if (character >= '0' && character <= '9') return character - '0';
-    if (character >= 'A' && character <= 'F') return character - 'A' + 10;
-    if (character >= 'a' && character <= 'f') return character - 'a' + 10;
-    return -1;
-}
 bool ReadHexEscape(std::u16string_view input, size_t& position, uint32_t& unit) {
     if (position == input.size()) return false;
     if (!((unit == '\\' && (input[position] == 'x' || input[position] == 'u' || input[position] == 'U')) ||
@@ -40,7 +35,7 @@ bool ReadHexEscape(std::u16string_view input, size_t& position, uint32_t& unit) 
     uint32_t value = 0;
     unsigned count = 0;
     while (end < input.size() && count < maximum) {
-        const int digit = HexDigit(input[end]);
+        const int digit = Ascii::HexDigit(input[end]);
         if (digit < 0) break;
         value = (value << 4) | digit;
         ++end;
@@ -63,23 +58,8 @@ std::string Utf8(std::u16string_view text) {
         if (value >= 0xd800 && value <= 0xdbff && index + 1 < text.size() && text[index + 1] >= 0xdc00 &&
             text[index + 1] <= 0xdfff) {
             value = 0x10000 + ((value - 0xd800) << 10) + text[++index] - 0xdc00;
-        } else if (value >= 0xd800 && value <= 0xdfff) {
-            value = 0xfffd;
         }
-        if (value < 0x80) {
-            result += static_cast<char>(value);
-        } else {
-            if (value >= 0x10000) {
-                result += static_cast<char>(0xf0 | (value >> 18));
-                result += static_cast<char>(0x80 | ((value >> 12) & 0x3f));
-            } else if (value >= 0x800) {
-                result += static_cast<char>(0xe0 | (value >> 12));
-            } else {
-                result += static_cast<char>(0xc0 | (value >> 6));
-            }
-            if (value >= 0x800) result += static_cast<char>(0x80 | ((value >> 6) & 0x3f));
-            result += static_cast<char>(0x80 | (value & 0x3f));
-        }
+        WindowsUtf8::AppendScalar(result, value);
     }
     return result;
 }

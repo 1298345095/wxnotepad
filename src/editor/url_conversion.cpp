@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/ascii_character.h"
 #include "editor/platform/utf8_scalar.h"
 #include <algorithm>
 #include <string_view>
@@ -123,12 +124,6 @@ std::string Encode(const std::string& text, bool component) {
         result += rest.substr(fragment, query > fragment ? query - fragment : std::string_view::npos);
     return result;
 }
-int HexDigit(unsigned char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
 std::string Convert(std::string_view text, UrlConversion command, size_t length) {
     const auto input = ValidUtf8(text);
     if (command != UrlConversion::Decode) return Encode(input, command == UrlConversion::ComponentEncode);
@@ -138,8 +133,8 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
             bytes += input[index];
             continue;
         }
-        const int high = HexDigit(input[index + 1]);
-        const int low = HexDigit(input[index + 2]);
+        const int high = Ascii::HexDigit(input[index + 1]);
+        const int low = Ascii::HexDigit(input[index + 2]);
         if (high < 0 || low < 0) {
             bytes += input[index];
             continue;

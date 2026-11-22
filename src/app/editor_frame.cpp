@@ -35,40 +35,17 @@
 #endif
 
 namespace {
-wxString EncodingName(FileEncoding encoding) {
-    switch (encoding) {
-        using enum FileEncoding;
-    case Utf16Le:
-        return "UTF-16LE";
-    case Utf16Be:
-        return "UTF-16BE";
-    case Gbk:
-        return "GBK (CP936)";
-    case Gb18030:
-        return "GB18030 (CP54936)";
-    case Big5:
-        return "Big5 (CP950)";
-    case Windows1252:
-        return "Windows-1252";
-    case Dos437:
-        return "DOS-437";
-    default:
-        return "UTF-8";
-    }
-}
-
 wxString DocumentEncodingLabel(const DocumentSession& document) {
     const auto encoding = document.Encoding();
-    const wxString name = EncodingName(encoding);
+    const auto* info = FindFileEncodingInfo(encoding);
+    const wxString name = info ? info->displayName : "UTF-8";
     if (document.IsDefaultEncoding()) {
         switch (encoding) {
             using enum FileEncoding;
         case Gbk:
-            return "ANSI (CP936)";
         case Gb18030:
-            return "ANSI (CP54936)";
         case Big5:
-            return "ANSI (CP950)";
+            return wxString::Format("ANSI (CP%u)", info->codePage);
         default:
             return "ANSI (" + name + ")";
         }

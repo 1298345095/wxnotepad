@@ -1,6 +1,7 @@
 // Adapted from Notepad4 89b8b36 EditAutoC.cpp: EditCompleteWordCore.
 // Copyright and BSD 3-Clause license: licenses/Notepad4.txt.
 #include "editor/word_completion.h"
+#include "editor/ascii_character.h"
 #include "editor/completion_candidates.h"
 #include "editor/editor_control.h"
 #include "editor/completion_styles.h"
@@ -37,21 +38,6 @@ bool IsASpaceOrTab(int ch) {
 bool IsAlpha(int ch) {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
-int UnsafeLower(int ch) {
-    return ch >= 'A' && ch <= 'Z' ? ch + 'a' - 'A' : ch;
-}
-bool BitTestEx(const uint32_t* mask, unsigned value) {
-    return value < 256 && (mask[value >> 5] & (1U << (value & 31)));
-}
-constexpr unsigned LexerAttr_PrintfFormatSpecifier = 1U << 6;
-constexpr unsigned LexerAttr_CppPreprocessor = 1U << 8;
-constexpr unsigned LexerAttr_EscapePunctuation = 1U << 10;
-constexpr unsigned LexerAttr_PlainTextFile = 1U << 11;
-constexpr int AutoCompletionOption_ScanWordsInDocument = 4;
-constexpr int AutoCompletionOption_OnlyWordsInDocument = 8;
-constexpr int AutoCompleteScope_Commont = 1;
-constexpr int AutoCompleteScope_String = 2;
-constexpr int AutoCompleteScope_PlainText = 4;
 // optimization for small string
 template <size_t StackSize = 32> class CharBuffer {
     char* ptr;
@@ -127,7 +113,7 @@ class Collector final {
     static bool IsDefaultWordChar(unsigned ch) {
         static constexpr std::array<uint32_t, 8> mask = {0,           0x03ff0000U, 0x87fffffeU, 0x07fffffeU,
                                                          0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
-        return BitTestEx(mask.data(), ch);
+        return CompletionStyleContains(mask, ch);
     }
     bool IsRawStringStyle(unsigned style) const { return CompletionStyleContains(styles_.rawStrings, style); }
     bool IsCommentStyle(unsigned style) const { return CompletionStyleContains(styles_.comments, style); }
@@ -178,7 +164,7 @@ class Collector final {
                 return stylePrev == definition_.original.formatSpecifierStyle;
             }
             // legacy lexer without format specifier highlighting
-            if (definition_.original.lexerAttributes & LexerAttr_PrintfFormatSpecifier) {
+            if (definition_.original.lexerAttributes & SyntaxLexerAttribute::PrintfFormatSpecifier) {
                 return !(stylePrev == definition_.original.operatorStyle ||
                          stylePrev == definition_.original.operatorStyle2);
             }
@@ -561,7 +547,7 @@ class Collector final {
             chPrev2 = CharacterAt(before2);
         // Word after an escape character or format specifier.
         if (chPrev == '%' || (chPrev == definition_.original.escapeCharacterStart &&
-                              (definition_.original.lexerAttributes & LexerAttr_EscapePunctuation) == 0)) {
+                              (definition_.original.lexerAttributes & SyntaxLexerAttribute::EscapePunctuation) == 0)) {
             const auto style = StyleIndexAt(iStartWordPos);
             if (IsEscapeCharOrFormatSpecifier(before, ch, chPrev, style, false)) {
                 ++iStartWordPos;
@@ -581,7 +567,7 @@ class Collector final {
             iRootLen = settings_.minNumberLength;
             if (ch == '0') {
                 // number prefix
-                const int chNext = UnsafeLower(Call(Message::GetCharAt, iStartWordPos + 1));
+                const int chNext = Ascii::Lower(Call(Message::GetCharAt, iStartWordPos + 1));
                 if (chNext == 'x' || chNext == 'b' || chNext == 'o') {
                     iRootLen += 2;
                 }
@@ -611,7 +597,7 @@ class Collector final {
 
     void AdjustSpecialPrefix(Sci_Position iStartWordPos, Sci_Position iLineStartPos, int& ch, int& chPrev,
                              int chPrev2) {
-        if ((definition_.original.lexerAttributes & LexerAttr_CppPreprocessor) &&
+        if ((definition_.original.lexerAttributes & SyntaxLexerAttribute::CppPreprocessor) &&
             (chPrev == '#' || IsASpaceOrTab(chPrev))) {
             if (const auto previous = ReadPreprocessorPrefix(iStartWordPos, iLineStartPos, chPrev);
                 previous.has_value())
@@ -624,16 +610,17 @@ class Collector final {
     }
 
     bool CompletionScopeEnabled(int iCurrentStyle, bool bScanWordsInDocument) {
-        if (definition_.lexer == SCLEX_NULL || (definition_.original.lexerAttributes & LexerAttr_PlainTextFile)) {
-            if (!bScanWordsInDocument || !(settings_.completeScope & AutoCompleteScope_PlainText) ||
-                !(settings_.scanWordScope & AutoCompleteScope_PlainText)) {
+        if (definition_.lexer == SCLEX_NULL ||
+            (definition_.original.lexerAttributes & SyntaxLexerAttribute::PlainTextFile)) {
+            if (!bScanWordsInDocument || !(settings_.completeScope & WordCompletionScope::PlainText) ||
+                !(settings_.scanWordScope & WordCompletionScope::PlainText)) {
                 return false;
             }
         } else {
-            if ((!(settings_.completeScope & AutoCompleteScope_Commont) && IsCommentStyle(iCurrentStyle)) ||
-                (!(settings_.completeScope & AutoCompleteScope_String) &&
+            if ((!(settings_.completeScope & WordCompletionScope::Comment) && IsCommentStyle(iCurrentStyle)) ||
+                (!(settings_.completeScope & WordCompletionScope::String) &&
                  CompletionStyleContains(styles_.strings, iCurrentStyle)) ||
-                (!(settings_.completeScope & AutoCompleteScope_PlainText) &&
+                (!(settings_.completeScope & WordCompletionScope::PlainText) &&
                  CompletionStyleContains(styles_.plainText, iCurrentStyle))) {
                 return false;
             }
@@ -646,18 +633,18 @@ class Collector final {
         std::array<uint32_t, 8> ignoredStyleMask{};
         if (bScanWordsInDocument) {
             ignoredStyleMask = styles_.ignoredWords;
-            if (!(settings_.scanWordScope & AutoCompleteScope_Commont) && !IsCommentStyle(iCurrentStyle)) {
+            if (!(settings_.scanWordScope & WordCompletionScope::Comment) && !IsCommentStyle(iCurrentStyle)) {
                 for (unsigned i = 0; i < 8; i++) {
                     ignoredStyleMask[i] |= styles_.comments[i];
                 }
             }
-            if (!(settings_.scanWordScope & AutoCompleteScope_String) &&
+            if (!(settings_.scanWordScope & WordCompletionScope::String) &&
                 !CompletionStyleContains(styles_.strings, iCurrentStyle)) {
                 for (unsigned i = 0; i < 8; i++) {
                     ignoredStyleMask[i] |= styles_.strings[i];
                 }
             }
-            if (!(settings_.scanWordScope & AutoCompleteScope_PlainText) &&
+            if (!(settings_.scanWordScope & WordCompletionScope::PlainText) &&
                 !CompletionStyleContains(styles_.plainText, iCurrentStyle)) {
                 for (unsigned i = 0; i < 8; i++) {
                     ignoredStyleMask[i] |= styles_.plainText[i];
@@ -669,13 +656,13 @@ class Collector final {
 
     void CollectCandidates(CompletionCandidates& pWList, int iCurrentStyle, bool bIgnoreLexer, bool bIgnoreDoc,
                            char prefix) {
-        const bool bScanWordsInDocument = (settings_.completeOption & AutoCompletionOption_ScanWordsInDocument) != 0;
+        const bool bScanWordsInDocument = (settings_.completeOption & WordCompletionOption::ScanWordsInDocument) != 0;
         const bool bIgnoreCase = pWList.IgnoreCase();
         bool retry = CompletionScopeEnabled(iCurrentStyle, bScanWordsInDocument);
-        const auto ignoredStyleMask =
-            definition_.lexer == SCLEX_NULL || (definition_.original.lexerAttributes & LexerAttr_PlainTextFile)
-                ? std::array<uint32_t, 8>{}
-                : IgnoredDocumentStyles(iCurrentStyle, retry && bScanWordsInDocument);
+        const auto ignoredStyleMask = definition_.lexer == SCLEX_NULL || (definition_.original.lexerAttributes &
+                                                                          SyntaxLexerAttribute::PlainTextFile)
+                                          ? std::array<uint32_t, 8>{}
+                                          : IgnoredDocumentStyles(iCurrentStyle, retry && bScanWordsInDocument);
 
         while (retry) {
             if (!bIgnoreLexer) {
@@ -793,7 +780,7 @@ public:
         Call(Message::GetTextRangeFull, 0, &tr);
         iRootLen = static_cast<int>(strlen(pRoot.data()));
 
-        bool bIgnoreLexer = (settings_.completeOption & AutoCompletionOption_OnlyWordsInDocument) != 0 ||
+        bool bIgnoreLexer = (settings_.completeOption & WordCompletionOption::OnlyWordsInDocument) != 0 ||
                             (pRoot[0] >= '0' && pRoot[0] <= '9'); // number
         const bool bIgnoreCase = bIgnoreLexer || settings_.ignoreCase;
         CompletionCandidates pWList({pRoot.data(), static_cast<size_t>(iRootLen)}, bIgnoreCase);

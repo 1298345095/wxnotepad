@@ -17,7 +17,8 @@ import subprocess
 import sys
 import time
 
-POLL = .01
+from app_observation import AppExited, POLL, StateTimeout, publish_command, wait_state as observe_state
+
 QUIET = 1.0
 
 
@@ -57,25 +58,16 @@ def memory(pid):
 
 
 def wait_state(folder, process, predicate):
-    deadline = time.perf_counter() + 30
-    while time.perf_counter() < deadline:
-        if process.poll() is not None:
-            raise RuntimeError(f"App exited {process.returncode}")
-        try:
-            state = dict(line.split("\t", 1) for line in
-                         (folder / "state").read_text(encoding="utf-8").splitlines())
-            if predicate(state):
-                return state
-        except (FileNotFoundError, PermissionError):
-            pass
-        time.sleep(POLL)
-    raise RuntimeError("App state observation timed out")
+    try:
+        return observe_state(folder, process, predicate, 30, time.perf_counter)
+    except AppExited as error:
+        raise RuntimeError(f"App exited {error.returncode}") from error
+    except StateTimeout as error:
+        raise RuntimeError("App state observation timed out") from error
 
 
 def command(folder, sequence, operation, path=""):
-    pending = folder / "pending"
-    pending.write_text(f"{sequence}\n{operation}\n{path}\n", encoding="utf-8")
-    pending.replace(folder / "command")
+    publish_command(folder, f"{sequence}\n{operation}\n{path}\n")
 
 
 def native_edit(process, state):

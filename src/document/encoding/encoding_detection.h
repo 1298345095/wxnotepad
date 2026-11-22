@@ -6,6 +6,14 @@
 #include <wx/string.h>
 
 enum class FileEncoding { Utf8, Utf16Le, Gbk, Utf16Be, Gb18030, Big5, Windows1252, Dos437 };
+struct FileEncodingInfo {
+    FileEncoding encoding;
+    unsigned codePage;
+    const char* displayName;
+    const char* observationName;
+};
+const FileEncodingInfo* FindFileEncodingInfo(FileEncoding encoding);
+
 enum class QuickReloadEncoding : std::uint8_t { Ansi, Oem, Default };
 struct EncodingChoice {
     FileEncoding encoding;

@@ -7,6 +7,7 @@ import tempfile
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from app_observation import AppExited, StateTimeout, publish_command as command, wait_state as observe_state
 from resources import native_edit
 
 
@@ -70,25 +71,12 @@ def observation_context(folder, process):
 
 
 def wait_state(folder, process, predicate, timeout=15):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if process.poll() is not None:
-            raise AssertionError(f"App exited: {process.returncode}")
-        try:
-            state = dict(line.split("\t", 1) for line in
-                         (folder / "state").read_text(encoding="utf-8").splitlines())
-            if predicate(state):
-                return state
-        except (FileNotFoundError, PermissionError):
-            pass
-        time.sleep(.01)
-    raise AssertionError("Actual app observation timed out")
-
-
-def command(folder, text):
-    pending = folder / "pending"
-    pending.write_text(text, encoding="utf-8")
-    pending.replace(folder / "command")
+    try:
+        return observe_state(folder, process, predicate, timeout, time.monotonic)
+    except AppExited as error:
+        raise AssertionError(f"App exited: {error.returncode}") from error
+    except StateTimeout as error:
+        raise AssertionError("Actual app observation timed out") from error
 
 
 def main():

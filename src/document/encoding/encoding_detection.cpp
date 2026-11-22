@@ -46,6 +46,19 @@ struct OriginalEncoding {
 };
 #include "original_encoding_catalog.h"
 
+// Supported codecs share identity and names; the full original catalog above
+// also retains aliases and persisted values for unsupported codecs.
+constexpr auto fileEncodings = std::to_array<FileEncodingInfo>({
+    {FileEncoding::Utf8, 65001, "UTF-8", "UTF-8"},
+    {FileEncoding::Utf16Le, 1200, "UTF-16LE", "UTF-16LE"},
+    {FileEncoding::Utf16Be, 1201, "UTF-16BE", "UTF-16BE"},
+    {FileEncoding::Gbk, 936, "GBK (CP936)", "CP936"},
+    {FileEncoding::Gb18030, 54936, "GB18030 (CP54936)", "CP54936"},
+    {FileEncoding::Big5, 950, "Big5 (CP950)", "CP950"},
+    {FileEncoding::Windows1252, 1252, "Windows-1252", "CP1252"},
+    {FileEncoding::Dos437, 437, "DOS-437", "CP437"},
+});
+
 int CodePageIndex(unsigned page) {
     for (size_t index = CPI_UTF8; index < std::size(catalog); ++index) {
         if (catalog[index].codePage == page) return static_cast<int>(index);
@@ -116,26 +129,10 @@ int DefaultEncoding(int value) {
 }
 
 int EncodingIndex(FileEncoding encoding) {
-    switch (encoding) {
-        using enum FileEncoding;
-    case Utf8:
-        return CPI_UTF8;
-    case Utf16Le:
-        return CPI_UNICODE;
-    case Utf16Be:
-        return CPI_UNICODEBE;
-    case Gbk:
-        return CodePageIndex(936);
-    case Windows1252:
-        return CodePageIndex(1252);
-    case Dos437:
-        return CodePageIndex(437);
-    case Gb18030:
-        return CodePageIndex(54936);
-    case Big5:
-        return CodePageIndex(950);
-    }
-    return CPI_NONE;
+    if (encoding == FileEncoding::Utf16Le) return CPI_UNICODE;
+    if (encoding == FileEncoding::Utf16Be) return CPI_UNICODEBE;
+    const auto* info = FindFileEncodingInfo(encoding);
+    return info ? CodePageIndex(info->codePage) : CPI_NONE;
 }
 
 int EncodingIndex(const EncodingChoice& choice) {
@@ -146,6 +143,13 @@ int EncodingIndex(const EncodingChoice& choice) {
     if (choice.bom && choice.encoding == Utf16Be) return CPI_UNICODEBEBOM;
     if (choice.bom && choice.encoding == Utf8) return CPI_UTF8SIGN;
     return EncodingIndex(choice.encoding);
+}
+
+int PersistedEncodingSetting(int index) {
+    if (index == CPI_UTF8) return CPI_NONE; // Original global UTF-8 default is omitted on Save.
+    // Persisted INI values, indexed by the original catalog order.
+    constexpr auto mapping = std::to_array<int>({0, 5, 1, 2, 6, 7, 3, 4, 8});
+    return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
 }
 
 bool ValidLegacy(unsigned page, std::string_view bytes) {
@@ -187,12 +191,11 @@ DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDef
                           : index == CPI_OEM   ? oem
                           : index >= 0         ? catalog[index].codePage
                                                : 0;
-    if (page == 936) return {Gbk, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 1252) return {Windows1252, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 437) return {Dos437, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 54936) return {Gb18030, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 950) return {Big5, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 65001) return {Utf8, false, {}, systemDefault, index == CPI_OEM};
+    for (const auto& info : fileEncodings) {
+        // UTF-16 is selected by its catalog identity, never as a native code page.
+        if (info.codePage == page && info.encoding != Utf16Le && info.encoding != Utf16Be)
+            return {info.encoding, false, {}, systemDefault, index == CPI_OEM};
+    }
     return {std::nullopt, false, page};
 }
 
@@ -404,6 +407,13 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
 }
 } // namespace
 
+const FileEncodingInfo* FindFileEncodingInfo(FileEncoding encoding) {
+    for (const auto& info : fileEncodings) {
+        if (info.encoding == encoding) return &info;
+    }
+    return nullptr;
+}
+
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {
     const auto names = catalog[EncodingIndex(encoding)].names;
     const auto separator = names.find(',');
@@ -428,11 +438,7 @@ std::optional<EncodingChoice> NativeOemEncodingChoice() {
 }
 
 int NormalizeEncodingSetting(int value) {
-    const int index = DefaultEncoding(value);
-    if (index == CPI_UTF8) return CPI_NONE; // Original global UTF-8 default is omitted on Save.
-    // Persisted INI values, indexed by the original catalog order.
-    constexpr auto mapping = std::to_array<int>({0, 5, 1, 2, 6, 7, 3, 4, 8});
-    return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
+    return PersistedEncodingSetting(DefaultEncoding(value));
 }
 
 std::optional<EncodingChoice> DefaultEncodingChoice(int setting) {
@@ -444,10 +450,7 @@ std::optional<EncodingChoice> DefaultEncodingChoice(int setting) {
 }
 
 int EncodingSetting(EncodingChoice choice) {
-    const int index = EncodingIndex(choice);
-    if (index == CPI_UTF8) return CPI_NONE;
-    constexpr auto mapping = std::to_array<int>({0, 5, 1, 2, 6, 7, 3, 4, 8});
-    return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
+    return PersistedEncodingSetting(EncodingIndex(choice));
 }
 
 bool IsUtf8(std::string_view bytes) {
