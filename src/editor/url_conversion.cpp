@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/platform/utf8_scalar.h"
 #include <algorithm>
 #include <string_view>
 #include <vector>
@@ -37,53 +38,16 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
     return result;
 }
 #else
-// The selection getter already maps NUL to space. Both original conversion
-// boundaries consume an invalid second continuation byte with its prefix.
-struct Utf8Sequence {
-    size_t consumed;
-    bool valid;
-};
-bool InvalidScalarPrefix(unsigned char first, unsigned char ch) {
-    return (first == 0xe0 && ch < 0xa0) || (first == 0xed && ch >= 0xa0) || (first == 0xf0 && ch < 0x90) ||
-           (first == 0xf4 && ch >= 0x90);
-}
-Utf8Sequence ReadUtf8Sequence(std::string_view text, size_t index) {
-    const auto first = static_cast<unsigned char>(text[index]);
-    const size_t width = first < 0x80                     ? 1
-                         : first >= 0xc2 && first <= 0xdf ? 2
-                         : first >= 0xe0 && first <= 0xef ? 3
-                         : first >= 0xf0 && first <= 0xf4 ? 4
-                                                          : 0;
-    size_t consumed = 1;
-    bool valid = width != 0;
-    while (valid && consumed < width) {
-        if (index + consumed == text.size()) {
-            valid = false;
-            break;
-        }
-        const auto ch = static_cast<unsigned char>(text[index + consumed]);
-        if (ch < 0x80 || ch > 0xbf) {
-            valid = false;
-            break;
-        }
-        if (consumed == 1 && InvalidScalarPrefix(first, ch)) {
-            ++consumed;
-            valid = false;
-            break;
-        }
-        ++consumed;
-    }
-    return {consumed, valid};
-}
+// The selection getter already maps NUL to space.
 std::string ValidUtf8(std::string_view text) {
     std::string result;
     for (size_t index = 0; index < text.size();) {
-        const auto [consumed, valid] = ReadUtf8Sequence(text, index);
-        if (valid)
-            result.append(text.substr(index, consumed));
+        const auto scalar = WindowsUtf8::ReadScalar(text.substr(index));
+        if (scalar.valid)
+            result.append(text.substr(index, scalar.consumed));
         else
             result += "\x{ef}\x{bf}\x{bd}";
-        index += consumed;
+        index += scalar.consumed;
     }
     return result;
 }
@@ -208,11 +172,6 @@ bool EditorControl::ConvertUrl(UrlConversion command) {
     const auto output = Convert(input, command, static_cast<size_t>(length));
     const auto start = Send(Message::GetSelectionStart);
     const auto end = Send(Message::GetSelectionEnd);
-    const bool backwards = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
-    Send(Message::SetTargetStart, start);
-    Send(Message::SetTargetEnd, end);
-    Send(Message::ReplaceTarget, output.size(), reinterpret_cast<intptr_t>(output.data()));
-    const auto outputEnd = start + static_cast<intptr_t>(output.size());
-    Send(Message::SetSel, backwards ? outputEnd : start, backwards ? start : outputEnd);
+    ReplaceRangeAndSelect(start, end, output);
     return true;
 }

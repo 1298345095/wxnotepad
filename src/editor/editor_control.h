@@ -93,7 +93,7 @@ public:
     bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
     void StripLeadingBlanks();
-    void StripTrailingBlanks();
+    void StripTrailingBlanks(bool wholeDocument = false);
     // False reports the original unsupported rectangular-selection operation.
     bool StripFirstCharacter();
     bool StripLastCharacter();
@@ -188,6 +188,8 @@ private:
     void QueueColorCallTipEdit();
     void EditColorCallTip(ColorCallTipRange range);
     std::unique_ptr<Core> core_;
+    // Select the replacement using the main selection's original direction.
+    void ReplaceRangeAndSelect(intptr_t start, intptr_t end, std::string_view replacement);
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
     std::unique_ptr<OccurrenceMarking> occurrences_;
     uint64_t documentRevision_ = 0;

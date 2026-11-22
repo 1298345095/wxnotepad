@@ -57,10 +57,10 @@ void StripSelectedBlanks(EditorControl& editor, bool leading) {
     }
 }
 
-void StripBlanks(EditorControl& editor, bool leading) {
+void StripBlanks(EditorControl& editor, bool leading, bool wholeDocument = false) {
     using enum Scintilla::Message;
     // Notepad4 89b8b36 EditStripLeadingBlanks / EditStripTrailingBlanks.
-    if (!editor.Send(GetSelectionEmpty) && !editor.Send(SelectionIsRectangle)) {
+    if (!wholeDocument && !editor.Send(GetSelectionEmpty) && !editor.Send(SelectionIsRectangle)) {
         StripSelectedBlanks(editor, leading);
         return;
     }
@@ -83,6 +83,6 @@ void EditorControl::StripLeadingBlanks() {
     StripBlanks(*this, true);
 }
 
-void EditorControl::StripTrailingBlanks() {
-    StripBlanks(*this, false);
+void EditorControl::StripTrailingBlanks(bool wholeDocument) {
+    StripBlanks(*this, false, wholeDocument);
 }

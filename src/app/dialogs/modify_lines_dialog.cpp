@@ -1,5 +1,5 @@
 #include "app/dialogs/modify_lines_dialog.h"
-#include "app/localization.h"
+#include "app/dialogs/win_edit_input.h"
 #include <wx/translation.h>
 #include "editor/editor_control.h"
 #include <wx/checkbox.h>
@@ -10,28 +10,16 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 
-namespace {
-wxString WinEditText(wxTextCtrl* input) {
-    auto text = input->GetValue();
-    text.Replace("\n", "\r\n");
-    return text;
-}
-} // namespace
-
 void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& before, wxString& after,
                            bool& skipEmpty) {
     // Original Edit.cpp::EditModifyLinesDlgProc and IDD_MODIFYLINES.
     wxDialog dialog(parent, wxID_ANY, _("Modify Lines"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const auto addInput = [contents, &dialog](const wxString& label, const wxString& name, const wxString& value) {
-        contents->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
-        auto display = value;
-        display.Replace("\r\n", "\n");
-        auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
-                                     wxTE_MULTILINE | wxTE_PROCESS_ENTER);
-        input->SetName(name);
-        AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(label));
+    auto* prefix = AddWinEditInput(dialog, *contents, _("&Prefix text to lines:"), "Prefix text to lines", before);
+    auto* suffix = AddWinEditInput(dialog, *contents, _("&Append text to lines:"), "Append text to lines", after);
+    auto* focused = prefix;
+    for (auto* input : {prefix, suffix}) {
         input->Bind(wxEVT_KEY_DOWN, [&dialog](wxKeyEvent& event) {
             // Original Helpers.cpp::MultilineEditProc accepts Return unless Shift is down.
             if ((event.GetKeyCode() == WXK_RETURN || event.GetKeyCode() == WXK_NUMPAD_ENTER) && !event.ShiftDown()) {
@@ -41,13 +29,6 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
                 event.Skip();
             }
         });
-        contents->Add(input, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
-        return input;
-    };
-    auto* prefix = addInput(_("&Prefix text to lines:"), "Prefix text to lines", before);
-    auto* suffix = addInput(_("&Append text to lines:"), "Append text to lines", after);
-    auto* focused = prefix;
-    for (auto* input : {prefix, suffix}) {
         input->Bind(wxEVT_SET_FOCUS, [&focused, input](wxFocusEvent& event) {
             focused = input;
             event.Skip();
@@ -91,8 +72,8 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
     dialog.Bind(
         wxEVT_BUTTON,
         [prefix, suffix, skip, &before, &after, &skipEmpty, &editor, &dialog](wxCommandEvent&) {
-            before = WinEditText(prefix);
-            after = WinEditText(suffix);
+            before = ReadWinEditInput(*prefix);
+            after = ReadWinEditInput(*suffix);
             skipEmpty = skip->GetValue();
             if (!editor.ModifyLines(before, after, skipEmpty))
                 wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",

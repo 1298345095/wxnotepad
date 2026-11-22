@@ -215,3 +215,5 @@ foreach(language 1033 2052 1028)
         endforeach()
     endif()
 endforeach()
+
+add_editor_test(settings_store settings_store_ini_semantics 30)

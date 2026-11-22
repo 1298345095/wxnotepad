@@ -1,6 +1,16 @@
 #include "editor/editor_control.h"
 #include <utility>
 
+// Original Edit.cpp::EditReplaceRange; callers retain their own no-change rules.
+void EditorControl::ReplaceRangeAndSelect(intptr_t start, intptr_t end, std::string_view replacement) {
+    using enum Scintilla::Message;
+    const bool backwards = Send(GetAnchor) > Send(GetCurrentPos);
+    Send(SetTargetRange, start, end);
+    Send(ReplaceTarget, replacement.size(), reinterpret_cast<intptr_t>(replacement.data()));
+    const auto resultEnd = start + static_cast<intptr_t>(replacement.size());
+    Send(SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
+}
+
 // Adapted from Notepad4 Edit.cpp::EditSelectWord at 89b8b36; see licenses/Notepad4.txt.
 void EditorControl::SelectWord() {
     using enum Scintilla::Message;

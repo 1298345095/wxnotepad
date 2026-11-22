@@ -6,6 +6,7 @@ add_library(fuzz_subjects STATIC
     ../../src/document/encoding/gbk_codec.cpp
     ../../src/document/encoding/single_byte_codec.cpp
     ../../src/document/encoding/chinese_codec.cpp
+    ../../src/document/encoding/wx_conversion.cpp
     "${NOTEPAD4_SOURCE}/scintilla/src/UniConversion.cxx")
 target_include_directories(fuzz_subjects PUBLIC ../../src
     PRIVATE "${NOTEPAD4_SOURCE}/scintilla/src")

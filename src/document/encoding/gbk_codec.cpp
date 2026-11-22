@@ -1,5 +1,6 @@
 #include <array>
 #include "document/encoding/gbk_codec.h"
+#include "document/encoding/wx_conversion.h"
 #include <wx/strconv.h>
 #include <wx/string.h>
 #include "UniConversion.h"
@@ -29,27 +30,6 @@ constexpr auto puaRanges = std::to_array<PuaRange>({
     {0xfba1, 0xfbfe, 0xe34e}, {0xfca1, 0xfcfe, 0xe3ac}, {0xfda1, 0xfdfe, 0xe40a}, {0xfe50, 0xfe7e, 0xe815},
     {0xfe80, 0xfea0, 0xe844}, {0xfea1, 0xfefe, 0xe468},
 });
-std::optional<std::wstring> Decode(const wxMBConv& converter, std::string_view bytes) {
-    if (bytes.empty()) return std::wstring{};
-    const auto length = converter.ToWChar(nullptr, 0, bytes.data(), bytes.size());
-    if (length == wxCONV_FAILED) return std::nullopt;
-    std::wstring result(length, L'\0');
-    const auto written = converter.ToWChar(result.data(), result.size(), bytes.data(), bytes.size());
-    if (written == wxCONV_FAILED) return std::nullopt;
-    result.resize(written);
-    return result;
-}
-std::optional<std::string> Encode(const wxMBConv& converter, const std::wstring& text) {
-    if (text.empty()) return std::string{};
-    const auto length = converter.FromWChar(nullptr, 0, text.data(), text.size());
-    if (length == wxCONV_FAILED) return std::nullopt;
-    std::string result(length, '\0');
-    const auto written = converter.FromWChar(result.data(), result.size(), text.data(), text.size());
-    if (written == wxCONV_FAILED) return std::nullopt;
-    result.resize(written);
-    return result;
-}
-
 std::optional<wchar_t> DecodePuaPair(std::string_view bytes) {
     if (bytes.size() != 2) return std::nullopt;
     const unsigned pair = (static_cast<unsigned char>(bytes[0]) << 8) | static_cast<unsigned char>(bytes[1]);
@@ -60,15 +40,16 @@ std::optional<wchar_t> DecodePuaPair(std::string_view bytes) {
 }
 } // namespace
 std::optional<std::string> DecodeGbk(std::string_view bytes) {
+    using namespace EncodingConversion;
     const wxCSConv cp936("CP936");
-    if (const auto wide = Decode(cp936, bytes)) return Encode(wxMBConvUTF8(), *wide);
+    if (const auto wide = ToWide(cp936, bytes)) return FromWide(wxMBConvUTF8(), *wide);
     std::wstring wide;
     for (size_t offset = 0; offset < bytes.size();) {
         const auto lead = static_cast<unsigned char>(bytes[offset]);
         const size_t length = lead <= 0x80 ? 1 : 2;
         if (lead == 0xff || length > bytes.size() - offset) return std::nullopt;
         const auto piece = bytes.substr(offset, length);
-        if (const auto decoded = Decode(cp936, piece))
+        if (const auto decoded = ToWide(cp936, piece))
             wide += *decoded;
         else {
             const auto decodedPua = DecodePuaPair(piece);
@@ -77,12 +58,13 @@ std::optional<std::string> DecodeGbk(std::string_view bytes) {
         }
         offset += length;
     }
-    return Encode(wxMBConvUTF8(), wide);
+    return FromWide(wxMBConvUTF8(), wide);
 }
 LegacyEncoded EncodeGbk(std::string_view utf8) {
-    const auto wide = Decode(wxMBConvUTF8(), utf8);
+    using namespace EncodingConversion;
+    const auto wide = ToWide(wxMBConvUTF8(), utf8);
     const wxCSConv cp936("CP936");
-    const auto strict = Encode(cp936, *wide);
+    const auto strict = FromWide(cp936, *wide);
     if (strict && DecodeGbk(*strict) == utf8) return {*strict, false};
     // Original EditSaveFile retains WC_NO_BEST_FIT_CHARS output whenever
     // substitution occurs. Supplementary scalars use two UTF-16 placeholders.
@@ -100,7 +82,7 @@ LegacyEncoded EncodeGbk(std::string_view utf8) {
                 break;
             }
         }
-        if (!converted) converted = Encode(cp936, *Decode(wxMBConvUTF8(), scalar));
+        if (!converted) converted = FromWide(cp936, *ToWide(wxMBConvUTF8(), scalar));
         if (converted && DecodeGbk(*converted) == scalar)
             result.bytes += *converted;
         else {

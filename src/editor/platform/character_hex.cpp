@@ -1,34 +1,11 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 #include "editor/platform/character_hex.h"
+#include "editor/platform/utf8_scalar.h"
 #include <cstdint>
 #include <format>
 #include <iterator>
 
 namespace {
-bool InvalidScalarPrefix(unsigned char first, unsigned char next) {
-    return (first == 0xe0 && next < 0xa0) || (first == 0xed && next >= 0xa0) || (first == 0xf0 && next < 0x90) ||
-           (first == 0xf4 && next >= 0x90);
-}
-uint32_t ReadUtf8Scalar(std::string_view text, size_t& position) {
-    const auto first = static_cast<unsigned char>(text[position++]);
-    if (first < 0x80) return first;
-    const int width = first >= 0xc2 && first <= 0xdf   ? 2
-                      : first >= 0xe0 && first <= 0xef ? 3
-                      : first >= 0xf0 && first <= 0xf4 ? 4
-                                                       : 0;
-    uint32_t value = width ? first & (0x7f >> width) : 0xfffd;
-    bool valid = width != 0;
-    for (int index = 1; valid && index < width; ++index) {
-        if (position == text.size() || (static_cast<unsigned char>(text[position]) & 0xc0) != 0x80) {
-            valid = false;
-            break;
-        }
-        const auto next = static_cast<unsigned char>(text[position++]);
-        value = (value << 6) | (next & 0x3f);
-        if (index == 1 && InvalidScalarPrefix(first, next)) valid = false;
-    }
-    return valid ? value : 0xfffd;
-}
 void AppendUtf16Scalar(std::u16string& result, uint32_t value) {
     if (value >= 0x10000) {
         result += static_cast<char16_t>(0xd800 + ((value - 0x10000) >> 10));
@@ -37,11 +14,11 @@ void AppendUtf16Scalar(std::u16string& result, uint32_t value) {
     result += static_cast<char16_t>(value);
 }
 std::u16string Utf16(std::string_view text) {
-    // Match MultiByteToWideChar(CP_UTF8, 0): consume an invalid continuation
-    // prefix, including the second byte when its scalar range is invalid.
     std::u16string result;
     for (size_t position = 0; position < text.size();) {
-        AppendUtf16Scalar(result, ReadUtf8Scalar(text, position));
+        const auto scalar = WindowsUtf8::ReadScalar(text.substr(position));
+        AppendUtf16Scalar(result, scalar.value);
+        position += scalar.consumed;
     }
     return result;
 }

@@ -60,11 +60,7 @@ bool EditorControl::JoinParagraphs() {
     if (JoinParagraphText(text, eol, joined)) {
         // Original EditReplaceRange replaces even identical bytes and repairs
         // the expanded selection in its original direction after the core call.
-        const bool reversed = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
-        Send(Message::SetTargetRange, start, end);
-        Send(Message::ReplaceTarget, joined.size(), reinterpret_cast<intptr_t>(joined.data()));
-        const auto joinedEnd = start + static_cast<intptr_t>(joined.size());
-        Send(Message::SetSel, reversed ? joinedEnd : start, reversed ? start : joinedEnd);
+        ReplaceRangeAndSelect(start, end, joined);
     }
     return true;
 }

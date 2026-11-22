@@ -279,6 +279,18 @@ void PublicBehavior(EditorFrame* frame) {
         editor->Send(Redo);
         Require(TestEditor::Text(editor) == fixture.expected, "normalization redo retains literal EOL bytes");
     }
+    TestEditor::ResetStream(editor, "x", 1, 0, Scintilla::EndOfLine::Lf);
+    const std::string binaryPrefix("P\r\n\0Q", 5);
+    Require(editor->EncloseSelection(wxString::FromUTF8(binaryPrefix.data(), binaryPrefix.size()), "\r\nS"),
+            "enclosure accepts embedded NULs in explicitly sized text");
+    const std::string binaryEnclosure("P\n\0Qx\nS", 7);
+    Require(TestEditor::Text(editor) == binaryEnclosure, "enclosure normalizes CRLF on both sides of a NUL");
+    Range(editor, 5, 4);
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "x" && !editor->Send(CanUndo) && !editor->Send(GetModify),
+            "binary enclosure must undo as one action");
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == binaryEnclosure, "binary enclosure redo retains all bytes");
     TestEditor::ResetStream(editor, "ab", 1, 1);
     Require(editor->EncloseSelection(wxString::FromUTF8("😀"), ")"), "empty selection accepts Unicode prefix");
     Require(TestEditor::Text(editor) == "a😀)b", "empty selection inserts before/after at caret");

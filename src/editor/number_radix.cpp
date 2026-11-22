@@ -144,11 +144,6 @@ bool EditorControl::ConvertNumberRadix(unsigned radix) {
     // selections, but replacement and direction use only the main selection.
     const auto start = Send(Message::GetSelectionStart);
     const auto end = Send(Message::GetSelectionEnd);
-    const bool backwards = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
-    Send(Message::SetTargetStart, start);
-    Send(Message::SetTargetEnd, end);
-    Send(Message::ReplaceTarget, output.size(), reinterpret_cast<intptr_t>(output.data()));
-    const auto resultEnd = start + static_cast<intptr_t>(output.size());
-    Send(Message::SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
+    ReplaceRangeAndSelect(start, end, output);
     return true;
 }

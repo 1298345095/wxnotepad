@@ -8,35 +8,9 @@ import subprocess
 import shutil
 import sys
 import tempfile
-import time
 
-
-def find_editor_windows(user, process, callback):
-    top = []
-    def window(hwnd, _):
-        pid = w.DWORD()
-        user.GetWindowThreadProcessId(hwnd, c.byref(pid))
-        if pid.value == process.pid:
-            name = c.create_unicode_buffer(128)
-            user.GetClassNameW(hwnd, name, 128)
-            if name.value == "Notepad4":
-                top.append(hwnd)
-        return True
-    deadline = time.monotonic() + 10
-    while not top and time.monotonic() < deadline:
-        user.EnumWindows(callback(window), 0)
-        time.sleep(.05)
-    if not top:
-        raise RuntimeError("original Notepad4 window was not found")
-    children = []
-    def child(hwnd, _):
-        name = c.create_unicode_buffer(128)
-        user.GetClassNameW(hwnd, name, 128)
-        if name.value == "Scintilla":
-            children.append(hwnd)
-        return True
-    user.EnumChildWindows(top[0], callback(child), 0)
-    return top[0], children[0]
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+from capture_number_radix import find_editor_windows
 
 
 def main():

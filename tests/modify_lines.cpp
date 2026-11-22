@@ -90,6 +90,14 @@ void ScopeAndMultiline(EditorControl* editor) {
         TestEditor::RequireSelection(editor, 0, fixture.selectionEnd,
                                      "selection extent uses original participating line count");
     }
+    TestEditor::ResetStream(editor, "x\ny", 0, 3, Scintilla::EndOfLine::Lf);
+    const std::string terminatedPrefix("P\r\n\0Q\r\n", 7);
+    editor->ModifyLines(wxString::FromUTF8(terminatedPrefix.data(), terminatedPrefix.size()), "");
+    Require(TestEditor::Text(editor) == "P\nx\nP\ny",
+            "Modify Lines truncates at NUL before converting and counting inserted separators");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == "x\ny" && !editor->Send(Message::CanUndo),
+            "NUL-terminated multiline insertion must undo as one action");
     TestEditor::ResetStream(editor, "a\n", 0, 2);
     editor->ModifyLines("[", "]");
     Require(TestEditor::Text(editor) == "[a]\n", "line-start endpoint excludes the final empty line");

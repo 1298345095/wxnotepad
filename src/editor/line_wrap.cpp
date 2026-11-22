@@ -96,11 +96,7 @@ bool EditorControl::WrapToColumn(int column) {
     // collapsed or a break inserted, even if the converted bytes are equal.
     if (WrapUnits(text, count, column, eol, converted)) {
         const auto replacement = WrappedUtf8(converted);
-        const bool reversed = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
-        Send(Message::SetTargetRange, start, end);
-        Send(Message::ReplaceTarget, replacement.size(), reinterpret_cast<intptr_t>(replacement.data()));
-        const auto replacementEnd = start + static_cast<intptr_t>(replacement.size());
-        Send(Message::SetSel, reversed ? replacementEnd : start, reversed ? start : replacementEnd);
+        ReplaceRangeAndSelect(start, end, replacement);
     }
     return true;
 }

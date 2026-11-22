@@ -2,6 +2,7 @@
 
 #include "settings/original_settings.h"
 #include "syntax/syntax_catalog.h"
+#include <optional>
 
 class SettingsStore final {
 public:
@@ -24,6 +25,9 @@ private:
     std::vector<wxString> lines_;
     int recentFileCapacity_ = OriginalSettingLimits::MinRecentFiles;
     bool LoadLines();
+    enum class KeyCase { Exact, Insensitive };
+    std::optional<wxString> FindValue(const wxString& key, const wxString& sectionName,
+                                      KeyCase keyCase = KeyCase::Exact) const;
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
     wxString ReadString(const wxString& key, const wxString& fallback, const wxString& sectionName = "Settings") const;
@@ -35,6 +39,7 @@ private:
     std::vector<wxString> ReadRecentFiles() const;
     void WriteRecentFiles(const std::vector<wxString>& history);
     void WriteHistory(const wxString& sectionName, const std::vector<wxString>& history);
+    void ReplaceHistorySection(const wxString& sectionName, const std::vector<wxString>& history);
     void WriteBool(const wxString& key, bool value, bool fallback, const wxString& sectionName = "Settings");
     void WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName = "Settings");
     void WriteSchemeTabs(size_t index);
