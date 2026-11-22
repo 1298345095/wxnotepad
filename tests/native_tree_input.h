@@ -3,6 +3,7 @@
 #include <wx/ffile.h>
 #include <wx/treectrl.h>
 #include <chrono>
+#include <future>
 #include <stdexcept>
 
 // Real mouse gestures target the calling fixture's native modal tree. Linux
@@ -70,15 +71,26 @@ inline void Mouse(DWORD flags) {
     input.type = INPUT_MOUSE;
     input.mi.dwFlags = flags;
     if (SendInput(1, &input, sizeof(INPUT)) != 1) throw std::runtime_error("send native tree pointer input");
-    wxYield();
 }
-inline void Move(wxTreeCtrl& tree, wxPoint point) {
+inline void Move(HWND tree, wxPoint point) {
     DWORD process = 0;
     const auto target = WindowFromPoint(POINT{point.x, point.y});
     GetWindowThreadProcessId(target, &process);
-    if (process != GetCurrentProcessId() || target != static_cast<HWND>(tree.GetHandle()))
+    if (process != GetCurrentProcessId() || target != tree)
         throw std::runtime_error("native tree pointer must target this fixture's owned tree");
     if (!SetCursorPos(point.x, point.y)) throw std::runtime_error("move native tree pointer");
+}
+template <class Gesture> void SendGesture(wxTreeCtrl& tree, Gesture gesture) {
+    NativeFocus::Activate(static_cast<HWND>(wxGetTopLevelParent(&tree)->GetHandle()),
+                          static_cast<HWND>(tree.GetHandle()));
+    // Win32 tree button-down processing can track the mouse synchronously.
+    // Deliver its release independently while the UI thread pumps that loop.
+    auto pending = std::async(std::launch::async, gesture, static_cast<HWND>(tree.GetHandle()));
+    while (pending.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    pending.get();
     wxYield();
 }
 #endif
@@ -87,11 +99,11 @@ inline void Click(wxTreeCtrl& tree, wxTreeItemId item) {
 #ifdef __WXGTK__
     Request(wxString::Format("click:%d,%d,1", point.x, point.y));
 #else
-    NativeFocus::Activate(static_cast<HWND>(wxGetTopLevelParent(&tree)->GetHandle()),
-                          static_cast<HWND>(tree.GetHandle()));
-    Move(tree, point);
-    Mouse(MOUSEEVENTF_LEFTDOWN);
-    Mouse(MOUSEEVENTF_LEFTUP);
+    SendGesture(tree, [point](HWND target) {
+        Move(target, point);
+        Mouse(MOUSEEVENTF_LEFTDOWN);
+        Mouse(MOUSEEVENTF_LEFTUP);
+    });
 #endif
 }
 inline void Drag(wxTreeCtrl& tree, wxTreeItemId source, wxTreeItemId target) {
@@ -100,17 +112,17 @@ inline void Drag(wxTreeCtrl& tree, wxTreeItemId source, wxTreeItemId target) {
 #ifdef __WXGTK__
     Request(wxString::Format("tree-drag:%d,%d,%d,%d", from.x, from.y, to.x, to.y));
 #else
-    NativeFocus::Activate(static_cast<HWND>(wxGetTopLevelParent(&tree)->GetHandle()),
-                          static_cast<HWND>(tree.GetHandle()));
-    Move(tree, from);
-    Mouse(MOUSEEVENTF_LEFTDOWN);
-    constexpr int MotionSteps = 8;
-    for (int step = 1; step <= MotionSteps; ++step) {
-        Move(tree,
-             wxPoint(from.x + (to.x - from.x) * step / MotionSteps, from.y + (to.y - from.y) * step / MotionSteps));
-        wxMilliSleep(30);
-    }
-    Mouse(MOUSEEVENTF_LEFTUP);
+    SendGesture(tree, [from, to](HWND target) {
+        Move(target, from);
+        Mouse(MOUSEEVENTF_LEFTDOWN);
+        constexpr int MotionSteps = 8;
+        for (int step = 1; step <= MotionSteps; ++step) {
+            Move(target,
+                 wxPoint(from.x + (to.x - from.x) * step / MotionSteps, from.y + (to.y - from.y) * step / MotionSteps));
+            wxMilliSleep(30);
+        }
+        Mouse(MOUSEEVENTF_LEFTUP);
+    });
 #endif
 }
 inline void Enter(wxDialog& dialog) {
