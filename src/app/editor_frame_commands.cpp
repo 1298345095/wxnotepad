@@ -295,6 +295,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
             },
             id);
     }
+    // TRANSLATORS: File submenu grouping explicit-codec Open commands; extension to IDR_MAINWND.
     file->AppendSubMenu(openAs, _("Open &As"));
     file->Append(wxID_SAVE, _("&Save\tCtrl+S"));
     file->Append(wxID_SAVEAS, _("Save &As...\tF6"));
@@ -470,6 +471,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->AppendSeparator();
     AppendRecentFilesCommand(file);
     file->AppendSeparator();
+    // TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
     file->Append(wxID_EXIT, _("E&xit\tAlt+F4"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Close(); }, wxID_EXIT);
     return file;
@@ -1224,11 +1226,17 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
         languages->AppendSubMenu(family, label);
     };
     using enum SyntaxLanguage;
+    // TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
     addFamily(_("&Text File"), {PlainText});
+    // TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
     addFamily(_("&JavaScript"), {JavaScript, Jsx, TypeScript, Tsx});
+    // TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
     addFamily(_("&Web Source Code"), {Html, Jsp, Jspx, AspxCs, AspxVb, AspVb, AspJs});
+    // TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
     addFamily(_("Mark&down"), {MarkdownGitHub, MarkdownGitLab, MarkdownPandoc});
+    // TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
     addFamily(_("Shell Scri&pt"), {Bash, CShell, M4});
+    // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
     addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
     languages->AppendSeparator();
     for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Toml, Yaml})

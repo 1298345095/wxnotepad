@@ -329,6 +329,7 @@ msgstr "高亮显示当前子行(&H)"
 msgid "&Indent"
 msgstr "增加缩进(&I)"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "&JavaScript"
 msgstr "&JavaScript"
@@ -638,6 +639,7 @@ msgstr "保存时移除行尾空白(&S)。"
 msgid "&Tab Settings..."
 msgstr "制表符设置(&T)..."
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
 msgid "&Text File"
 msgstr "文本文件(&T)"
@@ -699,6 +701,7 @@ msgstr "查看(&V)"
 msgid "&Visual Studio"
 msgstr "&Visual Studio"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "&Web Source Code"
 msgstr "Web 源代码(&W)"
@@ -725,6 +728,7 @@ msgstr "自动换行(&R)\tCtrl+Shift+W"
 msgid "&Wrap around"
 msgstr "循环搜索(&D)"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "&XML Document"
 msgstr "XML 文档(&X)"
@@ -1442,6 +1446,7 @@ msgstr "双引号"
 msgid "Draw Block Caret in &Selection"
 msgstr "在选区内绘制块状光标(&S)"
 
+#. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
 #: src/app/editor_frame_commands.cpp
 msgid "E&xit\tAlt+F4"
 msgstr "退出(&X)\tAlt+F4"
@@ -1965,6 +1970,7 @@ msgstr "页边距（毫米）"
 msgid "Mark &Occurrences"
 msgstr "标记匹配选中(&K)"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "Mark&down"
 msgstr "Mark&down"
@@ -2112,6 +2118,7 @@ msgstr "只有文件所有者才能更改所有者的写入权限。"
 msgid "Only words in document"
 msgstr "仅使用当前文档中的单词"
 
+#. TRANSLATORS: File submenu grouping explicit-codec Open commands; extension to IDR_MAINWND.
 #: src/app/editor_frame_commands.cpp
 msgid "Open &As"
 msgstr "以指定编码打开(&A)"
@@ -2680,6 +2687,7 @@ msgstr "设置(&I)"
 msgid "Settings saved"
 msgstr "当前程序设置已被保存"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
 #: src/app/editor_frame_commands.cpp
 msgid "Shell Scri&pt"
 msgstr "Shell 脚本(&P)"

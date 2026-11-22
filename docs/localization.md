@@ -14,7 +14,7 @@ preference remain runtime/settings responsibilities.
 
 ## Selecting a language
 
-Settings → Language offers System Language, English, 中文(简体) and 中文(繁體).
+Settings → Appearance → Language offers System Language, English, 中文(简体) and 中文(繁體).
 Selecting the current numeric preference is a no-op. In the language-change
 prompt, Cancel leaves the preference unchanged; No saves it immediately for
 the next process; Yes saves it and invokes Restart. The current window keeps

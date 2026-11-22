@@ -299,6 +299,7 @@ msgstr ""
 msgid "&Indent"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "&JavaScript"
 msgstr ""
@@ -573,6 +574,7 @@ msgstr ""
 msgid "&Tab Settings..."
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
 msgid "&Text File"
 msgstr ""
@@ -627,6 +629,7 @@ msgstr ""
 msgid "&Visual Studio"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "&Web Source Code"
 msgstr ""
@@ -651,6 +654,7 @@ msgstr ""
 msgid "&Wrap around"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "&XML Document"
 msgstr ""
@@ -1343,6 +1347,7 @@ msgstr ""
 msgid "Draw Block Caret in &Selection"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
 #: src/app/editor_frame_commands.cpp
 msgid "E&xit\tAlt+F4"
 msgstr ""
@@ -1834,6 +1839,7 @@ msgstr ""
 msgid "Mark &Occurrences"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
 #: src/app/editor_frame_commands.cpp
 msgid "Mark&down"
 msgstr ""
@@ -1972,6 +1978,7 @@ msgstr ""
 msgid "Only words in document"
 msgstr ""
 
+#. TRANSLATORS: File submenu grouping explicit-codec Open commands; extension to IDR_MAINWND.
 #: src/app/editor_frame_commands.cpp
 msgid "Open &As"
 msgstr ""
@@ -2516,6 +2523,7 @@ msgstr ""
 msgid "Settings saved"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
 #: src/app/editor_frame_commands.cpp
 msgid "Shell Scri&pt"
 msgstr ""
