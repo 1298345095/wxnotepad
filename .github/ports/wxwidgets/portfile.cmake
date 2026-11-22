@@ -84,7 +84,7 @@ if(NOT DEFINED WXWIDGETS_USE_STD_CONTAINERS)
 endif()
 
 # The editor uses its own document model and the original core's regex engine.
-# Retain printing, native lists/trees, standard dialogs and PNG/SVG art.
+# Retain native printing, lists/trees, standard dialogs and all application art.
 if(VCPKG_TARGET_IS_WINDOWS)
     set(image_codecs OFF)
     set(regex_library OFF)
@@ -95,6 +95,35 @@ if(VCPKG_TARGET_IS_WINDOWS)
         -DwxUSE_DOC_VIEW_ARCHITECTURE=OFF
         -DwxUSE_MDI=OFF
         -DwxUSE_MDI_ARCHITECTURE=OFF
+        -DwxUSE_GIF=OFF
+        -DwxUSE_PCX=OFF
+        -DwxUSE_TGA=OFF
+        -DwxUSE_IFF=OFF
+        -DwxUSE_PNM=OFF
+        -DwxUSE_ANIMATIONCTRL=OFF
+        -DwxUSE_CALENDARCTRL=OFF
+        -DwxUSE_DATEPICKCTRL=OFF
+        -DwxUSE_TIMEPICKCTRL=OFF
+        -DwxUSE_FINDREPLDLG=OFF
+        -DwxUSE_WIZARDDLG=OFF
+        -DwxUSE_SPLASH=OFF
+        -DwxUSE_ACTIVEX=OFF
+        -DwxUSE_JOYSTICK=OFF
+        -DwxUSE_SEARCHCTRL=OFF
+        -DwxUSE_RICHTOOLTIP=OFF
+        # SVG file export and PostScript are separate from SVG artwork and
+        # the Windows native printer path used by the application.
+        -DwxUSE_SVG=OFF
+        -DwxUSE_POSTSCRIPT=OFF
+        -DwxUSE_AFM_FOR_POSTSCRIPT=OFF
+        -DwxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW=OFF
+        # The editor opens ordinary files. Keep streams and zlib for PNG
+        # artwork and the compressed compatibility tables.
+        -DwxUSE_ZIPSTREAM=OFF
+        -DwxUSE_TARSTREAM=OFF
+        -DwxUSE_ARCHIVE_STREAMS=OFF
+        -DwxUSE_FS_ARCHIVE=OFF
+        -DwxUSE_FS_ZIP=OFF
     )
 else()
     set(image_codecs sys)
