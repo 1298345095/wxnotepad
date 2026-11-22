@@ -40,6 +40,7 @@ public:
             try {
                 auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Syntax schemes", dialog), wxTreeCtrl);
                 Require(tree, "native scheme dialog exposes its tree");
+                std::printf("DIALOG: %s\n", title.utf8_str().data());
                 action(*dialog, *tree);
             } catch (const std::exception& failure) {
                 error = failure.what();
@@ -424,6 +425,7 @@ void LocalizedLayout(EditorFrame* frame) {
 class SchemeApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxString language;
         const bool layout = wxGetEnv("WXNOTEPAD_SCHEME_LAYOUT_LANGUAGE", &language);
         if (layout) AppLocalization::Initialize(static_cast<uint16_t>(wxAtoi(language)));
@@ -438,6 +440,7 @@ public:
                     ExitMainLoop();
                     return;
                 }
+                std::puts("PHASE: normal scheme selection/cancel/history");
                 const int choose = frame->GetMenuBar()->FindMenuItem("Scheme", "Syntax Scheme...");
                 Require(choose != wxNOT_FOUND, "Scheme exposes the original F12 Syntax Scheme command");
                 Require(frame->GetMenuBar()->FindMenuItem("Scheme", "Favorite Schemes...") != wxNOT_FOUND,
@@ -456,11 +459,17 @@ public:
                             editor->Send(Scintilla::Message::GetCurrentPos) == 9 &&
                             editor->Send(Scintilla::Message::GetUndoActions) == undo,
                         "chooser acceptance/cancel preserve exact text, selection and undo history");
+                std::puts("PHASE: default/automatic settings");
                 DefaultScheme();
+                std::puts("PHASE: favorite checking and drag events");
                 Favorites();
+                std::puts("PHASE: retained favorite capacity");
                 FavoriteCapacity();
+                std::puts("PHASE: real pointer favorite management");
                 PointerFavorites();
+                std::puts("PHASE: native F12/Enter");
                 KeyboardChooser();
+                std::puts("PASS: native scheme selection and favorite workflows");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

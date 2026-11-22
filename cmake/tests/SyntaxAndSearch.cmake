@@ -46,6 +46,9 @@ add_editor_test(syntax_markup original_markup_schemes 90)
 target_compile_definitions(syntax_markup PRIVATE
     "MARKUP_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markup_reference.tsv\"")
 add_editor_test(syntax_save automatic_language_save 60)
+add_test(NAME original_scheme_base_filter_reachability COMMAND syntax_save)
+set_tests_properties(original_scheme_base_filter_reachability PROPERTIES TIMEOUT 90
+    ENVIRONMENT "WXNOTEPAD_BASE_FILTER_REACHABILITY=1")
 add_editor_test(syntax_manual manual_language_choice 60)
 add_editor_test(scheme_chooser original_scheme_chooser 90)
 add_editor_test(scheme_filters original_scheme_file_filters 90)
