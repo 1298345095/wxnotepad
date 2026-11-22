@@ -15,6 +15,8 @@ The source authority remains Notepad4
 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`; generated headers retain original
 file hashes and the BSD notice. HTML/XML continue to use `LexHTML.cxx` and
 the offset embedded CSS styles, with their existing markup dialect options.
+The shared importer also preserves original scheme identities 27 (CSS) and
+28 (SQL), independent of host enum ordering, for favorites and scheme choosers.
 
 `tests/reference_capture/capture_css_sql.py` runs an isolated copy of the
 pinned original executable on an owned Windows desktop. Its independently
@@ -43,6 +45,8 @@ lists and confirmation, paired parentheses/quotes, SQL character prefixes and
 their original Undo/Redo boundaries. The Linux key driver names the apostrophe
 keysym explicitly and recognizes its shifted double-quote release, keeping
 the same owned-editor input acknowledgement and deadline.
+Windows replays complete keydown/character/keyup sequences, following wxMSW's
+character-event contract after a handled completion Enter.
 
 External evidence is retained at
 `F:/wxnotepad-evidence/original-controls-implementation-2026-11-22/256/`, including
