@@ -139,6 +139,9 @@ inline void Enter(wxDialog& dialog) {
 #else
     NativeKeys::DialogNavigation(&dialog, VK_RETURN);
 #endif
-    Wait([&] { return !dialog.IsModal(); }, "native Enter accepts the owned scheme dialog");
+    // MSW retains its modal-loop data until this driver callback returns.
+    // EndModal's visible outcome and explicit return code prove acceptance now.
+    Wait([&] { return !dialog.IsShown() && dialog.GetReturnCode() == wxID_OK; },
+         "native Enter accepts the owned scheme dialog");
 }
 } // namespace NativeTreeInput
