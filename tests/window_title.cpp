@@ -2,6 +2,7 @@
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
 #include "file_command_driver.h"
+#include "file_helpers.h"
 #include "app/localization.h"
 #include <wx/filename.h>
 #include <wx/ffile.h>
@@ -59,7 +60,7 @@ void NativeRadioChoices(EditorFrame* frame) {
     }
 }
 void Modes(EditorFrame* frame) {
-    const auto path = wxFileName::CreateTempFileName(wxString::FromUTF8("title 中文 "));
+    const auto path = TestFiles::Filename(TestFiles::TemporaryDirectory() / TestFiles::Utf8Path("title 中文.txt"));
     wxFFile file(path, "wb");
     Require(file.IsOpened() && file.Write("document") && file.Close(), "write title fixture");
     Require(frame->Open(path).status == OpenStatus::Opened, "open named document");
@@ -74,8 +75,7 @@ void Modes(EditorFrame* frame) {
     Require(NativeTitle(frame) == name.GetFullName() + " [" + name.GetPath() + "] - wxnotepad",
             "name and directory restores original title");
     wxRemoveFile(path);
-    const auto root = wxFileName::CreateTempFileName("title-path-");
-    wxRemoveFile(root);
+    const auto root = TestFiles::Filename(TestFiles::TemporaryDirectory("title-path"));
     const wxString directory = root + wxFILE_SEP_PATH + wxString::FromUTF8(std::string(175, 'a'));
     const wxFileName longPath(directory, wxString::FromUTF8("文档.txt"));
     Require(wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL), "create long native Unicode path");
