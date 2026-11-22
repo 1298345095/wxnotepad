@@ -6,6 +6,25 @@
 #include <algorithm>
 #include <array>
 
+namespace {
+std::u16string ExcerptUtf16(std::string_view input) {
+    std::u16string text;
+    size_t position = 0;
+    while (position < input.size()) {
+        const auto scalar = WindowsUtf8::ReadScalar(input.substr(position));
+        if (scalar.value == 0) break;
+        if (scalar.value >= 0x10000) {
+            text += static_cast<char16_t>(0xd800 + ((scalar.value - 0x10000) >> 10));
+            text += static_cast<char16_t>(0xdc00 + ((scalar.value - 0x10000) & 0x3ff));
+        } else {
+            text += static_cast<char16_t>(scalar.value);
+        }
+        position += scalar.consumed;
+    }
+    return text;
+}
+} // namespace
+
 wxString EditorControl::CaptureTitleExcerpt(bool defaultEncoding) {
     // Edit.cpp::EditGetExcerpt at Notepad4 89b8b36: preserve the byte bound,
     // UTF-16 character bound, trailing space and delayed ellipsis threshold.
@@ -27,18 +46,7 @@ wxString EditorControl::CaptureTitleExcerpt(bool defaultEncoding) {
         input.resize(std::min(input.size(), static_cast<size_t>(ExcerptInputBytes)));
         input = NativeDefaultEncodingUnicode(input);
     }
-    std::u16string text;
-    for (size_t position = 0; position < input.size();) {
-        const auto scalar = WindowsUtf8::ReadScalar(std::string_view(input).substr(position));
-        if (scalar.value == 0) break;
-        if (scalar.value >= 0x10000) {
-            text += static_cast<char16_t>(0xd800 + ((scalar.value - 0x10000) >> 10));
-            text += static_cast<char16_t>(0xdc00 + ((scalar.value - 0x10000) & 0x3ff));
-        } else {
-            text += static_cast<char16_t>(scalar.value);
-        }
-        position += scalar.consumed;
-    }
+    const auto text = ExcerptUtf16(input);
     std::u16string excerpt;
     char16_t previous = u' ';
     for (auto character : text) {

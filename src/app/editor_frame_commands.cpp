@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include <memory>
 #include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
@@ -1188,7 +1189,27 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     // TRANSLATORS: IDM_VIEW_SCHEME / IDM_VIEW_SCHEME_FAVORITE, before code-style options.
     const int selectScheme = wxWindow::NewControlId();
     languages->Append(selectScheme, _("&Syntax Scheme...\tF12"));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(); }, selectScheme);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+#ifdef __WXGTK__
+            // GTK's window key hash ignores consumed modifiers. Wayland can
+            // mark Alt on F12 as consumed and select this bare-F12 accelerator.
+            // Preserve the actual event state and dispatch the exact registered
+            // accelerator, including Alt+F12 font and Shift+F12 inheritance.
+            const std::unique_ptr<GdkEvent, decltype(&gdk_event_free)> key(gtk_get_current_event(), gdk_event_free);
+            if (key && key->type == GDK_KEY_PRESS && key->key.keyval == GDK_KEY_F12) {
+                const auto modifiers =
+                    static_cast<GdkModifierType>(key->key.state & gtk_accelerator_get_default_mod_mask());
+                if (modifiers != 0) {
+                    gtk_accel_groups_activate(G_OBJECT(GetHandle()), GDK_KEY_F12, modifiers);
+                    return;
+                }
+            }
+#endif
+            ShowSyntaxScheme();
+        },
+        selectScheme);
     const int favoriteSchemes = wxWindow::NewControlId();
     languages->Append(favoriteSchemes, _("&Favorite Schemes..."));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(true); }, favoriteSchemes);
@@ -2434,9 +2455,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
 }
 
 void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
-    auto* title = new wxMenu;
-    const auto appendChoice = [title](int id, const wxString& label) {
-        auto* item = title->AppendCheckItem(id, label);
+    auto title = std::make_unique<wxMenu>();
+    const auto appendChoice = [menu = title.get()](int id, const wxString& label) {
+        auto* item = menu->AppendCheckItem(id, label);
         // Keep the original radio marks, while allowing an already selected
         // excerpt command to run again through GTK's native activate signal.
 #ifdef __WXMSW__
@@ -2444,7 +2465,7 @@ void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
         information.cbSize = sizeof(information);
         information.fMask = MIIM_FTYPE;
         information.fType = MFT_RADIOCHECK;
-        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
+        SetMenuItemInfoW(static_cast<HMENU>(menu->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
                          &information);
 #elif defined(__WXGTK__)
         gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item->GetMenuItem()), TRUE);
@@ -2485,7 +2506,7 @@ void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
         },
         excerpt);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(!titleExcerpt_.empty()); }, excerpt);
-    settings->AppendSubMenu(title, _("Window Title Displa&y"));
+    settings->AppendSubMenu(title.release(), _("Window Title Displa&y"));
 }
 
 void EditorFrame::AppendAppearanceOptions(wxMenu* view) {

@@ -87,6 +87,11 @@ if(WIN32)
 endif()
 
 add_editor_test(default_fonts original_default_fonts 60)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+    # Preserve the original 60-second guard and retain a stack through the core collector.
+    set_tests_properties(original_default_fonts PROPERTIES
+        TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+endif()
 if(WIN32)
     target_link_libraries(default_fonts PRIVATE imm32)
     add_test(NAME original_default_fonts_gdi COMMAND default_fonts)

@@ -157,7 +157,9 @@ void CheckMenu(EditorFrame* frame) {
     auto* appearance = Submenu(bar->GetMenu(5), "Appearance");
     Order(Submenu(bar->GetMenu(5), "Window Title Display"),
           {"File Name Only", "File Name and Directory", "Full Path Name", "Text Excerpt"});
-    Order(appearance, {"Show Menu", "Show Toolbar", "Show Statusbar", "Full Screen Mode", "Scroll Past Last Line",
+    // Pinned Notepad4.rc: customize and automatic scaling follow Show Toolbar.
+    Order(appearance, {"Show Menu", "Show Toolbar", "Customize Toolbar...", "Auto Scale Toolbar", "Use Large Toolbar",
+                       "Show Statusbar", "Full Screen Mode", "Scroll Past Last Line",
                        "Auto-Shrink Horizontal Scrollbar", "Language"});
     Groups(appearance, {"Show Menu", "Full Screen Mode", "Language"});
     Order(Submenu(bar->GetMenu(5), "Other Settings"), {"Remember Recent Files", "Remember Search Options"});

@@ -353,6 +353,15 @@ void KeyboardChooser() {
     NativeTreeInput::Wait([&] { return presented; }, "F12 test frame is presented before native shortcut");
     wxYield();
     frame->SetTitle("wxnotepad scheme F12");
+    {
+        Picker modified;
+        modified.action = [](wxDialog& dialog, wxTreeCtrl&) { NativeSearch::Click(&dialog, wxID_CANCEL); };
+        // Pinned Ctrl+F12 belongs to undelivered Customize Schemes, not the
+        // public Syntax Scheme chooser. Do not let GTK alias it to bare F12.
+        NativeKeys::Shortcut(frame, WXK_F12, true, false, false, nullptr, "wxnotepad scheme F12");
+        Require(modified.error.empty(), modified.error.utf8_str());
+        Require(modified.shown == 0, "Ctrl+F12 does not activate the unrelated bare-F12 scheme command");
+    }
     Picker picker;
     picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
         NativeTreeInput::Present(dialog);
@@ -414,6 +423,9 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
     NativeKeys::AfterPresentation(frame, [&](bool ready) { presented = ready; });
     NativeTreeInput::Wait([&] { return presented; }, "localized F12 frame is presented before native shortcut");
     wxYield();
+    // Initial editor-state events refresh the document title during mapping.
+    // Set the owned focus target after that refresh, as KeyboardChooser does.
+    frame->SetTitle("wxnotepad localized scheme F12");
     for (const bool favorite : {false, true}) {
         Picker picker;
         picker.title = wxGetTranslation(favorite ? "Favorite Schemes" : "Select Scheme");

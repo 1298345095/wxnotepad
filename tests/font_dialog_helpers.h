@@ -20,6 +20,11 @@ public:
     }
     ~Chooser() override { Unregister(); }
     int Enter(wxDialog* dialog) override {
+        if (dialog->GetTitle() == "Select Scheme") {
+            error_ = "native font shortcut must open the font chooser rather than the syntax scheme chooser";
+            wxTheApp->CallAfter([dialog] { NativeSearch::Click(dialog, wxID_CANCEL); });
+            return wxID_NONE;
+        }
         if (auto* font = wxDynamicCast(dialog, wxFontDialog)) {
             dialog_ = font;
             if (colour_.IsOk() && dialog_->GetFontData().GetColour() != colour_) {
