@@ -36,8 +36,9 @@ with tempfile.TemporaryDirectory(prefix='java-languages-') as name:
                 if code == 'en':
                     restart = menu_id(app.state, 'Restart')
                     automatic = menu_id(app.state, 'Automatic')
-                chosen = menu_id(app.state, scheme)
-                assert scheme in app.state['document_status'], app.state
+                caption = scheme + {'en': ' Source', 'zh_CN': ' 源代码', 'zh_TW': ' 原始碼'}[code]
+                chosen = menu_id(app.state, caption)
+                assert caption in app.state['document_status'], app.state
                 assert app.state['tab_width'] == '6' and app.state['indent_width'] == '2', app.state
                 app.choose(chosen)
                 before = dict(app.state)
@@ -48,12 +49,12 @@ with tempfile.TemporaryDirectory(prefix='java-languages-') as name:
                 for field in ('document_path', 'length', 'encoding', 'bom', 'eol_mode', 'tab_width', 'indent_width'):
                     assert child.state[field] == before[field], (field, before, child.state)
                 assert child.process.pid != app.process.pid
-                assert menus(child.state)[menu_id(child.state, scheme)]['checked'] == '1', child.state
-                assert scheme in child.state['document_status'], child.state
+                assert menus(child.state)[menu_id(child.state, caption)]['checked'] == '1', child.state
+                assert caption in child.state['document_status'], child.state
                 child.send('save')
                 assert path.read_bytes() == original
                 child.choose(automatic)
-                assert scheme in child.state['document_status'], child.state
+                assert caption in child.state['document_status'], child.state
                 assert menus(child.state)[automatic]['checked'] == '1'
                 log = args.evidence / root.name / f'{code}-{suffix}.json'
                 log.write_text(json.dumps({'parent': before, 'child': child.state}, ensure_ascii=False, indent=2),

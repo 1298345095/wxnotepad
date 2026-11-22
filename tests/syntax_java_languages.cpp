@@ -22,11 +22,11 @@ void Paint(EditorFrame* frame) {
 
 std::array<TestLanguages::SchemeFixture, 3> Schemes() {
     return {
-        {{"Java", LanguageForPath("sample.java"), SCLEX_JAVA, "java",
+        {{"Java Source", LanguageForPath("sample.java"), SCLEX_JAVA, "java",
           "class Sample<T> {\n  void run() {\n    System.out.println(42);\n  }\n}\n", "//", "/*", "*/", "Java Source"},
-         {"C#", LanguageForPath("sample.cs"), SCLEX_CSHARP, "cs",
+         {"C# Source", LanguageForPath("sample.cs"), SCLEX_CSHARP, "cs",
           "class Sample<T> {\n  void Run() {\n    Console.WriteLine(42);\n  }\n}\n", "//", "/*", "*/", "C# Source"},
-         {"Kotlin", LanguageForPath("sample.kt"), SCLEX_KOTLIN, "kt",
+         {"Kotlin Source", LanguageForPath("sample.kt"), SCLEX_KOTLIN, "kt",
           "class Sample<T> {\n  fun run() {\n    println(42)\n  }\n}\n", "//", "/*", "*/", "Kotlin Source"}}};
 }
 
@@ -80,7 +80,7 @@ void Operations(EditorFrame* frame) {
             std::getline(row, field, '\t');
         std::fprintf(stderr, "original operation %s %s %s\n", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
         editor->Send(AutoCCancel);
-        Choose(frame, fields[0].c_str());
+        Choose(frame, (fields[0] + " Source").c_str());
         const auto before = TestLanguages::Unhex(fields[2]);
         const auto initialCaret = static_cast<intptr_t>(before.size());
         TestEditor::ResetStream(editor, before.c_str(), initialCaret, initialCaret);

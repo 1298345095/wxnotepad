@@ -965,8 +965,8 @@ msgid "C Shell"
 msgstr "C Shell"
 
 #: src/syntax/syntax_catalog.cpp
-msgid "C#"
-msgstr "C#"
+msgid "C# Source"
+msgstr "C# 源代码"
 
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
@@ -1818,8 +1818,8 @@ msgid "JSX"
 msgstr "JSX"
 
 #: src/syntax/syntax_catalog.cpp
-msgid "Java"
-msgstr "Java"
+msgid "Java Source"
+msgstr "Java 源代码"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
@@ -1836,8 +1836,8 @@ msgid "Justify (&Paragraph mode)."
 msgstr "两端对齐(段落模式)(&P)。"
 
 #: src/syntax/syntax_catalog.cpp
-msgid "Kotlin"
-msgstr "Kotlin"
+msgid "Kotlin Source"
+msgstr "Kotlin 源代码"
 
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format
@@ -3368,3 +3368,12 @@ msgstr "m4"
 
 #~ msgid "&Expand All"
 #~ msgstr "全部展开(&E)"
+
+#~ msgid "C#"
+#~ msgstr "C#"
+
+#~ msgid "Java"
+#~ msgstr "Java"
+
+#~ msgid "Kotlin"
+#~ msgstr "Kotlin"
