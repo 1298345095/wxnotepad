@@ -22,13 +22,13 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
     case Scss:
     case Less:
     case Hss:
-        for (const unsigned ch : {'$', '-', '@'})
+        for (const auto ch : {'$', '-', '@'})
             result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
         break;
     case Sql:
-        for (const unsigned ch : {'$', '@'})
+        for (const auto ch : {'$', '@'})
             result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
-        for (const unsigned ch : {'B', 'Q', 'X', 'b', 'q', 'x'})
+        for (const auto ch : {'B', 'Q', 'X', 'b', 'q', 'x'})
             result.characterPrefixes[ch >> 5] |= 1U << (ch & 31);
         result.rawStrings[SCE_SQL_QOPERATOR >> 5] |= 1U << (SCE_SQL_QOPERATOR & 31);
         for (const unsigned style : {SCE_SQL_WORD, SCE_SQL_WORD2, SCE_SQL_USER1, SCE_SQL_HEX, SCE_SQL_HEX2})
