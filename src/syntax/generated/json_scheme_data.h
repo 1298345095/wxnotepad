@@ -24,6 +24,6 @@ constexpr auto jsonStyles = std::to_array<SyntaxStyle>({
     {SCE_JSON_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_JSON_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata jsonOriginal = {4099, 2, 2, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', SCE_JSON_ESCAPECHAR, 0, 0, 0, 0, SCE_JSON_OPERATOR, 0, SCE_JSON_BLOCKCOMMENT, SCE_JSON_STRING_DQ, SCE_JSON_ESCAPECHAR};
+constexpr SyntaxOriginalMetadata jsonOriginal = {4099, 2, 2, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', SCE_JSON_ESCAPECHAR, 0, 0, 0, 0, SCE_JSON_OPERATOR, 0, SCE_JSON_BLOCKCOMMENT, SCE_JSON_STRING_DQ, SCE_JSON_ESCAPECHAR, 54};
 constexpr const char* jsonSettingsSection = "JSON Document";
 // clang-format on

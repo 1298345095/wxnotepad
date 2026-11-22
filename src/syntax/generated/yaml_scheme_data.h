@@ -32,7 +32,7 @@ constexpr auto yamlStyles = std::to_array<SyntaxStyle>({
     {SCE_YAML_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_YAML_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata yamlOriginal = {59, 2, 2, (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4), 0, '\\', SCE_YAML_ESCAPECHAR, 0, 0, 0, 0, SCE_YAML_OPERATOR, 0, SCE_YAML_COMMENT, 0, 0};
+constexpr SyntaxOriginalMetadata yamlOriginal = {59, 2, 2, (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4), 0, '\\', SCE_YAML_ESCAPECHAR, 0, 0, 0, 0, SCE_YAML_OPERATOR, 0, SCE_YAML_COMMENT, 0, 0, 69};
 constexpr const char* yamlSettingsSection = "YAML Document";
 constexpr auto yamlExtensions = std::to_array<const char*>({"yml", "yaml", "clang-format", "clang-tidy", "clangd", "mir", "apinotes", "ifs", "gyp", "gypi", "cff", "winget"});
 // clang-format on

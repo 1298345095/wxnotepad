@@ -100,7 +100,7 @@ constexpr auto vbsStyles = std::to_array<SyntaxStyle>({
     {SCE_VB_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_VB_LINE_CONTINUATION, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata vbsOriginal = {8, 4, 4, (1 << 0), SCE_VB_FUNCTION_DEFINITION, '\0', SCE_VB_ESCAPECHAR, SCE_VB_FORMAT_SPECIFIER, 0, 0, SCE_VB_COMMENTLINE, SCE_VB_OPERATOR, SCE_VB_OPERATOR2, SCE_VB_COMMENTLINE, SCE_VB_STRING, SCE_VB_PLACEHOLDER};
+constexpr SyntaxOriginalMetadata vbsOriginal = {8, 4, 4, (1 << 0), SCE_VB_FUNCTION_DEFINITION, '\0', SCE_VB_ESCAPECHAR, SCE_VB_FORMAT_SPECIFIER, 0, 0, SCE_VB_COMMENTLINE, SCE_VB_OPERATOR, SCE_VB_OPERATOR2, SCE_VB_COMMENTLINE, SCE_VB_STRING, SCE_VB_PLACEHOLDER, 30};
 constexpr const char* vbsSettingsSection = "VBScript";
 constexpr auto vbsExtensions = std::to_array<const char*>({"vbs", "dsm"});
 // clang-format on

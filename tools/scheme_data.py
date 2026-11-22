@@ -93,8 +93,10 @@ def original_scheme(data, symbol):
     return keywords, flags, styles, fields + tail, [ext.strip() for ext in extensions.split(';')], title
 
 
-def generate_scheme(data, filename, symbol, name, *, include_extensions=True):
+def generate_scheme(data, filename, symbol, name, *, include_extensions=True, scheme_id=None):
     keywords, flags, styles, metadata, extensions, title = original_scheme(data, symbol)
+    if scheme_id is not None:
+        metadata.append(str(scheme_id))
     output = provenance('update_schemes.py', f'src/EditLexers/stl{filename}.cpp', data)
     output += ['// Full original groups and attributes, including completion-only lists.',
                '// clang-format off', f'constexpr auto {name}Keywords = std::to_array<const char*>({{' + keywords + '});',
