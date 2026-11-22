@@ -165,7 +165,7 @@ public:
         AppLocalization::Initialize(static_cast<uint16_t>(language));
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
-        settings_->values.selectOption = 11;
+        settings_->values.selectOption = SelectOption_Default & ~SelectOption_CopyPasteBufferAsFindText;
         auto* frame = new EditorFrame(settings_.get());
         frame->SetClientSize(wxSize(1500, 650));
         frame->Show();
