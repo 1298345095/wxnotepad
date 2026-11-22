@@ -1,0 +1,50 @@
+if(WIN32)
+    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
+    execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
+        "${NOTEPAD4_SOURCE}" "${directwrite_generated}" COMMAND_ERROR_IS_FATAL ANY)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
+        "${NOTEPAD4_SOURCE}/scintilla/win32/SurfaceD2D.cxx"
+        "${NOTEPAD4_SOURCE}/scintilla/win32/ScintillaWin.cxx")
+    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp
+        src/editor/platform/directwrite_surface.cpp)
+    target_include_directories(editor_runtime PRIVATE "${directwrite_generated}")
+    target_compile_definitions(editor_runtime PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
+    target_link_libraries(editor_features PRIVATE advapi32 shell32 ole32)
+    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
+    target_sources(app_shell PRIVATE src/app/explorer_selections.cpp)
+    target_link_libraries(app_shell PRIVATE shell32 ole32 oleaut32 uuid comdlg32)
+endif()
+
+# The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.
+foreach(target notepad4_core editor_runtime editor_features app_shell)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /utf-8 /GR- /Zc:char8_t-)
+    else()
+        target_compile_options(${target} PRIVATE -fno-char8_t)
+    endif()
+endforeach()
+if(UNIX AND NOT APPLE)
+    target_sources(editor_runtime PRIVATE src/editor/platform/text_measurement_gtk.cpp)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+    pkg_check_modules(GIO_UNIX REQUIRED IMPORTED_TARGET gio-unix-2.0)
+    target_link_libraries(app_shell PRIVATE PkgConfig::GIO_UNIX)
+    pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
+    target_link_libraries(editor_runtime PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
+endif()
+
+function(add_gui_program target source)
+    add_executable(${target} WIN32 ${source})
+    target_link_libraries(${target} PRIVATE ${ARGN})
+    if(WIN32)
+        target_sources(${target} PRIVATE src/app/windows.rc)
+        target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    endif()
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /utf-8)
+        # windows.rc embeds wxWidgets' complete DPI-aware application manifest.
+        target_link_options(${target} PRIVATE /MANIFEST:NO)
+    endif()
+endfunction()
