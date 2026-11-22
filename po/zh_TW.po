@@ -1064,6 +1064,10 @@ msgstr "大括號 {}"
 msgid "C Shell"
 msgstr "C Shell"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "C# Source"
+msgstr "C# 原始碼"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/View/Caret Style submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
@@ -1954,6 +1958,10 @@ msgid "JSX"
 msgstr "JSX"
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java Source"
+msgstr "Java 原始碼"
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr "JavaScript"
 
@@ -1966,6 +1974,10 @@ msgstr "聯結段落(&P)\tCtrl+Shift+J"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
 msgstr "左右對齊（段落模式）(&P)。"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin Source"
+msgstr "Kotlin 原始碼"
 
 # Original Notepad4 zh-Hant: IDD_WARNLINEENDS/IDC_EOL_SUM_LF (count adapted); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -3570,3 +3582,12 @@ msgstr "m4"
 # Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
 #~ msgid "&Expand All"
 #~ msgstr "全部展開(&E)"
+
+#~ msgid "C#"
+#~ msgstr "C#"
+
+#~ msgid "Java"
+#~ msgstr "Java"
+
+#~ msgid "Kotlin"
+#~ msgstr "Kotlin"

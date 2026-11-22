@@ -370,6 +370,6 @@ constexpr auto pythonStyles = std::to_array<SyntaxStyle>({
     {SCE_PY_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_PY_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata pythonOriginal = {632, 4, 4, (1 << 1) | (1 << 2), SCE_PY_FUNCTION_DEFINITION, '\\', SCE_PY_ESCAPECHAR, SCE_PY_FORMAT_SPECIFIER, 0, 0, 0, SCE_PY_OPERATOR, SCE_PY_OPERATOR2, SCE_PY_TASKMARKER, SCE_PY_STRING_SQ, SCE_PY_TRIPLE_RAWBYTES_DQ};
+constexpr SyntaxOriginalMetadata pythonOriginal = {632, 4, 4, (1 << 1) | (1 << 2), SCE_PY_FUNCTION_DEFINITION, '\\', SCE_PY_ESCAPECHAR, SCE_PY_FORMAT_SPECIFIER, 0, 0, 0, SCE_PY_OPERATOR, SCE_PY_OPERATOR2, SCE_PY_TASKMARKER, SCE_PY_STRING_SQ, SCE_PY_TRIPLE_RAWBYTES_DQ, 32};
 constexpr const char* pythonSettingsSection = "Python Script";
 // clang-format on

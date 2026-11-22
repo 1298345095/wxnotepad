@@ -3,9 +3,15 @@
 #include <wx/filename.h>
 #include <wx/translation.h>
 #include <array>
+#include <cstdlib>
+#include <algorithm>
+#include <limits>
 
 namespace {
 #include "syntax/generated/cpp_scheme_data.h"
+#include "syntax/generated/java_scheme_data.h"
+#include "syntax/generated/csharp_scheme_data.h"
+#include "syntax/generated/kotlin_scheme_data.h"
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
 #include "syntax/generated/bash_scheme_data.h"
@@ -83,11 +89,14 @@ constexpr auto xsltExtensions = std::to_array<const char*>({"xsl", "xslt"});
 constexpr auto dtdExtensions = std::to_array<const char*>({"dtd"});
 constexpr auto plistExtensions = std::to_array<const char*>({"plist"});
 // Pinned stlDefault.cpp::lexTextFile uses the distinct Text Settings table.
-constexpr SyntaxOriginalMetadata plainOriginal = {
-    SyntaxLexerAttribute::NoLineComment | SyntaxLexerAttribute::NoBlockComment |
-        SyntaxLexerAttribute::IndentBasedFolding | SyntaxLexerAttribute::IndentLookForward |
-        SyntaxLexerAttribute::PlainTextFile,
-    4, 4, (1 << 1) | (1 << 2)};
+constexpr SyntaxOriginalMetadata plainOriginal = [] {
+    SyntaxOriginalMetadata original{SyntaxLexerAttribute::NoLineComment | SyntaxLexerAttribute::NoBlockComment |
+                                        SyntaxLexerAttribute::IndentBasedFolding |
+                                        SyntaxLexerAttribute::IndentLookForward | SyntaxLexerAttribute::PlainTextFile,
+                                    4, 4, (1 << 1) | (1 << 2)};
+    original.schemeId = 0; // NP2LEX_TEXTFILE - NP2LEX_TEXTFILE.
+    return original;
+}();
 constexpr auto definitions = std::to_array<SyntaxDefinition>({
     {wxTRANSLATE("Plain Text"),
      textExtensions,
@@ -107,6 +116,54 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      plainOriginal},
     {wxTRANSLATE("C/C++"), cppExtensions, cppLists, cppStyles, cppProperties, SCLEX_CPP, SyntaxLanguage::Cpp, true,
      "//", "/*", "*/", SCE_C_COMMENTDOC_TAG_XML, false, false, nullptr, cppOriginal},
+    {wxTRANSLATE("C# Source"),
+     csharpExtensions,
+     csharpLists,
+     csharpStyles,
+     {},
+     SCLEX_CSHARP,
+     SyntaxLanguage::CSharp,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_CSHARP_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     csharpOriginal},
+    {wxTRANSLATE("Java Source"),
+     javaExtensions,
+     javaLists,
+     javaStyles,
+     {},
+     SCLEX_JAVA,
+     SyntaxLanguage::Java,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_JAVA_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     javaOriginal},
+    {wxTRANSLATE("Kotlin Source"),
+     kotlinExtensions,
+     kotlinLists,
+     kotlinStyles,
+     {},
+     SCLEX_KOTLIN,
+     SyntaxLanguage::Kotlin,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_KOTLIN_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     kotlinOriginal},
     {wxTRANSLATE("Python"),
      pythonExtensions,
      pythonLists,
@@ -466,6 +523,35 @@ const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
     return definitions[0];
 }
 
+std::optional<SyntaxLanguage> SyntaxFromOriginalSchemeId(int identity) {
+    if (identity < 0) return std::nullopt;
+    for (const auto& definition : SyntaxCatalog()) {
+        if (definition.original.schemeId == identity &&
+            SyntaxSettingsLanguage(definition.language) == definition.language)
+            return definition.language;
+    }
+    return std::nullopt;
+}
+
+std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration) {
+    // Pinned Helpers.cpp::ParseCommaList: decimal values, optional commas and whitespace.
+    const auto bytes = configuration.Left(SyntaxSchemeLimits::FavoriteConfigCharacters).utf8_string();
+    const char* cursor = bytes.c_str();
+    std::vector<SyntaxLanguage> languages;
+    for (size_t count = 0; count < SyntaxSchemeLimits::FavoriteCount; ++count) {
+        char* end = nullptr;
+        const auto identity = std::strtol(cursor, &end, 10);
+        if (end == cursor) break;
+        if (identity > 0 && identity <= std::numeric_limits<int>::max()) {
+            if (const auto language = SyntaxFromOriginalSchemeId(static_cast<int>(identity));
+                language && std::ranges::find(languages, *language) == languages.end())
+                languages.push_back(*language);
+        }
+        cursor = *end == ',' ? end + 1 : end;
+    }
+    return languages;
+}
+
 SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
     using enum SyntaxLanguage;
     if (language >= Html && language <= Jspx) return Html;
@@ -491,6 +577,12 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         using enum SyntaxLanguage;
     case Cpp:
         return "C/C++ Source";
+    case Java:
+        return javaSettingsSection;
+    case CSharp:
+        return csharpSettingsSection;
+    case Kotlin:
+        return kotlinSettingsSection;
     case Python:
         return "Python Script";
     case Json:

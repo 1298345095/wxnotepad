@@ -3,6 +3,9 @@ file(GLOB lexlib_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/lexlib/
 add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJava.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSharp.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexKotlin.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexRust.cxx"
