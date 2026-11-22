@@ -121,7 +121,7 @@ constexpr auto kotlinStyles = std::to_array<SyntaxStyle>({
     {SCE_KOTLIN_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_KOTLIN_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata kotlinOriginal = {128, 4, 4, (1 << 0) | (1 << 1) | (1 << 2), SCE_KOTLIN_FUNCTION_DEFINITION, '\\', SCE_KOTLIN_ESCAPECHAR, 0, 0, SCE_KOTLIN_CHARACTER, 0, SCE_KOTLIN_OPERATOR, SCE_KOTLIN_OPERATOR2, SCE_KOTLIN_TASKMARKER, SCE_KOTLIN_CHARACTER, SCE_KOTLIN_ESCAPECHAR};
+constexpr SyntaxOriginalMetadata kotlinOriginal = {128, 4, 4, (1 << 0) | (1 << 1) | (1 << 2), SCE_KOTLIN_FUNCTION_DEFINITION, '\\', SCE_KOTLIN_ESCAPECHAR, 0, 0, SCE_KOTLIN_CHARACTER, 0, SCE_KOTLIN_OPERATOR, SCE_KOTLIN_OPERATOR2, SCE_KOTLIN_TASKMARKER, SCE_KOTLIN_CHARACTER, SCE_KOTLIN_ESCAPECHAR, 68};
 constexpr const char* kotlinSettingsSection = "Kotlin Source";
 constexpr auto kotlinExtensions = std::to_array<const char*>({"kt", "kts"});
 // clang-format on

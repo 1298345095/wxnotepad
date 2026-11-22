@@ -27,5 +27,9 @@ with tempfile.TemporaryDirectory() as directory:
             assert f'{name}Keywords[{index}] ? {name}Keywords[{index}] : "", {attributes}U << 8U' in content
         for style in styles:
             assert style in content
+        # Literal NP2LEX offsets from pinned EditLexer.h; independent of catalog order.
+        identity = {'java': 2, 'csharp': 3, 'kotlin': 68}[name]
+        metadata = next(line for line in content.splitlines() if line.startswith(f'constexpr SyntaxOriginalMetadata {name}Original'))
+        assert metadata.endswith(f', {identity}}};')
         assert content == (root / f'src/syntax/generated/{name}_scheme_data.h').read_text(encoding='utf-8')
 print('PASS: reproducible complete original Java/C#/Kotlin groups, attributes, styles and identities')

@@ -132,7 +132,7 @@ constexpr auto javaStyles = std::to_array<SyntaxStyle>({
     {SCE_JAVA_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_JAVA_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata javaOriginal = {192, 4, 4, (1 << 0) | (1 << 1) | (1 << 2), SCE_JAVA_FUNCTION_DEFINITION, '\\', SCE_JAVA_ESCAPECHAR, SCE_JAVA_FORMAT_SPECIFIER, 0, SCE_JAVA_CHARACTER, 0, SCE_JAVA_OPERATOR, SCE_JAVA_OPERATOR2, SCE_JAVA_TASKMARKER, SCE_JAVA_STRING, SCE_JAVA_CHARACTER};
+constexpr SyntaxOriginalMetadata javaOriginal = {192, 4, 4, (1 << 0) | (1 << 1) | (1 << 2), SCE_JAVA_FUNCTION_DEFINITION, '\\', SCE_JAVA_ESCAPECHAR, SCE_JAVA_FORMAT_SPECIFIER, 0, SCE_JAVA_CHARACTER, 0, SCE_JAVA_OPERATOR, SCE_JAVA_OPERATOR2, SCE_JAVA_TASKMARKER, SCE_JAVA_STRING, SCE_JAVA_CHARACTER, 2};
 constexpr const char* javaSettingsSection = "Java Source";
 constexpr auto javaExtensions = std::to_array<const char*>({"java", "jad", "aidl", "bsh"});
 // clang-format on
