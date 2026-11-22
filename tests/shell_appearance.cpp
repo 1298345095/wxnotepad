@@ -334,6 +334,7 @@ void CheckToolbarLayout(EditorFrame* frame) {
                                                    wxID_CUT,
                                                    wxID_COPY,
                                                    wxID_PASTE,
+                                                   wxID_DELETE,
                                                    wxID_SEPARATOR,
                                                    wxID_FIND,
                                                    wxID_REPLACE,
@@ -343,7 +344,11 @@ void CheckToolbarLayout(EditorFrame* frame) {
                                                    command("View", "Default Levels"),
                                                    wxID_SEPARATOR,
                                                    command("View", "Zoom In"),
-                                                   command("View", "Zoom Out")});
+                                                   command("View", "Zoom Out"),
+                                                   wxID_SEPARATOR,
+                                                   command("Scheme", "Syntax Scheme..."),
+                                                   wxID_SEPARATOR,
+                                                   wxID_EXIT});
     Require(toolbar->GetToolsCount() == expectedOrder.size(), "default toolbar retains original delivered groups");
     for (size_t index = 0; index < expectedOrder.size(); ++index) {
         const auto* tool = toolbar->GetToolByPos(static_cast<int>(index));

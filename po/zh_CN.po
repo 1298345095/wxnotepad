@@ -97,6 +97,10 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "%zu 处替换"
 
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Add ->"
+msgstr "添加(&A) ->"
+
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_commands.cpp
 msgid "&All Levels\tShift+Alt+A"
@@ -112,6 +116,10 @@ msgstr "总是显示此对话框(&A)。"
 msgid "&Append text to lines:"
 msgstr "每行后缀文本(&A):"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Auto Scale Toolbar"
+msgstr "工具栏比例自适应(&A)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_AUTO_RELOAD.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Auto-reload (unmodified)."
@@ -124,6 +132,10 @@ msgstr "自动按文件扩展名选择(&A)"
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
 msgstr "自动(&A)"
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Available toolbar buttons:"
+msgstr "可用工具栏按钮(&A)："
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Base64"
@@ -214,6 +226,10 @@ msgstr "复制行(&C)\tCtrl+Shift+C"
 msgid "&Current Block\tAlt+C"
 msgstr "当前块(&C)\tAlt+C"
 
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Current toolbar buttons:"
+msgstr "当前工具栏按钮(&C)："
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr "解码(&D)"
@@ -242,7 +258,7 @@ msgid "&Default..."
 msgstr "默认(&D)..."
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Delete"
 msgstr "删除(&D)"
 
@@ -532,7 +548,7 @@ msgid "&Prefix text to lines:"
 msgstr "每行前缀文本(&P):"
 
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Print...\tCtrl+P"
 msgstr "打印(&P)...\tCtrl+P"
 
@@ -569,6 +585,10 @@ msgstr "移除重复行(&R)。"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Replace"
 msgstr "替换(&R)"
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Reset"
+msgstr "重置(&R)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_RESETZOOM.
 #: src/app/editor_frame_commands.cpp
@@ -661,7 +681,7 @@ msgstr "行切分(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "保存时移除行尾空白(&S)。"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Syntax Scheme...\tF12"
 msgstr "选择语法高亮(&S)...\tF12"
 
@@ -787,6 +807,10 @@ msgstr "1/3 页(&3)"
 #: src/app/editor_frame_commands.cpp
 msgid "1/&4 Page"
 msgstr "1/4 页(&4)"
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "<- &Remove"
+msgstr "<- 移除(&R)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "A&dvanced Settings"
@@ -1419,6 +1443,14 @@ msgstr "当前编码"
 msgid "Current screen color (WYSIWYG)"
 msgstr "当前屏幕颜色（所见即所得）"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Customi&ze Toolbar..."
+msgstr "自定义工具栏(&Z)..."
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "Customize Toolbar"
+msgstr "自定义工具栏"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_DELETELINE.
 #: src/app/editor_frame_commands.cpp
 msgid "D&elete Line\tCtrl+Shift+D"
@@ -1487,7 +1519,7 @@ msgid "Draw Block Caret in &Selection"
 msgstr "在选区内绘制块状光标(&S)"
 
 #. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "E&xit\tAlt+F4"
 msgstr "退出(&X)\tAlt+F4"
 
@@ -1542,7 +1574,7 @@ msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "转义 HTML/XML 字符(&M)\tAlt+Shift+X"
 
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
-#: src/app/document_tools.cpp
+#: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "执行文档(&D)\tCtrl+L"
 
@@ -2108,10 +2140,18 @@ msgstr "单词最小长度"
 msgid "Modify Lines"
 msgstr "行修改"
 
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "Move &Down"
+msgstr "下移(&D)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MOVELINEDOWN.
 #: src/app/editor_frame_commands.cpp
 msgid "Move &Down\tAlt+Down"
 msgstr "下移(&V)\tAlt+Down"
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "Move &Up"
+msgstr "上移(&U)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MOVELINEUP.
 #: src/app/editor_frame_commands.cpp
@@ -2770,6 +2810,10 @@ msgstr "选择到下一个(&X)\tCtrl+Alt+F2"
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Separator"
+msgstr "分隔符"
+
 #: src/app/dialogs/scheme_chooser.cpp
 msgid "Set selected scheme as &default."
 msgstr "设置所选文件类型为默认(&D)"
@@ -3279,6 +3323,10 @@ msgstr "使用默认代码样式(&C)\tShift+F12"
 msgid "Use Global Tab Settings"
 msgstr "使用全局设置"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Use Lar&ge Toolbar"
+msgstr "使用大工具栏(&G)"
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Scheme Tab Settings"
 msgstr "使用文件类型设置"
@@ -3451,6 +3499,9 @@ msgstr "m4"
 #~ msgid "%s%s | %s%s | EOL: %s"
 #~ msgstr "%s%s | %s%s | 换行符: %s"
 
+#~ msgid "&Add →"
+#~ msgstr "添加(&A) →"
+
 #~ msgid "&Collapse All"
 #~ msgstr "全部折叠(&C)"
 
@@ -3486,3 +3537,6 @@ msgstr "m4"
 
 #~ msgid "Text files (*.txt)"
 #~ msgstr "文本文件 (*.txt)"
+
+#~ msgid "← &Remove"
+#~ msgstr "← 移除(&R)"

@@ -141,6 +141,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.showMenu = ReadBool("ShowMenu", defaults.showMenu);
     values.showToolbar = ReadBool("ShowToolbar", defaults.showToolbar);
+    values.autoScaleToolbar = ReadInt("AutoScaleToolbar", defaults.autoScaleToolbar);
+    values.toolbarButtons = ReadString("ToolbarButtons", defaults.toolbarButtons);
     values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
     values.fullScreenMode = ReadInt("FullScreenMode", defaults.fullScreenMode);
     values.escapeFunction = static_cast<EscapeFunction>(
@@ -529,6 +531,8 @@ bool SettingsStore::Save(bool explicitSave) {
                  RecentFiles::MinimumCapacity << 1);
         WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
         WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
+        WriteInt("AutoScaleToolbar", values.autoScaleToolbar, defaults.autoScaleToolbar);
+        WriteString("ToolbarButtons", values.toolbarButtons, defaults.toolbarButtons);
         WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
         WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
         WriteInt("EscFunction", std::to_underlying(values.escapeFunction), std::to_underlying(defaults.escapeFunction));
