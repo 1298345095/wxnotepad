@@ -2418,7 +2418,8 @@ void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
         information.cbSize = sizeof(information);
         information.fMask = MIIM_FTYPE;
         information.fType = MFT_RADIOCHECK;
-        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), id, FALSE, &information);
+        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
+                         &information);
 #elif defined(__WXGTK__)
         gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item->GetMenuItem()), TRUE);
 #endif

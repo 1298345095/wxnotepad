@@ -47,7 +47,8 @@ void NativeRadioChoices(EditorFrame* frame) {
         MENUITEMINFOW information{};
         information.cbSize = sizeof(information);
         information.fMask = MIIM_FTYPE;
-        Require(GetMenuItemInfoW(static_cast<HMENU>(item->GetMenu()->GetHMenu()), item->GetId(), FALSE, &information) &&
+        Require(GetMenuItemInfoW(static_cast<HMENU>(item->GetMenu()->GetHMenu()), static_cast<UINT>(item->GetMSWId()),
+                                 FALSE, &information) &&
                     (information.fType & MFT_RADIOCHECK),
                 "original title choices use native mutually exclusive radio marks");
 #elif defined(__WXGTK__)
