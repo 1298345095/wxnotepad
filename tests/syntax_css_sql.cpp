@@ -61,12 +61,19 @@ void DialectWorkflows(EditorFrame* frame, SettingsStore& settings) {
         Require(editor->Send(Message::GetTabWidth) == (css ? 2 : 7) &&
                     editor->Send(Message::GetIndent) == (css ? 2 : 3) && !editor->Send(Message::GetUseTabs),
                 "CSS retains independent original 2/2 spaces; SQL inherits global indentation");
+        constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+        const auto fontSize = editor->Send(Message::StyleGetSizeFractional, defaultStyle);
         TestLanguages::Choose(frame, "Plain Text");
         TestLanguages::Choose(frame, fixture.name);
         Require(TestEditor::Text(editor) == fixture.text && !frame->DocumentIsModified() &&
                     !editor->Send(Message::CanUndo),
                 "manual scheme installation preserves bytes and history");
+        Require(editor->Send(Message::StyleGetSizeFractional, defaultStyle) == fontSize,
+                "restoring a CSS dialect or SQL retains its inherited original font size");
         TestLanguages::Choose(frame, "Automatic");
+        Require(frame->Revert().status == OpenStatus::Opened && editor->Send(Message::GetLexer) == fixture.lexer &&
+                    TestEditor::Text(editor) == fixture.text,
+                "native Revert reloads each original scheme's current file and automatic classification");
         TestLanguages::FoldCommands(frame);
         TestEditor::ResetStream(editor, "call()\n");
         if (*fixture.lineComment) {
