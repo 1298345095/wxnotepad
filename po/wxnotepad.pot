@@ -884,6 +884,10 @@ msgstr ""
 msgid "C Shell"
 msgstr ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "C#"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
 msgstr ""
@@ -1686,6 +1690,10 @@ msgid "JSX"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr ""
 
@@ -1695,6 +1703,10 @@ msgstr ""
 
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp

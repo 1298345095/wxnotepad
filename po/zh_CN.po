@@ -964,6 +964,10 @@ msgstr "花括号 {}"
 msgid "C Shell"
 msgstr "C Shell"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "C#"
+msgstr "C#"
+
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
 msgstr "光标样式(&A)"
@@ -1814,6 +1818,10 @@ msgid "JSX"
 msgstr "JSX"
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java"
+msgstr "Java"
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr "JavaScript"
 
@@ -1826,6 +1834,10 @@ msgstr "段落合并(&P)\tCtrl+Shift+J"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
 msgstr "两端对齐(段落模式)(&P)。"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin"
+msgstr "Kotlin"
 
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format

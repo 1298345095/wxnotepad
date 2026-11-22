@@ -1239,7 +1239,7 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
     addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
     languages->AppendSeparator();
-    for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Toml, Yaml})
+    for (const auto language : {Cpp, CSharp, CMake, Go, Java, Json, Kotlin, Lua, Python, Rust, Toml, Yaml})
         addLanguage(languages, "&" + LanguageName(language), language);
     return languages;
 }
