@@ -82,7 +82,8 @@ void Operations(EditorFrame* frame) {
         editor->Send(AutoCCancel);
         Choose(frame, fields[0].c_str());
         const auto before = TestLanguages::Unhex(fields[2]);
-        TestEditor::ResetStream(editor, before.c_str(), before.size(), before.size());
+        const auto initialCaret = static_cast<intptr_t>(before.size());
+        TestEditor::ResetStream(editor, before.c_str(), initialCaret, initialCaret);
         Paint(frame);
         const auto character = std::stoi(fields[3]);
         if (character) {
