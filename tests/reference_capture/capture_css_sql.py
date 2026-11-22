@@ -5,8 +5,34 @@ from ctypes import wintypes as w
 import json
 from pathlib import Path
 import shutil
+from enum import IntEnum
 
 import original_host as host
+
+
+class Sci(IntEnum):
+    GetStyleIndexAt = 2038
+    AutoCCancel = 2101
+    AutoCActive = 2102
+    AutoCSelect = 2108
+    GetLineCount = 2154
+    EmptyUndoBuffer = 2175
+    Undo = 2176
+    Redo = 2011
+    GetFoldLevel = 2223
+    AutoCGetCurrent = 2445
+    AutoCGetCurrentText = 2610
+    DeleteRange = 2645
+    GetLexer = 4002
+    Colourise = 4003
+
+
+WM_KEYDOWN = 0x100
+WM_CHAR = 0x102
+VK_DOWN = 0x28
+VK_RETURN = 0x0D
+COMPLETE_WORD = 40373
+GENERIC_ALL_ACCESS = 0x10000000
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--exe', required=True, type=Path)
@@ -24,7 +50,7 @@ user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWO
 user.CreateDesktopW.restype = w.HANDLE
 user.CloseDesktop.argtypes = [w.HANDLE]
 name = 'wxnotepad-original-css-sql-256'
-desktop = user.CreateDesktopW(name, None, None, 0, 0x10000000, None)
+desktop = user.CreateDesktopW(name, None, None, 0, GENERIC_ALL_ACCESS, None)
 assert desktop
 fixtures = [
     ('case.css', ':root {\n  --theme: #123456;\n}\n'
@@ -55,16 +81,16 @@ typing = []
 def completion_items(app):
     items = []
     previous = -1
-    while app.send(2102):
-        current = app.send(2445)
+    while app.send(Sci.AutoCActive):
+        current = app.send(Sci.AutoCGetCurrent)
         if current == previous:
             break
         previous = current
-        size = app.send(2610, 0, app.memory)
+        size = app.send(Sci.AutoCGetCurrentText, 0, app.memory)
         buffer = c.create_string_buffer(size + 1)
         assert host.kernel.ReadProcessMemory(app.handle, app.memory, buffer, size + 1, None)
         items.append(buffer.value.decode('utf-8'))
-        user.SendMessageW(app.editor, 0x100, 0x28, 0)
+        user.SendMessageW(app.editor, WM_KEYDOWN, VK_DOWN, 0)
     return items
 
 
@@ -78,51 +104,51 @@ try:
             position = raw.index(token)
 
             def snapshot(stage):
-                app.send(4003, 0, -1)
+                app.send(Sci.Colourise, 0, -1)
                 data = app.text()
                 return dict(stage=stage, text=data.hex(),
-                            styles=bytes(app.send(2038, i) & 255 for i in range(len(data))).hex(),
-                            folds=[app.send(2223, i) for i in range(app.send(2154))])
+                            styles=bytes(app.send(Sci.GetStyleIndexAt, i) & 255 for i in range(len(data))).hex(),
+                            folds=[app.send(Sci.GetFoldLevel, i) for i in range(app.send(Sci.GetLineCount))])
 
             states = [snapshot('base')]
-            app.send(2175)
-            app.send(2645, position, 1)
+            app.send(Sci.EmptyUndoBuffer)
+            app.send(Sci.DeleteRange, position, 1)
             states.append(snapshot('edit'))
-            app.send(2176)
+            app.send(Sci.Undo)
             states.append(snapshot('undo'))
-            app.send(2011)
+            app.send(Sci.Redo)
             states.append(snapshot('redo'))
-            rows.append(dict(name=filename, position=position, lexer=app.send(4002), states=states))
+            rows.append(dict(name=filename, position=position, lexer=app.send(Sci.GetLexer), states=states))
             for before in ([b'a:hov', b'a::bef', b'@med', b'a { col'] if filename.endswith('css')
                            else [b'a { col'] if filename.endswith(('.less', '.hss')) else [b'SEL', b'COU']):
-                app.send(2101)
+                app.send(Sci.AutoCCancel)
                 app.reset(before, len(before), len(before))
-                app.send(4003, 0, -1)
-                app.command(40373)
+                app.send(Sci.Colourise, 0, -1)
+                app.command(COMPLETE_WORD)
                 items = completion_items(app)
                 after = app.text()
                 if items:
-                    app.send(2108, 0, app.put(items[0].encode('utf-8') + b'\0'))
-                    user.SendMessageW(app.editor, 0x100, 0x0D, 0)
+                    app.send(Sci.AutoCSelect, 0, app.put(items[0].encode('utf-8') + b'\0'))
+                    user.SendMessageW(app.editor, WM_KEYDOWN, VK_RETURN, 0)
                 completions.append(dict(name=filename, before=before.hex(), after=after.hex(), items=items,
                                         confirmed=app.text().hex()))
-                app.send(2101)
+                app.send(Sci.AutoCCancel)
             contexts = [(b'SE', 'L'), (b"SELECT Q", "'"), (b'SELECT ', '(')] if filename.endswith('.sql') else [
                 (b'a { co', 'l'), (b'a { ', '('), (b'a { content: ', '"')]
             for before, character in contexts:
                 app.reset(before, len(before), len(before))
-                app.send(4003, 0, -1)
-                user.SendMessageW(app.editor, 0x102, ord(character), 0)
+                app.send(Sci.Colourise, 0, -1)
+                user.SendMessageW(app.editor, WM_CHAR, ord(character), 0)
                 after = app.text()
                 items = completion_items(app)
                 if items:
-                    app.send(2108, 0, app.put(items[0].encode('utf-8') + b'\0'))
-                    user.SendMessageW(app.editor, 0x100, 0x0D, 0)
+                    app.send(Sci.AutoCSelect, 0, app.put(items[0].encode('utf-8') + b'\0'))
+                    user.SendMessageW(app.editor, WM_KEYDOWN, VK_RETURN, 0)
                 confirmed = app.text()
-                app.send(2101)
-                app.send(2176)
+                app.send(Sci.AutoCCancel)
+                app.send(Sci.Undo)
                 undo = app.text()
-                app.send(2011)
+                app.send(Sci.Redo)
                 typing.append(dict(name=filename, before=before.hex(), character=ord(character), after=after.hex(),
                                    confirmed=confirmed.hex(), undo=undo.hex(), redo=app.text().hex(), items=items))
         finally:

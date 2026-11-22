@@ -324,14 +324,19 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      false,
      nullptr,
      cmakeOriginal},
+    // TRANSLATORS: CSS is the original stylesheet language abbreviation.
     {wxTRANSLATE("CSS"), cssExtensions, cssLists, cssStyles, cssProperties, SCLEX_CSS, SyntaxLanguage::Css, true,
      nullptr, "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    // TRANSLATORS: SCSS is the original Sass stylesheet dialect abbreviation.
     {wxTRANSLATE("SCSS"), scssExtensions, cssLists, cssStyles, scssProperties, SCLEX_CSS, SyntaxLanguage::Scss, true,
      "//", "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    // TRANSLATORS: Less is the original stylesheet language's name.
     {wxTRANSLATE("Less"), lessExtensions, cssLists, cssStyles, lessProperties, SCLEX_CSS, SyntaxLanguage::Less, true,
      "//", "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    // TRANSLATORS: HSS is the original stylesheet dialect abbreviation.
     {wxTRANSLATE("HSS"), hssExtensions, cssLists, cssStyles, hssProperties, SCLEX_CSS, SyntaxLanguage::Hss, true, "//",
      "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    // TRANSLATORS: SQL is the original query-language abbreviation.
     {wxTRANSLATE("SQL"), sqlExtensions, sqlLists, sqlStyles, sqlProperties, SCLEX_SQL, SyntaxLanguage::Sql, true, "--",
      "/*", "*/", SCE_SQL_COMMENTLINEDOC, false, false, nullptr, sqlOriginal},
 });

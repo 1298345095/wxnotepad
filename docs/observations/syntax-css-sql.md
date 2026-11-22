@@ -38,6 +38,12 @@ The existing color CallTip fixture exercises preview pixels, native color
 choices and exact Undo/Redo in each delivered scheme, alongside its original
 plain-text typing/priority checks.
 
+Fifteen further independent native typing cases cover automatic completion
+lists and confirmation, paired parentheses/quotes, SQL character prefixes and
+their original Undo/Redo boundaries. The Linux key driver names the apostrophe
+keysym explicitly and recognizes its shifted double-quote release, keeping
+the same owned-editor input acknowledgement and deadline.
+
 External evidence is retained at
 `F:/wxnotepad-evidence/original-controls-implementation-2026-11-22/256/`, including
 the independent original JSON, importer/native red runs and subsequent native

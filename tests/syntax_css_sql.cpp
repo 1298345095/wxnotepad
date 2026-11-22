@@ -120,6 +120,38 @@ std::string CurrentCandidate(EditorControl* editor) {
     text.pop_back();
     return text;
 }
+std::vector<std::string> CandidateList(EditorControl* editor) {
+    std::vector<std::string> actual;
+    intptr_t previous = -1;
+    while (editor->Send(Message::AutoCActive)) {
+        const auto current = editor->Send(Message::AutoCGetCurrent);
+        if (current == previous) break;
+        previous = current;
+        actual.push_back(CurrentCandidate(editor));
+#ifdef __WXMSW__
+        NativeCompletion::Key(editor, VK_DOWN);
+#else
+        NativeCompletion::Key(editor, GDK_KEY_Down);
+#endif
+    }
+    return actual;
+}
+std::vector<std::string> ExpectedCandidates(const std::string& words) {
+    std::vector<std::string> expected;
+    std::istringstream candidates(words);
+    for (std::string word; candidates >> word;)
+        expected.push_back(word);
+    return expected;
+}
+void ConfirmFirst(EditorControl* editor, const std::vector<std::string>& expected) {
+    if (expected.empty()) return;
+    editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>(expected.front().c_str()));
+#ifdef __WXMSW__
+    NativeCompletion::Key(editor, VK_RETURN);
+#else
+    NativeCompletion::Key(editor, GDK_KEY_Return);
+#endif
+}
 void OriginalCompletions(EditorFrame* frame) {
     auto* editor = frame->Editor();
     std::ifstream input(std::filesystem::path(CSS_SQL_COMPLETION_REFERENCE));
@@ -142,33 +174,11 @@ void OriginalCompletions(EditorFrame* frame) {
         editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
         TestSyntax::Paint(frame);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Complete Word"));
-        std::vector<std::string> actual;
-        intptr_t previous = -1;
-        while (editor->Send(Message::AutoCActive)) {
-            const auto current = editor->Send(Message::AutoCGetCurrent);
-            if (current == previous) break;
-            previous = current;
-            actual.push_back(CurrentCandidate(editor));
-#ifdef __WXMSW__
-            NativeCompletion::Key(editor, VK_DOWN);
-#else
-            NativeCompletion::Key(editor, GDK_KEY_Down);
-#endif
-        }
-        std::vector<std::string> expected;
-        std::istringstream candidates(words);
-        for (std::string word; candidates >> word;)
-            expected.push_back(word);
+        const auto actual = CandidateList(editor);
+        const auto expected = ExpectedCandidates(words);
         Require(actual == expected && TestEditor::Text(editor) == TestLanguages::Unhex(afterHex),
                 "manual completion candidate list and immediate result match independent original");
-        if (!expected.empty()) {
-            editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>(expected.front().c_str()));
-#ifdef __WXMSW__
-            NativeCompletion::Key(editor, VK_RETURN);
-#else
-            NativeCompletion::Key(editor, GDK_KEY_Return);
-#endif
-        }
+        ConfirmFirst(editor, expected);
         Require(TestEditor::Text(editor) == TestLanguages::Unhex(confirmedHex),
                 "native Enter inserts the independently captured original candidate");
         TestSyntax::Command(frame, wxID_UNDO);
@@ -180,6 +190,56 @@ void OriginalCompletions(EditorFrame* frame) {
     }
     Require(rows == 12, "all independent CSS dialect/SQL completion cases must execute");
     std::puts("PASS: original native completion lists, Enter insertion and Undo/Redo");
+}
+void OriginalTyping(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    std::ifstream input(std::filesystem::path(CSS_SQL_TYPING_REFERENCE));
+    Require(input.is_open(), "independent original native typing fixtures must open");
+    size_t rows = 0;
+    for (std::string line; std::getline(input, line);) {
+        if (line.empty() || line.front() == '#') continue;
+        std::array<std::string, 8> columns;
+        std::istringstream row(line);
+        for (auto& column : columns)
+            std::getline(row, column, '\t');
+        const auto& [name, beforeHex, characterText, afterHex, confirmedHex, undoHex, redoHex, words] = columns;
+        editor->Send(Message::SetSavePoint);
+        const auto path = TestFiles::TemporaryDirectory(name);
+        TestFiles::WriteBytes(path, TestLanguages::Unhex(beforeHex));
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "typing fixture must Open");
+        editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+        NativePaint::Complete(editor);
+        const int character = std::stoi(characterText);
+        std::fprintf(stderr, "typing fixture=%s character=%d\n", name.c_str(), character);
+#ifdef __WXMSW__
+        SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_CHAR, character, 0);
+#else
+        if (character == '(')
+            NativeKeys::Shortcut(frame, '9', false, false, true);
+        else if (character == '"')
+            NativeKeys::Shortcut(frame, '\'', false, false, true);
+        else
+            NativeKeys::Shortcut(frame, character == 'l' ? 'L' : character, false, false, character == 'L');
+#endif
+        wxYield();
+        const auto expected = ExpectedCandidates(words);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(afterHex) && CandidateList(editor) == expected,
+                "native automatic completion and paired characters match independent original bytes and lists");
+        ConfirmFirst(editor, expected);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(confirmedHex),
+                "automatic native Enter confirms the original candidate");
+        editor->Send(Message::AutoCCancel);
+        TestSyntax::Command(frame, wxID_UNDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(undoHex),
+                "native typed completion and paired characters retain original Undo boundary");
+        TestSyntax::Command(frame, wxID_REDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(redoHex),
+                "native typed completion and paired characters retain original Redo bytes");
+        editor->Send(Message::SetSavePoint);
+        ++rows;
+    }
+    Require(rows == 15, "all five languages' automatic completion and paired-character contexts must run");
+    std::puts("PASS: 15 original native automatic completion/brace/quote/Undo/Redo cases");
 }
 class CssSqlApp final : public wxApp {
 public:
@@ -199,6 +259,7 @@ public:
                 OriginalOracle(frame);
                 DialectWorkflows(frame, *settings_);
                 OriginalCompletions(frame);
+                OriginalTyping(frame);
                 TestLanguages::NativeFiles(frame, schemes);
                 result_ = 0;
             } catch (const std::exception& error) {

@@ -998,6 +998,7 @@ msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] "CR: %llu 行。"
 
+#. TRANSLATORS: CSS is the original stylesheet language abbreviation.
 #: src/syntax/syntax_catalog.cpp
 msgid "CSS"
 msgstr "CSS"
@@ -1708,6 +1709,7 @@ msgstr "跳转到选区结束(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "按文件类型分组(&T)。"
 
+#. TRANSLATORS: HSS is the original stylesheet dialect abbreviation.
 #: src/syntax/syntax_catalog.cpp
 msgid "HSS"
 msgstr "HSS"
@@ -1885,6 +1887,7 @@ msgstr "左页边距"
 msgid "Left:"
 msgstr "左："
 
+#. TRANSLATORS: Less is the original stylesheet language's name.
 #: src/syntax/syntax_catalog.cpp
 msgid "Less"
 msgstr "Less"
@@ -2482,6 +2485,7 @@ msgstr "行排序(&O)...\tAlt+O"
 msgid "S&wap\tCtrl+K"
 msgstr "交换(&W)\tCtrl+K"
 
+#. TRANSLATORS: SCSS is the original Sass stylesheet dialect abbreviation.
 #: src/syntax/syntax_catalog.cpp
 msgid "SCSS"
 msgstr "SCSS"
@@ -2490,6 +2494,7 @@ msgstr "SCSS"
 msgid "SHY — Soft &hyphen"
 msgstr "SHY — 软连字符(&Q)"
 
+#. TRANSLATORS: SQL is the original query-language abbreviation.
 #: src/syntax/syntax_catalog.cpp
 msgid "SQL"
 msgstr "SQL"
