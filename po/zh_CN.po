@@ -39,6 +39,12 @@ msgstr " (手动指定)"
 msgid " | Sel %lld"
 msgstr " | 选中 %lld"
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr "“%s”"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_SAVE.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -301,6 +307,10 @@ msgstr "文件(&F)"
 msgid "&File Name"
 msgstr "文件名(&F)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
+msgstr "仅文件名(&F)"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Find All"
 msgstr "查找全部(&F)"
@@ -407,6 +417,10 @@ msgstr "合并重复行(&M)。"
 #: src/app/editor_frame_commands.cpp
 msgid "&Millisecond (ms)"
 msgstr "毫秒(&m) (ms)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Minimize wxnotepad"
+msgstr "最小化 wxnotepad(&M)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MODIFYLINES.
 #: src/app/editor_frame_commands.cpp
@@ -650,6 +664,10 @@ msgstr "选择语法高亮(&S)...\tF12"
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr "制表符设置(&T)..."
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
+msgstr "文本摘选(&T)"
 
 #. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
@@ -971,6 +989,10 @@ msgstr "花括号 {}"
 #: src/syntax/syntax_catalog.cpp
 msgid "C Shell"
 msgstr "C Shell"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "C# Source"
+msgstr "C# 源代码"
 
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
@@ -1460,6 +1482,10 @@ msgid "E&xit\tAlt+F4"
 msgstr "退出(&X)\tAlt+F4"
 
 #: src/app/editor_frame_commands.cpp
+msgid "E&xit wxnotepad"
+msgstr "退出 wxnotepad(&X)"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr "启用多选(&M)"
 
@@ -1510,6 +1536,10 @@ msgstr "转义 HTML/XML 字符(&M)\tAlt+Shift+X"
 msgid "Execute &Document\tCtrl+L"
 msgstr "执行文档(&D)\tCtrl+L"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Extra Esc &Key Function"
+msgstr "Esc 键特别功能(&K)"
+
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr "FSI — 首个强方向隔离符(&F)"
@@ -1535,6 +1565,10 @@ msgstr "文件模式(&M)"
 #: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_file_watching.cpp
 msgid "File Change Notification"
 msgstr "文件变更通知"
+
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
+msgstr "文件名和目录(&D)"
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYFILENAME.
 #: src/app/editor_frame_commands.cpp
@@ -1619,6 +1653,10 @@ msgstr "页脚："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
 msgstr "对换行的文本"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
+msgstr "完整路径名称(&P)"
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
 #: src/app/editor_frame_commands.cpp
@@ -1826,6 +1864,10 @@ msgid "JSX"
 msgstr "JSX"
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java Source"
+msgstr "Java 源代码"
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr "JavaScript"
 
@@ -1838,6 +1880,10 @@ msgstr "段落合并(&P)\tCtrl+Shift+J"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
 msgstr "两端对齐(段落模式)(&P)。"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin Source"
+msgstr "Kotlin 源代码"
 
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format
@@ -3237,6 +3283,10 @@ msgstr "按空白"
 msgid "Whole &word"
 msgstr "只匹配完整单词(&W)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
+msgstr "窗口标题显示(&Y)"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"
 msgstr "Windows (CR+LF)"
@@ -3382,3 +3432,11 @@ msgstr "m4"
 
 #~ msgid "Text files (*.txt)"
 #~ msgstr "文本文件 (*.txt)"
+#~ msgid "C#"
+#~ msgstr "C#"
+
+#~ msgid "Java"
+#~ msgstr "Java"
+
+#~ msgid "Kotlin"
+#~ msgstr "Kotlin"

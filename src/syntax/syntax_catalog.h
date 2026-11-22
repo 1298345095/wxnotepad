@@ -42,6 +42,9 @@ enum class SyntaxLanguage : uint8_t {
     MarkdownGitHub,
     MarkdownGitLab,
     MarkdownPandoc,
+    Java,
+    CSharp,
+    Kotlin,
     Count
 };
 namespace SyntaxDetectionLimits {

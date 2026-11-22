@@ -1247,7 +1247,7 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
     addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
     languages->AppendSeparator();
-    for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Toml, Yaml})
+    for (const auto language : {Cpp, CSharp, CMake, Go, Java, Json, Kotlin, Lua, Python, Rust, Toml, Yaml})
         addLanguage(languages, "&" + LanguageName(language), language);
     return languages;
 }
@@ -1724,7 +1724,7 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         ShowSyntaxScheme();
         return true;
     }
-    if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && HandleFullScreenEscape()) return true;
+    if (event.GetKeyCode() == WXK_ESCAPE && HandleEscapeKey(event.GetModifiers())) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (event.ShiftDown() && !event.MetaDown())
@@ -2347,6 +2347,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     AppendAppearanceOptions(view);
+    AppendWindowTitleOptions(view);
     view->AppendSeparator();
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
@@ -2366,6 +2367,28 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
                 document_.ConfigureAutoSave(preferences.autoSave);
         },
         autoSave);
+    auto* escape = new wxMenu;
+    // Notepad4 89b8b36 IDM_VIEW_NOESCFUNC..IDM_VIEW_ESCEXIT, after AutoSave.
+    for (const auto& [label, action] : {std::pair{wxTRANSLATE("&None"), EscapeFunction::None},
+                                        std::pair{wxTRANSLATE("&Minimize wxnotepad"), EscapeFunction::Minimize},
+                                        std::pair{wxTRANSLATE("E&xit wxnotepad"), EscapeFunction::Exit}}) {
+        const int id = wxWindow::NewControlId();
+        escape->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, action](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).escapeFunction = action;
+                UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, action](wxUpdateUIEvent& event) {
+                event.Check((settings_ ? settings_->values : defaults_).escapeFunction == action);
+            },
+            id);
+    }
+    view->AppendSubMenu(escape, _("Extra Esc &Key Function"));
     if (settings_) {
         auto* other = new wxMenu;
         const int saveRecent = wxWindow::NewControlId();
@@ -2416,6 +2439,61 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
 #endif
     AppendSettingsCommands(view);
     return view;
+}
+
+void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
+    auto* title = new wxMenu;
+    const auto appendChoice = [title](int id, const wxString& label) {
+        auto* item = title->AppendCheckItem(id, label);
+        // Keep the original radio marks, while allowing an already selected
+        // excerpt command to run again through GTK's native activate signal.
+#ifdef __WXMSW__
+        MENUITEMINFOW information{};
+        information.cbSize = sizeof(information);
+        information.fMask = MIIM_FTYPE;
+        information.fType = MFT_RADIOCHECK;
+        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
+                         &information);
+#elif defined(__WXGTK__)
+        gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item->GetMenuItem()), TRUE);
+#endif
+        return item;
+    };
+    for (const auto& [label, mode] :
+         {std::pair{wxTRANSLATE("&File Name Only"), TitlePathNameFormat::NameOnly},
+          std::pair{wxTRANSLATE("File Name and &Directory"), TitlePathNameFormat::NameFirst},
+          std::pair{wxTRANSLATE("Full &Path Name"), TitlePathNameFormat::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        // Check items allow choosing the already selected command again on GTK,
+        // including recapturing Text Excerpt. Update UI keeps one item checked.
+        appendChoice(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, mode](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).pathNameFormat = mode;
+                titleExcerpt_.clear();
+                UpdateDocumentState();
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(titleExcerpt_.empty() &&
+                            (settings_ ? settings_->values : defaults_).pathNameFormat == mode);
+            },
+            id);
+    }
+    const int excerpt = wxWindow::NewControlId();
+    appendChoice(excerpt, _("&Text Excerpt"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            titleExcerpt_ = editor_->CaptureTitleExcerpt(document_.IsDefaultEncoding());
+            UpdateDocumentState();
+        },
+        excerpt);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(!titleExcerpt_.empty()); }, excerpt);
+    settings->AppendSubMenu(title, _("Window Title Displa&y"));
 }
 
 void EditorFrame::AppendAppearanceOptions(wxMenu* view) {

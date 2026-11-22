@@ -34,6 +34,12 @@ msgstr ""
 msgid " | Sel %lld"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr ""
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "\"%s\" is read only. Save to a different file?"
@@ -275,6 +281,10 @@ msgstr ""
 msgid "&File Name"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Find All"
 msgstr ""
@@ -368,6 +378,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Millisecond (ms)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Minimize wxnotepad"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -584,6 +598,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
 msgstr ""
 
 #. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
@@ -890,6 +908,10 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "C Shell"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "C# Source"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1361,6 +1383,10 @@ msgid "E&xit\tAlt+F4"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "E&xit wxnotepad"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr ""
 
@@ -1410,6 +1436,10 @@ msgstr ""
 msgid "Execute &Document\tCtrl+L"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Extra Esc &Key Function"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr ""
@@ -1433,6 +1463,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_file_watching.cpp
 msgid "File Change Notification"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1511,6 +1545,10 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1698,6 +1736,10 @@ msgid "JSX"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java Source"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr ""
 
@@ -1707,6 +1749,10 @@ msgstr ""
 
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin Source"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -3028,6 +3074,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp

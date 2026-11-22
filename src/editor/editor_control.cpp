@@ -11,6 +11,9 @@
 #include <cmath>
 #include <type_traits>
 #include <utility>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
@@ -216,6 +219,10 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
 
 EditorControl::~EditorControl() {
     WXNOTE_TRACE("editor.destroy", "\ttarget=%p", static_cast<void*>(this));
+#ifdef __WXGTK__
+    if (preeditStartHandler_) g_signal_handler_disconnect(m_imContext, preeditStartHandler_);
+    if (preeditEndHandler_) g_signal_handler_disconnect(m_imContext, preeditEndHandler_);
+#endif
     SetDropTarget(nullptr);
 }
 
@@ -631,7 +638,41 @@ std::optional<std::string> EditorControl::ExpandRegexReplacement(const std::stri
     return std::string(expanded, static_cast<size_t>(length));
 }
 
+#ifdef __WXGTK__
+void EditorControl::GTKHandleRealized() {
+    wxControl::GTKHandleRealized();
+    // wxGTK creates its IM context on realization, after our constructor.
+    if (m_imContext && !preeditStartHandler_) {
+        preeditStartHandler_ =
+            g_signal_connect(m_imContext, "preedit-start", G_CALLBACK(+[](GtkIMContext*, gpointer value) {
+                                 static_cast<EditorControl*>(value)->inputMethodComposing_ = true;
+                             }),
+                             this);
+        preeditEndHandler_ =
+            g_signal_connect(m_imContext, "preedit-end", G_CALLBACK(+[](GtkIMContext*, gpointer value) {
+                                 static_cast<EditorControl*>(value)->inputMethodComposing_ = false;
+                             }),
+                             this);
+    }
+}
+#endif
+
+bool EditorControl::InputMethodComposing() const noexcept {
+#ifdef __WXMSW__
+    return core_->InputMethodComposing();
+#elif defined(__WXGTK__)
+    return inputMethodComposing_;
+#else
+    return false;
+#endif
+}
+
 void EditorControl::OnKeyDown(wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_ESCAPE && InputMethodComposing()) {
+        // wxGTK filters IM keys after KEY_DOWN; let preedit/candidates own Escape.
+        event.Skip();
+        return;
+    }
     WXNOTE_TRACE("editor.key-down", "\ttarget=%p\tfocus=%p\tkey=%d\tmodifiers=%d\tlength=%lld\tanchor=%lld\tcaret=%lld",
                  static_cast<void*>(this), static_cast<void*>(wxWindow::FindFocus()), event.GetKeyCode(),
                  event.GetModifiers(), static_cast<long long>(Send(Message::GetLength)),
@@ -682,7 +723,15 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
                 result = core_->ImeMessage(message, wParam, lParam);
             }))
             return 0;
-        if (result) return *result;
+        if (result) {
+            if (message == WM_IME_STARTCOMPOSITION) {
+                // Inline composition suppresses DefWindowProc, but wx still
+                // needs its native IME-entry bookkeeping to balance END below.
+                WXLRESULT nativeResult = 0;
+                wxControl::MSWHandleMessage(&nativeResult, message, wParam, lParam);
+            }
+            return *result;
+        }
     }
     return wxControl::MSWWindowProc(message, wParam, lParam);
 }
