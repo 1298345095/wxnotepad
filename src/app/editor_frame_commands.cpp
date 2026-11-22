@@ -1733,7 +1733,11 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         ShowSyntaxScheme();
         return true;
     }
+#ifndef __WXMSW__
+    // MSW's hook still reports physical Escape after TSF converts the retrieved
+    // MSG to VK_PROCESSKEY. MSWTranslateMessage owns the actual Escape message.
     if (event.GetKeyCode() == WXK_ESCAPE && HandleEscapeKey(event.GetModifiers())) return true;
+#endif
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (event.ShiftDown() && !event.MetaDown())

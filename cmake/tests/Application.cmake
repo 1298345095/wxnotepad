@@ -61,6 +61,14 @@ add_gui_program(extra_escape tests/extra_escape.cpp app_shell)
 add_test(NAME original_extra_escape COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "$<TARGET_FILE:extra_escape>")
 set_tests_properties(original_extra_escape PROPERTIES TIMEOUT 60)
+if(WIN32)
+    add_gui_program(ime_escape tests/ime_escape.cpp app_shell)
+    target_link_libraries(ime_escape PRIVATE imm32 comctl32)
+    add_test(NAME windows_pinyin_escape_gdi COMMAND ime_escape 0)
+    add_test(NAME windows_pinyin_escape_directwrite COMMAND ime_escape 1)
+    set_tests_properties(windows_pinyin_escape_gdi windows_pinyin_escape_directwrite PROPERTIES
+        TIMEOUT 45 SKIP_RETURN_CODE 77)
+endif()
 add_test(NAME original_extra_escape_lifecycle COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/extra_escape_process.py" "$<TARGET_FILE:extra_escape>")
