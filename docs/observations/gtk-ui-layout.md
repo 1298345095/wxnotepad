@@ -77,3 +77,32 @@ Local evidence is retained under
 red reports (`x11-red-02`), the independent Replace-only correction
 (`replace-fix-01`), font-metric instrumentation (`metrics-01`) and final
 backend results. The diagnostic-only logging was removed before validation.
+
+## Windows CI language-verification follow-up
+
+The first hosted Windows run passed 272 of 274 tests; only the two new Chinese
+replacement-layout cases failed before reaching their geometry assertions. The
+existing packaged application passed both Chinese language scenarios on the
+same runner, and its catalogs were deployed beside the test executable.
+
+The new fixture implicitly converted the UTF-8 source literal `行` to `wxString`
+using the Windows default converter. A native control using Windows-1252
+reproduces the hosted failure: the actual caption remains `行 1 / 1`, but the
+expected prefix becomes `è¡Œ`. On this development host, the default conversion
+instead returns an empty prefix, which `StartsWith()` accepts and consequently
+masked the defective comparison. Changing the C runtime character locale did
+not reproduce the hosted failure: wxWidgets' Windows default converter uses
+`CP_ACP` rather than the C runtime locale.
+
+The fixture now constructs its expected prefix explicitly with `FromUTF8()`
+and also requires it to be nonempty. The original language, row-order and
+inside-dialog checks remain. Its CMake target explicitly depends on deployed
+catalogs, including when built independently. Native control patches, hosted
+logs and before/after reports are retained in `ci-followup/` within the evidence
+directory above.
+
+The same follow-up separates Pango field metrics from line aggregation and
+glyph-pixel scanning from the baseline comparison. Owning native capture
+objects are noncopyable because GTK callbacks retain their addresses. Native
+windows retain temporary ownership until their explicit frame/application
+handoff. These changes preserve the existing font, drawing and test rules.

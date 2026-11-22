@@ -196,6 +196,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 add_gui_program(native_ui_layout tests/native_ui_layout.cpp app_shell)
+add_dependencies(native_ui_layout wxnotepad_catalogs)
 foreach(language 1033 2052 1028)
     add_test(NAME native_replace_layout_${language} COMMAND native_ui_layout replace ${language})
     set_tests_properties(native_replace_layout_${language} PROPERTIES TIMEOUT 30)
