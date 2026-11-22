@@ -184,7 +184,8 @@ def inspect(artifact, source, baseline=None):
             raise ValueError('Expected exactly one packaged wxnotepad executable')
         application = applications[0]
         report['application'] = application.name
-        for path in sorted(path for path in artifact.rglob('*') if path.is_file()):
+        paths = (path for path in artifact.rglob('*') if path.is_file())
+        for path in sorted(paths, key=lambda entry: entry.relative_to(artifact).as_posix()):
             data = path.read_bytes()
             record = {'path': path.relative_to(artifact).as_posix(), 'bytes': len(data),
                       'sha256': hashlib.sha256(data).hexdigest()}
