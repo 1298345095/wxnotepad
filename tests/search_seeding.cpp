@@ -11,6 +11,7 @@
 #include <wx/log.h>
 #include <wx/ffile.h>
 #include <cstdio>
+#include <format>
 #include <utility>
 #include <stdexcept>
 #include <memory>
@@ -23,7 +24,7 @@
 namespace {
 void ReportStage(const char* stage) {
     static const TestClock::StopWatch elapsed;
-    std::fprintf(stderr, "Search seeding elapsed_ms=%ld stage=%s\n", elapsed.Time(), stage);
+    std::fputs(std::format("Search seeding elapsed_ms={} stage={}\n", elapsed.Time(), stage).c_str(), stderr);
     std::fflush(stderr);
 }
 void Require(bool condition, const char* message) {

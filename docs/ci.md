@@ -380,11 +380,17 @@ distributed files, executable sections and symbols/relocations. It also verifies
 that all five complete toolbar PNG strips and every original ICO image payload
 occur in the packaged application, so unused artwork remains available for
 future features. Native appearance tests separately load all eight icon sizes.
-To inspect an existing package, use:
+Run from a working directory that contains the report files. `--output` and
+the optional `--baseline-report` must resolve inside that directory, including
+any symlink destinations. Artifact and source inputs can be read from other
+directories. To inspect an existing package, use:
 
 ```text
-python -X utf8 .github/scripts/binary_size.py --artifact-dir /path/to/artifact --source-root . --output /path/to/binary-size.json
+python -X utf8 .github/scripts/binary_size.py --artifact-dir /path/to/artifact --source-root . --output .ci/reports/binary-size.json
 ```
+
+Add `--baseline-report .ci/reports/binary-size-before.json` to compare against
+a report from the same platform.
 
 Windows configures WER full dumps for `visual_brace.exe` and `eol_open.exe`
 under `.ci/reports/windows-dumps`. These targets have produced an observed
@@ -422,6 +428,10 @@ dump grace period.
 The existing Linux core collector retains its executable and GDB thread stacks.
 After the complete Linux suites, a separate private Wayland session repeats this
 case up to 20 times, stopping at the first failure; its logs remain separate.
+
+The search-seeding fixture uses the same SIGQUIT mechanism under its original
+60-second deadline. Its flushed monotonic stage logs distinguish the 1 MiB
+selection boundary, over-limit selection, clipboard fallback and window cleanup.
 
 Evidence artifacts retain JUnit XML, complete CTest logs, Weston logs, configure
 logs, source provenance and dependency build logs, including on failed jobs.

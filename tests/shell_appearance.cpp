@@ -21,7 +21,7 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-void CheckApplicationIcons(EditorFrame* frame) {
+void CheckApplicationIcons(const EditorFrame* frame) {
     const auto& icons = frame->GetIcons();
     for (const int size : {16, 20, 24, 32, 40, 48, 64, 256}) {
         const auto icon = icons.GetIconOfExactSize(size);

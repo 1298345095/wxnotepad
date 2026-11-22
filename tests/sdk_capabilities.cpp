@@ -107,8 +107,8 @@ void CheckCapabilities() {
                                              "<rect width='8' height='8' fill='red'/></svg>",
                                              wxSize(iconPixels, iconPixels));
     Require(svg.IsOk() && svg.GetBitmap(wxSize(iconPixels, iconPixels)).IsOk(), "SVG art must still rasterize");
-    constexpr const char* xpmData[]{"2 2 2 1", "r c #ff0000", "g c #00ff00", "rg", "gr"};
-    const wxImage xpm(xpmData);
+    constexpr std::array xpmData{"2 2 2 1", "r c #ff0000", "g c #00ff00", "rg", "gr"};
+    const wxImage xpm(xpmData.data());
     Require(xpm.IsOk() && xpm.GetSize() == wxSize(2, 2) && xpm.GetRed(0, 0) == 255 && xpm.GetGreen(1, 0) == 255,
             "XPM artwork must retain its pixels");
 #ifdef __WXMSW__

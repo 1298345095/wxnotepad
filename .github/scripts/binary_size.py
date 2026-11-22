@@ -61,7 +61,11 @@ def elf_metadata(kind, content, entry_size):
         return {'relr_bytes': len(content), 'relr_relocations': count}
     if kind == 6:  # SHT_DYNAMIC; repeated DT_RELRSZ entries retain the last value.
         entries = elf_table(content, entry_size, '<qQ', 'dynamic')
-        return {'dynamic_relr_bytes': value for tag, value in entries if tag == 35}
+        result = {}
+        for tag, value in entries:
+            if tag == 35:
+                result['dynamic_relr_bytes'] = value
+        return result
     return {}
 
 
@@ -144,7 +148,7 @@ def describe(data):
     return None
 
 
-def artwork(source, executable):
+def toolbar_images(source, executable):
     header = (source / 'src/app/toolbar_art.h').read_text(encoding='utf-8')
     arrays = re.findall(r'unsigned char (Strip\d+)\[\]\s*=\s*\{([\d,\s]+)\}', header)
     if {name for name, _ in arrays} != {'Strip16', 'Strip24', 'Strip32', 'Strip40', 'Strip48'} or len(arrays) != 5:
@@ -159,6 +163,11 @@ def artwork(source, executable):
             raise ValueError('Expected all 27 toolbar images at each original resolution')
         images.append({'name': name, 'bytes': len(content), 'sha256': hashlib.sha256(content).hexdigest(),
                        'image_count': width // height, 'present': content in executable})
+    return images
+
+
+def artwork(source, executable):
+    images = toolbar_images(source, executable)
     icon = (source / 'src/app/artwork/wxnotepad.ico').read_bytes()
     reserved, kind, count = unpack(icon, 0, '<HHH')
     if reserved or kind != 1 or not count:
@@ -214,6 +223,13 @@ def inspect(artifact, source, baseline=None):
     return report
 
 
+def report_path(path, directory):
+    resolved = path.resolve()
+    if not resolved.is_relative_to(directory):
+        raise ValueError(f'Report path must stay within the working directory: {path}')
+    return resolved
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifact-dir', type=Path, required=True)
@@ -221,9 +237,16 @@ def main():
     parser.add_argument('--baseline-report', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     arguments = parser.parse_args()
-    report = inspect(arguments.artifact_dir, arguments.source_root, arguments.baseline_report)
-    arguments.output.parent.mkdir(parents=True, exist_ok=True)
-    arguments.output.write_text(json.dumps(report, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+    try:
+        directory = Path.cwd().resolve()
+        output = report_path(arguments.output, directory)
+        baseline = (report_path(arguments.baseline_report, directory)
+                    if arguments.baseline_report is not None else None)
+    except (OSError, RuntimeError, ValueError) as error:
+        parser.error(str(error))
+    report = inspect(arguments.artifact_dir, arguments.source_root, baseline)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     print(f"Distribution: {report['artifact_bytes']} bytes; {len(report['files'])} files; "
           f"icons retained: {report.get('artwork', {}).get('all_present', False)}")
     for error in report['errors']:
