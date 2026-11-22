@@ -723,7 +723,15 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
                 result = core_->ImeMessage(message, wParam, lParam);
             }))
             return 0;
-        if (result) return *result;
+        if (result) {
+            if (message == WM_IME_STARTCOMPOSITION) {
+                // Inline composition suppresses DefWindowProc, but wx still
+                // needs its native IME-entry bookkeeping to balance END below.
+                WXLRESULT nativeResult = 0;
+                wxControl::MSWHandleMessage(&nativeResult, message, wParam, lParam);
+            }
+            return *result;
+        }
     }
     return wxControl::MSWWindowProc(message, wParam, lParam);
 }
