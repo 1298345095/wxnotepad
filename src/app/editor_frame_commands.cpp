@@ -2428,6 +2428,7 @@ void EditorFrame::AppendAppearanceOptions(wxMenu* view) {
                 event.Check((settings_ ? settings_->values : defaults_).*member);
             },
             id);
+        if (member == &OriginalSettings::showToolbar) AppendToolbarCommands(appearance);
     }
     appearance->AppendSeparator();
     auto* fullScreen = new wxMenu;

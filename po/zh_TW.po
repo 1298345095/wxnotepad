@@ -127,6 +127,10 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "取代 %zu 處"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Add →"
+msgstr "新增(&A) →"
+
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_commands.cpp
 msgid "&All Levels\tShift+Alt+A"
@@ -142,6 +146,10 @@ msgstr "總是顯示此對話框(&A)。"
 msgid "&Append text to lines:"
 msgstr "在各行末尾附加文字(&A)："
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Auto Scale Toolbar"
+msgstr "工具列自動縮放(&A)"
+
 # Original Notepad4 zh-Hant: IDD_CHANGENOTIFY/IDC_CHANGENOTIFY_AUTO_RELOAD; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Auto-reload (unmodified)."
@@ -150,6 +158,10 @@ msgstr "自動重新載入（如未修改）(&A)。"
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
 msgstr "自動(&A)"
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Available toolbar buttons:"
+msgstr "可用工具列按鈕(&A)："
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Base64"
@@ -237,6 +249,10 @@ msgstr "複製行(&C)\tCtrl+Shift+C"
 msgid "&Current Block\tAlt+C"
 msgstr "目前區塊(&C)\tAlt+C"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Current toolbar buttons:"
+msgstr "目前工具列按鈕(&C)："
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr "解碼(&D)"
@@ -267,7 +283,7 @@ msgid "&Default..."
 msgstr "預設(&D)..."
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Delete"
 msgstr "刪除(&D)"
 
@@ -564,7 +580,7 @@ msgid "&Prefix text to lines:"
 msgstr "在各行開頭插入文字(&P)："
 
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Print...\tCtrl+P"
 msgstr "列印(&P)...\tCtrl+P"
 
@@ -602,6 +618,10 @@ msgstr "移除重複行(&R)。"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Replace"
 msgstr "取代(&R)"
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Reset"
+msgstr "重設(&R)"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_RESETZOOM; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1474,6 +1494,14 @@ msgstr "目前編碼"
 msgid "Current screen color (WYSIWYG)"
 msgstr "目前螢幕色彩（所見即所得）"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Customi&ze Toolbar..."
+msgstr "自訂工具列(&Z)..."
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "Customize Toolbar"
+msgstr "自訂工具列"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_DELETELINE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "D&elete Line\tCtrl+Shift+D"
@@ -1547,7 +1575,7 @@ msgid "Draw Block Caret in &Selection"
 msgstr "在選取範圍內繪製方塊游標(&S)"
 
 #. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "E&xit\tAlt+F4"
 msgstr "結束(&X)\tAlt+F4"
 
@@ -1602,7 +1630,7 @@ msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
 
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
-#: src/app/document_tools.cpp
+#: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "執行文件(&D)\tCtrl+L"
 
@@ -2163,10 +2191,18 @@ msgstr "最短單詞長度"
 msgid "Modify Lines"
 msgstr "行變更"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Move &Down"
+msgstr "下移(&D)"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_MOVELINEDOWN; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Move &Down\tAlt+Down"
 msgstr "下移(&V)\tAlt+Down"
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "Move &Up"
+msgstr "上移(&U)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_MOVELINEUP; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2842,6 +2878,10 @@ msgstr "選擇到下一個(&X)\tCtrl+Alt+F2"
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr "選擇到上一個(&S)\tCtrl+Alt+Shift+F2"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Separator"
+msgstr "分隔符號"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
@@ -3363,6 +3403,10 @@ msgstr "使用預設程式碼樣式(&C)\tShift+F12"
 msgid "Use Global Tab Settings"
 msgstr "使用全域 Tab 設定"
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Use Lar&ge Toolbar"
+msgstr "使用大工具列(&G)"
+
 # Original Notepad4 zh-Hant: IDD_TABSETTINGS/IDC_FILE_USE_SCHEME_TAB; adapted where needed.
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Scheme Tab Settings"
@@ -3528,6 +3572,10 @@ msgstr "縮放比例（%d%% 至 %d%%）："
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
 msgstr "m4"
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "← &Remove"
+msgstr "← 移除(&R)"
 
 #, c-format
 #~ msgid "%s bytes"

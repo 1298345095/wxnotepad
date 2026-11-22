@@ -160,6 +160,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         UpdatePositionStatus();
+        CallAfter([this] { UpdateToolbarSize(); });
 #ifdef __WXMSW__
         if (FullScreenActive()) CallAfter([this] { RefreshFullScreen(); });
 #endif

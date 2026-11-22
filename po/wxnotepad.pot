@@ -88,6 +88,10 @@ msgid_plural "%zu replacements"
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Add →"
+msgstr ""
+
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_commands.cpp
 msgid "&All Levels\tShift+Alt+A"
@@ -101,12 +105,20 @@ msgstr ""
 msgid "&Append text to lines:"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Auto Scale Toolbar"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Auto-reload (unmodified)."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
+msgstr ""
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Available toolbar buttons:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -184,6 +196,10 @@ msgstr ""
 msgid "&Current Block\tAlt+C"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Current toolbar buttons:"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr ""
@@ -211,7 +227,7 @@ msgid "&Default..."
 msgstr ""
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Delete"
 msgstr ""
 
@@ -458,7 +474,7 @@ msgid "&Prefix text to lines:"
 msgstr ""
 
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Print...\tCtrl+P"
 msgstr ""
 
@@ -489,6 +505,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Replace"
+msgstr ""
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Reset"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1283,6 +1303,14 @@ msgstr ""
 msgid "Current screen color (WYSIWYG)"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Customi&ze Toolbar..."
+msgstr ""
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "Customize Toolbar"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "D&elete Line\tCtrl+Shift+D"
 msgstr ""
@@ -1348,7 +1376,7 @@ msgid "Draw Block Caret in &Selection"
 msgstr ""
 
 #. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "E&xit\tAlt+F4"
 msgstr ""
 
@@ -1398,7 +1426,7 @@ msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
-#: src/app/document_tools.cpp
+#: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr ""
 
@@ -1896,8 +1924,16 @@ msgstr ""
 msgid "Modify Lines"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Move &Down"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Move &Down\tAlt+Down"
+msgstr ""
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "Move &Up"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2515,6 +2551,10 @@ msgstr ""
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Separator"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
 msgstr ""
@@ -2978,6 +3018,10 @@ msgstr ""
 msgid "Use Global Tab Settings"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Use Lar&ge Toolbar"
+msgstr ""
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Scheme Tab Settings"
 msgstr ""
@@ -3130,4 +3174,8 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
+msgstr ""
+
+#: src/app/editor_frame_toolbar.cpp
+msgid "← &Remove"
 msgstr ""

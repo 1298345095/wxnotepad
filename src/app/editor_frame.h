@@ -124,6 +124,11 @@ private:
     void ApplyWrapSymbols();
     void CreateMenus();
     void CreateDefaultToolbar();
+    void AppendToolbarCommands(wxMenu* appearance);
+    void UpdateToolbarSize();
+    void RebuildToolbar();
+    void CustomizeToolbar();
+    std::vector<int> toolbarButtons_;
     int FindMenuCommand(const wxString& label) const;
     void CreatePositionStatus();
     void ShowEditorContextMenu(wxContextMenuEvent& event);
