@@ -1036,9 +1036,19 @@ msgstr "字符转十六进制(&H)\tCtrl+Alt+X"
 msgid "C/C++"
 msgstr "C/C++"
 
+#. TRANSLATORS: Original C/C++ base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "C/C++ Source"
+msgstr "C/C++ 源代码"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "CMake"
 msgstr "CMake"
+
+#. TRANSLATORS: Original CMake base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "CMake Script"
+msgstr "CMake 脚本"
 
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format
@@ -1731,6 +1741,11 @@ msgstr "全局设置"
 msgid "Go"
 msgstr "Go"
 
+#. TRANSLATORS: Original Go base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Go Source"
+msgstr "Go 源代码"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM (caption expanded for clarity).
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Go To Line"
@@ -1898,6 +1913,11 @@ msgstr "反转亮度（深色背景）"
 msgid "JSON"
 msgstr "JSON"
 
+#. TRANSLATORS: Original JSON base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "JSON Document"
+msgstr "JSON 文档"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSP"
 msgstr "JSP"
@@ -2062,6 +2082,11 @@ msgstr "长行设置"
 msgid "Lua"
 msgstr "Lua"
 
+#. TRANSLATORS: Original Lua base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Lua Script"
+msgstr "Lua 脚本"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr "点击边栏选择可视子行(&S)"
@@ -2085,7 +2110,8 @@ msgstr "标记匹配选中(&K)"
 msgid "Mark&down"
 msgstr "Mark&down"
 
-#: src/app/dialogs/document_dialogs.cpp
+#. TRANSLATORS: Original Markdown base-scheme chooser title, shared by its dialects.
+#: src/app/dialogs/document_dialogs.cpp src/syntax/syntax_catalog.cpp
 msgid "Markdown"
 msgstr "Markdown"
 
@@ -2415,6 +2441,11 @@ msgstr "标点符号"
 msgid "Python"
 msgstr "Python"
 
+#. TRANSLATORS: Original Python base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Python Script"
+msgstr "Python 脚本"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REPLACE.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
@@ -2572,6 +2603,11 @@ msgstr "运行命令"
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
+
+#. TRANSLATORS: Original Rust base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Rust Source"
+msgstr "Rust 源代码"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SORTLINES.
 #: src/app/editor_frame_commands.cpp
@@ -2832,6 +2868,11 @@ msgstr "当前程序设置已被保存"
 msgid "Shell Scri&pt"
 msgstr "Shell 脚本(&P)"
 
+#. TRANSLATORS: Original Shell base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Shell Script"
+msgstr "Shell 脚本"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
 msgstr "显示菜单(&M)\tAlt+F11"
@@ -3012,6 +3053,11 @@ msgstr "与上一行交换(&R)\tAlt+S"
 msgid "TOML"
 msgstr "TOML"
 
+#. TRANSLATORS: Original TOML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "TOML File"
+msgstr "TOML 文件"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "TSX"
 msgstr "TSX"
@@ -3046,6 +3092,11 @@ msgstr "空格转制表符\tCtrl+Shift+T"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
 msgstr "插入制表符为空格"
+
+#. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Text File"
+msgstr "文本文件"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -3437,6 +3488,11 @@ msgstr "XSLT"
 #: src/syntax/syntax_catalog.cpp
 msgid "YAML"
 msgstr "YAML"
+
+#. TRANSLATORS: Original YAML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "YAML Document"
+msgstr "YAML 文档"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_ENCODING2.
 #: src/app/editor_frame.cpp

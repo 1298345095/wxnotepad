@@ -1122,9 +1122,19 @@ msgstr "字元轉 Hex(&H)\tCtrl+Alt+X"
 msgid "C/C++"
 msgstr "C/C++"
 
+#. TRANSLATORS: Original C/C++ base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "C/C++ Source"
+msgstr "C/C++ 原始碼"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "CMake"
 msgstr "CMake"
+
+#. TRANSLATORS: Original CMake base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "CMake Script"
+msgstr "CMake 指令碼"
 
 # Original Notepad4 zh-Hant: IDD_WARNLINEENDS/IDC_EOL_SUM_CRLF (count adapted); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -1841,6 +1851,11 @@ msgstr "全域"
 msgid "Go"
 msgstr "Go"
 
+#. TRANSLATORS: Original Go base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Go Source"
+msgstr "Go 原始碼"
+
 # Original Notepad4 zh-Hant: IDD_LINENUM title (line purpose clarified); adapted where needed.
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Go To Line"
@@ -2015,6 +2030,11 @@ msgstr "反轉亮度（深色背景）"
 msgid "JSON"
 msgstr "JSON"
 
+#. TRANSLATORS: Original JSON base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "JSON Document"
+msgstr "JSON 文件"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSP"
 msgstr "JSP"
@@ -2187,6 +2207,11 @@ msgstr "長行設定"
 msgid "Lua"
 msgstr "Lua"
 
+#. TRANSLATORS: Original Lua base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Lua Script"
+msgstr "Lua 指令碼"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr "按一下邊欄選取視覺子行(&S)"
@@ -2211,7 +2236,8 @@ msgstr "標記出現位置(&O)"
 msgid "Mark&down"
 msgstr "Mark&down"
 
-#: src/app/dialogs/document_dialogs.cpp
+#. TRANSLATORS: Original Markdown base-scheme chooser title, shared by its dialects.
+#: src/app/dialogs/document_dialogs.cpp src/syntax/syntax_catalog.cpp
 msgid "Markdown"
 msgstr "Markdown"
 
@@ -2552,6 +2578,11 @@ msgstr "標點符號"
 msgid "Python"
 msgstr "Python"
 
+#. TRANSLATORS: Original Python base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Python Script"
+msgstr "Python 指令碼"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_REPLACE; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
@@ -2720,6 +2751,11 @@ msgstr "執行命令"
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
 msgstr "Rust"
+
+#. TRANSLATORS: Original Rust base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Rust Source"
+msgstr "Rust 原始碼"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_SORTLINES; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2995,6 +3031,11 @@ msgstr "設定已儲存"
 msgid "Shell Scri&pt"
 msgstr "Shell 指令碼(&P)"
 
+#. TRANSLATORS: Original Shell base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Shell Script"
+msgstr "Shell 指令碼"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
 msgstr "顯示功能表(&M)\tAlt+F11"
@@ -3181,6 +3222,11 @@ msgstr "交換(&R)\tAlt+S"
 msgid "TOML"
 msgstr "TOML"
 
+#. TRANSLATORS: Original TOML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "TOML File"
+msgstr "TOML 檔案"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "TSX"
 msgstr "TSX"
@@ -3218,6 +3264,11 @@ msgstr "空白轉 Tab\tCtrl+Shift+T"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
 msgstr "Tab 轉為空白"
+
+#. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Text File"
+msgstr "文字檔案"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -3619,6 +3670,11 @@ msgstr "XSLT"
 #: src/syntax/syntax_catalog.cpp
 msgid "YAML"
 msgstr "YAML"
+
+#. TRANSLATORS: Original YAML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "YAML Document"
+msgstr "YAML 文件"
 
 # Original Notepad4 zh-Hant: IDS_ASK_ENCODING2; adapted where needed.
 #: src/app/editor_frame.cpp

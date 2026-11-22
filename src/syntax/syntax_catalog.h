@@ -165,6 +165,8 @@ struct SyntaxDefinition {
     const char* scriptInterpreter = nullptr;
     SyntaxOriginalMetadata original;
     SyntaxMenuPlacement menu;
+    // Visible base-scheme title; persistence continues to use SyntaxSettingsSection.
+    const char* chooserCaption = name;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();
