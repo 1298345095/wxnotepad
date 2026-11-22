@@ -681,7 +681,7 @@ msgstr "行切分(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "保存时移除行尾空白(&S)。"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Syntax Scheme...\tF12"
 msgstr "选择语法高亮(&S)...\tF12"
 
@@ -3508,9 +3508,6 @@ msgstr "m4"
 #~ msgid "&Expand All"
 #~ msgstr "全部展开(&E)"
 
-#~ msgid "← &Remove"
-#~ msgstr "← 移除(&R)"
-
 #~ msgid "All files (*.*)"
 #~ msgstr "所有文件 (*.*)"
 
@@ -3540,3 +3537,6 @@ msgstr "m4"
 
 #~ msgid "Text files (*.txt)"
 #~ msgstr "文本文件 (*.txt)"
+
+#~ msgid "← &Remove"
+#~ msgstr "← 移除(&R)"

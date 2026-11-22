@@ -154,6 +154,7 @@ std::vector<ToolbarCommand> ToolbarCommands(wxMenuBar* menuBar) {
                                                     {12, wxTRANSLATE("&Word Wrap\tCtrl+Shift+W")},
                                                     {13, wxTRANSLATE("Zoom &In\tCtrl++")},
                                                     {14, wxTRANSLATE("Zoom &Out\tCtrl+-")},
+                                                    {15, wxTRANSLATE("&Syntax Scheme...\tF12")},
                                                     {17, wxTRANSLATE("E&xit\tAlt+F4")},
                                                     {18, wxTRANSLATE("Save &As...\tF6")},
                                                     {19, wxTRANSLATE("Save Cop&y...\tCtrl+F6")},

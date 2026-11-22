@@ -3,11 +3,13 @@
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include "app/localization.h"
+#include "status_helpers.h"
 #include <wx/log.h>
 #include <wx/toolbar.h>
 #include <wx/listbox.h>
 #include <wx/display.h>
 #include <wx/statusbr.h>
+#include <wx/treectrl.h>
 #include <array>
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
@@ -177,16 +179,19 @@ void SizeCycle(EditorFrame* frame, const wxString& settingsPath) {
     NativeSearch::Command(frame, automatic);
     check(96, sizes[0]);
 }
-class CustomizeDriver final : public wxModalDialogHook {
+class ToolbarDialogDriver final : public wxModalDialogHook {
 public:
-    explicit CustomizeDriver(std::function<void(wxDialog*)> action) : action_(std::move(action)) { Register(); }
+    explicit ToolbarDialogDriver(std::function<void(wxDialog*)> action, wxString title = _("Customize Toolbar"))
+        : action_(std::move(action)), title_(std::move(title)) {
+        Register();
+    }
     int Enter(wxDialog* dialog) override {
-        if (dialog->GetName() != "Customize toolbar") return wxID_NONE;
+        if (dialog->GetTitle() != title_) return wxID_NONE;
         opened = true;
         wxTheApp->CallAfter([this, dialog] {
             NativeKeys::AfterPresentation(dialog, [this, dialog](bool ready) {
                 try {
-                    Require(ready, "customization dialog is natively presented");
+                    Require(ready, "toolbar command dialog is natively presented");
                     action_(dialog);
                 } catch (...) {
                     failure = std::current_exception();
@@ -201,9 +206,56 @@ public:
 
 private:
     std::function<void(wxDialog*)> action_;
+    wxString title_;
 };
+void ActivateToolbar(EditorFrame* frame, int command) {
+    auto* toolbar = frame->GetToolBar();
+    const int position = toolbar->GetToolPos(command);
+    Require(position != wxNOT_FOUND && toolbar->GetToolEnabled(command), "native toolbar command is available");
+#ifdef __WXMSW__
+    SendMessageW(static_cast<HWND>(frame->GetHandle()), WM_COMMAND, MAKEWPARAM(command, 0),
+                 reinterpret_cast<LPARAM>(toolbar->GetHandle()));
+#elif defined(__WXGTK__)
+    auto* tool = gtk_toolbar_get_nth_item(toolbar->GTKGetToolbar(), position);
+    Require(GTK_IS_TOOL_BUTTON(tool), "native toolbar command has a GTK tool button");
+    g_signal_emit_by_name(tool, "clicked");
+#endif
+    wxYield();
+}
+void SchemeToolbarCancel(EditorFrame* frame, const wxString& settingsPath) {
+    const int command = frame->GetMenuBar()->FindMenuItem(_("Sche&me"), _("&Syntax Scheme...\tF12"));
+    Require(command != wxNOT_FOUND, "delivered Syntax Scheme menu command exists");
+    const auto* tool = frame->GetToolBar()->FindById(command);
+    Require(tool && tool->GetLabel() == wxMenuItem::GetLabelText(_("&Syntax Scheme...\tF12")) &&
+                tool->GetShortHelp() == wxStripMenuCodes(_("&Syntax Scheme...\tF12"), wxStrip_Mnemonics),
+            "original toolbar identity15 shares the delivered F12 menu label, command and tooltip");
+    const auto metadata = StatusMetadata(frame);
+    SettingsStore before(settingsPath);
+    ToolbarDialogDriver driver(
+        [](wxDialog* dialog) {
+            auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Syntax schemes", dialog), wxTreeCtrl);
+            Require(tree && NativeDialogs::SelectTreeLabel(*tree, wxGetTranslation("Python Script")),
+                    "toolbar opens the real chooser and permits a different delivered scheme");
+            auto* selected = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", dialog), wxCheckBox);
+            auto* automatic = wxDynamicCast(wxWindow::FindWindowByName("AutoSelect", dialog), wxCheckBox);
+            Require(selected && automatic, "toolbar chooser exposes the original scheme preferences");
+            NativeSearch::Toggle(selected, !selected->GetValue());
+            NativeSearch::Toggle(automatic, !automatic->GetValue());
+            NativeSearch::Click(dialog, wxID_CANCEL);
+        },
+        _("Select Scheme"));
+    ActivateToolbar(frame, command);
+    if (driver.failure) std::rethrow_exception(driver.failure);
+    Require(driver.opened && frame->Editor()->HasFocus() && StatusMetadata(frame) == metadata,
+            "native toolbar chooser Cancel preserves the current scheme and editor focus");
+    NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
+    SettingsStore after(settingsPath);
+    Require(after.values.defaultScheme == before.values.defaultScheme &&
+                after.values.autoSelect == before.values.autoSelect,
+            "toolbar chooser Cancel discards temporary default and automatic-selection preferences");
+}
 void AddAndRemove(EditorFrame* frame) {
-    CustomizeDriver driver([frame](wxDialog* dialog) {
+    ToolbarDialogDriver driver([frame](wxDialog* dialog) {
         auto* available = wxDynamicCast(wxWindow::FindWindowByName("Available toolbar buttons", dialog), wxListBox);
         auto* current = wxDynamicCast(wxWindow::FindWindowByName("Current toolbar buttons", dialog), wxListBox);
         Require(available && current, "customization exposes native available/current button lists");
@@ -241,14 +293,23 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
     const auto encoding = frame->DocumentEncoding();
     const auto bom = frame->DocumentHasBom();
     const auto eol = editor->Send(GetEOLMode);
+    const auto history = editor->Send(GetUndoActions);
+    const auto historyPosition = editor->Send(GetUndoCurrent);
     const auto unchanged = [&] {
         Require(NativeSearch::Text(editor) == text && frame->DocumentEncoding() == encoding &&
                     frame->DocumentHasBom() == bom && editor->Send(GetEOLMode) == eol &&
                     editor->Send(GetSelectionStart) == 2 && editor->Send(GetSelectionEnd) == 7 &&
-                    editor->Send(CanUndo) && !editor->Send(CanRedo) && editor->Send(GetModify),
+                    editor->Send(CanUndo) && !editor->Send(CanRedo) && editor->Send(GetModify) &&
+                    editor->Send(GetUndoActions) == history && editor->Send(GetUndoCurrent) == historyPosition,
                 "layout changes preserve text, selection, format, save point and history");
     };
-    CustomizeDriver driver([&](wxDialog* dialog) {
+    SchemeToolbarCancel(frame, settingsPath);
+    unchanged();
+    for (int cycle = 0; cycle < 3; ++cycle) {
+        NativeSearch::Command(frame, AppearanceCommand(frame, "Use Lar&ge Toolbar"));
+        unchanged();
+    }
+    ToolbarDialogDriver driver([&](wxDialog* dialog) {
         const auto area = wxDisplay(wxDisplay::GetFromWindow(dialog)).GetClientArea();
         Require(area.Contains(dialog->GetScreenRect()), "localized customization dialog fits the native work area");
         for (auto* child : dialog->GetChildren())
@@ -293,7 +354,7 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
         click("Reset toolbar buttons");
         NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
         SettingsStore reset(settingsPath);
-        Require(reset.values.toolbarButtons == "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 17",
+        Require(reset.values.toolbarButtons == "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 0 17",
                 "Reset restores the pinned projected default stable identities and separators");
         current->SetSelection(current->FindString(wxMenuItem::GetLabelText(_("&Undo\tCtrl+Z"))));
         while (current->GetSelection() > 0)
@@ -306,9 +367,7 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
     unchanged();
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetToolBar()->GetToolEnabled(wxID_UNDO), "reordered Undo retains its enabled state");
-    wxCommandEvent undo(wxEVT_TOOL, wxID_UNDO);
-    undo.SetEventObject(frame->GetToolBar());
-    frame->GetToolBar()->GetEventHandler()->ProcessEvent(undo);
+    ActivateToolbar(frame, wxID_UNDO);
     Require(!editor->Send(GetModify) && editor->Send(CanRedo),
             "reordered toolbar command executes Undo at the original save point");
     NativeSearch::Command(frame, wxID_REDO);
@@ -325,8 +384,8 @@ struct ConfigurationCase {
 const auto ConfigurationCases = std::to_array<ConfigurationCase>(
     {{"malformed", "8 0 5 junk 9", "8 0 5"},
      {"clamped", "-1 999 0 4", "0 27 0 4"},
-     {"unsupported", "3 0 22 8 0 999", "0 8 0 27"},
-     {"invalid", "junk 8", "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 17"},
+     {"unsupported", "3 0 22 8 0 16 999", "0 8 0 27"},
+     {"invalid", "junk 8", "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 0 17"},
      {"duplicate", "8 8 0 4", "8 8 0 4"},
      {"bounded",
       "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 "

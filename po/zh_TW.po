@@ -744,7 +744,7 @@ msgstr "分割行(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "儲存檔案時移除行尾空白(&S)。"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Syntax Scheme...\tF12"
 msgstr "選擇語法高亮(&S)...\tF12"
 
@@ -3695,9 +3695,6 @@ msgstr "m4"
 #~ msgid "&Expand All"
 #~ msgstr "全部展開(&E)"
 
-#~ msgid "← &Remove"
-#~ msgstr "← 移除(&R)"
-
 # Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
 #~ msgid "All files (*.*)"
 #~ msgstr "所有檔案 (*.*)"
@@ -3728,3 +3725,6 @@ msgstr "m4"
 
 #~ msgid "Text files (*.txt)"
 #~ msgstr "文字檔案 (*.txt)"
+
+#~ msgid "← &Remove"
+#~ msgstr "← 移除(&R)"

@@ -346,6 +346,8 @@ void CheckToolbarLayout(EditorFrame* frame) {
                                                    command("View", "Zoom In"),
                                                    command("View", "Zoom Out"),
                                                    wxID_SEPARATOR,
+                                                   command("Scheme", "Syntax Scheme..."),
+                                                   wxID_SEPARATOR,
                                                    wxID_EXIT});
     Require(toolbar->GetToolsCount() == expectedOrder.size(), "default toolbar retains original delivered groups");
     for (size_t index = 0; index < expectedOrder.size(); ++index) {

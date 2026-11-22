@@ -10,8 +10,10 @@ available/current buttons, a reusable separator, Add, Remove, Move Up, Move Down
 Reset and Close. Changes apply immediately; Close retains them. The native lists,
 buttons and mnemonics support keyboard operation and have translated accessible
 names. Reset projects the pinned original default onto delivered commands,
-including Delete and Exit. Print and Execute Document are available choices but
-are absent from the original default.
+including Delete, Syntax Scheme and Exit. Syntax Scheme reuses the delivered F12
+chooser as original identity 15. Configure Schemes (identity 16) remains absent
+until that command is implemented. Print and Execute Document are available
+choices but are absent from the original default.
 
 A single command catalog joins original button identities to existing translated
 menu commands. Artwork index is identity minus one; zero represents a separator.
@@ -51,5 +53,8 @@ document text, selection, current encoding/BOM/EOL, save point or Undo/Redo.
 the actual menus, native dialog controls, physical shortcuts, toolbar activation
 and settings save/reload. Their expectations include independently observed
 original default identities, malformed-prefix handling, out-of-range clamping,
-the numeric size cycle, Reset, separators and reordered Undo behavior. The
+the numeric size cycle, Reset, separators and reordered Undo behavior. Native
+toolbar activation opens the shared scheme chooser; selecting a different scheme
+and changing temporary preferences followed by Cancel preserves the document,
+scheme, preferences, selection, format, save point and exact undo history. The
 external ticket archive is `original-controls-implementation-2026-11-22/253/`.

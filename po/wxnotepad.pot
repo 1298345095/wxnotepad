@@ -617,7 +617,7 @@ msgstr ""
 msgid "&Strip trailing blanks when saving."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Syntax Scheme...\tF12"
 msgstr ""
 
