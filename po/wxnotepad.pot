@@ -105,6 +105,10 @@ msgstr ""
 msgid "&Auto-reload (unmodified)."
 msgstr ""
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "&Auto-select by filename extension."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
 msgstr ""
@@ -262,6 +266,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Favorite Schemes..."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -576,6 +584,10 @@ msgid "&Strip trailing blanks when saving."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Syntax Scheme...\tF12"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr ""
 
@@ -736,10 +748,6 @@ msgstr ""
 #. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
-msgstr ""
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "All files (*.*)"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1414,6 +1422,10 @@ msgstr ""
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
+msgstr ""
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Favorite Schemes"
 msgstr ""
 
 #: src/app/dialogs/recent_files_dialog.cpp
@@ -2513,6 +2525,10 @@ msgstr ""
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr ""
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Select Scheme"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
 msgstr ""
@@ -2543,6 +2559,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
+msgstr ""
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Set selected scheme as &default."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2703,6 +2723,10 @@ msgstr ""
 msgid "Symbol &before wrap:"
 msgstr ""
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Syntax schemes"
+msgstr ""
+
 #: src/app/language_commands.cpp
 msgid "System Language"
 msgstr ""
@@ -2749,10 +2773,6 @@ msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
-msgstr ""
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "Text files (*.txt)"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.

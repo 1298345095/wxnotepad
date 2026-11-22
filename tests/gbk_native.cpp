@@ -156,6 +156,7 @@ public:
         SetExitOnFrameDelete(false);
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
+        settings_->values.favoriteSchemes = "1 54"; // Original C/C++ and JSON native filter choices.
         settings_->values.wordWrap = false;
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;

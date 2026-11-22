@@ -34,6 +34,17 @@ target_compile_definitions(syntax_markup PRIVATE
     "MARKUP_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markup_reference.tsv\"")
 add_editor_test(syntax_save automatic_language_save 60)
 add_editor_test(syntax_manual manual_language_choice 60)
+add_editor_test(scheme_chooser original_scheme_chooser 90)
+add_editor_test(scheme_filters original_scheme_file_filters 90)
+add_dependencies(scheme_chooser wxnotepad_catalogs)
+foreach(language 1033 2052 1028)
+    add_test(NAME original_scheme_layout_${language} COMMAND scheme_chooser)
+    set_tests_properties(original_scheme_layout_${language} PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_SCHEME_LAYOUT_LANGUAGE=${language}")
+endforeach()
+add_test(NAME original_scheme_settings_lifecycle COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/scheme_selection_process.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_scheme_settings_lifecycle PROPERTIES TIMEOUT 90)
 add_editor_test(syntax_large large_language_selection 60)
 if(WXNOTEPAD_ENABLE_COVERAGE)
     # The byte-exact 32 MiB round-trips took 88.5s under CPU contention with

@@ -111,6 +111,10 @@ msgstr "每行后缀文本(&A):"
 msgid "&Auto-reload (unmodified)."
 msgstr "自动重新加载(如未修改)(&A)。"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "&Auto-select by filename extension."
+msgstr "自动按文件扩展名选择(&A)"
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
 msgstr "自动(&A)"
@@ -287,6 +291,10 @@ msgstr "编码标识符(&E)\tCtrl+F8"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
 msgstr "保存时确保换行符一致(&E)。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Favorite Schemes..."
+msgstr "常用语法高亮(&F)..."
 
 # Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / File menu.
 #: src/app/editor_frame_commands.cpp
@@ -639,6 +647,10 @@ msgstr "行切分(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "保存时移除行尾空白(&S)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Syntax Scheme...\tF12"
+msgstr "选择语法高亮(&S)...\tF12"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_TABSETTINGS.
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
@@ -813,10 +825,6 @@ msgstr "所有文件 (*)"
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有文件 (*)|*"
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "All files (*.*)"
-msgstr "所有文件 (*.*)"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Angle brackets <>"
@@ -1515,6 +1523,10 @@ msgstr "执行文档(&D)\tCtrl+L"
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr "FSI — 首个强方向隔离符(&F)"
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Favorite Schemes"
+msgstr "常用语法高亮"
 
 #: src/app/dialogs/recent_files_dialog.cpp
 #: src/app/dialogs/tab_settings_dialog.cpp
@@ -2671,6 +2683,10 @@ msgstr "选择编码"
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr "选择当前代码块中的行(&C)\tAlt+Shift+]"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Select Scheme"
+msgstr "选择语法高亮"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
 msgstr "选择和编辑选项(&E)"
@@ -2707,6 +2723,10 @@ msgstr "选择到下一个(&X)\tCtrl+Alt+F2"
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Set selected scheme as &default."
+msgstr "设置所选文件类型为默认(&D)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
@@ -2880,6 +2900,10 @@ msgstr "换行后的标记(&A)："
 msgid "Symbol &before wrap:"
 msgstr "换行前的标记(&B)："
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Syntax schemes"
+msgstr "语法高亮方案"
+
 #: src/app/language_commands.cpp
 msgid "System Language"
 msgstr "系统语言"
@@ -2932,10 +2956,6 @@ msgstr "空格转制表符\tCtrl+Shift+T"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
 msgstr "插入制表符为空格"
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "Text files (*.txt)"
-msgstr "文本文件 (*.txt)"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -3401,3 +3421,9 @@ msgstr "m4"
 
 #~ msgid "SQL"
 #~ msgstr "SQL"
+
+#~ msgid "All files (*.*)"
+#~ msgstr "所有文件 (*.*)"
+
+#~ msgid "Text files (*.txt)"
+#~ msgstr "文本文件 (*.txt)"

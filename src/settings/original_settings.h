@@ -52,6 +52,8 @@ struct OriginalSettings {
     bool showIndentGuides = false;
     bool simpleIndentGuides = false;
     bool autoSelect = true;
+    int defaultScheme = 0;
+    wxString favoriteSchemes;
     bool noCgiGuess = false;
     bool noHtmlGuess = false;
     bool fixLineEndings = false;
