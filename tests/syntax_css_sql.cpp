@@ -231,7 +231,16 @@ void OriginalTyping(EditorFrame* frame) {
 #endif
         wxYield();
         const auto expected = ExpectedCandidates(words);
-        Require(TestEditor::Text(editor) == TestLanguages::Unhex(afterHex) && CandidateList(editor) == expected,
+        const auto actual = CandidateList(editor);
+        if (TestEditor::Text(editor) != TestLanguages::Unhex(afterHex) || actual != expected) {
+            std::fprintf(stderr, "native typing expected=[%s] actual=[%s] candidates=%zu/%zu\n",
+                         TestLanguages::Unhex(afterHex).c_str(), TestEditor::Text(editor).c_str(), actual.size(),
+                         expected.size());
+            for (const auto& candidate : actual)
+                std::fprintf(stderr, "[%s] ", candidate.c_str());
+            std::fprintf(stderr, "\n");
+        }
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(afterHex) && actual == expected,
                 "native automatic completion and paired characters match independent original bytes and lists");
         ConfirmFirst(editor, expected);
         Require(TestEditor::Text(editor) == TestLanguages::Unhex(confirmedHex),
