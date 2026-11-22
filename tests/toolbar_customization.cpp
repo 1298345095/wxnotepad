@@ -328,6 +328,13 @@ const auto ConfigurationCases = std::to_array<ConfigurationCase>(
      {"unsupported", "3 0 22 8 0 999", "0 8 0 27"},
      {"invalid", "junk 8", "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 17"},
      {"duplicate", "8 8 0 4", "8 8 0 4"},
+     {"bounded",
+      "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 "
+      "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 "
+      "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 1 1 1",
+      "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 "
+      "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 "
+      "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 1 1"},
      {"numeric", "1 0 5", "1 0 5", 120},
      {"negative", "1 0 5", "1 0 5", -7}});
 void ConfigurationLifecycle(EditorFrame* frame, const wxString& settingsPath, const ConfigurationCase& fixture) {
@@ -375,9 +382,13 @@ void ConfigurationLifecycle(EditorFrame* frame, const wxString& settingsPath, co
     Require(contents.Contains("Unrelated=value") && contents.Contains("[Private section]"),
             "toolbar changes retain unrelated INI settings and sections");
     auto* restored = new EditorFrame(&saved);
-    Require(restored->GetToolBar()->GetToolsCount() == toolbar->GetToolsCount(),
-            "settings reload restores the complete toolbar layout");
-    for (size_t index = 0; index < toolbar->GetToolsCount(); ++index) {
+    if (wxString(fixture.name) == "bounded")
+        Require(toolbar->GetToolsCount() == 54 && restored->GetToolBar()->GetToolsCount() == 53,
+                "original bounded save retains its 53-button prefix without changing the 54 live buttons");
+    else
+        Require(restored->GetToolBar()->GetToolsCount() == toolbar->GetToolsCount(),
+                "settings reload restores the complete toolbar layout");
+    for (size_t index = 0; index < restored->GetToolBar()->GetToolsCount(); ++index) {
         const auto* first = toolbar->GetToolByPos(static_cast<int>(index));
         const auto* second = restored->GetToolBar()->GetToolByPos(static_cast<int>(index));
         Require(first->IsSeparator() == second->IsSeparator() &&

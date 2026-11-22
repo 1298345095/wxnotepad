@@ -206,9 +206,11 @@ std::vector<int> DefaultToolbarLayout(const std::vector<ToolbarCommand>& command
 
 wxString EncodeToolbarButtons(const std::vector<int>& buttons) {
     wxString result;
-    for (size_t index = 0; index < std::min(buttons.size(), MaximumSavedToolbarButtons) &&
-                           result.length() < ToolbarConfigBufferCharacters - 3;
-         ++index) {
+    for (size_t index = 0; index < std::min(buttons.size(), MaximumSavedToolbarButtons); ++index) {
+        // Toolbar_GetButtons counts the trailing space before testing room for
+        // the next original two-digit identity and its terminator.
+        const size_t originalLength = result.length() + (result.empty() ? 0 : 1);
+        if (originalLength >= ToolbarConfigBufferCharacters - 3) break;
         if (!result.empty()) result += ' ';
         result += wxString::Format("%d", buttons[index]);
     }
