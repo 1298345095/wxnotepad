@@ -145,6 +145,12 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.toolbarButtons = ReadString("ToolbarButtons", defaults.toolbarButtons);
     values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
     values.fullScreenMode = ReadInt("FullScreenMode", defaults.fullScreenMode);
+    values.escapeFunction = static_cast<EscapeFunction>(
+        std::clamp(ReadInt("EscFunction", std::to_underlying(defaults.escapeFunction)),
+                   std::to_underlying(EscapeFunction::None), std::to_underlying(EscapeFunction::Exit)));
+    values.pathNameFormat = static_cast<TitlePathNameFormat>(std::clamp(
+        ReadInt("PathNameFormat", std::to_underlying(defaults.pathNameFormat)),
+        std::to_underlying(TitlePathNameFormat::NameOnly), std::to_underlying(TitlePathNameFormat::FullPath)));
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.wordWrapMode =
         std::clamp(ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
@@ -174,6 +180,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const int wrapSymbols = std::clamp(ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
     values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
     values.autoSelect = ReadBool("AutoSelect", defaults.autoSelect, "Styles");
+    values.defaultScheme = ReadInt("DefaultScheme", defaults.defaultScheme, "Styles");
+    values.favoriteSchemes = ReadString("FavoriteSchemes", {}, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
     values.noHtmlGuess = ReadBool("NoHTMLGuess", defaults.noHtmlGuess, "Settings2");
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
@@ -527,6 +535,9 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteString("ToolbarButtons", values.toolbarButtons, defaults.toolbarButtons);
         WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
         WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
+        WriteInt("EscFunction", std::to_underlying(values.escapeFunction), std::to_underlying(defaults.escapeFunction));
+        WriteInt("PathNameFormat", std::to_underlying(values.pathNameFormat),
+                 std::to_underlying(defaults.pathNameFormat));
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
         WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),
@@ -549,6 +560,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
         WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
         WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");
+        WriteInt("DefaultScheme", values.defaultScheme, defaults.defaultScheme, "Styles");
+        WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
         WriteInt("DefaultEncoding", values.encoding.defaultEncoding, defaults.encoding.defaultEncoding);
         WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, defaults.encoding.skipUnicodeDetection);
         WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, defaults.encoding.loadANSIasUTF8);

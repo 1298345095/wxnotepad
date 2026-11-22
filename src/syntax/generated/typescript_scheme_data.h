@@ -106,7 +106,7 @@ constexpr auto typescriptStyles = std::to_array<SyntaxStyle>({
     {SCE_JS_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_JS_OPERATOR_PF, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata typescriptOriginal = {131, 2, 2, (1 << 0) | (1 << 1) | (1 << 2), SCE_JS_FUNCTION_DEFINITION, '\\', SCE_JS_ESCAPECHAR, 0, 0, 0, 0, SCE_JS_OPERATOR, SCE_JS_OPERATOR2, SCE_JS_TASKMARKER, SCE_JSX_TEXT, SCE_JS_ESCAPECHAR};
+constexpr SyntaxOriginalMetadata typescriptOriginal = {131, 2, 2, (1 << 0) | (1 << 1) | (1 << 2), SCE_JS_FUNCTION_DEFINITION, '\\', SCE_JS_ESCAPECHAR, 0, 0, 0, 0, SCE_JS_OPERATOR, SCE_JS_OPERATOR2, SCE_JS_TASKMARKER, SCE_JSX_TEXT, SCE_JS_ESCAPECHAR, 76};
 constexpr const char* typescriptSettingsSection = "TypeScript";
 constexpr auto typescriptExtensions = std::to_array<const char*>({"ts", "tsx", "cts", "mts", "ets", "osts"});
 // clang-format on

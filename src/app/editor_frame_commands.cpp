@@ -1185,6 +1185,14 @@ void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
 
 wxMenu* EditorFrame::CreateLanguageMenu() {
     auto* languages = new wxMenu;
+    // TRANSLATORS: IDM_VIEW_SCHEME / IDM_VIEW_SCHEME_FAVORITE, before code-style options.
+    const int selectScheme = wxWindow::NewControlId();
+    languages->Append(selectScheme, _("&Syntax Scheme...\tF12"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(); }, selectScheme);
+    const int favoriteSchemes = wxWindow::NewControlId();
+    languages->Append(favoriteSchemes, _("&Favorite Schemes..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(true); }, favoriteSchemes);
+    languages->AppendSeparator();
     const int useCode = wxWindow::NewControlId();
     languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));
     Bind(
@@ -1218,29 +1226,17 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
         return id;
     };
     automaticLanguageId_ = addLanguage(languages, _("&Automatic"), std::nullopt);
-    const auto addFamily = [&addLanguage, languages](const wxString& label,
-                                                     std::initializer_list<SyntaxLanguage> members) {
+    for (const auto& group : SyntaxMenuFamilies()) {
+        const auto members = SyntaxMenuMembers(group.family);
+        if (members.empty()) continue;
         auto* family = new wxMenu;
-        for (const auto language : members)
-            addLanguage(family, "&" + LanguageName(language), language);
-        languages->AppendSubMenu(family, label);
-    };
-    using enum SyntaxLanguage;
-    // TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
-    addFamily(_("&Text File"), {PlainText});
-    // TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-    addFamily(_("&JavaScript"), {JavaScript, Jsx, TypeScript, Tsx});
-    // TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-    addFamily(_("&Web Source Code"), {Html, Jsp, Jspx, AspxCs, AspxVb, AspVb, AspJs});
-    // TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-    addFamily(_("Mark&down"), {MarkdownGitHub, MarkdownGitLab, MarkdownPandoc});
-    // TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-    addFamily(_("Shell Scri&pt"), {Bash, CShell, M4});
-    // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-    addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
+        for (const auto* definition : members)
+            addLanguage(family, "&" + wxGetTranslation(definition->name), definition->language);
+        languages->AppendSubMenu(family, wxGetTranslation(group.label));
+    }
     languages->AppendSeparator();
-    for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Toml, Yaml})
-        addLanguage(languages, "&" + LanguageName(language), language);
+    for (const auto* definition : SyntaxMenuMembers(SyntaxMenuFamily::Standalone))
+        addLanguage(languages, "&" + wxGetTranslation(definition->name), definition->language);
     return languages;
 }
 
@@ -1712,7 +1708,11 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && HandleFullScreenEscape()) return true;
+    if (event.GetKeyCode() == WXK_F12 && !event.HasAnyModifiers()) {
+        ShowSyntaxScheme();
+        return true;
+    }
+    if (event.GetKeyCode() == WXK_ESCAPE && HandleEscapeKey(event.GetModifiers())) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (event.ShiftDown() && !event.MetaDown())
@@ -2335,6 +2335,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     AppendAppearanceOptions(view);
+    AppendWindowTitleOptions(view);
     view->AppendSeparator();
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
@@ -2354,6 +2355,28 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
                 document_.ConfigureAutoSave(preferences.autoSave);
         },
         autoSave);
+    auto* escape = new wxMenu;
+    // Notepad4 89b8b36 IDM_VIEW_NOESCFUNC..IDM_VIEW_ESCEXIT, after AutoSave.
+    for (const auto& [label, action] : {std::pair{wxTRANSLATE("&None"), EscapeFunction::None},
+                                        std::pair{wxTRANSLATE("&Minimize wxnotepad"), EscapeFunction::Minimize},
+                                        std::pair{wxTRANSLATE("E&xit wxnotepad"), EscapeFunction::Exit}}) {
+        const int id = wxWindow::NewControlId();
+        escape->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, action](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).escapeFunction = action;
+                UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, action](wxUpdateUIEvent& event) {
+                event.Check((settings_ ? settings_->values : defaults_).escapeFunction == action);
+            },
+            id);
+    }
+    view->AppendSubMenu(escape, _("Extra Esc &Key Function"));
     if (settings_) {
         auto* other = new wxMenu;
         const int saveRecent = wxWindow::NewControlId();
@@ -2404,6 +2427,61 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
 #endif
     AppendSettingsCommands(view);
     return view;
+}
+
+void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
+    auto* title = new wxMenu;
+    const auto appendChoice = [title](int id, const wxString& label) {
+        auto* item = title->AppendCheckItem(id, label);
+        // Keep the original radio marks, while allowing an already selected
+        // excerpt command to run again through GTK's native activate signal.
+#ifdef __WXMSW__
+        MENUITEMINFOW information{};
+        information.cbSize = sizeof(information);
+        information.fMask = MIIM_FTYPE;
+        information.fType = MFT_RADIOCHECK;
+        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
+                         &information);
+#elif defined(__WXGTK__)
+        gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item->GetMenuItem()), TRUE);
+#endif
+        return item;
+    };
+    for (const auto& [label, mode] :
+         {std::pair{wxTRANSLATE("&File Name Only"), TitlePathNameFormat::NameOnly},
+          std::pair{wxTRANSLATE("File Name and &Directory"), TitlePathNameFormat::NameFirst},
+          std::pair{wxTRANSLATE("Full &Path Name"), TitlePathNameFormat::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        // Check items allow choosing the already selected command again on GTK,
+        // including recapturing Text Excerpt. Update UI keeps one item checked.
+        appendChoice(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, mode](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).pathNameFormat = mode;
+                titleExcerpt_.clear();
+                UpdateDocumentState();
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(titleExcerpt_.empty() &&
+                            (settings_ ? settings_->values : defaults_).pathNameFormat == mode);
+            },
+            id);
+    }
+    const int excerpt = wxWindow::NewControlId();
+    appendChoice(excerpt, _("&Text Excerpt"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            titleExcerpt_ = editor_->CaptureTitleExcerpt(document_.IsDefaultEncoding());
+            UpdateDocumentState();
+        },
+        excerpt);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(!titleExcerpt_.empty()); }, excerpt);
+    settings->AppendSubMenu(title, _("Window Title Displa&y"));
 }
 
 void EditorFrame::AppendAppearanceOptions(wxMenu* view) {

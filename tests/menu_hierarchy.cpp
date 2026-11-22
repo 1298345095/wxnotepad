@@ -142,7 +142,8 @@ void CheckMenu(EditorFrame* frame) {
     Order(bar->GetMenu(5),
           {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
            "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
-           "Appearance", "File Change Notification...", "AutoSave Settings...", "Other Settings",
+           "Appearance", "Window Title Display", "File Change Notification...", "AutoSave Settings...",
+           "Extra Esc Key Function", "Other Settings",
 #ifdef __WXMSW__
            "Advanced Settings",
 #endif
@@ -154,10 +155,13 @@ void CheckMenu(EditorFrame* frame) {
                              "Save Settings On Exit"});
 #endif
     auto* appearance = Submenu(bar->GetMenu(5), "Appearance");
+    Order(Submenu(bar->GetMenu(5), "Window Title Display"),
+          {"File Name Only", "File Name and Directory", "Full Path Name", "Text Excerpt"});
     Order(appearance, {"Show Menu", "Show Toolbar", "Show Statusbar", "Full Screen Mode", "Scroll Past Last Line",
                        "Auto-Shrink Horizontal Scrollbar", "Language"});
     Groups(appearance, {"Show Menu", "Full Screen Mode", "Language"});
     Order(Submenu(bar->GetMenu(5), "Other Settings"), {"Remember Recent Files", "Remember Search Options"});
+    Order(Submenu(bar->GetMenu(5), "Extra Esc Key Function"), {"None", "Minimize wxnotepad", "Exit wxnotepad"});
 #ifdef __WXMSW__
     Order(Submenu(bar->GetMenu(5), "Advanced Settings"), {"Rendering Technology"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Advanced Settings"), "Rendering Technology"), {"Legacy GDI", "Direct2D"});
@@ -171,11 +175,34 @@ void CheckMenu(EditorFrame* frame) {
                             "Run Command...", "Action on Selection", "Base64"});
     Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
     auto* schemes = bar->GetMenu(4);
-    Order(schemes,
-          {"Use Default Code Style", "Automatic", "Text File", "JavaScript", "Web Source Code", "Markdown",
-           "Shell Script", "XML Document", "C/C++", "CMake", "Go", "JSON", "Lua", "Python", "Rust", "TOML", "YAML"});
-    Groups(schemes, {"Use Default Code Style", "Automatic", "C/C++"});
+    Order(schemes, {"Syntax Scheme...",
+                    "Favorite Schemes...",
+                    "Use Default Code Style",
+                    "Automatic",
+                    "Text File",
+                    "CSS Style Sheet",
+                    "JavaScript",
+                    "Web Source Code",
+                    "Markdown",
+                    "Shell Script",
+                    "XML Document",
+                    "C/C++",
+                    "C# Source",
+                    "CMake",
+                    "Go",
+                    "Java Source",
+                    "JSON",
+                    "Kotlin Source",
+                    "Lua",
+                    "Python",
+                    "Rust",
+                    "SQL Query",
+                    "TOML",
+                    "YAML"});
+    Groups(schemes, {"Syntax Scheme...", "Use Default Code Style", "Automatic", "C/C++"});
     Order(Submenu(schemes, "Text File"), {"Plain Text"});
+    Order(Submenu(schemes, "CSS Style Sheet"),
+          {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet"});
     Order(Submenu(schemes, "JavaScript"), {"JavaScript", "JSX", "TypeScript", "TSX"});
     Order(Submenu(schemes, "Web Source Code"),
           {"Web Source Code", "JSP", "JSPX", "ASP.NET C#", "ASP.NET VB", "ASP VBScript", "ASP JavaScript"});

@@ -1,5 +1,6 @@
 """Import full original scheme tables from the pinned Notepad4 revision (offline)."""
 import argparse
+import re
 from pathlib import Path
 
 from scheme_data import generate_scheme, read_pinned
@@ -9,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMES = {'Rust': 'Rust', 'Go': 'Go', 'Lua': 'Lua', 'CPP': 'CPP',
            'Python': 'Python', 'Bash': 'Bash', 'JavaScript': 'JS', 'TypeScript': 'TS',
            'JSON': 'JSON', 'HTML': 'HTML', 'XML': 'XML', 'CSS': 'CSS', 'VBS': 'VBS', 'PHP': 'PHP',
-           'TOML': 'TOML', 'YAML': 'YAML', 'CMake': 'CMake', 'Markdown': 'Markdown'}
+           'TOML': 'TOML', 'YAML': 'YAML', 'CMake': 'CMake', 'Markdown': 'Markdown', 'SQL': 'SQL',
+           'Java': 'Java', 'CSharp': 'CSharp', 'Kotlin': 'Kotlin'}
 
 
 def main(schemes=None):
@@ -21,9 +23,17 @@ def main(schemes=None):
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for filename in args.schemes:
         data = read_pinned(args.source, f'src/EditLexers/stl{filename}.cpp')
+        # Resource identities belong to the original catalog record, never enum order.
+        identity = re.search(rb'\bNP2LEX_\w+', data)
+        scheme_id = None
+        if identity:
+            resources = read_pinned(args.source, 'src/EditLexer.h')
+            ids = dict((key, int(value)) for key, value in re.findall(rb'#define\s+(NP2LEX_\w+)\s+(\d+)', resources))
+            scheme_id = ids[identity[0]] - ids[b'NP2LEX_TEXTFILE']
         name = filename.lower()
         output = generate_scheme(data, filename, SCHEMES[filename], name,
-                                 include_extensions=filename not in {'CPP', 'Python', 'JSON', 'Bash'})
+                                 include_extensions=filename not in {'CPP', 'Python', 'JSON', 'Bash'},
+                                 scheme_id=scheme_id)
         (args.output_dir / f'{name}_scheme_data.h').write_text(output, encoding='utf-8', newline='\n')
 
 

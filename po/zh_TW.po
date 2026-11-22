@@ -75,6 +75,12 @@ msgstr " (覆寫)"
 msgid " | Sel %lld"
 msgstr " | 選取 %lld"
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr "「%s」"
+
 # Original Notepad4 zh-Hant: IDS_READONLY_SAVE; adapted where needed.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -155,6 +161,10 @@ msgstr "工具列自動縮放(&A)"
 msgid "&Auto-reload (unmodified)."
 msgstr "自動重新載入（如未修改）(&A)。"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "&Auto-select by filename extension."
+msgstr "自動依檔案副檔名選擇(&A)"
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
 msgstr "自動(&A)"
@@ -191,6 +201,11 @@ msgstr "瀏覽目錄(&B)..."
 #: src/app/run_command.cpp
 msgid "&Browse..."
 msgstr "瀏覽(&B)..."
+
+#. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+#: src/syntax/syntax_catalog.cpp
+msgid "&CSS Style Sheet"
+msgstr "CSS 樣式表(&H)"
 
 # Original Notepad4 zh-Hant: IDD_INFOBOX/IDCANCEL; adapted where needed.
 #: src/app/editor_frame.cpp
@@ -341,6 +356,10 @@ msgstr "編碼識別碼(&E)\tCtrl+F8"
 msgid "&Ensure consistent line endings when saving."
 msgstr "儲存檔案時確保換行字元一致(&E)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Favorite Schemes..."
+msgstr "常用語法高亮(&F)..."
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/File menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&File"
@@ -350,6 +369,10 @@ msgstr "檔案(&F)"
 #: src/app/editor_frame_commands.cpp
 msgid "&File Name"
 msgstr "檔案名稱(&F)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
+msgstr "只檔名(&F)"
 
 # Original Notepad4 zh-Hant: IDD_FIND/IDC_FINDALL; adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -389,8 +412,8 @@ msgstr "醒目提示目前子行(&H)"
 msgid "&Indent"
 msgstr "增加縮排(&I)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/JavaScript family, including TypeScript and JSX/TSX.
+#: src/syntax/syntax_catalog.cpp
 msgid "&JavaScript"
 msgstr "&JavaScript"
 
@@ -464,6 +487,10 @@ msgstr "合併重複行(&M)。"
 #: src/app/editor_frame_commands.cpp
 msgid "&Millisecond (ms)"
 msgstr "毫秒(&M) (ms)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Minimize wxnotepad"
+msgstr "最小化 wxnotepad(&M)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_MODIFYLINES; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -717,13 +744,21 @@ msgstr "分割行(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "儲存檔案時移除行尾空白(&S)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Syntax Scheme...\tF12"
+msgstr "選擇語法高亮(&S)...\tF12"
+
 # Original Notepad4 zh-Hant: IDM_VIEW_TABSETTINGS; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr "Tab 設定(&T)..."
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
+msgstr "選取的文字(&T)"
+
+#. TRANSLATORS: Original Scheme/Text File family.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Text File"
 msgstr "文字檔案(&T)"
 
@@ -787,8 +822,8 @@ msgstr "檢視(&V)"
 msgid "&Visual Studio"
 msgstr "&Visual Studio"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Web Source Code family, including HTML, JSP and ASP.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Web Source Code"
 msgstr "網頁原始碼(&W)"
 
@@ -817,8 +852,8 @@ msgstr "自動換行(&R)\tCtrl+Shift+W"
 msgid "&Wrap around"
 msgstr "循環搜尋(&D)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/XML Document family and document dialects.
+#: src/syntax/syntax_catalog.cpp
 msgid "&XML Document"
 msgstr "XML 文件(&X)"
 
@@ -905,11 +940,6 @@ msgstr "所有檔案 (*)"
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有檔案 (*)|*"
-
-# Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
-#: src/app/dialogs/document_dialogs.cpp
-msgid "All files (*.*)"
-msgstr "所有檔案 (*.*)"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Angle brackets <>"
@@ -1074,6 +1104,10 @@ msgstr "大括號 {}"
 msgid "C Shell"
 msgstr "C Shell"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "C# Source"
+msgstr "C# 原始碼"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/View/Caret Style submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
@@ -1105,6 +1139,11 @@ msgstr[0] "CR+LF：%llu 行。"
 msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] "CR：%llu 行。"
+
+#. TRANSLATORS: Original CSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "CSS Style Sheet"
+msgstr "CSS 樣式表"
 
 # Original Notepad4 zh-Hant: IDD_SORT/IDC_SORT_IGNORE_CASE; adapted where needed.
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1583,6 +1622,10 @@ msgstr "在選取範圍內繪製方塊游標(&S)"
 msgid "E&xit\tAlt+F4"
 msgstr "結束(&X)\tAlt+F4"
 
+#: src/app/editor_frame_commands.cpp
+msgid "E&xit wxnotepad"
+msgstr "離開 wxnotepad(&X)"
+
 # Original Notepad4 zh-Hant: IDM_SET_MULTIPLE_SELECTION; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
@@ -1638,9 +1681,17 @@ msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
 msgid "Execute &Document\tCtrl+L"
 msgstr "執行文件(&D)\tCtrl+L"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Extra Esc &Key Function"
+msgstr "額外 Esc 鍵功能(&K)"
+
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr "FSI — 首個強方向字元隔離(&F)"
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Favorite Schemes"
+msgstr "常用語法高亮"
 
 #: src/app/dialogs/recent_files_dialog.cpp
 #: src/app/dialogs/tab_settings_dialog.cpp
@@ -1661,6 +1712,10 @@ msgstr "檔案模式(&M)"
 #: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_file_watching.cpp
 msgid "File Change Notification"
 msgstr "檔案變更通知"
+
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
+msgstr "檔案名稱與資料夾(&D)"
 
 # Original Notepad4 zh-Hant: CMD_COPYFILENAME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1749,6 +1804,10 @@ msgstr "頁尾："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
 msgstr "換行的文字"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
+msgstr "完整路徑名稱(&P)"
 
 # Original Notepad4 zh-Hant: CMD_COPYPATHNAME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1841,6 +1900,11 @@ msgstr "跳到選取範圍結尾(&T)\tCtrl+Shift+."
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Group by file &type."
 msgstr "依檔案類型分組(&T)。"
+
+#. TRANSLATORS: Original HSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "HSS Style Sheet"
+msgstr "HSS 樣式表"
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1964,6 +2028,10 @@ msgid "JSX"
 msgstr "JSX"
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java Source"
+msgstr "Java 原始碼"
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr "JavaScript"
 
@@ -1976,6 +2044,10 @@ msgstr "聯結段落(&P)\tCtrl+Shift+J"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
 msgstr "左右對齊（段落模式）(&P)。"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin Source"
+msgstr "Kotlin 原始碼"
 
 # Original Notepad4 zh-Hant: IDD_WARNLINEENDS/IDC_EOL_SUM_LF (count adapted); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -2022,6 +2094,11 @@ msgstr "左邊界"
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
 msgstr "左："
+
+#. TRANSLATORS: Original Less stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Less Style Sheet"
+msgstr "Less 樣式表"
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
 #: src/app/editor_frame_commands.cpp
@@ -2129,8 +2206,8 @@ msgstr "邊界（公釐）"
 msgid "Mark &Occurrences"
 msgstr "標記出現位置(&O)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Markdown family and dialect order.
+#: src/syntax/syntax_catalog.cpp
 msgid "Mark&down"
 msgstr "Mark&down"
 
@@ -2654,9 +2731,19 @@ msgstr "行排序(&O)...\tAlt+O"
 msgid "S&wap\tCtrl+K"
 msgstr "交換(&W)\tCtrl+K"
 
+#. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SCSS Style Sheet"
+msgstr "SCSS 樣式表"
+
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
 msgstr "SHY — 軟連字號(&X)"
+
+#. TRANSLATORS: Original SQL Query scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SQL Query"
+msgstr "SQL 查詢"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"
@@ -2844,6 +2931,10 @@ msgstr "選擇編碼"
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr "選擇目前區塊中的行(&C)\tAlt+Shift+]"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Select Scheme"
+msgstr "選擇語法高亮"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings/Select and Edit Options submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
@@ -2886,6 +2977,10 @@ msgstr "選擇到上一個(&S)\tCtrl+Alt+Shift+F2"
 msgid "Separator"
 msgstr "分隔符號"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Set selected scheme as &default."
+msgstr "設定選取的檔案型態為預設(&D)"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
@@ -2895,8 +2990,8 @@ msgstr "設定(&I)"
 msgid "Settings saved"
 msgstr "設定已儲存"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Shell Script family, including Bash, C Shell and m4.
+#: src/syntax/syntax_catalog.cpp
 msgid "Shell Scri&pt"
 msgstr "Shell 指令碼(&P)"
 
@@ -3063,6 +3158,10 @@ msgstr "換行後的標記(&A)："
 msgid "Symbol &before wrap:"
 msgstr "換行前的標記(&B)："
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Syntax schemes"
+msgstr "語法高亮方案"
+
 # Original Notepad4 zh-Hant: IDM_LANG_USER_DEFAULT; adapted where needed.
 #: src/app/language_commands.cpp
 msgid "System Language"
@@ -3119,10 +3218,6 @@ msgstr "空白轉 Tab\tCtrl+Shift+T"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
 msgstr "Tab 轉為空白"
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "Text files (*.txt)"
-msgstr "文字檔案 (*.txt)"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -3446,6 +3541,10 @@ msgstr "依空白"
 msgid "Whole &word"
 msgstr "完整單詞(&O)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
+msgstr "視窗標題顯示(&Y)"
+
 # Original Notepad4 zh-Hant: IDS_EOLMODENAME_CRLF; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"
@@ -3598,3 +3697,34 @@ msgstr "m4"
 
 #~ msgid "← &Remove"
 #~ msgstr "← 移除(&R)"
+
+# Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
+#~ msgid "All files (*.*)"
+#~ msgstr "所有檔案 (*.*)"
+
+#~ msgid "C#"
+#~ msgstr "C#"
+
+#~ msgid "CSS"
+#~ msgstr "CSS"
+
+#~ msgid "HSS"
+#~ msgstr "HSS"
+
+#~ msgid "Java"
+#~ msgstr "Java"
+
+#~ msgid "Kotlin"
+#~ msgstr "Kotlin"
+
+#~ msgid "Less"
+#~ msgstr "Less"
+
+#~ msgid "SCSS"
+#~ msgstr "SCSS"
+
+#~ msgid "SQL"
+#~ msgstr "SQL"
+
+#~ msgid "Text files (*.txt)"
+#~ msgstr "文字檔案 (*.txt)"

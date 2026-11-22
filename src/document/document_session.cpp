@@ -1057,7 +1057,7 @@ bool DocumentSession::DetectAutomaticLanguage() {
     std::array<char, SyntaxDetectionLimits::DocTypeBytes + 1> prefix{};
     editor_.Send(Scintilla::Message::GetText, prefix.size() - 1, reinterpret_cast<intptr_t>(prefix.data()));
     const auto detected = DetectLanguage(path_, prefix.data(), detection_);
-    automaticLanguage_ = detected ? detected->schemeLanguage : SyntaxLanguage::PlainText;
+    automaticLanguage_ = detected ? detected->schemeLanguage : detection_.defaultLanguage;
     markupDialect_ = detected ? detected->markupDialect : std::nullopt;
     return detected.has_value();
 }
