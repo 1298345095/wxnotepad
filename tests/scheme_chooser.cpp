@@ -414,6 +414,9 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
     NativeKeys::AfterPresentation(frame, [&](bool ready) { presented = ready; });
     NativeTreeInput::Wait([&] { return presented; }, "localized F12 frame is presented before native shortcut");
     wxYield();
+    // Initial editor-state events refresh the document title during mapping.
+    // Set the owned focus target after that refresh, as KeyboardChooser does.
+    frame->SetTitle("wxnotepad localized scheme F12");
     for (const bool favorite : {false, true}) {
         Picker picker;
         picker.title = wxGetTranslation(favorite ? "Favorite Schemes" : "Select Scheme");

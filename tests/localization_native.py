@@ -571,7 +571,7 @@ class Dialogs:
                         continue
                     text = ctypes.create_unicode_buffer(length + 1)
                     self.user.SendMessageW(child, 0x0148, index, ctypes.cast(text, ctypes.c_void_p).value)
-                    if '*.' in text.value:
+                    if '(*' in text.value:
                         filters.append(text.value)
             return filters
         # The chooser can still publish its filter controls after navigation.
@@ -582,12 +582,12 @@ class Dialogs:
         for child, action in controls:
             assert action.do_action(0), 'Native chooser filter popup Open action'
             self.wait_chooser_popup(child, True, deadline)
-            filters = [text for text in self.texts(window) if '*.' in text]
+            filters = [text for text in self.texts(window) if '(*' in text]
             assert action.do_action(0), 'Native chooser filter popup Close action'
             self.wait_chooser_popup(child, False, deadline)
             if filters:
                 return filters
-        return [text for text in self.texts(window) if '*.' in text]
+        return [text for text in self.texts(window) if '(*' in text]
 
     def answer(self, process, choice, title='wxnotepad', window=None):
         window = window if window is not None else self.wait(process, title)

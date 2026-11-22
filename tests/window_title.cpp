@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <sstream>
 #include <array>
+#include <memory>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -113,9 +114,11 @@ void Excerpts(EditorFrame* frame) {
     std::ifstream reference(std::filesystem::path(WINDOW_TITLE_REFERENCE));
     Require(reference.is_open(), "open independently captured original excerpt fixtures");
     std::string line;
+    size_t fixtureIndex = 0;
     while (std::getline(reference, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         if (line.empty() || line[0] == '#') continue;
+        ++fixtureIndex;
         std::istringstream row(line);
         std::array<std::string, 6> columns;
         for (auto& column : columns)
@@ -133,8 +136,8 @@ void Excerpts(EditorFrame* frame) {
         Menu(frame, "Text Excerpt");
         const auto expected = wxString::FromUTF8(Unhex(columns[5])) + " - wxnotepad";
         if (NativeTitle(frame) != expected)
-            std::fprintf(stderr, "excerpt %s: got '%s', expected '%s'\n", columns[0].c_str(),
-                         NativeTitle(frame).utf8_str().data(), expected.utf8_str().data());
+            std::fprintf(stderr, "excerpt row %zu: title mismatch (actual length=%zu, expected length=%zu)\n",
+                         fixtureIndex, NativeTitle(frame).length(), expected.length());
         Require(NativeTitle(frame) == expected, "actual title equals independent original excerpt");
         Require(State(frame) == before, "title command preserves exact text, directed selections and undo/redo");
         const bool excerpt = columns[0] != "empty" && columns[0] != "rectangle";
@@ -292,7 +295,8 @@ public:
         const bool nativeAnsi = argc == 2 && wxString(argv[1]) == "--native-ansi";
         AppLocalization::Initialize(localized ? (traditional ? TraditionalChineseLanguage : SimplifiedChineseLanguage)
                                               : EnglishLanguage);
-        auto* frame = new EditorFrame;
+        frame_ = std::make_unique<EditorFrame>();
+        auto* frame = frame_.get();
         frame->Show();
         CallAfter([this, frame, localized, traditional, nativeAnsi] {
             try {
@@ -311,7 +315,7 @@ public:
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 status_ = 1;
             }
-            frame->Destroy();
+            frame_.release()->Destroy();
         });
         return true;
     }
@@ -321,6 +325,7 @@ public:
     }
 
 private:
+    std::unique_ptr<EditorFrame> frame_;
     int status_ = 0;
 };
 wxIMPLEMENT_APP(WindowTitleApp);
