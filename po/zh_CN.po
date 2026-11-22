@@ -143,6 +143,11 @@ msgstr "浏览目录(&B)..."
 msgid "&Browse..."
 msgstr "浏览(&B)..."
 
+#. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+#: src/app/editor_frame_commands.cpp
+msgid "&CSS Style Sheet"
+msgstr "CSS 样式表(&H)"
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -993,6 +998,10 @@ msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] "CR: %llu 行。"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "CSS"
+msgstr "CSS"
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
 msgstr "不区分大小写(&I)。"
@@ -1699,6 +1708,10 @@ msgstr "跳转到选区结束(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "按文件类型分组(&T)。"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "HSS"
+msgstr "HSS"
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
@@ -1871,6 +1884,10 @@ msgstr "左页边距"
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
 msgstr "左："
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Less"
+msgstr "Less"
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
 #: src/app/editor_frame_commands.cpp
@@ -2465,9 +2482,17 @@ msgstr "行排序(&O)...\tAlt+O"
 msgid "S&wap\tCtrl+K"
 msgstr "交换(&W)\tCtrl+K"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "SCSS"
+msgstr "SCSS"
+
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
 msgstr "SHY — 软连字符(&Q)"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "SQL"
+msgstr "SQL"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"

@@ -21,6 +21,8 @@ namespace {
 #include "syntax/generated/toml_scheme_data.h"
 #include "syntax/generated/yaml_scheme_data.h"
 #include "syntax/generated/cmake_scheme_data.h"
+#include "syntax/generated/css_scheme_data.h"
+#include "syntax/generated/sql_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
 constexpr auto textExtensions = std::to_array<const char*>({"txt"});
@@ -34,6 +36,16 @@ constexpr auto cppProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"
 constexpr auto bashProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
 constexpr auto cShellProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "1"}});
 constexpr auto m4Properties = std::to_array<SyntaxProperty>({{"lexer.lang", "2"}});
+constexpr auto cssProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
+constexpr auto scssProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "1"}});
+constexpr auto lessProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "2"}});
+constexpr auto hssProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "3"}});
+// LexSQL.cxx::SqlOption_Default enables backtick identifiers, # comments and
+// backslash escapes. Install it explicitly after the shared dialect reset.
+constexpr auto sqlProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "7"}});
+constexpr auto scssExtensions = std::to_array<const char*>({"scss"});
+constexpr auto lessExtensions = std::to_array<const char*>({"less"});
+constexpr auto hssExtensions = std::to_array<const char*>({"hss"});
 constexpr auto markdownGitHubProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
 constexpr auto markdownGitLabProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "1"}});
 constexpr auto markdownPandocProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "2"}});
@@ -312,6 +324,16 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      false,
      nullptr,
      cmakeOriginal},
+    {wxTRANSLATE("CSS"), cssExtensions, cssLists, cssStyles, cssProperties, SCLEX_CSS, SyntaxLanguage::Css, true,
+     nullptr, "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    {wxTRANSLATE("SCSS"), scssExtensions, cssLists, cssStyles, scssProperties, SCLEX_CSS, SyntaxLanguage::Scss, true,
+     "//", "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    {wxTRANSLATE("Less"), lessExtensions, cssLists, cssStyles, lessProperties, SCLEX_CSS, SyntaxLanguage::Less, true,
+     "//", "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    {wxTRANSLATE("HSS"), hssExtensions, cssLists, cssStyles, hssProperties, SCLEX_CSS, SyntaxLanguage::Hss, true, "//",
+     "/*", "*/", SCE_CSS_CDO_CDC, false, false, nullptr, cssOriginal},
+    {wxTRANSLATE("SQL"), sqlExtensions, sqlLists, sqlStyles, sqlProperties, SCLEX_SQL, SyntaxLanguage::Sql, true, "--",
+     "/*", "*/", SCE_SQL_COMMENTLINEDOC, false, false, nullptr, sqlOriginal},
 });
 
 bool Space(char ch) {
@@ -471,6 +493,10 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
     if (language >= Html && language <= Jspx) return Html;
     if (language >= Xml && language <= Plist) return Xml;
     switch (language) {
+    case Scss:
+    case Less:
+    case Hss:
+        return Css;
     case CShell:
     case M4:
         return Bash;
@@ -519,6 +545,10 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return yamlSettingsSection;
     case CMake:
         return cmakeSettingsSection;
+    case Css:
+        return cssSettingsSection;
+    case Sql:
+        return sqlSettingsSection;
     default:
         return "Text File";
     }

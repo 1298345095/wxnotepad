@@ -41,6 +41,11 @@ enum class SyntaxLanguage : uint8_t {
     MarkdownGitHub,
     MarkdownGitLab,
     MarkdownPandoc,
+    Css,
+    Scss,
+    Less,
+    Hss,
+    Sql,
     Count
 };
 namespace SyntaxDetectionLimits {

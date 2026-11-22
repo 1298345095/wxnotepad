@@ -1228,6 +1228,8 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     using enum SyntaxLanguage;
     // TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
     addFamily(_("&Text File"), {PlainText});
+    // TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+    addFamily(_("&CSS Style Sheet"), {Css, Scss, Less, Hss});
     // TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
     addFamily(_("&JavaScript"), {JavaScript, Jsx, TypeScript, Tsx});
     // TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
@@ -1239,7 +1241,7 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
     addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
     languages->AppendSeparator();
-    for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Toml, Yaml})
+    for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Sql, Toml, Yaml})
         addLanguage(languages, "&" + LanguageName(language), language);
     return languages;
 }

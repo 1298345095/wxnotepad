@@ -135,6 +135,11 @@ msgstr ""
 msgid "&Browse..."
 msgstr ""
 
+#. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+#: src/app/editor_frame_commands.cpp
+msgid "&CSS Style Sheet"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr ""
@@ -914,6 +919,10 @@ msgid_plural "CR: %llu lines."
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "CSS"
+msgstr ""
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
 msgstr ""
@@ -1578,6 +1587,10 @@ msgstr ""
 msgid "Group by file &type."
 msgstr ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "HSS"
+msgstr ""
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
@@ -1741,6 +1754,10 @@ msgstr ""
 #. TRANSLATORS: Left paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Less"
 msgstr ""
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
@@ -2313,8 +2330,16 @@ msgstr ""
 msgid "S&wap\tCtrl+K"
 msgstr ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "SCSS"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "SQL"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
