@@ -33,29 +33,29 @@ fixtures = [
      '@Deprecated\nclass Sample<T extends Number> {\n'
      '  String block = """\nhello \\s界\n""";\n'
      '  String template = STR."value \\{value}";\n'
-     '  <U> U convert(U value) { return value; }\n}\n', 'hello'),
+     '  <U> U convert(U value) { return value; }\n}\n', '"""'),
     ('incomplete.java',
      'class Broken<T {\n  String text = """\nunterminated\n'
-     '/* incomplete comment @param\n', 'unterminated'),
+     '/* incomplete comment @param\n', '"""'),
     ('complete.cs',
      '#region sample\n/// <summary>Sample</summary>\n'
      '[Obsolete]\nclass Sample<T> {\n'
      '  string verbatim = @"C:\\folder\\界";\n'
      '  string value = $"{1 + 2:D2}";\n'
      '  string raw = $$"""\n{{value}} "quoted"\n""";\n'
-     '  void Run() { /* TODO */ }\n}\n#endregion\n', 'quoted'),
+     '  void Run() { /* TODO */ }\n}\n#endregion\n', '"""'),
     ('incomplete.csx',
      '#if DEBUG\n/// <summary incomplete\n'
-     'var raw = $$"""\n{{value +\n', 'value'),
+     'var raw = $$"""\n{{value +\n', '"""'),
     ('complete.kt',
      '/** @param value Kotlin */\n@Deprecated("old")\n'
      'class Sample<T> {\n  /* outer /* nested */ still comment */\n'
      '  val text = "Hello ${value + 1}: $value"\n'
      '  val raw = """\nraw \\n $value 界\n"""\n'
-     '  fun `quoted name`(value: T) { println(value) }\n}\n', 'nested'),
+     '  fun `quoted name`(value: T) { println(value) }\n}\n', '/* nested'),
     ('incomplete.kts',
      '#!/usr/bin/env kotlin\nval value = "${call(\n'
-     '/* outer /* inner */ unfinished\n', 'inner'),
+     '/* outer /* inner */ unfinished\n', '/* inner'),
 ]
 
 # Mode is the character to type, or zero for the public Complete Word command.

@@ -26,13 +26,16 @@ private Windows desktop, using a fresh portable settings directory and no
 clipboard input. The original executable SHA-256 is
 `c4ae363348fe833b39c9d9b77f1f0b85565f140f7c5e52c51a0b91cf896227d9`.
 The capture's process logs and provenance are retained outside Git under
-`F:/wxnotepad-evidence/original-controls-implementation-2026-11-22/255/original-01`.
+`F:/wxnotepad-evidence/original-controls-implementation-2026-11-22/255/`, under
+`original-01` and `original-02`. The final style oracle uses `original-02`;
+the original completion/typing rows were identical in both captures.
 
 The six documents cover Java annotations, generics, templates and text blocks;
 C# directives, XML documentation, verbatim, interpolated and raw strings;
 Kotlin templates, nested comments, multiline strings and scripts. Each has
 complete or malformed/incomplete input and four observed states: baseline,
-single-byte deletion, Undo and Redo. The native application test compares every
+single-byte deletion of a text-block quote or nested-comment delimiter, Undo
+and Redo. These edits change lexical state across subsequent lines. The native application test compares every
 text byte, style byte and fold level in all 24 states. The separate operation
 oracle covers 20 manual/automatic completion, confirmation/history and typed
 brace/quote scenarios.
