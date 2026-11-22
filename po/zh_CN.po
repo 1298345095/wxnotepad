@@ -3460,9 +3460,6 @@ msgstr "m4"
 #~ msgid "All files (*.*)"
 #~ msgstr "所有文件 (*.*)"
 
-#~ msgid "Text files (*.txt)"
-#~ msgstr "文本文件 (*.txt)"
-
 #~ msgid "C#"
 #~ msgstr "C#"
 
