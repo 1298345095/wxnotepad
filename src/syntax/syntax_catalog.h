@@ -162,6 +162,7 @@ inline constexpr size_t FavoriteCount = 31;
 inline constexpr size_t FavoriteConfigCharacters = 127;
 } // namespace SyntaxSchemeLimits
 std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
+std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration);
 SyntaxLanguage LanguageForPath(const wxString& path);
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,

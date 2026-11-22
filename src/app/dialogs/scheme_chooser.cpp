@@ -10,8 +10,6 @@
 #include <wx/translation.h>
 #include <algorithm>
 #include <vector>
-#include <cstdlib>
-#include <limits>
 #include <utility>
 
 namespace {
@@ -40,36 +38,30 @@ void AddCheckStates(wxTreeCtrl& tree) {
     }
     tree.AssignStateImageList(images);
 }
-wxString FavoriteConfiguration(const wxString& original, const std::vector<SyntaxLanguage>& favorites) {
+std::optional<wxString> FavoriteConfiguration(const wxString& original, const std::vector<SyntaxLanguage>& favorites) {
     if (FavoriteSyntaxSchemes(original) == favorites) return original;
     // Replace supported slots in their new order; unavailable original IDs stay
     // in the compatibility value rather than being mistaken for enum ordinals.
     std::vector<int> identities;
-    const auto bytes = original.utf8_string();
-    const char* cursor = bytes.c_str();
     size_t next = 0;
-    for (size_t count = 0; count < SyntaxSchemeLimits::FavoriteCount; ++count) {
-        char* end = nullptr;
-        const auto identity = std::strtol(cursor, &end, 10);
-        if (end == cursor) break;
-        if (identity >= std::numeric_limits<int>::min() && identity <= std::numeric_limits<int>::max()) {
-            if (identity > 0 && SyntaxFromOriginalSchemeId(static_cast<int>(identity))) {
-                if (next < favorites.size()) identities.push_back(SyntaxFor(favorites[next++]).original.schemeId);
-            } else {
-                identities.push_back(static_cast<int>(identity));
-            }
+    for (const int identity : OriginalFavoriteSchemeIds(original)) {
+        if (identity > 0 && SyntaxFromOriginalSchemeId(identity)) {
+            if (next < favorites.size()) identities.push_back(SyntaxFor(favorites[next++]).original.schemeId);
+        } else {
+            identities.push_back(identity);
         }
-        cursor = *end == ',' ? end + 1 : end;
     }
     while (next < favorites.size())
         identities.push_back(SyntaxFor(favorites[next++]).original.schemeId);
+    if (identities.size() > SyntaxSchemeLimits::FavoriteCount) return std::nullopt;
     wxString configuration;
     for (size_t index = 0; index < identities.size(); ++index) {
         const auto value = wxString::Format("%d", identities[index]);
         if (!configuration.empty()) configuration += ' ';
         configuration += value;
     }
-    return configuration;
+    return configuration.length() <= SyntaxSchemeLimits::FavoriteConfigCharacters ? std::optional(configuration)
+                                                                                  : std::nullopt;
 }
 } // namespace
 
@@ -178,11 +170,13 @@ std::optional<SyntaxLanguage> ChooseSyntaxScheme(wxWindow* parent, SyntaxLanguag
             const auto* data = item.IsOk() ? static_cast<SchemeData*>(tree->GetItemData(item)) : nullptr;
             if (!data || data->language == SyntaxLanguage::PlainText) return;
             const auto language = data->language;
+            const auto previous = favorites;
             const auto found = std::ranges::find(favorites, language);
             if (found != favorites.end())
                 favorites.erase(found);
             else if (favorites.size() < SyntaxSchemeLimits::FavoriteCount)
                 favorites.push_back(language);
+            if (!FavoriteConfiguration(settings.favoriteSchemes, favorites)) favorites = previous;
             rebuildFavorites(language, false);
         });
         tree->Bind(wxEVT_TREE_BEGIN_DRAG, [&](wxTreeEvent& event) {
@@ -207,6 +201,7 @@ std::optional<SyntaxLanguage> ChooseSyntaxScheme(wxWindow* parent, SyntaxLanguag
             const auto* data = static_cast<SchemeData*>(tree->GetItemData(target));
             const auto after = data ? std::optional(data->language) : std::nullopt;
             if (after == language) return;
+            const auto previous = favorites;
             const auto found = std::ranges::find(favorites, *language);
             if (found != favorites.end()) {
                 // A drag from the alphabetic copy of an existing favorite just checks it.
@@ -223,6 +218,7 @@ std::optional<SyntaxLanguage> ChooseSyntaxScheme(wxWindow* parent, SyntaxLanguag
                 position = favorites.end();
             }
             favorites.insert(position, *language);
+            if (!FavoriteConfiguration(settings.favoriteSchemes, favorites)) favorites = previous;
             rebuildFavorites(*language, tree->IsExpanded(favoriteGroup));
         });
     }
@@ -232,6 +228,9 @@ std::optional<SyntaxLanguage> ChooseSyntaxScheme(wxWindow* parent, SyntaxLanguag
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
     if (defaultEdited) settings.defaultScheme = temporaryDefault;
     settings.autoSelect = automatic->GetValue();
-    if (favorite) settings.favoriteSchemes = FavoriteConfiguration(settings.favoriteSchemes, favorites);
+    if (favorite) {
+        if (const auto configuration = FavoriteConfiguration(settings.favoriteSchemes, favorites))
+            settings.favoriteSchemes = *configuration;
+    }
     return favorite ? std::nullopt : Selected(*tree);
 }

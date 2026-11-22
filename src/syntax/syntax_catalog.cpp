@@ -509,21 +509,29 @@ std::optional<SyntaxLanguage> SyntaxFromOriginalSchemeId(int identity) {
     return std::nullopt;
 }
 
-std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration) {
+std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration) {
     // Pinned Helpers.cpp::ParseCommaList: decimal values, optional commas and whitespace.
     const auto bytes = configuration.Left(SyntaxSchemeLimits::FavoriteConfigCharacters).utf8_string();
     const char* cursor = bytes.c_str();
-    std::vector<SyntaxLanguage> languages;
+    std::vector<int> identities;
     for (size_t count = 0; count < SyntaxSchemeLimits::FavoriteCount; ++count) {
         char* end = nullptr;
         const auto identity = std::strtol(cursor, &end, 10);
         if (end == cursor) break;
-        if (identity > 0 && identity <= std::numeric_limits<int>::max()) {
-            if (const auto language = SyntaxFromOriginalSchemeId(static_cast<int>(identity));
-                language && std::ranges::find(languages, *language) == languages.end())
-                languages.push_back(*language);
-        }
+        if (identity >= std::numeric_limits<int>::min() && identity <= std::numeric_limits<int>::max())
+            identities.push_back(static_cast<int>(identity));
         cursor = *end == ',' ? end + 1 : end;
+    }
+    return identities;
+}
+
+std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration) {
+    std::vector<SyntaxLanguage> languages;
+    for (const int identity : OriginalFavoriteSchemeIds(configuration)) {
+        if (identity <= 0) continue;
+        if (const auto language = SyntaxFromOriginalSchemeId(identity);
+            language && std::ranges::find(languages, *language) == languages.end())
+            languages.push_back(*language);
     }
     return languages;
 }

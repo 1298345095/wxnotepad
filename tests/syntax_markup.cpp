@@ -9,6 +9,8 @@
 #include "native_key_helpers.h"
 #include "syntax_test_helpers.h"
 #include "tab_settings_helpers.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include <SciLexer.h>
 #include <wx/app.h>
 #include <wx/menu.h>
@@ -555,7 +557,10 @@ class MarkupApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(TestFiles::TemporaryDirectory("markup.ini")));
+        settings_->values = OriginalSettings{};
+        settings_->values.favoriteSchemes = "25 26"; // Original XML and Web native filter choices.
+        auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
@@ -616,6 +621,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
