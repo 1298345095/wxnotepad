@@ -16,6 +16,7 @@ import original_host as host
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--exe', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
+parser.add_argument('--documentation-only', action='store_true', help='Capture the three interior documentation completions')
 args = parser.parse_args()
 output = args.output.resolve()
 output.mkdir(parents=True, exist_ok=True)
@@ -67,6 +68,12 @@ completions = [
     ('Kotlin', 'kt', 'pri', 0), ('Kotlin', 'kt', '@Dep', 0),
     ('Kotlin', 'kt', '/** @par', 0), ('Kotlin', 'kt', 'pr', ord('i')),
 ]
+documentation_completions = [
+    ('Java', 'java', '/** @par| */', 0),
+    ('C#', 'cs', '/// <sum| ', 0),
+    ('Kotlin', 'kt', '/** @par| */', 0),
+]
+completions += documentation_completions
 characters = [
     ('Java', 'java', 'class Sample<T', ord('<')),
     ('Java', 'java', '"text\\', ord('"')),
@@ -77,6 +84,10 @@ characters = [
     ('Kotlin', 'kt', 'val x = """raw\\', ord('"')),
     ('Kotlin', 'kt', 'val x = "text\\', ord('"')),
 ]
+if args.documentation_only:
+    fixtures = []
+    completions = documentation_completions
+    characters = []
 user = host.user
 user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWORD, c.c_void_p]
 user.CreateDesktopW.restype = w.HANDLE
@@ -129,12 +140,14 @@ try:
             app.close()
     for kind, cases in [('completion', completions), ('character', characters)]:
         for scheme, extension, before, character in cases:
+            caret = len(before.partition('|')[0].encode('utf-8'))
+            before = before.replace('|', '', 1)
             path = portable / ('operation.' + extension)
             path.write_bytes(b'\xef\xbb\xbf')
             app = host.Original(path, executable, desktop, desktop_name)
             try:
                 raw = before.encode('utf-8')
-                app.reset(raw, len(raw), len(raw))
+                app.reset(raw, caret, caret)
                 app.send(4003, 0, -1)
                 if character:
                     user.SendMessageW(app.editor, 0x102, character, 0)
@@ -154,7 +167,7 @@ try:
                 operations.append([scheme, kind, raw.hex(), str(character), changed['hex'],
                                    str(changed['anchor']), str(changed['caret']), ','.join(item.hex() for item in items),
                                    confirmed['hex'], str(confirmed['anchor']), str(confirmed['caret']),
-                                   undo['hex'], redo['hex']])
+                                   undo['hex'], redo['hex'], str(caret)])
                 print(scheme, kind, repr(before), character, [item.decode() for item in items], flush=True)
             finally:
                 app.close()

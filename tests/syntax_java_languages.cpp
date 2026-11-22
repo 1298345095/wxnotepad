@@ -75,14 +75,16 @@ void Operations(EditorFrame* frame) {
     while (std::getline(input, line)) {
         if (line.empty() || line.front() == '#') continue;
         std::istringstream row(line);
-        std::array<std::string, 13> fields;
+        constexpr size_t InitialCaretColumn = 13;
+        std::array<std::string, InitialCaretColumn + 1> fields;
         for (auto& field : fields)
             std::getline(row, field, '\t');
         std::fprintf(stderr, "original operation %s %s %s\n", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
         editor->Send(AutoCCancel);
         Choose(frame, (fields[0] + " Source").c_str());
         const auto before = TestLanguages::Unhex(fields[2]);
-        const auto initialCaret = static_cast<intptr_t>(before.size());
+        const auto initialCaret = fields[InitialCaretColumn].empty() ? static_cast<intptr_t>(before.size())
+                                                                     : std::stol(fields[InitialCaretColumn]);
         TestEditor::ResetStream(editor, before.c_str(), initialCaret, initialCaret);
         Paint(frame);
         const auto character = std::stoi(fields[3]);
@@ -130,8 +132,9 @@ void Operations(EditorFrame* frame) {
         editor->Send(SetSavePoint);
         ++rows;
     }
-    Require(rows == 20, "all original language completion and brace/quote operations run");
-    std::puts("PASS: 20 independent original manual/automatic completion, generic braces and raw/escaped quote cases");
+    Require(rows == 23, "all original language completion and brace/quote operations run");
+    std::puts("PASS: 23 independent original manual/automatic/documentation completion, generic braces and raw/escaped "
+              "quote cases");
 }
 
 void Workflows(EditorFrame* frame, SettingsStore& settings) {
@@ -288,14 +291,19 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         TestRenderer::Select(frame->Editor());
         frame->Show();
-        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
+        const bool completionOnly = wxGetenv("WXNOTEPAD_JAVA_COMPLETION_ONLY") != nullptr;
+        NativeKeys::AfterPresentation(frame, [this, frame, completionOnly](bool presented) {
             try {
                 Require(presented, "owned native frame must be presented before language workflows");
-                Recognition(frame);
-                OriginalOracle(frame);
+                if (!completionOnly) {
+                    Recognition(frame);
+                    OriginalOracle(frame);
+                }
                 Operations(frame);
-                SchemeSwitches(frame);
-                Workflows(frame, *settings_);
+                if (!completionOnly) {
+                    SchemeSwitches(frame);
+                    Workflows(frame, *settings_);
+                }
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

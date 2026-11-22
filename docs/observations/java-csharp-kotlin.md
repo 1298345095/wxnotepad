@@ -29,6 +29,9 @@ The capture's process logs and provenance are retained outside Git under
 `F:/wxnotepad-evidence/original-controls-implementation-2026-11-22/255/`, under
 `original-01` and `original-02`. The final style oracle uses `original-02`;
 the original completion/typing rows were identical in both captures.
+`original-doc-03` adds three positive interior-comment completions, including
+Java/Kotlin documentation tags and C# XML documentation. It retains the
+original caret inside the comment; the earlier EOF cases remain as negatives.
 
 The six documents cover Java annotations, generics, templates and text blocks;
 C# directives, XML documentation, verbatim, interpolated and raw strings;
@@ -37,8 +40,13 @@ complete or malformed/incomplete input and four observed states: baseline,
 single-byte deletion of a text-block quote or nested-comment delimiter, Undo
 and Redo. These edits change lexical state across subsequent lines. The native application test compares every
 text byte, style byte and fold level in all 24 states. The separate operation
-oracle covers 20 manual/automatic completion, confirmation/history and typed
+oracle covers 23 manual/automatic/documentation completion, confirmation/history and typed
 brace/quote scenarios.
+
+The new menu/filter captions retain the original `Java Source`, `C# Source`
+and `Kotlin Source` titles. The shared metadata generator reads their stable
+original scheme identities (2, 3 and 68) from pinned `EditLexer.h`; they do not
+depend on the port's enum positions.
 
 The native workflow fixture also covers original secondary extensions, native
 Open/Save As filters, manual and Automatic selection, New, reload, original
