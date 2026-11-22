@@ -112,6 +112,9 @@ inline void Click(wxTreeCtrl& tree, wxTreeItemId item) {
 #endif
 }
 inline void Drag(wxTreeCtrl& tree, wxTreeItemId source, wxTreeItemId target) {
+    // Reveal the nearby drop group before measuring the source: scrolling it
+    // into view afterwards would invalidate the source's screen position.
+    tree.EnsureVisible(target);
     const auto from = Point(tree, source);
     const auto to = Point(tree, target);
 #ifdef __WXGTK__
