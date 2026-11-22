@@ -15,6 +15,8 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTOML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexYAML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCMake.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSS.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexSQL.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
@@ -122,6 +124,7 @@ add_library(app_shell STATIC
     src/settings/environment_expansion.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
+    src/app/dialogs/scheme_chooser.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
     src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp

@@ -1185,6 +1185,14 @@ void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
 
 wxMenu* EditorFrame::CreateLanguageMenu() {
     auto* languages = new wxMenu;
+    // TRANSLATORS: IDM_VIEW_SCHEME / IDM_VIEW_SCHEME_FAVORITE, before code-style options.
+    const int selectScheme = wxWindow::NewControlId();
+    languages->Append(selectScheme, _("&Syntax Scheme...\tF12"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(); }, selectScheme);
+    const int favoriteSchemes = wxWindow::NewControlId();
+    languages->Append(favoriteSchemes, _("&Favorite Schemes..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(true); }, favoriteSchemes);
+    languages->AppendSeparator();
     const int useCode = wxWindow::NewControlId();
     languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));
     Bind(
@@ -1218,29 +1226,17 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
         return id;
     };
     automaticLanguageId_ = addLanguage(languages, _("&Automatic"), std::nullopt);
-    const auto addFamily = [&addLanguage, languages](const wxString& label,
-                                                     std::initializer_list<SyntaxLanguage> members) {
+    for (const auto& group : SyntaxMenuFamilies()) {
+        const auto members = SyntaxMenuMembers(group.family);
+        if (members.empty()) continue;
         auto* family = new wxMenu;
-        for (const auto language : members)
-            addLanguage(family, "&" + LanguageName(language), language);
-        languages->AppendSubMenu(family, label);
-    };
-    using enum SyntaxLanguage;
-    // TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
-    addFamily(_("&Text File"), {PlainText});
-    // TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-    addFamily(_("&JavaScript"), {JavaScript, Jsx, TypeScript, Tsx});
-    // TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-    addFamily(_("&Web Source Code"), {Html, Jsp, Jspx, AspxCs, AspxVb, AspVb, AspJs});
-    // TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-    addFamily(_("Mark&down"), {MarkdownGitHub, MarkdownGitLab, MarkdownPandoc});
-    // TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-    addFamily(_("Shell Scri&pt"), {Bash, CShell, M4});
-    // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-    addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
+        for (const auto* definition : members)
+            addLanguage(family, "&" + wxGetTranslation(definition->name), definition->language);
+        languages->AppendSubMenu(family, wxGetTranslation(group.label));
+    }
     languages->AppendSeparator();
-    for (const auto language : {Cpp, CSharp, CMake, Go, Java, Json, Kotlin, Lua, Python, Rust, Toml, Yaml})
-        addLanguage(languages, "&" + LanguageName(language), language);
+    for (const auto* definition : SyntaxMenuMembers(SyntaxMenuFamily::Standalone))
+        addLanguage(languages, "&" + wxGetTranslation(definition->name), definition->language);
     return languages;
 }
 
@@ -1712,6 +1708,10 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F12 && !event.HasAnyModifiers()) {
+        ShowSyntaxScheme();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_ESCAPE && HandleEscapeKey(event.GetModifiers())) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {

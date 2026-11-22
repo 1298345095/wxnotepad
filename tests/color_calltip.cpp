@@ -146,7 +146,7 @@ void CapturePreview(wxWindow* popup, const char* placement) {
     });
 }
 
-void CheckPreview(EditorFrame* frame) {
+void CheckPreview(EditorFrame* frame, bool typingInteraction = true) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     auto* modes = CallTipMenu(frame);
@@ -174,6 +174,15 @@ void CheckPreview(EditorFrame* frame) {
                 popup->GetDPI().x, popup->GetDPI().y, popup->GetContentScaleFactor(), popup->GetSize().x,
                 popup->GetSize().y);
     CapturePreview(popup, "inline");
+    if (!typingInteraction) {
+#ifdef __WXMSW__
+        NativeCompletion::Key(editor, VK_ESCAPE);
+#else
+        NativeCompletion::Key(editor, GDK_KEY_Escape);
+#endif
+        Require(!VisibleCallTip(editor), "native Escape dismisses the language's color preview");
+        return;
+    }
     wxMouseEvent leave(wxEVT_LEAVE_WINDOW);
     leave.SetEventObject(editor);
     editor->GetEventHandler()->ProcessEvent(leave);
@@ -187,6 +196,9 @@ void CheckPreview(EditorFrame* frame) {
     letter.SetEventObject(editor);
     letter.m_uniChar = 'q';
     editor->GetEventHandler()->ProcessEvent(letter);
+    if (!VisibleCallTip(editor) || NativeSearch::Text(editor) != "qpre #aB3 and")
+        std::fprintf(stderr, "color typing: lexer=%zd visible=%d text=[%s]\n", editor->Send(GetLexer),
+                     VisibleCallTip(editor) != nullptr, NativeSearch::Text(editor).c_str());
     Require(VisibleCallTip(editor) && NativeSearch::Text(editor) == "qpre #aB3 and",
             "ordinary typing changes the document and retains the existing CallTip");
     NativeSearch::Command(frame, modes->FindItem("Off"));
@@ -519,6 +531,13 @@ public:
                 CheckModes(frame);
                 CheckPreview(frame);
                 CheckEdits(frame);
+                for (const auto* language :
+                     {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet", "SQL Query"}) {
+                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
+                    CheckPreview(frame, false);
+                    CheckEdits(frame);
+                }
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
                 CheckCompletionPriority(frame);
 #ifdef __WXMSW__
                 CheckImePriority(frame);

@@ -6,6 +6,7 @@
 #include <span>
 #include <string_view>
 #include <optional>
+#include <limits>
 #include <vector>
 
 enum class SyntaxLanguage : uint8_t {
@@ -42,6 +43,11 @@ enum class SyntaxLanguage : uint8_t {
     MarkdownGitHub,
     MarkdownGitLab,
     MarkdownPandoc,
+    Css,
+    Scss,
+    Less,
+    Hss,
+    Sql,
     Java,
     CSharp,
     Kotlin,
@@ -131,6 +137,16 @@ struct SyntaxComments {
     const char* open;
     const char* close;
 };
+enum class SyntaxMenuFamily : uint8_t { Standalone, TextFile, Css, JavaScript, Html, Markdown, Shell, Xml };
+struct SyntaxMenuPlacement {
+    SyntaxMenuFamily family = SyntaxMenuFamily::Standalone;
+    // Original menu order within the family, independent of enum/settings IDs.
+    unsigned order = std::numeric_limits<unsigned>::max();
+};
+struct SyntaxMenuGroup {
+    SyntaxMenuFamily family;
+    const char* label;
+};
 struct SyntaxDefinition {
     const char* name;
     std::span<const char* const> extensions;
@@ -148,9 +164,12 @@ struct SyntaxDefinition {
     bool encodingHeader = false;
     const char* scriptInterpreter = nullptr;
     SyntaxOriginalMetadata original;
+    SyntaxMenuPlacement menu;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();
+std::span<const SyntaxMenuGroup> SyntaxMenuFamilies();
+std::vector<const SyntaxDefinition*> SyntaxMenuMembers(SyntaxMenuFamily family);
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
 SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language);
 const char* SyntaxSettingsSection(SyntaxLanguage language);
@@ -160,6 +179,7 @@ inline constexpr size_t FavoriteCount = 31;
 inline constexpr size_t FavoriteConfigCharacters = 127;
 } // namespace SyntaxSchemeLimits
 std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
+std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration);
 SyntaxLanguage LanguageForPath(const wxString& path);
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,

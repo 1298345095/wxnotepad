@@ -178,6 +178,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const int wrapSymbols = std::clamp(ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
     values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
     values.autoSelect = ReadBool("AutoSelect", defaults.autoSelect, "Styles");
+    values.defaultScheme = ReadInt("DefaultScheme", defaults.defaultScheme, "Styles");
+    values.favoriteSchemes = ReadString("FavoriteSchemes", {}, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
     values.noHtmlGuess = ReadBool("NoHTMLGuess", defaults.noHtmlGuess, "Settings2");
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
@@ -554,6 +556,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
         WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
         WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");
+        WriteInt("DefaultScheme", values.defaultScheme, defaults.defaultScheme, "Styles");
+        WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
         WriteInt("DefaultEncoding", values.encoding.defaultEncoding, defaults.encoding.defaultEncoding);
         WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, defaults.encoding.skipUnicodeDetection);
         WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, defaults.encoding.loadANSIasUTF8);

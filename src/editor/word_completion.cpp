@@ -395,8 +395,10 @@ class Collector final {
 
     AddWordResult AddCssSpecialWord(CompletionCandidates& words, int currentStyle, int previousStyle, int ch,
                                     int previous) {
-        currentStyle -= css_style(SCE_CSS_DEFAULT);
-        previousStyle -= css_style(SCE_CSS_DEFAULT);
+        if (definition_.lexer == SCLEX_HTML) {
+            currentStyle -= css_style(SCE_CSS_DEFAULT);
+            previousStyle -= css_style(SCE_CSS_DEFAULT);
+        }
         if (ch == '@' && currentStyle == SCE_CSS_DEFAULT) {
             words.AddKeywords(cssKeywords[1]);
             return AddWordResult_IgnoreLexer;
@@ -536,8 +538,9 @@ class Collector final {
                                     int previous) {
         if ((ch == '\\' || (previous == '\\' && (ch == '^' || ch == ':'))) && settings_.latexInputMethod)
             words.AddKeywords(ch == ':' ? EmojiInputSequenceString : LaTeXInputSequenceString);
-        if (definition_.lexer == SCLEX_HTML && currentStyle >= css_style(SCE_CSS_DEFAULT) &&
-            currentStyle < SCE_PHP_DEFAULT)
+        if (definition_.lexer == SCLEX_CSS ||
+            (definition_.lexer == SCLEX_HTML && currentStyle >= css_style(SCE_CSS_DEFAULT) &&
+             currentStyle < SCE_PHP_DEFAULT))
             return AddCssSpecialWord(words, currentStyle, previousStyle, ch, previous);
         if (definition_.lexer == SCLEX_HTML && currentStyle >= js_style(SCE_JS_DEFAULT) &&
             currentStyle < css_style(SCE_CSS_DEFAULT))

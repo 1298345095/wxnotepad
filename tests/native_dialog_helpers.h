@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <iterator>
+#include <vector>
 #ifdef __WXMSW__
 #include <windows.h>
 #include <commctrl.h>
@@ -38,6 +39,32 @@ inline bool PathEquals(const wxString& actual, const wxString& expected) {
     return false;
 }
 #ifdef __WXMSW__
+inline std::vector<wxString> FileTypes(HWND window) {
+    std::vector<wxString> result;
+    EnumChildWindows(
+        window,
+        [](HWND child, LPARAM data) -> BOOL {
+            wchar_t type[64]{};
+            GetClassNameW(child, type, static_cast<int>(std::size(type)));
+            if (!IsWindowVisible(child) || wxString(type) != "ComboBox") return TRUE;
+            const auto count = SendMessageW(child, CB_GETCOUNT, 0, 0);
+            if (count <= 0) return TRUE;
+            std::vector<wxString> choices;
+            for (LRESULT index = 0; index < count; ++index) {
+                const auto length = SendMessageW(child, CB_GETLBTEXTLEN, static_cast<WPARAM>(index), 0);
+                if (length < 0) return TRUE;
+                std::vector<wchar_t> label(static_cast<size_t>(length) + 1);
+                SendMessageW(child, CB_GETLBTEXT, static_cast<WPARAM>(index), reinterpret_cast<LPARAM>(label.data()));
+                const wxString value(label.data());
+                if (!value.Contains(" (")) return TRUE;
+                choices.push_back(value);
+            }
+            *reinterpret_cast<std::vector<wxString>*>(data) = std::move(choices);
+            return FALSE;
+        },
+        reinterpret_cast<LPARAM>(&result));
+    return result;
+}
 inline wxString CurrentFileType(HWND window) {
     wxString type;
     EnumChildWindows(
@@ -125,6 +152,14 @@ inline void ChooseFile(HWND window, const wxString& destination) {
     }
 }
 #elif defined(__WXGTK__)
+inline std::vector<wxString> FileTypes(GtkWidget* widget) {
+    std::vector<wxString> result;
+    GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
+    for (auto* item = filters; item; item = item->next)
+        result.push_back(wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(item->data))));
+    g_slist_free(filters);
+    return result;
+}
 inline wxString CurrentFileType(GtkWidget* widget) {
     auto* filter = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
     return filter ? wxString::FromUTF8(gtk_file_filter_get_name(filter)) : wxString{};
