@@ -3594,6 +3594,10 @@ msgstr "m4"
 #~ msgid "&Expand All"
 #~ msgstr "全部展開(&E)"
 
+# Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
+#~ msgid "All files (*.*)"
+#~ msgstr "所有檔案 (*.*)"
+
 #~ msgid "CSS"
 #~ msgstr "CSS"
 
@@ -3608,10 +3612,6 @@ msgstr "m4"
 
 #~ msgid "SQL"
 #~ msgstr "SQL"
-
-# Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
-#~ msgid "All files (*.*)"
-#~ msgstr "所有檔案 (*.*)"
 
 #~ msgid "Text files (*.txt)"
 #~ msgstr "文字檔案 (*.txt)"

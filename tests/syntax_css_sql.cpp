@@ -9,6 +9,10 @@
 #include <array>
 #include <cstdio>
 #include <memory>
+#include <exception>
+#include <utility>
+#include <wx/timer.h>
+#include <wx/treectrl.h>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -126,6 +130,52 @@ void DialectWorkflows(EditorFrame* frame, SettingsStore& settings) {
             "CSS settings survive configuration reload");
     editor->Send(Message::SetSavePoint);
     std::puts("PASS: original dialect switching, comments/history, indentation identity, naming and exact disk bytes");
+}
+class SchemePicker final : public wxTimer {
+public:
+    explicit SchemePicker(const char* label) : label_(label) { Start(DialogPollMilliseconds); }
+    int shown = 0;
+    std::exception_ptr failure;
+    void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Select Scheme") continue;
+            Stop();
+            ++shown;
+            try {
+                auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Syntax schemes", dialog), wxTreeCtrl);
+                Require(tree && NativeDialogs::SelectTreeLabel(*tree, wxString::FromUTF8(label_)),
+                        "original CSS/SQL base title must exist in the real scheme chooser");
+                NativeSearch::Click(dialog, wxID_OK);
+            } catch (...) {
+                failure = std::current_exception();
+                dialog->EndModal(wxID_CANCEL);
+            }
+        }
+    }
+
+private:
+    static constexpr int DialogPollMilliseconds = 40;
+    const char* label_;
+};
+void ChooserWorkflows(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const auto before = TestEditor::Text(editor);
+    const auto undo = editor->Send(Message::CanUndo);
+    for (const auto& [title, lexer] : {std::pair{"SQL Query", SCLEX_SQL}, std::pair{"CSS Style Sheet", SCLEX_CSS}}) {
+        SchemePicker picker(title);
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Syntax Scheme..."));
+        picker.Stop();
+        if (picker.failure) std::rethrow_exception(picker.failure);
+        Require(picker.shown == 1 && editor->Send(Message::GetLexer) == lexer,
+                "real scheme chooser must install original CSS/SQL base lexer");
+        Require(TestEditor::Text(editor) == before && editor->Send(Message::CanUndo) == undo,
+                "scheme chooser selection preserves document bytes and pending history");
+    }
+    NativePaint::Complete(editor);
+    Require(editor->Send(Message::GetStyleIndexAt, before.find("$tone")) == SCE_CSS_OPERATOR,
+            "choosing CSS after SQL restores the original standard CSS dialect");
+    std::puts("PASS: real scheme chooser selects original CSS and SQL identities without changing bytes/history");
 }
 std::string CurrentCandidate(EditorControl* editor) {
     const auto length = editor->Send(Message::AutoCGetCurrentText);
@@ -288,6 +338,7 @@ public:
                 FileRecognition(frame);
                 OriginalOracle(frame);
                 DialectWorkflows(frame, *settings_);
+                ChooserWorkflows(frame);
                 OriginalCompletions(frame);
                 OriginalTyping(frame);
                 TestLanguages::NativeFiles(frame, schemes);
