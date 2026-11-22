@@ -143,6 +143,9 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.showToolbar = ReadBool("ShowToolbar", defaults.showToolbar);
     values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
     values.fullScreenMode = ReadInt("FullScreenMode", defaults.fullScreenMode);
+    values.pathNameFormat = static_cast<TitlePathNameFormat>(std::clamp(
+        ReadInt("PathNameFormat", std::to_underlying(defaults.pathNameFormat)),
+        std::to_underlying(TitlePathNameFormat::NameOnly), std::to_underlying(TitlePathNameFormat::FullPath)));
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.wordWrapMode =
         std::clamp(ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
@@ -523,6 +526,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
         WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
         WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
+        WriteInt("PathNameFormat", std::to_underlying(values.pathNameFormat),
+                 std::to_underlying(defaults.pathNameFormat));
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
         WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),

@@ -139,14 +139,14 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
-    Order(bar->GetMenu(5),
-          {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
-           "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
-           "Appearance", "File Change Notification...", "AutoSave Settings...", "Other Settings",
+    Order(bar->GetMenu(5), {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...",
+                            "Long Line Settings...", "Auto Completion Settings...", "Auto Completion Ignore Case",
+                            "Auto Indent", "Select and Edit Options", "Appearance", "Window Title Display",
+                            "File Change Notification...", "AutoSave Settings...", "Other Settings",
 #ifdef __WXMSW__
-           "Advanced Settings",
+                            "Advanced Settings",
 #endif
-           "Save Settings On Exit", "Save Settings Now"});
+                            "Save Settings On Exit", "Save Settings Now"});
     Groups(bar->GetMenu(5), {"Insert Tabs as Spaces", "Appearance", "File Change Notification...",
 #ifdef __WXMSW__
                              "Advanced Settings"});
@@ -154,6 +154,8 @@ void CheckMenu(EditorFrame* frame) {
                              "Save Settings On Exit"});
 #endif
     auto* appearance = Submenu(bar->GetMenu(5), "Appearance");
+    Order(Submenu(bar->GetMenu(5), "Window Title Display"),
+          {"File Name Only", "File Name and Directory", "Full Path Name", "Text Excerpt"});
     Order(appearance, {"Show Menu", "Show Toolbar", "Show Statusbar", "Full Screen Mode", "Scroll Past Last Line",
                        "Auto-Shrink Horizontal Scrollbar", "Language"});
     Groups(appearance, {"Show Menu", "Full Screen Mode", "Language"});

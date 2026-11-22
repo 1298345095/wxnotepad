@@ -28,6 +28,7 @@ add_library(editor_runtime STATIC
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/character_information.cpp
+    src/editor/title_excerpt.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp

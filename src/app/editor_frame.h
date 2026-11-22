@@ -101,6 +101,7 @@ private:
     void RecordRecentFile();
     int revertId_;
     wxString lastSaveCopyDirectory_;
+    wxString titleExcerpt_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;
@@ -162,6 +163,7 @@ private:
     void AppendCompletionOptions(wxMenu* view);
     void AppendSelectionOptions(wxMenu* view);
     void AppendAppearanceOptions(wxMenu* view);
+    void AppendWindowTitleOptions(wxMenu* settings);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
     void AppendCallTipCommands(wxMenu* view);
