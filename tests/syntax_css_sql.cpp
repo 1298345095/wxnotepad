@@ -220,7 +220,13 @@ void OriginalTyping(EditorFrame* frame) {
         const int character = std::stoi(characterText);
         std::fprintf(stderr, "typing fixture=%s character=%d\n", name.c_str(), character);
 #ifdef __WXMSW__
-        SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_CHAR, character, 0);
+        // wxMSW suppresses WM_CHAR after a handled keydown (for example the
+        // preceding completion Enter). Deliver the complete next native key.
+        const auto handle = static_cast<HWND>(editor->GetHandle());
+        const auto virtualKey = LOBYTE(VkKeyScanW(static_cast<wchar_t>(character)));
+        SendMessageW(handle, WM_KEYDOWN, virtualKey, 0);
+        SendMessageW(handle, WM_CHAR, character, 0);
+        SendMessageW(handle, WM_KEYUP, virtualKey, 0);
 #else
         if (character == '(')
             NativeKeys::Shortcut(frame, '9', false, false, true);
