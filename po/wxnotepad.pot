@@ -88,7 +88,7 @@ msgid_plural "%zu replacements"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Add →"
 msgstr ""
 
@@ -117,7 +117,7 @@ msgstr ""
 msgid "&Automatic"
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Available toolbar buttons:"
 msgstr ""
 
@@ -196,7 +196,7 @@ msgstr ""
 msgid "&Current Block\tAlt+C"
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Current toolbar buttons:"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr ""
 msgid "&Replace"
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Reset"
 msgstr ""
 
@@ -1307,7 +1307,7 @@ msgstr ""
 msgid "Customi&ze Toolbar..."
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Customize Toolbar"
 msgstr ""
 
@@ -1924,7 +1924,7 @@ msgstr ""
 msgid "Modify Lines"
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Move &Down"
 msgstr ""
 
@@ -1932,7 +1932,7 @@ msgstr ""
 msgid "Move &Down\tAlt+Down"
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Move &Up"
 msgstr ""
 
@@ -3176,6 +3176,6 @@ msgstr ""
 msgid "m4"
 msgstr ""
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "← &Remove"
 msgstr ""

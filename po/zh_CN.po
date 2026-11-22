@@ -91,7 +91,7 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "%zu 处替换"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Add →"
 msgstr "添加(&A) →"
 
@@ -123,7 +123,7 @@ msgstr "自动重新加载(如未修改)(&A)。"
 msgid "&Automatic"
 msgstr "自动(&A)"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Available toolbar buttons:"
 msgstr "可用工具栏按钮(&A)："
 
@@ -211,7 +211,7 @@ msgstr "复制行(&C)\tCtrl+Shift+C"
 msgid "&Current Block\tAlt+C"
 msgstr "当前块(&C)\tAlt+C"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Current toolbar buttons:"
 msgstr "当前工具栏按钮(&C)："
 
@@ -559,7 +559,7 @@ msgstr "移除重复行(&R)。"
 msgid "&Replace"
 msgstr "替换(&R)"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Reset"
 msgstr "重置(&R)"
 
@@ -1403,7 +1403,7 @@ msgstr "当前屏幕颜色（所见即所得）"
 msgid "Customi&ze Toolbar..."
 msgstr "自定义工具栏(&Z)..."
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Customize Toolbar"
 msgstr "自定义工具栏"
 
@@ -2058,7 +2058,7 @@ msgstr "单词最小长度"
 msgid "Modify Lines"
 msgstr "行修改"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Move &Down"
 msgstr "下移(&D)"
 
@@ -2067,7 +2067,7 @@ msgstr "下移(&D)"
 msgid "Move &Down\tAlt+Down"
 msgstr "下移(&V)\tAlt+Down"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Move &Up"
 msgstr "上移(&U)"
 
@@ -3387,7 +3387,7 @@ msgstr "缩放级别 (%d%% 到 %d%%):"
 msgid "m4"
 msgstr "m4"
 
-#: src/app/editor_frame_toolbar.cpp
+#: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "← &Remove"
 msgstr "← 移除(&R)"
 

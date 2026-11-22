@@ -4,6 +4,7 @@
 #include <wx/frame.h>
 #include <array>
 #include <memory>
+#include <vector>
 #include "document/document_session.h"
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
@@ -125,7 +126,6 @@ private:
     void CreateMenus();
     void CreateDefaultToolbar();
     void AppendToolbarCommands(wxMenu* appearance);
-    void UpdateToolbarSize();
     void RebuildToolbar();
     void CustomizeToolbar();
     std::vector<int> toolbarButtons_;
