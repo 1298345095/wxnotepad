@@ -19,6 +19,19 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw TestEditor::Failure(message);
 }
+void AwaitNativeSize(wxDialog& dialog) {
+    // GTK delivers the window manager's resize acknowledgement asynchronously.
+    // Observe the fitted height before starting the next Find/Replace switch.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    const auto requested = dialog.GetSize();
+    while (dialog.GetSize().y != dialog.GetMinSize().y && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(1);
+    }
+    if (requested != dialog.GetSize())
+        std::cout << "Native size acknowledgement: " << requested.x << ',' << requested.y << " -> "
+                  << dialog.GetSize().x << ',' << dialog.GetSize().y << '\n';
+}
 void ReplacementLayout(EditorFrame* frame) {
     int retainedWidth = 0;
     for (int command : {wxID_FIND, wxID_REPLACE, wxID_FIND, wxID_REPLACE}) {
@@ -37,6 +50,7 @@ void ReplacementLayout(EditorFrame* frame) {
         Require(input->IsShown() == replace && label->IsShown() == replace,
                 "replacement controls follow the current Find/Replace mode");
         Require((dialog->GetWindowStyleFlag() & wxRESIZE_BORDER) != 0, "Find and Replace have a native sizing border");
+        AwaitNativeSize(*dialog);
         const auto minimum = dialog->GetMinSize();
         Require(dialog->GetMaxSize().y == minimum.y && dialog->GetSize().y == minimum.y && dialog->GetMaxSize().x == -1,
                 "search dialogs allow horizontal dragging and lock their fitted height");

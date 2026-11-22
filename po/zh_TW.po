@@ -1689,6 +1689,10 @@ msgstr "符合 %s%s"
 msgid "Footer:"
 msgstr "頁尾："
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "For wrapped line"
+msgstr "換行的文字"
+
 # Original Notepad4 zh-Hant: CMD_COPYPATHNAME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"

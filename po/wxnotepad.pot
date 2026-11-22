@@ -1472,6 +1472,10 @@ msgstr ""
 msgid "Footer:"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "For wrapped line"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
 msgstr ""

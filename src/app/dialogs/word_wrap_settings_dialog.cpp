@@ -6,6 +6,7 @@
 #include <wx/choice.h>
 #include <wx/dialog.h>
 #include <wx/sizer.h>
+#include <wx/statbox.h>
 #include <wx/stattext.h>
 #include <wx/translation.h>
 
@@ -41,14 +42,16 @@ bool ShowWordWrapSettingsDialog(wxWindow* parent, OriginalSettings& settings) {
         choice(_("Wrap &mode:"), "Wrap mode",
                {_("No Wrap"), _("Word"), _("Character"), _("Whitespace"), _("Automatic")}, settings.wordWrapMode);
     layout->Add(fields, 0, wxEXPAND | wxALL, dialog.FromDIP(12));
-    auto* select = new wxCheckBox(&dialog, wxID_ANY, _("Margin click selects visual &subline"));
+    auto* wrapped = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("For wrapped line"));
+    auto* select = new wxCheckBox(wrapped->GetStaticBox(), wxID_ANY, _("Margin click selects visual &subline"));
     select->SetName("Wrap select subline");
     select->SetValue(settings.wordWrapSelectSubLine);
-    layout->Add(select, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(12));
-    auto* highlight = new wxCheckBox(&dialog, wxID_ANY, _("&Highlight current subline"));
+    wrapped->Add(select, 0, wxALL, dialog.FromDIP(DialogLayout::GapDip));
+    auto* highlight = new wxCheckBox(wrapped->GetStaticBox(), wxID_ANY, _("&Highlight current subline"));
     highlight->SetName("Wrap highlight subline");
     highlight->SetValue(settings.highlightCurrentLine >= 10);
-    layout->Add(highlight, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(12));
+    wrapped->Add(highlight, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogLayout::GapDip));
+    layout->Add(wrapped, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(12));
     layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(12));
     DialogLayout::Fit(dialog, layout);
     dialog.CentreOnParent();

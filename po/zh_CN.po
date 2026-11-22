@@ -1579,6 +1579,10 @@ msgstr "匹配 %s%s"
 msgid "Footer:"
 msgstr "页脚："
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "For wrapped line"
+msgstr "对换行的文本"
+
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
