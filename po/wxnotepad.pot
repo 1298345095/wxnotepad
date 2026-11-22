@@ -1554,6 +1554,10 @@ msgstr ""
 msgid "Header:"
 msgstr ""
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Headers and Footers"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr ""
@@ -2034,6 +2038,10 @@ msgstr ""
 msgid "Pandoc"
 msgstr ""
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Paper"
+msgstr ""
+
 #. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Paper and &Orientation..."
@@ -2048,9 +2056,17 @@ msgstr ""
 msgid "Plain Text"
 msgstr ""
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Preview"
+msgstr ""
+
 #. TRANSLATORS: Title of the print failure message.
 #: src/app/editor_print_job.cpp
 msgid "Print"
+msgstr ""
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print Colors"
 msgstr ""
 
 #. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
@@ -3037,6 +3053,10 @@ msgstr ""
 
 #: src/editor/special_insert.h
 msgid "ZWSP — &Zero width space"
+msgstr ""
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Zoom"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp

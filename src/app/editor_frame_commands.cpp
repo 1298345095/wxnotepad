@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
 #include "app/editor_print_job.h"
@@ -57,9 +58,11 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     auto* input = CreateZoomInput(&dialog, static_cast<int>(editor.Send(Message::GetZoom)));
     input->SetName("Zoom level");
     AppLocalization::SetAccessibleName(*input, _("Zoom level"));
-    contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
-                  dialog.FromDIP(10));
+    auto* zoomRow = new wxBoxSizer(wxHORIZONTAL);
+    zoomRow->Add(input, 1, wxRIGHT, dialog.FromDIP(10));
+    zoomRow->Add(new wxButton(&dialog, wxID_APPLY));
+    contents->Add(zoomRow, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     const auto apply = [input, &editor, &dialog](wxCommandEvent& event) {
         if (const auto level = ReadZoomLevel(*input)) editor.Send(Message::SetZoom, *level);
         // As in the original, invalid OK closes without changing zoom; Apply
@@ -68,7 +71,7 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     };
     dialog.Bind(wxEVT_BUTTON, apply, wxID_OK);
     dialog.Bind(wxEVT_BUTTON, apply, wxID_APPLY);
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, contents);
     input->SetSelection(-1, -1);
     input->SetFocus();
     dialog.CentreOnParent();
@@ -2140,7 +2143,7 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
             information->SetName("Character information");
             contents->Add(information, 0, wxALL, dialog.FromDIP(12));
             contents->Add(dialog.CreateSeparatedButtonSizer(wxOK), 0, wxEXPAND | wxALL, dialog.FromDIP(8));
-            dialog.SetSizerAndFit(contents);
+            DialogLayout::Fit(dialog, contents);
             dialog.CentreOnParent();
             dialog.ShowModal();
         },

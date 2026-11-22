@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/desktop_launch.h"
 #include "app/native_launch.h"
 #include "settings/settings_store.h"
@@ -53,18 +54,18 @@ public:
         auto* layout = new wxBoxSizer(wxVERTICAL);
         path_ = new wxTextCtrl(this, wxID_ANY, directory_, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
         path_->SetName("open-with-directory");
-        layout->Add(path_, 0, wxEXPAND | wxALL, FromDIP(8));
-        programs_ = new wxListBox(this, wxID_ANY);
+        programs_ = new wxListBox(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(360, 225)));
         programs_->SetName("open-with-programs");
-        layout->Add(programs_, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(8));
+        layout->Add(programs_, 1, wxEXPAND | wxALL, FromDIP(8));
         // TRANSLATORS: IDD_OPENWITH button selecting the directory containing available programs.
         auto* browse = new wxButton(this, wxID_ANY, _("&Browse Directory..."));
         browse->SetName("open-with-browse");
-        layout->Add(browse, 0, wxALL, FromDIP(8));
+        auto* directoryRow = new wxBoxSizer(wxHORIZONTAL);
+        directoryRow->Add(browse, 0, wxRIGHT, FromDIP(8));
+        directoryRow->Add(path_, 1, wxALIGN_CENTER_VERTICAL);
+        layout->Add(directoryRow, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(8));
         layout->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(8));
-        SetSizer(layout);
-        SetMinSize(FromDIP(wxSize(360, 300)));
-        SetSize(FromDIP(wxSize(480, 380)));
+        DialogLayout::Fit(*this, layout, DialogLayout::Resize::Both);
         Fill();
         browse->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
             // TRANSLATORS: IDD_OPENWITH directory browser title.

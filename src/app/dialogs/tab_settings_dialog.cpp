@@ -1,4 +1,5 @@
 #include "app/dialogs/tab_settings_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include <utility>
 #include "app/localization.h"
 #include <wx/translation.h>
@@ -27,7 +28,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
                            IndentationSettings& indentation) {
     wxDialog dialog(parent, wxID_ANY, _("Tab Settings"));
     auto* layout = new wxBoxSizer(wxVERTICAL);
-    auto* groups = new wxBoxSizer(wxHORIZONTAL);
+    auto* groups = new wxBoxSizer(wxVERTICAL);
     const auto addGroup = [groups, &dialog](const char* name, const OriginalTabs& value, wxCheckBox** inherit,
                                             const wxString& inheritLabel) {
         const auto label = wxGetTranslation(name);
@@ -44,16 +45,21 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
         auto* spaces = new wxCheckBox(owner, wxID_ANY, _("Tabs as Spaces"));
         spaces->SetName(wxString(name) + " Tabs as Spaces");
         AppLocalization::SetAccessibleName(*spaces, wxString::Format(_("%s tabs as spaces"), label));
-        box->Add(new wxStaticText(owner, wxID_ANY, _("Tab Width (1–256):")), 0, wxALL, 4);
-        box->Add(tab, 0, wxEXPAND | wxALL, 4);
-        box->Add(new wxStaticText(owner, wxID_ANY, _("Indentation Width (0–256):")), 0, wxALL, 4);
-        box->Add(indent, 0, wxEXPAND | wxALL, 4);
-        box->Add(spaces, 0, wxALL, 4);
+        const int gap = dialog.FromDIP(DialogLayout::GapDip);
+        auto* fields = new wxFlexGridSizer(3, gap, gap);
+        fields->Add(new wxStaticText(owner, wxID_ANY, _("Tab Width (1–256):")), 0, wxALIGN_CENTER_VERTICAL);
+        fields->Add(tab, 0, wxEXPAND);
+        fields->Add(spaces, 0, wxALIGN_CENTER_VERTICAL);
+        fields->Add(new wxStaticText(owner, wxID_ANY, _("Indentation Width (0–256):")), 0, wxALIGN_CENTER_VERTICAL);
+        fields->Add(indent, 0, wxEXPAND);
         if (inherit) {
             *inherit = new wxCheckBox(owner, wxID_ANY, inheritLabel);
-            box->Add(*inherit, 0, wxALL, 4);
+            fields->Add(*inherit, 0, wxALIGN_CENTER_VERTICAL);
+        } else {
+            fields->AddSpacer(0);
         }
-        groups->Add(box, 1, wxEXPAND | wxALL, 5);
+        box->Add(fields, 0, wxEXPAND | wxALL, gap);
+        groups->Add(box, 0, wxEXPAND | wxALL, gap);
         TabControls controls{tab, indent, spaces};
         controls.Set(value, true);
         return controls;
@@ -102,7 +108,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     for (auto* control : {tabIndents, backspace, smart, detect})
         layout->Add(control, 0, wxALL, 5);
     layout->Add(dialog.CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, 5);
-    dialog.SetSizerAndFit(layout);
+    DialogLayout::Fit(dialog, layout);
     if (dialog.ShowModal() != wxID_OK) return false;
     preferences.globalTabs = global.Read();
     scheme = schemeControls.Read();

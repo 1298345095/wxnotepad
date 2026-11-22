@@ -1,4 +1,5 @@
 #include "app/dialogs/enclose_selection_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/win_edit_input.h"
 #include <wx/translation.h>
 #include "editor/editor_control.h"
@@ -16,8 +17,7 @@ void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxStrin
         AddWinEditInput(dialog, *contents, _("Insert &before selection:"), "Insert before selection", before);
     auto* suffix = AddWinEditInput(dialog, *contents, _("Insert &after selection:"), "Insert after selection", after);
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
-    dialog.SetMinSize(dialog.GetSize());
+    DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Both);
     prefix->SetFocus();
     dialog.CentreOnParent();
     dialog.Bind(

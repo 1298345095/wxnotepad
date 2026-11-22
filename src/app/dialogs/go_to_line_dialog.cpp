@@ -1,4 +1,5 @@
 #include "app/dialogs/go_to_line_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include <wx/translation.h>
 #include "editor/editor_control.h"
@@ -37,8 +38,7 @@ void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
     AppLocalization::SetAccessibleName(*column, _("Column"));
     column->SetMaxLength(20);
     contents->Add(column, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, DialogLayout::WithSideButtons(dialog, contents));
     dialog.Bind(
         wxEVT_BUTTON,
         [input, column, &editor, &dialog](wxCommandEvent&) {

@@ -1,4 +1,5 @@
 #include "app/dialogs/word_wrap_settings_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include "settings/original_settings.h"
 #include <wx/checkbox.h>
@@ -24,9 +25,6 @@ bool ShowWordWrapSettingsDialog(wxWindow* parent, OriginalSettings& settings) {
         fields->Add(control, 1, wxEXPAND);
         return control;
     };
-    auto* mode =
-        choice(_("Wrap &mode:"), "Wrap mode",
-               {_("No Wrap"), _("Word"), _("Character"), _("Whitespace"), _("Automatic")}, settings.wordWrapMode);
     auto* indent =
         choice(_("Continuation &indent:"), "Wrap indent",
                {_("No wrap indent"), _("Wrap indent by 1 character"), _("Wrap indent by 2 characters"),
@@ -39,6 +37,9 @@ bool ShowWordWrapSettingsDialog(wxWindow* parent, OriginalSettings& settings) {
     auto* after = choice(_("Symbol &after wrap:"), "Wrap symbol after",
                          {_("None"), _("Near text"), _("Near borders"), _("In line number margin")},
                          settings.showWordWrapSymbols ? settings.wordWrapSymbols / 10 : 0);
+    auto* mode =
+        choice(_("Wrap &mode:"), "Wrap mode",
+               {_("No Wrap"), _("Word"), _("Character"), _("Whitespace"), _("Automatic")}, settings.wordWrapMode);
     layout->Add(fields, 0, wxEXPAND | wxALL, dialog.FromDIP(12));
     auto* select = new wxCheckBox(&dialog, wxID_ANY, _("Margin click selects visual &subline"));
     select->SetName("Wrap select subline");
@@ -49,7 +50,7 @@ bool ShowWordWrapSettingsDialog(wxWindow* parent, OriginalSettings& settings) {
     highlight->SetValue(settings.highlightCurrentLine >= 10);
     layout->Add(highlight, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(12));
     layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(12));
-    dialog.SetSizerAndFit(layout);
+    DialogLayout::Fit(dialog, layout);
     dialog.CentreOnParent();
     if (dialog.ShowModal() != wxID_OK) return false;
     settings.wordWrapIndent = static_cast<WrapContinuationIndent>(indent->GetSelection());

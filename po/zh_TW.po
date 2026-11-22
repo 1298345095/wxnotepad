@@ -1786,6 +1786,10 @@ msgstr "依檔案類型分組(&T)。"
 msgid "Header:"
 msgstr "頁首："
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Headers and Footers"
+msgstr "頁首和頁尾"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_HEX2CHAR; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
@@ -2313,6 +2317,10 @@ msgstr "頁面設定"
 msgid "Pandoc"
 msgstr "Pandoc"
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Paper"
+msgstr "紙張"
+
 #. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Paper and &Orientation..."
@@ -2327,10 +2335,18 @@ msgstr "圓括號 ()"
 msgid "Plain Text"
 msgstr "純文字"
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Preview"
+msgstr "預覽"
+
 #. TRANSLATORS: Title of the print failure message.
 #: src/app/editor_print_job.cpp
 msgid "Print"
 msgstr "列印"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print Colors"
+msgstr "列印色彩"
 
 #. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -3429,6 +3445,10 @@ msgstr "ZWNJ — 零寬不連接符號(&N)"
 #: src/editor/special_insert.h
 msgid "ZWSP — &Zero width space"
 msgstr "ZWSP — 零寬空白(&Z)"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Zoom"
+msgstr "縮放"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_ZOOMIN; adapted where needed.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp

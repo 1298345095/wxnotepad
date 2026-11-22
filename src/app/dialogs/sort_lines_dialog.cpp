@@ -1,4 +1,5 @@
 #include "app/dialogs/sort_lines_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include <wx/translation.h>
 #include "editor/sort_lines.h"
 #include <wx/checkbox.h>
@@ -54,8 +55,7 @@ bool ShowSortLinesDialog(wxWindow* parent, unsigned& options, bool rectangular) 
     for (auto* radio : radios)
         radio->Bind(wxEVT_RADIOBUTTON, [updateMode](wxCommandEvent&) { updateMode(); });
     boxes[1]->Bind(wxEVT_CHECKBOX, [boxes](wxCommandEvent&) { boxes[0]->Enable(!boxes[1]->GetValue()); });
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, DialogLayout::WithSideButtons(dialog, contents));
     dialog.CentreOnParent();
     radios[selected]->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return false;
