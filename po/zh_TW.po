@@ -191,7 +191,7 @@ msgid "&Browse..."
 msgstr "瀏覽(&B)..."
 
 #. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
-#: src/app/editor_frame_commands.cpp
+#: src/syntax/syntax_catalog.cpp
 msgid "&CSS Style Sheet"
 msgstr "CSS 樣式表(&H)"
 
@@ -396,8 +396,8 @@ msgstr "醒目提示目前子行(&H)"
 msgid "&Indent"
 msgstr "增加縮排(&I)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/JavaScript family, including TypeScript and JSX/TSX.
+#: src/syntax/syntax_catalog.cpp
 msgid "&JavaScript"
 msgstr "&JavaScript"
 
@@ -733,8 +733,8 @@ msgstr "Tab 設定(&T)..."
 msgid "&Text Excerpt"
 msgstr "選取的文字(&T)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Text File family.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Text File"
 msgstr "文字檔案(&T)"
 
@@ -798,8 +798,8 @@ msgstr "檢視(&V)"
 msgid "&Visual Studio"
 msgstr "&Visual Studio"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Web Source Code family, including HTML, JSP and ASP.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Web Source Code"
 msgstr "網頁原始碼(&W)"
 
@@ -828,8 +828,8 @@ msgstr "自動換行(&R)\tCtrl+Shift+W"
 msgid "&Wrap around"
 msgstr "循環搜尋(&D)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/XML Document family and document dialects.
+#: src/syntax/syntax_catalog.cpp
 msgid "&XML Document"
 msgstr "XML 文件(&X)"
 
@@ -2150,8 +2150,8 @@ msgstr "邊界（公釐）"
 msgid "Mark &Occurrences"
 msgstr "標記出現位置(&O)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Markdown family and dialect order.
+#: src/syntax/syntax_catalog.cpp
 msgid "Mark&down"
 msgstr "Mark&down"
 
@@ -2922,8 +2922,8 @@ msgstr "設定(&I)"
 msgid "Settings saved"
 msgstr "設定已儲存"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Shell Script family, including Bash, C Shell and m4.
+#: src/syntax/syntax_catalog.cpp
 msgid "Shell Scri&pt"
 msgstr "Shell 指令碼(&P)"
 

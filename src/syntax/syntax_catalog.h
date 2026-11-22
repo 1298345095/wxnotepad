@@ -6,6 +6,7 @@
 #include <span>
 #include <string_view>
 #include <optional>
+#include <limits>
 #include <vector>
 
 enum class SyntaxLanguage : uint8_t {
@@ -133,6 +134,16 @@ struct SyntaxComments {
     const char* open;
     const char* close;
 };
+enum class SyntaxMenuFamily : uint8_t { Standalone, TextFile, Css, JavaScript, Html, Markdown, Shell, Xml };
+struct SyntaxMenuPlacement {
+    SyntaxMenuFamily family = SyntaxMenuFamily::Standalone;
+    // Original menu order within the family, independent of enum/settings IDs.
+    unsigned order = std::numeric_limits<unsigned>::max();
+};
+struct SyntaxMenuGroup {
+    SyntaxMenuFamily family;
+    const char* label;
+};
 struct SyntaxDefinition {
     const char* name;
     std::span<const char* const> extensions;
@@ -150,9 +161,12 @@ struct SyntaxDefinition {
     bool encodingHeader = false;
     const char* scriptInterpreter = nullptr;
     SyntaxOriginalMetadata original;
+    SyntaxMenuPlacement menu;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();
+std::span<const SyntaxMenuGroup> SyntaxMenuFamilies();
+std::vector<const SyntaxDefinition*> SyntaxMenuMembers(SyntaxMenuFamily family);
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
 SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language);
 const char* SyntaxSettingsSection(SyntaxLanguage language);
