@@ -74,6 +74,12 @@ def focus_owned_window(focus, title, deadline_us=None):
     if backend == "x11":
         windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
         if not windows:
+            # GTK omits legacy WM_NAME for some non-Latin titles. xdotool's
+            # search then misses the visible window although getwindowname
+            # reads its UTF-8 _NET_WM_NAME correctly.
+            candidates = xdo("search", "--onlyvisible", "--class", ".").splitlines()
+            windows = [window for window in candidates if re.search(title, xdo("getwindowname", window))]
+        if not windows:
             return False
         xdo("windowfocus", "--sync", windows[0])
     if not acknowledge(focus, deadline_us):
