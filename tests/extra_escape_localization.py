@@ -2,6 +2,8 @@
 import argparse
 from pathlib import Path
 import tempfile
+import sys
+import time
 from localization_process import Acceptance, PREFERENCE
 from localization_package import menus, read_settings
 from localization_native import plain
@@ -56,7 +58,17 @@ def main():
                 assert all(button in text for button in buttons), text
                 with owned_topmost(fixture.dialogs, app.process, dialog):
                     capture_and_check(fixture.dialogs, app, dialog, fixture.logs / f'escape-close-{code}.png')
-                fixture.dialogs.click(dialog, buttons[2] if code == 'en' else buttons[2] + '(C)')
+                cancel_deadline = time.monotonic() + 10
+                fixture.dialogs.click(dialog, buttons[2] if code == 'en' else buttons[2] + '(C)',
+                                      deadline=cancel_deadline)
+                if sys.platform == 'win32':
+                    # A dismissed task dialog can remain visible after the
+                    # observer acknowledges Cancel.
+                    # Confirm this exact prompt is gone before another same-title
+                    # lookup, sharing the cancellation's existing readiness budget.
+                    while fixture.dialogs.user.IsWindowVisible(dialog) and time.monotonic() < cancel_deadline:
+                        time.sleep(.03)
+                    assert not fixture.dialogs.user.IsWindowVisible(dialog), 'Cancelled native prompt did not close'
                 app.finish()
                 assert app.state['dirty'] == '1' and app.process.poll() is None
                 app.begin('close')

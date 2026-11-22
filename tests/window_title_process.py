@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from contextlib import ExitStack
 from localization_package import Process, menus, menu_id, read_settings, wait_child
 
 
@@ -12,8 +13,8 @@ def main():
     parser.add_argument('executable', type=Path)
     args = parser.parse_args()
     source = args.executable.resolve()
-    with tempfile.TemporaryDirectory(prefix='wxnotepad-title-') as name:
-        folder = Path(name)
+    with tempfile.TemporaryDirectory(prefix='wxnotepad-title-') as name, ExitStack() as processes:
+        folder = Path(name).resolve()
         executable = folder / source.name
         shutil.copy2(source, executable)
         if (source.parent / 'locale').exists():
@@ -49,6 +50,7 @@ def main():
             nonlocal run
             run += 1
             app = Process(executable, folder / f'run-{run}', environment, path)
+            processes.callback(app.stop)
             assert app.state['title'] == title(mode), app.state['title']
             assert [menus(app.state)[identity]['checked'] for identity in commands(app)] == [
                 str(int(index == mode)) for index in range(4)]
