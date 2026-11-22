@@ -99,11 +99,16 @@ inline void Click(wxTreeCtrl& tree, wxTreeItemId item) {
 #ifdef __WXGTK__
     Request(wxString::Format("click:%d,%d,1", point.x, point.y));
 #else
+    static std::chrono::steady_clock::time_point previousClick;
+    const auto singleClickInterval = std::chrono::milliseconds(GetDoubleClickTime());
+    Wait([&] { return std::chrono::steady_clock::now() - previousClick > singleClickInterval; },
+         "separate intended native single clicks beyond the system double-click interval");
     SendGesture(tree, [point](HWND target) {
         Move(target, point);
         Mouse(MOUSEEVENTF_LEFTDOWN);
         Mouse(MOUSEEVENTF_LEFTUP);
     });
+    previousClick = std::chrono::steady_clock::now();
 #endif
 }
 inline void Drag(wxTreeCtrl& tree, wxTreeItemId source, wxTreeItemId target) {

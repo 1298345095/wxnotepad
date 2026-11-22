@@ -159,9 +159,13 @@ void Automatic(EditorFrame* frame, const char* language, int lexer) {
 }
 void Selected(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);
-    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language)) &&
-                StatusMetadata(frame).Contains(wxString(language) + " (override)") &&
-                frame->Editor()->Send(Message::GetLexer) == lexer,
+    const auto checked = frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language));
+    const auto status = StatusMetadata(frame);
+    const auto actualLexer = frame->Editor()->Send(Message::GetLexer);
+    if (!checked || !status.Contains(wxString(language) + " (override)") || actualLexer != lexer)
+        std::fprintf(stderr, "SELECTED: language=%s checked=%d status=%s expectedLexer=%d actualLexer=%zd\n", language,
+                     checked, status.utf8_str().data(), lexer, actualLexer);
+    Require(checked && status.Contains(wxString(language) + " (override)") && actualLexer == lexer,
             "specific save type must install its language and reflect the explicit choice in menu and status");
 }
 class SyntaxSaveApp final : public wxApp {
