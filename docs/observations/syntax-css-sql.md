@@ -17,6 +17,12 @@ file hashes and the BSD notice. HTML/XML continue to use `LexHTML.cxx` and
 the offset embedded CSS styles, with their existing markup dialect options.
 The shared importer also preserves original scheme identities 27 (CSS) and
 28 (SQL), independent of host enum ordering, for favorites and scheme choosers.
+The catalog also owns Scheme-menu families, membership and ordering. New
+records enter the menu through their catalog placement, including the combined
+C#, Java and Kotlin entries. The four CSS variants use the original canonical
+`CSS Style Sheet` file-dialog filter while preserving an explicitly selected
+dialect. The real syntax chooser is exercised for CSS and SQL, including stale
+dialect-property cleanup after switching back from SQL.
 
 `tests/reference_capture/capture_css_sql.py` runs an isolated copy of the
 pinned original executable on an owned Windows desktop. Its independently
