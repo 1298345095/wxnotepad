@@ -28,6 +28,8 @@ inline int UnshiftedPunctuation(int key) {
         return ',';
     case '>':
         return '.';
+    case '"':
+        return '\'';
     default:
         return key;
     }
@@ -387,6 +389,8 @@ inline wxString KeyName(int key) {
         return "comma";
     case '.':
         return "period";
+    case '\'':
+        return "apostrophe";
     default:
         const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
         return wxString::Format("%c", letter);

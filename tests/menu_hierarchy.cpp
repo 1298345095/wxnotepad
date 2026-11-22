@@ -175,11 +175,34 @@ void CheckMenu(EditorFrame* frame) {
                             "Run Command...", "Action on Selection", "Base64"});
     Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
     auto* schemes = bar->GetMenu(4);
-    Order(schemes, {"Syntax Scheme...", "Favorite Schemes...", "Use Default Code Style", "Automatic", "Text File",
-                    "JavaScript", "Web Source Code", "Markdown", "Shell Script", "XML Document", "C/C++", "CMake", "Go",
-                    "JSON", "Lua", "Python", "Rust", "TOML", "YAML"});
+    Order(schemes, {"Syntax Scheme...",
+                    "Favorite Schemes...",
+                    "Use Default Code Style",
+                    "Automatic",
+                    "Text File",
+                    "CSS Style Sheet",
+                    "JavaScript",
+                    "Web Source Code",
+                    "Markdown",
+                    "Shell Script",
+                    "XML Document",
+                    "C/C++",
+                    "C# Source",
+                    "CMake",
+                    "Go",
+                    "Java Source",
+                    "JSON",
+                    "Kotlin Source",
+                    "Lua",
+                    "Python",
+                    "Rust",
+                    "SQL Query",
+                    "TOML",
+                    "YAML"});
     Groups(schemes, {"Syntax Scheme...", "Use Default Code Style", "Automatic", "C/C++"});
     Order(Submenu(schemes, "Text File"), {"Plain Text"});
+    Order(Submenu(schemes, "CSS Style Sheet"),
+          {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet"});
     Order(Submenu(schemes, "JavaScript"), {"JavaScript", "JSX", "TypeScript", "TSX"});
     Order(Submenu(schemes, "Web Source Code"),
           {"Web Source Code", "JSP", "JSPX", "ASP.NET C#", "ASP.NET VB", "ASP VBScript", "ASP JavaScript"});

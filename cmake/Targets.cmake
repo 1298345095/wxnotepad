@@ -15,6 +15,8 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTOML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexYAML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCMake.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSS.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexSQL.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")

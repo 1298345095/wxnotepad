@@ -191,3 +191,13 @@ add_editor_test(replace_regex replace_regular_expression 30)
 add_editor_test(replace_all_regex replace_all_regular_expression 30)
 add_editor_test(replace_selection replace_in_selection 30)
 add_editor_test(search_backslashes original_search_backslashes 30)
+add_editor_test(syntax_css_sql original_css_sql_schemes 90)
+target_compile_definitions(syntax_css_sql PRIVATE
+    "CSS_SQL_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_reference.tsv\""
+    "CSS_SQL_COMPLETION_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_completion_reference.tsv\""
+    "CSS_SQL_TYPING_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_typing_reference.tsv\"")
+foreach(language IN ITEMS en zh_CN zh_TW)
+    add_test(NAME original_css_sql_process_${language} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
+    set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)
+endforeach()

@@ -145,6 +145,11 @@ msgstr ""
 msgid "&Browse..."
 msgstr ""
 
+#. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+#: src/syntax/syntax_catalog.cpp
+msgid "&CSS Style Sheet"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr ""
@@ -317,8 +322,8 @@ msgstr ""
 msgid "&Indent"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/JavaScript family, including TypeScript and JSX/TSX.
+#: src/syntax/syntax_catalog.cpp
 msgid "&JavaScript"
 msgstr ""
 
@@ -604,8 +609,8 @@ msgstr ""
 msgid "&Text Excerpt"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Text File family.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Text File"
 msgstr ""
 
@@ -659,8 +664,8 @@ msgstr ""
 msgid "&Visual Studio"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Web Source Code family, including HTML, JSP and ASP.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Web Source Code"
 msgstr ""
 
@@ -684,8 +689,8 @@ msgstr ""
 msgid "&Wrap around"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/XML Document family and document dialects.
+#: src/syntax/syntax_catalog.cpp
 msgid "&XML Document"
 msgstr ""
 
@@ -943,6 +948,11 @@ msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] ""
 msgstr[1] ""
+
+#. TRANSLATORS: Original CSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "CSS Style Sheet"
+msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
@@ -1628,6 +1638,11 @@ msgstr ""
 msgid "Group by file &type."
 msgstr ""
 
+#. TRANSLATORS: Original HSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "HSS Style Sheet"
+msgstr ""
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
@@ -1801,6 +1816,11 @@ msgstr ""
 msgid "Left:"
 msgstr ""
 
+#. TRANSLATORS: Original Less stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Less Style Sheet"
+msgstr ""
+
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
 #: src/app/editor_frame_commands.cpp
 #, c-format
@@ -1897,8 +1917,8 @@ msgstr ""
 msgid "Mark &Occurrences"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Markdown family and dialect order.
+#: src/syntax/syntax_catalog.cpp
 msgid "Mark&down"
 msgstr ""
 
@@ -2371,8 +2391,18 @@ msgstr ""
 msgid "S&wap\tCtrl+K"
 msgstr ""
 
+#. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SCSS Style Sheet"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
+msgstr ""
+
+#. TRANSLATORS: Original SQL Query scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SQL Query"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -2589,8 +2619,8 @@ msgstr ""
 msgid "Settings saved"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Shell Script family, including Bash, C Shell and m4.
+#: src/syntax/syntax_catalog.cpp
 msgid "Shell Scri&pt"
 msgstr ""
 

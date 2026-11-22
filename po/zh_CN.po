@@ -153,6 +153,11 @@ msgstr "浏览目录(&B)..."
 msgid "&Browse..."
 msgstr "浏览(&B)..."
 
+#. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+#: src/syntax/syntax_catalog.cpp
+msgid "&CSS Style Sheet"
+msgstr "CSS 样式表(&H)"
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -347,8 +352,8 @@ msgstr "高亮显示当前子行(&H)"
 msgid "&Indent"
 msgstr "增加缩进(&I)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/JavaScript family, including TypeScript and JSX/TSX.
+#: src/syntax/syntax_catalog.cpp
 msgid "&JavaScript"
 msgstr "&JavaScript"
 
@@ -669,8 +674,8 @@ msgstr "制表符设置(&T)..."
 msgid "&Text Excerpt"
 msgstr "文本摘选(&T)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Text File family.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Text File"
 msgstr "文本文件(&T)"
 
@@ -731,8 +736,8 @@ msgstr "查看(&V)"
 msgid "&Visual Studio"
 msgstr "&Visual Studio"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Web Source Code family, including HTML, JSP and ASP.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Web Source Code"
 msgstr "Web 源代码(&W)"
 
@@ -758,8 +763,8 @@ msgstr "自动换行(&R)\tCtrl+Shift+W"
 msgid "&Wrap around"
 msgstr "循环搜索(&D)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/XML Document family and document dialects.
+#: src/syntax/syntax_catalog.cpp
 msgid "&XML Document"
 msgstr "XML 文档(&X)"
 
@@ -1022,6 +1027,11 @@ msgstr[0] "CR+LF: %llu 行。"
 msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] "CR: %llu 行。"
+
+#. TRANSLATORS: Original CSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "CSS Style Sheet"
+msgstr "CSS 样式表"
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
@@ -1749,6 +1759,11 @@ msgstr "跳转到选区结束(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "按文件类型分组(&T)。"
 
+#. TRANSLATORS: Original HSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "HSS Style Sheet"
+msgstr "HSS 样式表"
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
@@ -1930,6 +1945,11 @@ msgstr "左页边距"
 msgid "Left:"
 msgstr "左："
 
+#. TRANSLATORS: Original Less stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Less Style Sheet"
+msgstr "Less 样式表"
+
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
 #: src/app/editor_frame_commands.cpp
 #, c-format
@@ -2028,8 +2048,8 @@ msgstr "页边距（毫米）"
 msgid "Mark &Occurrences"
 msgstr "标记匹配选中(&K)"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Markdown family and dialect order.
+#: src/syntax/syntax_catalog.cpp
 msgid "Mark&down"
 msgstr "Mark&down"
 
@@ -2523,9 +2543,19 @@ msgstr "行排序(&O)...\tAlt+O"
 msgid "S&wap\tCtrl+K"
 msgstr "交换(&W)\tCtrl+K"
 
+#. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SCSS Style Sheet"
+msgstr "SCSS 样式表"
+
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
 msgstr "SHY — 软连字符(&Q)"
+
+#. TRANSLATORS: Original SQL Query scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SQL Query"
+msgstr "SQL 查询"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"
@@ -2753,8 +2783,8 @@ msgstr "设置(&I)"
 msgid "Settings saved"
 msgstr "当前程序设置已被保存"
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Shell Script family, including Bash, C Shell and m4.
+#: src/syntax/syntax_catalog.cpp
 msgid "Shell Scri&pt"
 msgstr "Shell 脚本(&P)"
 
@@ -3436,8 +3466,26 @@ msgstr "m4"
 #~ msgid "C#"
 #~ msgstr "C#"
 
+#~ msgid "CSS"
+#~ msgstr "CSS"
+
+#~ msgid "HSS"
+#~ msgstr "HSS"
+
 #~ msgid "Java"
 #~ msgstr "Java"
 
 #~ msgid "Kotlin"
 #~ msgstr "Kotlin"
+
+#~ msgid "Less"
+#~ msgstr "Less"
+
+#~ msgid "SCSS"
+#~ msgstr "SCSS"
+
+#~ msgid "SQL"
+#~ msgstr "SQL"
+
+#~ msgid "Text files (*.txt)"
+#~ msgstr "文本文件 (*.txt)"
