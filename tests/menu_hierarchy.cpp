@@ -171,10 +171,10 @@ void CheckMenu(EditorFrame* frame) {
                             "Run Command...", "Action on Selection", "Base64"});
     Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
     auto* schemes = bar->GetMenu(4);
-    Order(schemes,
-          {"Use Default Code Style", "Automatic", "Text File", "JavaScript", "Web Source Code", "Markdown",
-           "Shell Script", "XML Document", "C/C++", "CMake", "Go", "JSON", "Lua", "Python", "Rust", "TOML", "YAML"});
-    Groups(schemes, {"Use Default Code Style", "Automatic", "C/C++"});
+    Order(schemes, {"Syntax Scheme...", "Favorite Schemes...", "Use Default Code Style", "Automatic", "Text File",
+                    "JavaScript", "Web Source Code", "Markdown", "Shell Script", "XML Document", "C/C++", "CMake", "Go",
+                    "JSON", "Lua", "Python", "Rust", "TOML", "YAML"});
+    Groups(schemes, {"Syntax Scheme...", "Use Default Code Style", "Automatic", "C/C++"});
     Order(Submenu(schemes, "Text File"), {"Plain Text"});
     Order(Submenu(schemes, "JavaScript"), {"JavaScript", "JSX", "TypeScript", "TSX"});
     Order(Submenu(schemes, "Web Source Code"),

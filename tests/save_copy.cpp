@@ -582,6 +582,7 @@ public:
     bool OnInit() override {
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
+        settings_->values.favoriteSchemes = "1 54"; // Original C/C++ and JSON native filter choices.
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();

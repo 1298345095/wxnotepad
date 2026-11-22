@@ -226,6 +226,28 @@ Tab widths range from 1 to 256; indentation widths range from 0 to 256, with 0
 using the tab width. Backspace's original bit 1 unindents the line; bit 2 deletes
 spaces to the previous indentation stop. Both choices are exposed in Tab Settings.
 
+Scheme → Syntax Scheme (F12) selects a delivered base scheme; the existing family
+menus retain dialect choices. The native tree shows Text File, ordered Favorite
+Schemes, then case-insensitive alphabetic groups. Selecting a group does not
+change the document language. Cancel preserves the current scheme and temporary
+default/automatic-selection preferences.
+
+`[Styles] DefaultScheme` uses the original resource identity relative to
+`NP2LEX_TEXTFILE`: for example Text File `0`, C/C++ `1`, Python `32`, and Rust `67`.
+It governs new documents and files without a detected scheme. `AutoSelect=1`
+enables filename/content recognition; `0` uses the default for future opens.
+Explicit choices apply to the current document and remain distinct from those
+preferences. An unavailable default falls back to Text File at runtime while its
+stored identity remains intact. Scheme identity metadata is imported with the
+original scheme data, independently of internal enum order and dialect identity.
+
+Favorite Schemes uses the same native chooser in management mode. OK commits its
+temporary default and automatic-selection preferences without changing the current
+document language. `[Styles] FavoriteSchemes` stores original scheme identities in
+order. Text File remains fixed; unavailable entries do not become another language
+because of an internal enum position. These fields follow Save Settings On Exit
+and Save Settings Now, retaining unrelated INI fields.
+
 The original scheme sections are `[Text File]`, `[C/C++ Source]`,
 `[Python Script]`, `[JSON Document]`, `[Shell Script]`, `[JavaScript]` and `[TypeScript]`. Bash, C Shell and m4
 share the Shell Script section. All support `TabWidth`, `IndentWidth`,

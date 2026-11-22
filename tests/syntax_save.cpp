@@ -31,7 +31,9 @@ using TestSyntax::Paint;
 class SaveChooser final : public wxTimer {
 public:
     SaveChooser(const wxString& path, SyntaxLanguage current, const wxString& type)
-        : path_(path), type_(type), current_(LanguageName(current)) {
+        : path_(path), type_(type), current_(SyntaxSettingsLanguage(current) == SyntaxLanguage::MarkdownGitHub
+                                                 ? "Markdown"
+                                                 : LanguageName(SyntaxSettingsLanguage(current))) {
         Start(150);
     }
     int choosers = 0;
@@ -80,22 +82,26 @@ private:
         const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
         GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
         initialType = wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(filters->data)));
-        // Markdown has three Scheme dialect choices but one original file type.
-        constexpr size_t markdownDialectOnlyChoices = 2;
-        Require(g_slist_length(filters) == SyntaxCatalog().size() + 1 - markdownDialectOnlyChoices &&
-                    current == filters->data && initialType.StartsWith(current_ + " (") &&
+        // This workflow explicitly favorites every delivered base scheme. The
+        // independent original capture establishes current/text/favorite order;
+        // dialect aliases remain current selections, not duplicate base filters.
+        const auto baseCount = std::ranges::count_if(SyntaxCatalog(), [](const auto& definition) {
+            return SyntaxSettingsLanguage(definition.language) == definition.language;
+        });
+        Require(g_slist_length(filters) == baseCount + 1 && current == filters->data &&
+                    initialType.StartsWith(current_ + " (") &&
                     wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(g_slist_last(filters)->data))) ==
                         "All Files (*)",
                 "native save types must initially select current scheme first, with All Files last");
         GSList* remaining = filters->next;
         for (const auto& definition : SyntaxCatalog()) {
             using enum SyntaxLanguage;
-            if (definition.language == MarkdownGitLab || definition.language == MarkdownPandoc) continue;
+            if (SyntaxSettingsLanguage(definition.language) != definition.language) continue;
             const auto* name = definition.language == MarkdownGitHub ? "Markdown" : definition.name;
             if (current_ == name) continue;
             Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
                                      .StartsWith(wxString(name) + " ("),
-                    "remaining native file types must follow catalog order without duplicates");
+                    "remaining native file types follow fixed text then explicit favorite order without duplicates");
             remaining = remaining->next;
         }
         g_slist_free(filters);
@@ -106,7 +112,8 @@ private:
     wxString current_;
     int stage_ = 0;
 };
-wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {}) {
+wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {},
+                     std::optional<SyntaxLanguage> expectedCurrent = std::nullopt) {
     using enum SyntaxLanguage;
     const auto lexer = frame->Editor()->Send(Message::GetLexer);
     auto current = PlainText;
@@ -122,7 +129,7 @@ wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, cons
         Require(dialect >= 0 && dialect < 4, "native Save chooser must retain JS dialect");
         current = dialects[dialect];
     }
-    SaveChooser chooser(path, current, type);
+    SaveChooser chooser(path, expectedCurrent.value_or(current), type);
     Command(frame, id);
     chooser.Stop();
     Require(chooser.choosers == 1, "real save command must use its native chooser");
@@ -162,6 +169,15 @@ public:
     bool OnInit() override {
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
+        // Preserve every existing specific-filetype/save/codec/history scenario
+        // by making its delivered base filters explicitly available, as original.
+        for (const auto& definition : SyntaxCatalog()) {
+            if (definition.language != SyntaxLanguage::PlainText &&
+                SyntaxSettingsLanguage(definition.language) == definition.language) {
+                if (!settings_->values.favoriteSchemes.empty()) settings_->values.favoriteSchemes += ' ';
+                settings_->values.favoriteSchemes += wxString::Format("%d", definition.original.schemeId);
+            }
+        }
         settings_->values.wordWrap = false;
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;
@@ -362,11 +378,23 @@ public:
                 for (const auto* dialect : {"JavaScript", "JSX", "TypeScript", "TSX"}) {
                     Choose(frame, dialect);
                     const auto languagePath = directory / (std::string("native-") + dialect + ".js");
-                    SaveCommand(frame, wxID_SAVEAS, Filename(languagePath), dialect);
+                    const wxString filter = wxString(dialect).StartsWith("T") ? "TypeScript" : "JavaScript";
+                    SaveCommand(frame, wxID_SAVEAS, Filename(languagePath), filter);
                     Selected(frame, dialect, SCLEX_JAVASCRIPT);
                     Require(Text(editor) == source, "native JS/TS Save As preserves document bytes");
                 }
                 std::puts("PASS: actual native JavaScript/JSX/TypeScript/TSX filter selection");
+                for (const auto& definition : SyntaxCatalog()) {
+                    if (SyntaxSettingsLanguage(definition.language) != definition.language) continue;
+                    const auto label = LanguageName(definition.language).utf8_string();
+                    Choose(frame, label.c_str());
+                    const auto path = directory / ("reachable-" + std::to_string(definition.original.schemeId) + "." +
+                                                   definition.extensions.front());
+                    SaveCommand(frame, wxID_SAVEAS, Filename(path), {}, definition.language);
+                    Selected(frame, label.c_str(), definition.lexer);
+                    Require(Bytes(path) == source && Text(editor) == source,
+                            "every delivered base remains reachable through current scheme and explicit favorites");
+                }
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

@@ -147,6 +147,10 @@ msgstr "在各行末尾附加文字(&A)："
 msgid "&Auto-reload (unmodified)."
 msgstr "自動重新載入（如未修改）(&A)。"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "&Auto-select by filename extension."
+msgstr "自動依檔案副檔名選擇(&A)"
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
 msgstr "自動(&A)"
@@ -324,6 +328,10 @@ msgstr "編碼識別碼(&E)\tCtrl+F8"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Ensure consistent line endings when saving."
 msgstr "儲存檔案時確保換行字元一致(&E)。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Favorite Schemes..."
+msgstr "常用語法高亮(&F)..."
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/File menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -697,6 +705,10 @@ msgstr "分割行(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "儲存檔案時移除行尾空白(&S)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Syntax Scheme...\tF12"
+msgstr "選擇語法高亮(&S)...\tF12"
+
 # Original Notepad4 zh-Hant: IDM_VIEW_TABSETTINGS; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
@@ -881,11 +893,6 @@ msgstr "所有檔案 (*)"
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有檔案 (*)|*"
-
-# Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
-#: src/app/dialogs/document_dialogs.cpp
-msgid "All files (*.*)"
-msgstr "所有檔案 (*.*)"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Angle brackets <>"
@@ -1609,6 +1616,10 @@ msgstr "執行文件(&D)\tCtrl+L"
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr "FSI — 首個強方向字元隔離(&F)"
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Favorite Schemes"
+msgstr "常用語法高亮"
 
 #: src/app/dialogs/recent_files_dialog.cpp
 #: src/app/dialogs/tab_settings_dialog.cpp
@@ -2804,6 +2815,10 @@ msgstr "選擇編碼"
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr "選擇目前區塊中的行(&C)\tAlt+Shift+]"
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Select Scheme"
+msgstr "選擇語法高亮"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings/Select and Edit Options submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
@@ -2841,6 +2856,10 @@ msgstr "選擇到下一個(&X)\tCtrl+Alt+F2"
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr "選擇到上一個(&S)\tCtrl+Alt+Shift+F2"
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Set selected scheme as &default."
+msgstr "設定選取的檔案型態為預設(&D)"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -3019,6 +3038,10 @@ msgstr "換行後的標記(&A)："
 msgid "Symbol &before wrap:"
 msgstr "換行前的標記(&B)："
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Syntax schemes"
+msgstr "語法高亮方案"
+
 # Original Notepad4 zh-Hant: IDM_LANG_USER_DEFAULT; adapted where needed.
 #: src/app/language_commands.cpp
 msgid "System Language"
@@ -3075,10 +3098,6 @@ msgstr "空白轉 Tab\tCtrl+Shift+T"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
 msgstr "Tab 轉為空白"
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "Text files (*.txt)"
-msgstr "文字檔案 (*.txt)"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -3544,3 +3563,10 @@ msgstr "m4"
 # Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
 #~ msgid "&Expand All"
 #~ msgstr "全部展開(&E)"
+
+# Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
+#~ msgid "All files (*.*)"
+#~ msgstr "所有檔案 (*.*)"
+
+#~ msgid "Text files (*.txt)"
+#~ msgstr "文字檔案 (*.txt)"

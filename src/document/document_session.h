@@ -132,6 +132,7 @@ public:
         return languageOverride_ ? std::optional(EffectiveLanguage()) : std::nullopt;
     }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
+    void SetSyntaxDetectionOptions(SyntaxDetectionOptions options) { detection_ = options; }
 
 private:
     class BackupTimer final : public wxTimer {

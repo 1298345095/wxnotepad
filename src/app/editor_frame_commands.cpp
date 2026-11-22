@@ -1185,6 +1185,14 @@ void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
 
 wxMenu* EditorFrame::CreateLanguageMenu() {
     auto* languages = new wxMenu;
+    // TRANSLATORS: IDM_VIEW_SCHEME / IDM_VIEW_SCHEME_FAVORITE, before code-style options.
+    const int selectScheme = wxWindow::NewControlId();
+    languages->Append(selectScheme, _("&Syntax Scheme...\tF12"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(); }, selectScheme);
+    const int favoriteSchemes = wxWindow::NewControlId();
+    languages->Append(favoriteSchemes, _("&Favorite Schemes..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(true); }, favoriteSchemes);
+    languages->AppendSeparator();
     const int useCode = wxWindow::NewControlId();
     languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));
     Bind(
@@ -1712,6 +1720,10 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F12 && !event.HasAnyModifiers()) {
+        ShowSyntaxScheme();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && HandleFullScreenEscape()) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {

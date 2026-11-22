@@ -7,6 +7,7 @@
 #include "syntax/syntax_scheme.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
+#include "app/dialogs/scheme_chooser.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
 #include "app/dialogs/recent_files_dialog.h"
@@ -71,7 +72,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
-                                                  settings->values.noHtmlGuess}
+                                                  settings->values.noHtmlGuess,
+                                                  SyntaxFromOriginalSchemeId(settings->values.defaultScheme)
+                                                      .value_or(SyntaxLanguage::PlainText)}
                          : SyntaxDetectionOptions{},
                 settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
@@ -152,6 +155,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                                                     : Scintilla::WhiteSpace::Invisible)));
     }
     document_.New();
+    indentation_.Apply(*editor_, document_.Language());
     CreateMenus();
     CreateDefaultToolbar();
     SetIcons(ApplicationIcons());
@@ -508,6 +512,15 @@ void EditorFrame::UpdateDocumentState() {
     UpdatePositionStatus();
 }
 
+void EditorFrame::ShowSyntaxScheme(bool favorite) {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    const auto language = ChooseSyntaxScheme(this, document_.Language(), preferences, favorite);
+    document_.SetSyntaxDetectionOptions(
+        {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
+         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText)});
+    if (language) ChooseLanguage(*language);
+}
+
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     document_.SelectLanguage(language);
     indentation_.Apply(*editor_, document_.Language());
@@ -536,7 +549,8 @@ SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMod
             if (wxMessageBox(wxString::Format(_("\"%s\" is read only. Save to a different file?"), document_.Path()),
                              _("Read only file"), wxYES_NO | wxICON_WARNING, this) != wxYES)
                 return {SaveStatus::Cancelled, {}};
-            const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path());
+            const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path(), {},
+                                               (settings_ ? settings_->values : defaults_).favoriteSchemes);
             if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
@@ -549,7 +563,8 @@ SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMod
         UpdateDocumentState();
         return result;
     }
-    const auto chosen = ChooseSaveFile(this, _("Save file"), document_.Language(), document_.Path());
+    const auto chosen = ChooseSaveFile(this, _("Save file"), document_.Language(), document_.Path(), {},
+                                       (settings_ ? settings_->values : defaults_).favoriteSchemes);
     if (!chosen) return SaveFirst(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
     return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
@@ -576,7 +591,8 @@ bool EditorFrame::UpdateFileTime() {
 }
 
 SaveResult EditorFrame::SaveAs() {
-    const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path());
+    const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path(), {},
+                                       (settings_ ? settings_->values : defaults_).favoriteSchemes);
     if (!chosen) return SaveAs(std::nullopt);
     return SaveAs(chosen->path, {}, chosen->type);
 }
@@ -608,7 +624,8 @@ SaveResult EditorFrame::SaveCopy() {
         filename = initial.GetFullName();
     }
     const auto chosen =
-        ChooseSaveFile(this, _("Save Copy"), document_.Language(), document_.Path(), {directory, filename});
+        ChooseSaveFile(this, _("Save Copy"), document_.Language(), document_.Path(), {directory, filename},
+                       (settings_ ? settings_->values : defaults_).favoriteSchemes);
     return SaveCopy(chosen ? std::optional<wxString>(chosen->path) : std::nullopt);
 }
 
@@ -729,7 +746,8 @@ OpenResult EditorFrame::ReloadQuickEncoding(QuickReloadEncoding encoding) {
 }
 
 OpenResult EditorFrame::Open() {
-    OpenFileDialog dialog(this);
+    OpenFileDialog dialog(this, document_.Language(), document_.Path(),
+                          (settings_ ? settings_->values : defaults_).favoriteSchemes);
     return Open(dialog.Choose());
 }
 
@@ -744,7 +762,8 @@ void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
     if (IsIconized()) Iconize(false);
     std::optional<wxString> source = path;
     if (wxDirExists(path)) {
-        OpenFileDialog dialog(this);
+        OpenFileDialog dialog(this, document_.Language(), document_.Path(),
+                              (settings_ ? settings_->values : defaults_).favoriteSchemes);
         dialog.SetDirectory(path);
         source = dialog.Choose();
     }
@@ -754,7 +773,8 @@ void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
 }
 
 OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
-    OpenFileDialog dialog(this);
+    OpenFileDialog dialog(this, document_.Language(), document_.Path(),
+                          (settings_ ? settings_->values : defaults_).favoriteSchemes);
     return Open(dialog.Choose(), encoding);
 }
 

@@ -219,6 +219,7 @@ private:
     int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
+    void ShowSyntaxScheme(bool favorite = false);
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const DocumentLoad::Intent& intent);

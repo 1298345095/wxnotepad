@@ -220,7 +220,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -365,6 +365,26 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     if not focus_owned_window(focus, title, deadline_us):
                         time.sleep(.03)
                         continue
+                elif request.startswith("tree-drag:"):
+                    x1, y1, x2, y2 = map(int, request[10:].split(","))
+                    if backend == "wayland":
+                        geometry = xdo("getwindowgeometry", "--shell", weston_window)
+                        values = dict(line.split("=", 1) for line in geometry.splitlines())
+                        x1 += int(values["X"])
+                        x2 += int(values["X"])
+                        y1 += int(values["Y"])
+                        y2 += int(values["Y"])
+                    xdo("mousemove", str(x1), str(y1))
+                    xdo("mousedown", "1")
+                    try:
+                        motion_steps = 8
+                        for step in range(1, motion_steps + 1):
+                            xdo("mousemove", str(x1 + (x2 - x1) * step // motion_steps),
+                                str(y1 + (y2 - y1) * step // motion_steps))
+                            time.sleep(.03)
+                    finally:
+                        xdo("mouseup", "1")
+                    acknowledge(focus)
                 elif request.startswith("click:"):
                     x, y, button = map(int, request[6:].split(","))
                     if backend == "wayland":
