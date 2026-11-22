@@ -496,7 +496,17 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 void EditorFrame::UpdateDocumentState() {
     ApplyUnicodeControlCharacter();
     const wxFileName path(document_.Path());
-    const wxString name = document_.Path().empty() ? _("Untitled") : path.GetFullName() + " [" + path.GetPath() + "]";
+    const auto format = (settings_ ? settings_->values : defaults_).pathNameFormat;
+    wxString name = _("Untitled");
+    if (!titleExcerpt_.empty()) {
+        // TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+        name = wxString::Format(_("\"%s\""), titleExcerpt_);
+    } else if (!document_.Path().empty()) {
+        name = format == TitlePathNameFormat::FullPath || path.GetFullName().empty() ? document_.Path()
+                                                                                     : path.GetFullName();
+        if (format == TitlePathNameFormat::NameFirst && !path.GetFullName().empty())
+            name += " [" + path.GetPath() + "]";
+    }
     const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")
                                                                                  : wxString{};
@@ -520,6 +530,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
     const auto result = document_.SaveFirst(
         destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
+        titleExcerpt_.clear();
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
         RefreshFileWatching();
@@ -559,6 +570,7 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
     const auto result = document_.SaveAs(
         destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
+        titleExcerpt_.clear();
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
         if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
@@ -622,6 +634,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 }
 
 OpenResult EditorFrame::LoadFile(const DocumentLoad::Intent& intent) {
+    const wxFileName previous(document_.Path());
     if (!document_.FileVariables().wordWrap.has_value())
         wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     const auto result = document_.Load(intent, [this] {
@@ -634,6 +647,7 @@ OpenResult EditorFrame::LoadFile(const DocumentLoad::Intent& intent) {
                       document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
     });
     if (result.status == OpenStatus::Opened) {
+        if (!previous.SameAs(wxFileName(document_.Path()))) titleExcerpt_.clear();
         if (std::holds_alternative<DocumentLoad::Open>(intent) && fileWatchingOptions_.resetOnNewFile)
             fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
@@ -730,7 +744,14 @@ OpenResult EditorFrame::ReloadQuickEncoding(QuickReloadEncoding encoding) {
 
 OpenResult EditorFrame::Open() {
     OpenFileDialog dialog(this);
-    return Open(dialog.Choose());
+    const auto result = Open(dialog.Choose());
+    // Original FileLoad determines excerpt retention before the chooser supplies
+    // its path. A successful chooser clears it even for the current file.
+    if (result.status == OpenStatus::Opened) {
+        titleExcerpt_.clear();
+        UpdateDocumentState();
+    }
+    return result;
 }
 
 void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
@@ -763,6 +784,7 @@ bool EditorFrame::NewDocument() {
     if (!document_.FileVariables().wordWrap.has_value())
         wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     document_.New();
+    titleExcerpt_.clear();
     editor_->SetWordWrapMode(wordWrap_ ? editor_->PreferredWordWrapMode() : Scintilla::Wrap::None);
     if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
     RefreshFileWatching();
