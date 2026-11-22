@@ -6,6 +6,25 @@
 #include <cmath>
 
 namespace {
+#ifdef __WXGTK__
+class FontShortcutModifiers final : public wxEventFilter {
+public:
+    FontShortcutModifiers() { wxEvtHandler::AddFilter(this); }
+    ~FontShortcutModifiers() override { wxEvtHandler::RemoveFilter(this); }
+    bool seen = false;
+    int modifiers = wxMOD_NONE;
+    int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_KEY_DOWN) {
+            const auto& key = static_cast<wxKeyEvent&>(event);
+            if (key.GetKeyCode() == WXK_F12) {
+                seen = true;
+                modifiers = key.GetModifiers();
+            }
+        }
+        return Event_Skip;
+    }
+};
+#endif
 using Scintilla::Message;
 constexpr auto DefaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
 constexpr auto FoldStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::FoldDisplayText);
@@ -111,9 +130,16 @@ public:
                 const auto codeFace = FontFace(editor);
                 const auto originalStyle = settings_->values.fonts.codeStyle;
                 {
+#ifdef __WXGTK__
+                    FontShortcutModifiers shortcut;
+#endif
                     NativeFonts::Chooser chooser(frame, 14, wxString::FromUTF8(textFace), true);
                     chooser.OpenWithShortcut();
                     chooser.Verify();
+#ifdef __WXGTK__
+                    Require(shortcut.seen && shortcut.modifiers == wxMOD_ALT,
+                            "real font shortcut delivers Alt+F12 without losing its modifier");
+#endif
                 }
                 Require(FontFace(editor) == codeFace &&
                             editor->Send(Message::StyleGetSizeFractional, DefaultStyle) == 1400 &&
