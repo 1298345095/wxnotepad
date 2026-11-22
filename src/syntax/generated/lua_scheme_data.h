@@ -71,7 +71,7 @@ constexpr auto luaStyles = std::to_array<SyntaxStyle>({
     {SCE_LUA_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_LUA_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata luaOriginal = {64, 4, 4, (1 << 0) | (1 << 1), SCE_LUA_FUNCTION_DEFINITION, '\\', SCE_LUA_ESCAPECHAR, SCE_LUA_FORMAT_SPECIFIER, SCE_LUA_WORD, 0, 0, SCE_LUA_OPERATOR, 0, SCE_LUA_COMMENTLINE, SCE_LUA_STRING_SQ, SCE_LUA_LITERALSTRING};
+constexpr SyntaxOriginalMetadata luaOriginal = {64, 4, 4, (1 << 0) | (1 << 1), SCE_LUA_FUNCTION_DEFINITION, '\\', SCE_LUA_ESCAPECHAR, SCE_LUA_FORMAT_SPECIFIER, SCE_LUA_WORD, 0, 0, SCE_LUA_OPERATOR, 0, SCE_LUA_COMMENTLINE, SCE_LUA_STRING_SQ, SCE_LUA_LITERALSTRING, 34};
 constexpr const char* luaSettingsSection = "Lua Script";
 constexpr auto luaExtensions = std::to_array<const char*>({"lua", "wlua", "nse", "luadoc", "luax"});
 // clang-format on

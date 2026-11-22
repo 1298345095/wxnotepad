@@ -6,6 +6,7 @@
 #include <span>
 #include <string_view>
 #include <optional>
+#include <vector>
 
 enum class SyntaxLanguage : uint8_t {
     PlainText,
@@ -58,6 +59,7 @@ struct SyntaxDetectionOptions {
     bool autoSelect = true;
     bool noCgiGuess = false;
     bool noHtmlGuess = false;
+    SyntaxLanguage defaultLanguage = SyntaxLanguage::PlainText;
 };
 struct DetectedSyntax {
     // Original pLex is chosen before the independent np2LexLangIndex sniff.
@@ -119,6 +121,8 @@ struct SyntaxOriginalMetadata {
     int commentStyleMarker = 0;
     int stringStyleFirst = 0;
     int stringStyleLast = 0;
+    // Pinned EDITLEXER::rid - NP2LEX_TEXTFILE, stable across catalog additions.
+    int schemeId = -1;
 };
 struct SyntaxProperty {
     const char* name;
@@ -152,6 +156,12 @@ std::span<const SyntaxDefinition> SyntaxCatalog();
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
 SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language);
 const char* SyntaxSettingsSection(SyntaxLanguage language);
+std::optional<SyntaxLanguage> SyntaxFromOriginalSchemeId(int identity);
+namespace SyntaxSchemeLimits {
+inline constexpr size_t FavoriteCount = 31;
+inline constexpr size_t FavoriteConfigCharacters = 127;
+} // namespace SyntaxSchemeLimits
+std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
 SyntaxLanguage LanguageForPath(const wxString& path);
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,

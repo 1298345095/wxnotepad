@@ -185,7 +185,7 @@ constexpr auto cmakeStyles = std::to_array<SyntaxStyle>({
     {SCE_CMAKE_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_CMAKE_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata cmakeOriginal = {1152, 4, 4, (1 << 0) | (1 << 1), 0, '\\', SCE_CMAKE_ESCAPECHAR, 0, SCE_CMAKE_WORD, 0, 0, SCE_CMAKE_OPERATOR, 0, SCE_CMAKE_TASKMARKER, SCE_CMAKE_STRING, SCE_CMAKE_BRACKET_ARGUMENT};
+constexpr SyntaxOriginalMetadata cmakeOriginal = {1152, 4, 4, (1 << 0) | (1 << 1), 0, '\\', SCE_CMAKE_ESCAPECHAR, 0, SCE_CMAKE_WORD, 0, 0, SCE_CMAKE_OPERATOR, 0, SCE_CMAKE_TASKMARKER, SCE_CMAKE_STRING, SCE_CMAKE_BRACKET_ARGUMENT, 46};
 constexpr const char* cmakeSettingsSection = "CMake Script";
 constexpr auto cmakeExtensions = std::to_array<const char*>({"cmake", "ctest"});
 // clang-format on
