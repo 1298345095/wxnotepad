@@ -68,6 +68,6 @@ constexpr auto bashStyles = std::to_array<SyntaxStyle>({
     {SCE_SH_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_SH_ERROR, 0xC80000, 0x8080FF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata bashOriginal = {8, 4, 4, (1 << 0) | (1 << 1), 0, '\\', 0, 0, SCE_SH_WORD, 0, 0, SCE_SH_OPERATOR, 0, SCE_SH_COMMENTLINE, SCE_SH_HERE_DELIM, SCE_SH_STRING_DQ};
+constexpr SyntaxOriginalMetadata bashOriginal = {8, 4, 4, (1 << 0) | (1 << 1), 0, '\\', 0, 0, SCE_SH_WORD, 0, 0, SCE_SH_OPERATOR, 0, SCE_SH_COMMENTLINE, SCE_SH_HERE_DELIM, SCE_SH_STRING_DQ, 37};
 constexpr const char* bashSettingsSection = "Shell Script";
 // clang-format on

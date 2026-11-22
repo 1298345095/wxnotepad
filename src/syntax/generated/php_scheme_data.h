@@ -466,7 +466,7 @@ constexpr auto phpStyles = std::to_array<SyntaxStyle>({
     {SCE_PHP_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_PHP_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata phpOriginal = {64, 4, 4, (1 << 1) | (1 << 2), SCE_PHP_FUNCTION_DEFINITION, '\\', SCE_PHP_ESCAPECHAR, SCE_PHP_FORMAT_SPECIFIER, 0, 0, 0, SCE_PHP_OPERATOR, SCE_PHP_OPERATOR2, 0, SCE_PHP_ESCAPECHAR, SCE_PHP_NOWDOC_ID};
+constexpr SyntaxOriginalMetadata phpOriginal = {64, 4, 4, (1 << 1) | (1 << 2), SCE_PHP_FUNCTION_DEFINITION, '\\', SCE_PHP_ESCAPECHAR, SCE_PHP_FORMAT_SPECIFIER, 0, 0, 0, SCE_PHP_OPERATOR, SCE_PHP_OPERATOR2, 0, SCE_PHP_ESCAPECHAR, SCE_PHP_NOWDOC_ID, 29};
 constexpr const char* phpSettingsSection = "PHP Script";
 constexpr auto phpExtensions = std::to_array<const char*>({"php", "phps", "phpt", "phtml", "php_cs", "eyecode"});
 // clang-format on

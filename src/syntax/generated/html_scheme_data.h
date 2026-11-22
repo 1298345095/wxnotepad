@@ -169,7 +169,7 @@ constexpr auto htmlStyles = std::to_array<SyntaxStyle>({
     {SCE_HB_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_HB_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata htmlOriginal = {3, 2, 2, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', css_style(SCE_CSS_ESCAPECHAR), 0, 0, 0, 0, css_style(SCE_CSS_OPERATOR), SCE_HB_OPERATOR, 0, 0, 0};
+constexpr SyntaxOriginalMetadata htmlOriginal = {3, 2, 2, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', css_style(SCE_CSS_ESCAPECHAR), 0, 0, 0, 0, css_style(SCE_CSS_OPERATOR), SCE_HB_OPERATOR, 0, 0, 0, 26};
 constexpr const char* htmlSettingsSection = "Web Source Code";
 constexpr auto htmlExtensions = std::to_array<const char*>({"html", "htm", "shtml", "xhtml", "asp", "aspx", "asax", "ascx", "cshtml", "vbhtml", "razor", "jsp", "jspf", "jspx", "rhtml", "vue", "hbs", "svelte", "mht", "htd", "htt", "hta", "htc", "cfm", "tpl", "jd"});
 // clang-format on

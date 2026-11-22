@@ -77,7 +77,7 @@ constexpr auto xmlStyles = std::to_array<SyntaxStyle>({
     {SCE_H_SGML_BLOCK_DEFAULT, 0x881280, 0xFFFFFF, false, false, false},
     {SCE_H_CDATA, 0x646464, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata xmlOriginal = {0, 4, 4, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\0', css_style(SCE_CSS_ESCAPECHAR), 0, 0, 0, 0, css_style(SCE_CSS_OPERATOR), SCE_HB_OPERATOR, 0, 0, 0};
+constexpr SyntaxOriginalMetadata xmlOriginal = {0, 4, 4, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\0', css_style(SCE_CSS_ESCAPECHAR), 0, 0, 0, 0, css_style(SCE_CSS_OPERATOR), SCE_HB_OPERATOR, 0, 0, 0, 25};
 constexpr const char* xmlSettingsSection = "XML Document";
 constexpr auto xmlExtensions = std::to_array<const char*>({"xml", "xsl", "xslt", "xsd", "dtd", "rss", "svg", "xul", "axl", "rdf", "xaml", "resx", "plist", "pom", "mm", "xrc", "fbp", "wxml"});
 // clang-format on
