@@ -30,7 +30,7 @@ void Choose(EditorFrame* frame, const wxString& label) {
     Require(id != wxNOT_FOUND, "Language menu must offer Python");
     Command(frame, id);
     auto* item = frame->GetMenuBar()->FindItem(id);
-    Require(item->IsRadio() && item->IsChecked(), "chosen language must be checked");
+    Require(item->IsCheckable() && item->IsChecked(), "chosen language must be checked");
 }
 void Delete(EditorControl* editor) {
     wxKeyEvent event(wxEVT_KEY_DOWN);

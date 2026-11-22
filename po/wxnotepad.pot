@@ -300,6 +300,10 @@ msgid "&Indent"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&JavaScript"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Join Lines\tCtrl+J"
 msgstr ""
 
@@ -494,7 +498,7 @@ msgstr ""
 msgid "&Reset if a new file is opened."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/document_tools.cpp
 msgid "&Restart"
 msgstr ""
 
@@ -570,6 +574,10 @@ msgid "&Tab Settings..."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Text File"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Toggle\tCtrl+F2"
 msgstr ""
 
@@ -619,6 +627,10 @@ msgstr ""
 msgid "&Visual Studio"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Source Code"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
 msgstr ""
@@ -637,6 +649,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wrap around"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&XML Document"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1328,6 +1344,10 @@ msgid "Draw Block Caret in &Selection"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "E&xit\tAlt+F4"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr ""
 
@@ -1814,6 +1834,10 @@ msgstr ""
 msgid "Mark &Occurrences"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Mark&down"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Markdown"
 msgstr ""
@@ -1946,6 +1970,10 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Open &As"
 msgstr ""
 
 #. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
@@ -2486,6 +2514,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Settings saved"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Shell Scri&pt"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp

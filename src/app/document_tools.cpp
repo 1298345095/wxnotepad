@@ -227,6 +227,10 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
         },
         save);
     tools->AppendSeparator();
+    const int restart = wxWindow::NewControlId();
+    tools->Append(restart, _("&Restart"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Restart(); }, restart);
+    tools->AppendSeparator();
     const int execute = wxWindow::NewControlId();
     // TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
     tools->Append(execute, _("Execute &Document\tCtrl+L"));

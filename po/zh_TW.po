@@ -373,6 +373,10 @@ msgstr "醒目提示目前子行(&H)"
 msgid "&Indent"
 msgstr "增加縮排(&I)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&JavaScript"
+msgstr "&JavaScript"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_JOINLINES (repaired original missing mnemonic); adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Join Lines\tCtrl+J"
@@ -609,7 +613,7 @@ msgid "&Reset if a new file is opened."
 msgstr "開啟新檔案時重設(&R)。"
 
 # Original Notepad4 zh-Hant: IDM_FILE_RESTART; adapted where needed.
-#: src/app/editor_frame_commands.cpp
+#: src/app/document_tools.cpp
 msgid "&Restart"
 msgstr "重新啟動(&R)"
 
@@ -697,6 +701,10 @@ msgstr "儲存檔案時移除行尾空白(&S)。"
 msgid "&Tab Settings..."
 msgstr "Tab 設定(&T)..."
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Text File"
+msgstr "文字檔案(&T)"
+
 # Original Notepad4 zh-Hant: BME_EDIT_BOOKMARKTOGGLE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle\tCtrl+F2"
@@ -757,6 +765,10 @@ msgstr "檢視(&V)"
 msgid "&Visual Studio"
 msgstr "&Visual Studio"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Source Code"
+msgstr "網頁原始碼(&W)"
+
 # Original Notepad4 zh-Hant: IDD_FIND/IDC_WILDCARDSEARCH; adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
@@ -781,6 +793,10 @@ msgstr "自動換行(&R)\tCtrl+Shift+W"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wrap around"
 msgstr "循環搜尋(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&XML Document"
+msgstr "XML 文件(&X)"
 
 # Original Notepad4 zh-Hant: IDD_INFOBOX/IDYES; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -1526,6 +1542,10 @@ msgstr "雙引號"
 msgid "Draw Block Caret in &Selection"
 msgstr "在選取範圍內繪製方塊游標(&S)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "E&xit\tAlt+F4"
+msgstr "結束(&X)\tAlt+F4"
+
 # Original Notepad4 zh-Hant: IDM_SET_MULTIPLE_SELECTION; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
@@ -2072,6 +2092,10 @@ msgstr "邊界（公釐）"
 msgid "Mark &Occurrences"
 msgstr "標記出現位置(&O)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Mark&down"
+msgstr "Mark&down"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Markdown"
 msgstr "Markdown"
@@ -2221,6 +2245,10 @@ msgstr "只有檔案擁有者才能變更擁有者的寫入權限。"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
 msgstr "僅使用文件內的單詞"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Open &As"
+msgstr "以指定編碼開啟(&A)"
 
 #. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
@@ -2815,6 +2843,10 @@ msgstr "設定(&I)"
 #: src/app/editor_frame_commands.cpp
 msgid "Settings saved"
 msgstr "設定已儲存"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Shell Scri&pt"
+msgstr "Shell 指令碼(&P)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
