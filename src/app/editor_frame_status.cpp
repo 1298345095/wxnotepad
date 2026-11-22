@@ -77,7 +77,7 @@ protected:
     }
 
 private:
-    void MeasureLine(wxDC& dc, int textHeight) {
+    void MeasureLine(const wxDC& dc, int textHeight) {
         ascent_ = 0;
         double descent = 0;
         auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());

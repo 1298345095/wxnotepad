@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "app/localization.h"
 #include "app/status_fields.h"
+#include "editor_test_helpers.h"
 #include "native_paint_helpers.h"
 #include "native_search_helpers.h"
 #include "settings/settings_store.h"
@@ -9,14 +10,14 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdio>
 #include <cstring>
+#include <exception>
+#include <iostream>
 #include <memory>
-#include <stdexcept>
 
 namespace {
 void Require(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
+    if (!value) throw TestEditor::Failure(message);
 }
 void ReplacementLayout(EditorFrame* frame) {
     for (int command : {wxID_FIND, wxID_REPLACE, wxID_FIND, wxID_REPLACE}) {
@@ -24,10 +25,10 @@ void ReplacementLayout(EditorFrame* frame) {
         const auto* input = wxWindow::FindWindowByName("Replacement text", frame);
         const auto* wrap = wxWindow::FindWindowByName("Wrap around", frame);
         Require(input && wrap, "actual search dialog exposes replacement and wrap controls");
-        auto* dialog = input->GetParent();
+        const auto* dialog = input->GetParent();
         const wxWindow* label = nullptr;
-        for (auto* child : dialog->GetChildren()) {
-            if (wxDynamicCast(child, wxStaticText) && child->GetLabel() == _("Replace &with:")) label = child;
+        for (const auto* child : dialog->GetChildren()) {
+            if (child->IsKindOf(wxCLASSINFO(wxStaticText)) && child->GetLabel() == _("Replace &with:")) label = child;
         }
         Require(label, "actual search dialog has its translated replacement label");
         const bool replace = command == wxID_REPLACE;
@@ -37,8 +38,9 @@ void ReplacementLayout(EditorFrame* frame) {
         const auto labelRect = label->GetRect();
         const auto inputRect = input->GetRect();
         const auto wrapRect = wrap->GetRect();
-        std::printf("Replace layout: label=%d..%d input=%d..%d wrap=%d..%d\n", labelRect.y, labelRect.GetBottom(),
-                    inputRect.y, inputRect.GetBottom(), wrapRect.y, wrapRect.GetBottom());
+        std::cout << "Replace layout: label=" << labelRect.y << ".." << labelRect.GetBottom()
+                  << " input=" << inputRect.y << ".." << inputRect.GetBottom() << " wrap=" << wrapRect.y << ".."
+                  << wrapRect.GetBottom() << '\n';
         Require(labelRect.GetBottom() < inputRect.y && inputRect.GetBottom() < wrapRect.y,
                 "Replace with label, replacement input and Wrap around must occupy separate ordered rows");
         Require(dialog->GetClientRect().Contains(labelRect) && dialog->GetClientRect().Contains(inputRect) &&
@@ -167,7 +169,8 @@ void StatusBaselines(const EditorFrame* frame) {
         const auto bottomEdge = static_cast<int>(std::floor((rectangle.GetBottom() + 1) * capture.ScaleY()));
         const int bottom =
             GlyphBottom(image, wxRect(left, top, right - left, bottomEdge - top), darkText, inkThreshold);
-        std::printf("Status baseline: field=%d glyph-bottom=%d text=%s\n", field, bottom, text.utf8_str().data());
+        std::cout << "Status baseline: field=" << field << " glyph-bottom=" << bottom
+                  << " text=" << text.utf8_str().data() << '\n';
         Require(bottom >= 0, "common baseline glyph is present in actual status pixels");
         if (expectedBottom < 0) expectedBottom = bottom;
         Require(bottom == expectedBottom, "translated and Latin status captions must share one painted baseline");
@@ -198,7 +201,9 @@ public:
     int OnExit() override { return result_; }
 
 private:
-    void Validate(EditorFrame* frame, int language) {
+    // This final GUI callback reports assertion and native-helper failures
+    // before closing the frame and stopping the test's event loop.
+    void Validate(EditorFrame* frame, int language) noexcept {
         try {
             const auto observedLine = frame->GetStatusBar()->GetStatusText(StatusField::Line);
             const auto expectedPrefix = wxString::FromUTF8(language == 1033 ? "Ln" : "行");
@@ -211,10 +216,10 @@ private:
             } else {
                 ReplacementLayout(frame);
             }
-            std::puts("PASS: actual native UI layout");
+            std::cout << "PASS: actual native UI layout\n";
             result_ = 0;
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            std::cerr << "FAIL: " << error.what() << '\n';
             result_ = 1;
         }
         frame->Destroy();
