@@ -81,7 +81,7 @@ std::optional<SyntaxLanguage> ChooseSyntaxScheme(wxWindow* parent, SyntaxLanguag
     wxTreeItemId favoriteGroup;
     auto favorites = FavoriteSyntaxSchemes(settings.favoriteSchemes);
     const auto add = [&](wxTreeItemId group, SyntaxLanguage language) {
-        const auto item = tree->AppendItem(group, wxGetTranslation(SyntaxSettingsSection(language)), -1, -1,
+        const auto item = tree->AppendItem(group, wxGetTranslation(SyntaxFor(language).chooserCaption), -1, -1,
                                            new SchemeData(language));
         if (!selection.IsOk() && language == SyntaxSettingsLanguage(current)) selection = item;
         if (favorite && language != SyntaxLanguage::PlainText)

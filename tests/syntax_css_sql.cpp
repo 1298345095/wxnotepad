@@ -13,6 +13,8 @@
 #include <utility>
 #include <wx/timer.h>
 #include <wx/treectrl.h>
+#include <wx/checkbox.h>
+#include <wx/modalhook.h>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -42,6 +44,48 @@ void FileRecognition(EditorFrame* frame) {
         Require(frame->Editor()->Send(Message::GetLexer) == expected,
                 "standalone original CSS dialects and SQL must install their dedicated lexer");
     }
+}
+class CommentSpacing final : public wxModalDialogHook {
+public:
+    CommentSpacing() { Register(); }
+    bool opened = false;
+    std::exception_ptr failure;
+    int Enter(wxDialog* dialog) override {
+        if (dialog->GetTitle() == "Auto Completion Settings") {
+            opened = true;
+            wxTheApp->CallAfter([this, dialog] {
+                try {
+                    auto* option = wxDynamicCast(wxWindow::FindWindowByName("Space after comment", dialog), wxCheckBox);
+                    Require(option, "native settings exposes optional comment spacing");
+                    NativeSearch::Toggle(option, false);
+                    NativeSearch::Click(dialog, wxID_OK);
+                } catch (...) {
+                    failure = std::current_exception();
+                    dialog->EndModal(wxID_CANCEL);
+                }
+            });
+        }
+        return wxID_NONE;
+    }
+};
+void MandatorySqlCommentSpace(EditorFrame* frame) {
+    TestLanguages::Choose(frame, "SQL Query");
+    CommentSpacing settings;
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Auto Completion Settings..."));
+    if (settings.failure) std::rethrow_exception(settings.failure);
+    Require(settings.opened, "native comment spacing setting opens");
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "SELECT 1;\n");
+    // Pinned EditAutoC.cpp::GetLineCommentString uses L"-- "; Edit.cpp::EditCommentLine
+    // retains this mandatory pad even with AutoInsertMask_SpaceAfterComment clear.
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
+    Require(TestEditor::Text(editor) == "-- SELECT 1;\n", "SQL retains mandatory space when optional spacing is off");
+    TestSyntax::Command(frame, wxID_UNDO);
+    Require(TestEditor::Text(editor) == "SELECT 1;\n", "SQL comment Undo restores exact original bytes");
+    TestSyntax::Command(frame, wxID_REDO);
+    Require(TestEditor::Text(editor) == "-- SELECT 1;\n", "SQL comment Redo restores exact mandatory-space bytes");
+    editor->Send(Message::SetSavePoint);
+    std::puts("PASS: SQL mandatory comment pad with optional spacing disabled and exact Undo/Redo");
 }
 void OriginalOracle(EditorFrame* frame) {
     const auto rows = TestLanguages::OriginalStyleFoldStates(
@@ -177,29 +221,6 @@ void ChooserWorkflows(EditorFrame* frame) {
             "choosing CSS after SQL restores the original standard CSS dialect");
     std::puts("PASS: real scheme chooser selects original CSS and SQL identities without changing bytes/history");
 }
-std::string CurrentCandidate(EditorControl* editor) {
-    const auto length = editor->Send(Message::AutoCGetCurrentText);
-    std::string text(static_cast<size_t>(length) + 1, '\0');
-    editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(text.data()));
-    text.pop_back();
-    return text;
-}
-std::vector<std::string> CandidateList(EditorControl* editor) {
-    std::vector<std::string> actual;
-    intptr_t previous = -1;
-    while (editor->Send(Message::AutoCActive)) {
-        const auto current = editor->Send(Message::AutoCGetCurrent);
-        if (current == previous) break;
-        previous = current;
-        actual.push_back(CurrentCandidate(editor));
-#ifdef __WXMSW__
-        NativeCompletion::Key(editor, VK_DOWN);
-#else
-        NativeCompletion::Key(editor, GDK_KEY_Down);
-#endif
-    }
-    return actual;
-}
 std::vector<std::string> ExpectedCandidates(const std::string& words) {
     std::vector<std::string> expected;
     std::istringstream candidates(words);
@@ -238,7 +259,7 @@ void OriginalCompletions(EditorFrame* frame) {
         editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
         TestSyntax::Paint(frame);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Complete Word"));
-        const auto actual = CandidateList(editor);
+        const auto actual = NativeCompletion::Candidates(editor);
         const auto expected = ExpectedCandidates(words);
         Require(actual == expected && TestEditor::Text(editor) == TestLanguages::Unhex(afterHex),
                 "manual completion candidate list and immediate result match independent original");
@@ -293,7 +314,7 @@ void OriginalTyping(EditorFrame* frame) {
 #endif
         wxYield();
         const auto expected = ExpectedCandidates(words);
-        const auto actual = CandidateList(editor);
+        const auto actual = NativeCompletion::Candidates(editor);
         if (TestEditor::Text(editor) != TestLanguages::Unhex(afterHex) || actual != expected) {
             std::fprintf(stderr, "native typing expected=[%s] actual=[%s] candidates=%zu/%zu\n",
                          TestLanguages::Unhex(afterHex).c_str(), TestEditor::Text(editor).c_str(), actual.size(),
@@ -342,6 +363,7 @@ public:
                 OriginalCompletions(frame);
                 OriginalTyping(frame);
                 TestLanguages::NativeFiles(frame, schemes);
+                MandatorySqlCommentSpace(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

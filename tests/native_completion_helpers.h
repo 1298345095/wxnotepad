@@ -1,6 +1,8 @@
 #pragma once
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
+#include <string>
+#include <vector>
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
 #endif
@@ -17,6 +19,27 @@ inline void Key(EditorControl* editor, int key) {
     gdk_event_free(event);
 #endif
     wxYield();
+}
+inline std::vector<std::string> Candidates(EditorControl* editor) {
+    using Scintilla::Message;
+    std::vector<std::string> result;
+    intptr_t previous = -1;
+    while (editor->Send(Message::AutoCActive)) {
+        const auto index = editor->Send(Message::AutoCGetCurrent);
+        if (index == previous) break;
+        previous = index;
+        const auto length = editor->Send(Message::AutoCGetCurrentText);
+        std::string word(static_cast<size_t>(length) + 1, '\0');
+        editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(word.data()));
+        word.pop_back();
+        result.push_back(word);
+#ifdef __WXMSW__
+        Key(editor, VK_DOWN);
+#else
+        Key(editor, GDK_KEY_Down);
+#endif
+    }
+    return result;
 }
 inline void Wheel(EditorControl* editor) {
 #ifdef __WXMSW__

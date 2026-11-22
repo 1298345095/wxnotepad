@@ -955,8 +955,18 @@ msgstr ""
 msgid "C/C++"
 msgstr ""
 
+#. TRANSLATORS: Original C/C++ base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "C/C++ Source"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "CMake"
+msgstr ""
+
+#. TRANSLATORS: Original CMake base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "CMake Script"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1622,6 +1632,11 @@ msgstr ""
 msgid "Go"
 msgstr ""
 
+#. TRANSLATORS: Original Go base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Go Source"
+msgstr ""
+
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Go To Line"
 msgstr ""
@@ -1768,6 +1783,11 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "JSON"
+msgstr ""
+
+#. TRANSLATORS: Original JSON base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "JSON Document"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1931,6 +1951,11 @@ msgstr ""
 msgid "Lua"
 msgstr ""
 
+#. TRANSLATORS: Original Lua base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Lua Script"
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr ""
@@ -1954,7 +1979,8 @@ msgstr ""
 msgid "Mark&down"
 msgstr ""
 
-#: src/app/dialogs/document_dialogs.cpp
+#. TRANSLATORS: Original Markdown base-scheme chooser title, shared by its dialects.
+#: src/app/dialogs/document_dialogs.cpp src/syntax/syntax_catalog.cpp
 msgid "Markdown"
 msgstr ""
 
@@ -2274,6 +2300,11 @@ msgstr ""
 msgid "Python"
 msgstr ""
 
+#. TRANSLATORS: Original Python base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Python Script"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr ""
@@ -2421,6 +2452,11 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
+msgstr ""
+
+#. TRANSLATORS: Original Rust base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Rust Source"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2668,6 +2704,11 @@ msgstr ""
 msgid "Shell Scri&pt"
 msgstr ""
 
+#. TRANSLATORS: Original Shell base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Shell Script"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
 msgstr ""
@@ -2833,6 +2874,11 @@ msgstr ""
 msgid "TOML"
 msgstr ""
 
+#. TRANSLATORS: Original TOML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "TOML File"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "TSX"
 msgstr ""
@@ -2863,6 +2909,11 @@ msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
+msgstr ""
+
+#. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Text File"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
@@ -3229,6 +3280,11 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "YAML"
+msgstr ""
+
+#. TRANSLATORS: Original YAML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "YAML Document"
 msgstr ""
 
 #: src/app/editor_frame.cpp

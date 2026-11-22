@@ -44,27 +44,6 @@ void OriginalOracle(EditorFrame* frame) {
     std::puts("PASS: 24 independent original full style/fold/edit/Undo/Redo states");
 }
 
-std::vector<std::string> Candidates(EditorControl* editor) {
-    std::vector<std::string> result;
-    intptr_t previous = -1;
-    while (editor->Send(Message::AutoCActive)) {
-        const auto index = editor->Send(Message::AutoCGetCurrent);
-        if (index == previous) break;
-        previous = index;
-        const auto length = editor->Send(Message::AutoCGetCurrentText);
-        std::string word(length + 1, '\0');
-        editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(word.data()));
-        word.pop_back();
-        result.push_back(word);
-#ifdef __WXMSW__
-        NativeCompletion::Key(editor, VK_DOWN);
-#else
-        NativeCompletion::Key(editor, GDK_KEY_Down);
-#endif
-    }
-    return result;
-}
-
 void Operations(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
@@ -107,7 +86,7 @@ void Operations(EditorFrame* frame) {
         std::string word;
         while (std::getline(words, word, ','))
             expected.push_back(TestLanguages::Unhex(word));
-        const auto actual = Candidates(editor);
+        const auto actual = NativeCompletion::Candidates(editor);
         if (actual != expected) {
             for (const auto& candidate : actual)
                 std::fprintf(stderr, "actual candidate [%s]\n", candidate.c_str());

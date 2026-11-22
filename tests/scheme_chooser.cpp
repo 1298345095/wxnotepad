@@ -14,6 +14,9 @@
 #include <wx/treectrl.h>
 #include <wx/convauto.h>
 #include <filesystem>
+#include <array>
+#include <memory>
+#include <string_view>
 #include <cstdio>
 
 namespace {
@@ -375,11 +378,52 @@ void KeyboardChooser() {
             "favorite-mode keyboard confirmation preserves current scheme");
     frame->Destroy();
 }
-void LocalizedLayout(EditorFrame* frame) {
+void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) {
+    // Independent expected captions: pinned original scheme titles, existing
+    // application terminology, and original zh-Hans/zh-Hant NP2LEX_TEXTFILE.
+    constexpr std::array<std::array<const char*, 3>, 21> captions = {{
+        {"Text File", "文本文件", "文字檔案"},
+        {"C/C++ Source", "C/C++ 源代码", "C/C++ 原始碼"},
+        {"C# Source", "C# 源代码", "C# 原始碼"},
+        {"Java Source", "Java 源代码", "Java 原始碼"},
+        {"Kotlin Source", "Kotlin 源代码", "Kotlin 原始碼"},
+        {"Python Script", "Python 脚本", "Python 指令碼"},
+        {"JSON Document", "JSON 文档", "JSON 文件"},
+        {"JavaScript", "JavaScript", "JavaScript"},
+        {"TypeScript", "TypeScript", "TypeScript"},
+        {"Shell Script", "Shell 脚本", "Shell 指令碼"},
+        {"Web Source Code", "Web 源代码", "網頁原始碼"},
+        {"XML Document", "XML 文档", "XML 文件"},
+        {"Rust Source", "Rust 源代码", "Rust 原始碼"},
+        {"Go Source", "Go 源代码", "Go 原始碼"},
+        {"Lua Script", "Lua 脚本", "Lua 指令碼"},
+        {"Markdown", "Markdown", "Markdown"},
+        {"TOML File", "TOML 文件", "TOML 檔案"},
+        {"YAML Document", "YAML 文档", "YAML 文件"},
+        {"CMake Script", "CMake 脚本", "CMake 指令碼"},
+        {"CSS Style Sheet", "CSS 样式表", "CSS 樣式表"},
+        {"SQL Query", "SQL 查询", "SQL 查詢"},
+    }};
+    constexpr int SimplifiedChineseLanguage = 2052;
+    constexpr int TraditionalChineseLanguage = 1028;
+    constexpr size_t PythonCaptionIndex = 5;
+    const size_t column = language == SimplifiedChineseLanguage ? 1 : language == TraditionalChineseLanguage ? 2 : 0;
+    const auto python = wxString::FromUTF8(captions[PythonCaptionIndex][column]);
+    frame->SetTitle("wxnotepad localized scheme F12");
+    bool presented = false;
+    NativeKeys::AfterPresentation(frame, [&](bool ready) { presented = ready; });
+    NativeTreeInput::Wait([&] { return presented; }, "localized F12 frame is presented before native shortcut");
+    wxYield();
     for (const bool favorite : {false, true}) {
         Picker picker;
         picker.title = wxGetTranslation(favorite ? "Favorite Schemes" : "Select Scheme");
         picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+            for (const auto& caption : captions) {
+                const auto expected = wxString::FromUTF8(caption[column]);
+                std::printf("CAPTION: %s\n", expected.utf8_str().data());
+                Require(NativeDialogs::SelectTreeLabel(tree, expected),
+                        "every delivered base scheme has its independently expected localized tree caption");
+            }
             auto* selected = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", &dialog), wxCheckBox);
             auto* automatic = wxDynamicCast(wxWindow::FindWindowByName("AutoSelect", &dialog), wxCheckBox);
             auto* ok = dialog.FindWindow(wxID_OK);
@@ -408,7 +452,11 @@ void LocalizedLayout(EditorFrame* frame) {
                         ok->GetPosition() - buttonPosition == wxPoint(growth.x, growth.y) &&
                         cancel->GetPosition().y == ok->GetPosition().y,
                     "two-axis resize grows the tree and moves original bottom options/buttons together");
-            NativeSearch::Click(&dialog, wxID_CANCEL);
+            if (!favorite) {
+                Require(NativeDialogs::SelectTreeLabel(tree, python), "localized Python chooser item is selectable");
+                NativeSearch::Toggle(selected, true);
+            }
+            NativeSearch::Click(&dialog, favorite ? wxID_CANCEL : wxID_OK);
         };
         const auto caption =
             wxStripMenuCodes(wxGetTranslation(favorite ? "&Favorite Schemes..." : "&Syntax Scheme...\tF12"));
@@ -417,10 +465,30 @@ void LocalizedLayout(EditorFrame* frame) {
             if (item->GetItemLabelText() == caption) command = item->GetId();
         }
         Require(command != wxNOT_FOUND, "translated original Scheme command is visible");
-        NativeSearch::Command(frame, command);
+        if (favorite)
+            NativeSearch::Command(frame, command);
+        else
+            NativeKeys::Shortcut(frame, WXK_F12, false, false, false, nullptr, "wxnotepad localized scheme F12");
         Require(picker.error.empty(), picker.error.utf8_str());
         Require(picker.shown == 1, "translated native chooser opened exactly once");
     }
+    Require(frame->Editor()->Send(Scintilla::Message::GetTabWidth) == 6,
+            "localized Python selection loads the original English INI scheme section");
+    Require(settings.Save(true), "accepted localized scheme settings save through the ordinary lifecycle");
+    const auto saved = Ini(TestFiles::Utf8Path(settings.Path().utf8_string()));
+    Require(saved.Contains("DefaultScheme=32") && saved.Contains("FavoriteSchemes=1 67") &&
+                saved.Contains("[Python Script]") && saved.Contains("[C/C++ Source]"),
+            "localized chooser preserves original numeric default/favorites and English INI identities");
+    if (column != 0) {
+        for (const auto& caption : captions)
+            if (std::string_view(caption[0]) != caption[column])
+                Require(!saved.Contains("[" + wxString::FromUTF8(caption[column]) + "]"),
+                        "visible translated captions never become INI section identities");
+    }
+    SettingsStore reopened(settings.Path());
+    Require(reopened.values.defaultScheme == 32 && reopened.values.favoriteSchemes == "1 67",
+            "localized default and favorite identities survive configuration reload");
+    std::puts("PASS: all localized F12/favorite captions and original INI identities");
 }
 class SchemeApp final : public wxApp {
 public:
@@ -429,12 +497,19 @@ public:
         wxString language;
         const bool layout = wxGetEnv("WXNOTEPAD_SCHEME_LAYOUT_LANGUAGE", &language);
         if (layout) AppLocalization::Initialize(static_cast<uint16_t>(wxAtoi(language)));
-        auto* frame = new EditorFrame;
+        if (layout) {
+            const auto ini = TestFiles::TemporaryDirectory("scheme-localized.ini");
+            TestFiles::WriteBytes(ini, "[Settings]\nSaveSettings=0\n[Styles]\nFavoriteSchemes=1 67\n"
+                                       "[C/C++ Source]\nTabWidth=11\nUseGlobalTabSettings=0\n"
+                                       "[Python Script]\nTabWidth=6\nUseGlobalTabSettings=0\n");
+            settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(ini));
+        }
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame, layout] {
+        CallAfter([this, frame, layout, language] {
             try {
                 if (layout) {
-                    LocalizedLayout(frame);
+                    LocalizedLayout(frame, *settings_, wxAtoi(language));
                     result_ = 0;
                     frame->Destroy();
                     ExitMainLoop();
@@ -485,6 +560,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
