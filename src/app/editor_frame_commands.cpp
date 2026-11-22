@@ -1712,7 +1712,7 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && HandleFullScreenEscape()) return true;
+    if (event.GetKeyCode() == WXK_ESCAPE && HandleEscapeKey(event.GetModifiers())) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (event.ShiftDown() && !event.MetaDown())
@@ -2354,6 +2354,28 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
                 document_.ConfigureAutoSave(preferences.autoSave);
         },
         autoSave);
+    auto* escape = new wxMenu;
+    // Notepad4 89b8b36 IDM_VIEW_NOESCFUNC..IDM_VIEW_ESCEXIT, after AutoSave.
+    for (const auto& [label, action] : {std::pair{wxTRANSLATE("&None"), EscapeFunction::None},
+                                        std::pair{wxTRANSLATE("&Minimize wxnotepad"), EscapeFunction::Minimize},
+                                        std::pair{wxTRANSLATE("E&xit wxnotepad"), EscapeFunction::Exit}}) {
+        const int id = wxWindow::NewControlId();
+        escape->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, action](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).escapeFunction = action;
+                UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, action](wxUpdateUIEvent& event) {
+                event.Check((settings_ ? settings_->values : defaults_).escapeFunction == action);
+            },
+            id);
+    }
+    view->AppendSubMenu(escape, _("Extra Esc &Key Function"));
     if (settings_) {
         auto* other = new wxMenu;
         const int saveRecent = wxWindow::NewControlId();

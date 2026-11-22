@@ -37,6 +37,7 @@ struct OriginalSettings {
     bool showToolbar = true;
     bool showStatusbar = true;
     int fullScreenMode = FullScreenMode_Default;
+    EscapeFunction escapeFunction = EscapeFunction::None;
     bool wordWrap = true;
     int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
     WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;
