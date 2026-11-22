@@ -34,8 +34,8 @@ constexpr size_t ToolbarConfigBufferCharacters = 160;
 
 class OriginalToolbar final : public wxToolBar {
 public:
-    explicit OriginalToolbar(wxWindow* parent)
-        : wxToolBar(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_HORIZONTAL | wxTB_FLAT | wxTB_NODIVIDER) {}
+    OriginalToolbar(wxWindow* parent, wxWindowID id, long style, const wxString& name)
+        : wxToolBar(parent, id, wxDefaultPosition, wxDefaultSize, style, name) {}
     void UpdateWindowUI(long flags = wxUPDATE_UI_NONE) override {
         wxToolBar::UpdateWindowUI(flags);
         // Original INI layouts may repeat a command. wx updates by ID and finds
@@ -69,8 +69,11 @@ public:
 // Both must use the same original pixel size, including at fractional DPI.
 class SizedToolbarArtwork final : public wxBitmapBundleImpl {
 public:
-    SizedToolbarArtwork(wxBitmapBundle source, wxSize logical, wxSize physical)
-        : source_(std::move(source)), logical_(logical), physical_(physical) {}
+    SizedToolbarArtwork(const wxBitmapBundle& source, int pixels, double contentScale)
+        : source_(source), physical_(pixels, pixels) {
+        const int logicalPixels = static_cast<int>(std::lround(pixels / contentScale));
+        logical_ = wxSize(logicalPixels, logicalPixels);
+    }
     wxSize GetDefaultSize() const override { return logical_; }
     wxSize GetPreferredBitmapSizeAtScale(double) const override { return physical_; }
     wxBitmap GetBitmap(const wxSize& size) override { return source_.GetBitmap(size); }
@@ -265,8 +268,7 @@ void EditorFrame::AppendToolbarCommands(wxMenu* appearance) {
 
 void EditorFrame::CreateDefaultToolbar() {
     if (!wxImage::FindHandler(wxBITMAP_TYPE_PNG)) wxImage::AddHandler(new wxPNGHandler);
-    auto* toolbar = new OriginalToolbar(this);
-    SetToolBar(toolbar);
+    auto* toolbar = CreateToolBar(wxTB_HORIZONTAL | wxTB_FLAT | wxTB_NODIVIDER);
     toolbar->SetName("Main toolbar");
     const auto commands = ToolbarCommands(GetMenuBar());
     const auto& configured = (settings_ ? settings_->values : defaults_).toolbarButtons;
@@ -307,14 +309,16 @@ void EditorFrame::CreateDefaultToolbar() {
     });
 }
 
+wxToolBar* EditorFrame::OnCreateToolBar(long style, wxWindowID id, const wxString& name) {
+    return new OriginalToolbar(this, id, style, name);
+}
+
 void EditorFrame::RebuildToolbar() {
     auto* toolbar = GetToolBar();
     toolbar->ClearTools();
     const auto commands = ToolbarCommands(GetMenuBar());
     const int pixels = ToolbarPixels(GetDPI().x, (settings_ ? settings_->values : defaults_).autoScaleToolbar);
-    const wxSize physical(pixels, pixels);
-    const int logicalPixels = static_cast<int>(std::lround(pixels / toolbar->GetContentScaleFactor()));
-    const wxSize logical(logicalPixels, logicalPixels);
+    const double contentScale = toolbar->GetContentScaleFactor();
     for (const int identity : toolbarButtons_) {
         if (identity == ToolbarSeparator) {
             toolbar->AddSeparator();
@@ -323,8 +327,8 @@ void EditorFrame::RebuildToolbar() {
             const auto source = ToolbarArt::Icon(identity - 1);
             const auto disabled = DisabledArtwork(source, wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
             toolbar->AddTool(menu->GetId(), menu->GetItemLabelText(),
-                             wxBitmapBundle::FromImpl(new SizedToolbarArtwork(source, logical, physical)),
-                             wxBitmapBundle::FromImpl(new SizedToolbarArtwork(disabled, logical, physical)),
+                             wxBitmapBundle::FromImpl(new SizedToolbarArtwork(source, pixels, contentScale)),
+                             wxBitmapBundle::FromImpl(new SizedToolbarArtwork(disabled, pixels, contentScale)),
                              menu->IsCheckable() ? wxITEM_CHECK : wxITEM_NORMAL,
                              wxStripMenuCodes(menu->GetItemLabel(), wxStrip_Mnemonics), menu->GetHelp());
             toolbar->EnableTool(menu->GetId(), menu->IsEnabled());

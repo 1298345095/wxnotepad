@@ -89,7 +89,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
-msgid "&Add →"
+msgid "&Add ->"
 msgstr ""
 
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
@@ -697,6 +697,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "1/&4 Page"
+msgstr ""
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "<- &Remove"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -3174,8 +3178,4 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"
-msgstr ""
-
-#: src/app/dialogs/toolbar_customization_dialog.cpp
-msgid "← &Remove"
 msgstr ""

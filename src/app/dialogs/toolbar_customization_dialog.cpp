@@ -41,8 +41,8 @@ void ShowToolbarCustomizationDialog(wxWindow* parent, std::span<const ToolbarBut
         actions->Add(control, 0, wxEXPAND | wxBOTTOM, gap);
         return control;
     };
-    auto* add = button(_("&Add →"), "Add toolbar button");
-    auto* remove = button(_("← &Remove"), "Remove toolbar button");
+    auto* add = button(_("&Add ->"), "Add toolbar button");
+    auto* remove = button(_("<- &Remove"), "Remove toolbar button");
     auto* up = button(_("Move &Up"), "Move toolbar button up");
     auto* down = button(_("Move &Down"), "Move toolbar button down");
     auto* reset = button(_("&Reset"), "Reset toolbar buttons");

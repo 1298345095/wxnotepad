@@ -92,8 +92,8 @@ msgid_plural "%zu replacements"
 msgstr[0] "%zu 处替换"
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
-msgid "&Add →"
-msgstr "添加(&A) →"
+msgid "&Add ->"
+msgstr "添加(&A) ->"
 
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_commands.cpp
@@ -772,6 +772,10 @@ msgstr "1/3 页(&3)"
 #: src/app/editor_frame_commands.cpp
 msgid "1/&4 Page"
 msgstr "1/4 页(&4)"
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "<- &Remove"
+msgstr "<- 移除(&R)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "A&dvanced Settings"
@@ -3387,10 +3391,6 @@ msgstr "缩放级别 (%d%% 到 %d%%):"
 msgid "m4"
 msgstr "m4"
 
-#: src/app/dialogs/toolbar_customization_dialog.cpp
-msgid "← &Remove"
-msgstr "← 移除(&R)"
-
 #, c-format
 #~ msgid "%s bytes"
 #~ msgstr "%s 字节"
@@ -3399,8 +3399,14 @@ msgstr "← 移除(&R)"
 #~ msgid "%s%s | %s%s | EOL: %s"
 #~ msgstr "%s%s | %s%s | 换行符: %s"
 
+#~ msgid "&Add →"
+#~ msgstr "添加(&A) →"
+
 #~ msgid "&Collapse All"
 #~ msgstr "全部折叠(&C)"
 
 #~ msgid "&Expand All"
 #~ msgstr "全部展开(&E)"
+
+#~ msgid "← &Remove"
+#~ msgstr "← 移除(&R)"

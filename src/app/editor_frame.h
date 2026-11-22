@@ -125,6 +125,7 @@ private:
     void ApplyWrapSymbols();
     void CreateMenus();
     void CreateDefaultToolbar();
+    wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;
     void AppendToolbarCommands(wxMenu* appearance);
     void RebuildToolbar();
     void CustomizeToolbar();

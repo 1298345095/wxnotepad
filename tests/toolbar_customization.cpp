@@ -42,10 +42,36 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
     NativeSearch::Command(frame, showToolbar);
     NativeSearch::Command(frame, showStatus);
     NativePaint::Complete(frame->Editor());
+    const auto nativeClient = [frame] {
+#ifdef __WXMSW__
+        RECT rectangle{};
+        Require(GetClientRect(static_cast<HWND>(frame->GetHandle()), &rectangle),
+                "native full client bounds are readable");
+        return wxSize(rectangle.right, rectangle.bottom);
+#elif defined(__WXGTK__)
+        int width = 0, height = 0;
+        gtk_window_get_size(GTK_WINDOW(frame->GetHandle()), &width, &height);
+        return wxSize(width, height);
+#else
+        return frame->GetClientSize();
+#endif
+    };
+    const auto layoutDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (frame->Editor()->GetSize() != nativeClient() && std::chrono::steady_clock::now() < layoutDeadline) {
+        wxYield();
+        wxMilliSleep(1);
+    }
+    Require(frame->Editor()->GetSize() == nativeClient(),
+            "all-hidden baseline reaches the actual native full client allocation");
     const auto editorSize = frame->Editor()->GetSize();
     const auto window = frame->GetRect();
     NativeSearch::Command(frame, large);
     NativePaint::Complete(frame->Editor());
+    if (frame->Editor()->GetSize() != editorSize)
+        std::fprintf(
+            stderr, "Hidden toolbar geometry: editor=%dx%d -> %dx%d frame=%dx%d toolbarShown=%d statusShown=%d\n",
+            editorSize.x, editorSize.y, frame->Editor()->GetSize().x, frame->Editor()->GetSize().y, frame->GetSize().x,
+            frame->GetSize().y, frame->GetToolBar()->IsShown(), frame->GetStatusBar()->IsShown());
     Require(!frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown() &&
                 frame->Editor()->GetSize() == editorSize,
             "size rebuilding retains hidden bars and the editor's native geometry");
@@ -229,8 +255,11 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
             if (child->IsShown()) {
                 Require(dialog->GetScreenRect().Contains(child->GetScreenRect()),
                         "customization controls remain visible");
-                if (auto* button = wxDynamicCast(child, wxButton))
+                if (auto* button = wxDynamicCast(child, wxButton)) {
+                    Require(!button->GetLabel().empty(),
+                            "every toolbar customization action has a visible native label");
                     Require(button->GetSize().x >= button->GetBestSize().x, "localized toolbar button label fits");
+                }
             }
         auto* available = wxDynamicCast(wxWindow::FindWindowByName("Available toolbar buttons", dialog), wxListBox);
         auto* current = wxDynamicCast(wxWindow::FindWindowByName("Current toolbar buttons", dialog), wxListBox);
@@ -329,9 +358,11 @@ void ConfigurationLifecycle(EditorFrame* frame, const wxString& settingsPath, co
                 "repeated original identities preserve native command availability for every configured button");
         const int large = AppearanceCommand(frame, "Use Lar&ge Toolbar");
         NativeSearch::Command(frame, large);
+        const int dpi = frame->GetDPI().x;
+        const int pixels = dpi == 192 ? 40 : dpi == 144 ? 32 : dpi == 120 ? 28 : 24;
         for (int index : {0, 1})
             Require(toolbar->GetToolByPos(index)->GetNormalBitmapBundle().GetBitmapFor(toolbar).GetSize() ==
-                        wxSize(frame->GetDPI().x == 192 ? 40 : 24, frame->GetDPI().x == 192 ? 40 : 24),
+                        wxSize(pixels, pixels),
                     "every repeated button uses the requested original size");
     }
     NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
