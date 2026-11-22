@@ -31,6 +31,8 @@ enum MarkOccurrenceOption {
     MarkOccurrenceOption_Default = MarkOccurrenceOption_Enabled,
 };
 
+enum class EscapeFunction { None, Minimize, Exit };
+
 enum FullScreenMode {
     FullScreenMode_OnStartup = 1,
     FullScreenMode_HideTitle = 2,

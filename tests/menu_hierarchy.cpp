@@ -139,14 +139,15 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
-    Order(bar->GetMenu(5), {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...",
-                            "Long Line Settings...", "Auto Completion Settings...", "Auto Completion Ignore Case",
-                            "Auto Indent", "Select and Edit Options", "Appearance", "Window Title Display",
-                            "File Change Notification...", "AutoSave Settings...", "Other Settings",
+    Order(bar->GetMenu(5),
+          {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
+           "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
+           "Appearance", "Window Title Display", "File Change Notification...", "AutoSave Settings...",
+           "Extra Esc Key Function", "Other Settings",
 #ifdef __WXMSW__
-                            "Advanced Settings",
+           "Advanced Settings",
 #endif
-                            "Save Settings On Exit", "Save Settings Now"});
+           "Save Settings On Exit", "Save Settings Now"});
     Groups(bar->GetMenu(5), {"Insert Tabs as Spaces", "Appearance", "File Change Notification...",
 #ifdef __WXMSW__
                              "Advanced Settings"});
@@ -160,6 +161,7 @@ void CheckMenu(EditorFrame* frame) {
                        "Auto-Shrink Horizontal Scrollbar", "Language"});
     Groups(appearance, {"Show Menu", "Full Screen Mode", "Language"});
     Order(Submenu(bar->GetMenu(5), "Other Settings"), {"Remember Recent Files", "Remember Search Options"});
+    Order(Submenu(bar->GetMenu(5), "Extra Esc Key Function"), {"None", "Minimize wxnotepad", "Exit wxnotepad"});
 #ifdef __WXMSW__
     Order(Submenu(bar->GetMenu(5), "Advanced Settings"), {"Rendering Technology"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Advanced Settings"), "Rendering Technology"), {"Legacy GDI", "Direct2D"});

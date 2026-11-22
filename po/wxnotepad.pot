@@ -373,6 +373,10 @@ msgid "&Millisecond (ms)"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Minimize wxnotepad"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Modify Lines...\tAlt+M"
 msgstr ""
 
@@ -1371,6 +1375,10 @@ msgid "E&xit\tAlt+F4"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "E&xit wxnotepad"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr ""
 
@@ -1418,6 +1426,10 @@ msgstr ""
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
 #: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Extra Esc &Key Function"
 msgstr ""
 
 #: src/editor/special_insert.h

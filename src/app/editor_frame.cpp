@@ -232,7 +232,7 @@ bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
             HandleFullScreenKey(modifiers);
             return true;
         }
-        if (message->wParam == VK_ESCAPE && modifiers == wxMOD_NONE && HandleFullScreenEscape()) return true;
+        if (message->wParam == VK_ESCAPE && HandleEscapeKey(modifiers)) return true;
     }
     // A hidden native menu receives no WM_INITMENU to refresh command state.
     // Refresh command gestures, leaving ordinary character input alone.
@@ -317,12 +317,27 @@ void EditorFrame::RefreshFullScreen() {
 }
 #endif
 
-bool EditorFrame::HandleFullScreenEscape() {
+bool EditorFrame::HandleEscapeKey(int modifiers) {
     using enum Scintilla::Message;
-    if (!FullScreenActive() || wxWindow::FindFocus() != editor_ || editor_->Send(AutoCActive) ||
-        editor_->Send(CallTipActive))
-        return false;
-    SetFullScreen(false);
+    if (wxWindow::FindFocus() != editor_ || editor_->InputMethodComposing()) return false;
+    if (modifiers == wxMOD_SHIFT) {
+        // Original CMD_SHIFTESC always uses the ordinary application close flow.
+        Close();
+        return true;
+    }
+    if (modifiers != wxMOD_NONE) return false;
+    // Original CMD_ESCAPE: one press performs only the first eligible action.
+    if (editor_->Send(AutoCActive))
+        editor_->Send(AutoCCancel);
+    else if (editor_->Send(CallTipActive))
+        editor_->Send(CallTipCancel);
+    else if (FullScreenActive())
+        SetFullScreen(false);
+    else if (const auto action = (settings_ ? settings_->values : defaults_).escapeFunction;
+             action == EscapeFunction::Minimize)
+        Iconize();
+    else if (action == EscapeFunction::Exit)
+        Close();
     return true;
 }
 

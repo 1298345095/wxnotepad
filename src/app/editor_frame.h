@@ -74,7 +74,7 @@ private:
     bool FullScreenActive() const;
     void SetFullScreen(bool active);
     void HandleFullScreenKey(int modifiers);
-    bool HandleFullScreenEscape();
+    bool HandleEscapeKey(int modifiers);
 #ifdef __WXMSW__
     struct FullScreenPlacement;
     std::unique_ptr<FullScreenPlacement> fullScreenPlacement_;
