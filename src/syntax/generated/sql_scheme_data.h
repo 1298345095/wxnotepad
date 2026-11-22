@@ -539,7 +539,7 @@ constexpr auto sqlStyles = std::to_array<SyntaxStyle>({
     {SCE_SQL_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_SQL_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata sqlOriginal = {512, 4, 4, (1 << 0), 0, '\\', SCE_SQL_ESCAPECHAR, 0, SCE_SQL_WORD, 0, 0, SCE_SQL_OPERATOR, 0, SCE_SQL_COMMENTLINEDOC, SCE_SQL_QOPERATOR, SCE_SQL_BIT};
+constexpr SyntaxOriginalMetadata sqlOriginal = {512, 4, 4, (1 << 0), 0, '\\', SCE_SQL_ESCAPECHAR, 0, SCE_SQL_WORD, 0, 0, SCE_SQL_OPERATOR, 0, SCE_SQL_COMMENTLINEDOC, SCE_SQL_QOPERATOR, SCE_SQL_BIT, 28};
 constexpr const char* sqlSettingsSection = "SQL Query";
 constexpr auto sqlExtensions = std::to_array<const char*>({"sql", "mysql", "hsql"});
 // clang-format on

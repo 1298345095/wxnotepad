@@ -17,9 +17,11 @@ with tempfile.TemporaryDirectory() as directory:
     assert '"wxss"' in css and '"hss"' in css
     assert 'cssKeywords[5] ? cssKeywords[5] : "", 4U << 8U' in css
     assert 'SCE_CSS_OPERATOR2' in css and 'SCE_CSS_VARIABLE' in css
+    assert 'SCE_CSS_URL, 27};' in css
     assert '"mysql"' in sql and '"hsql"' in sql
     assert 'sqlKeywords[3] ? sqlKeywords[3] : "", 4U << 8U' in sql
     assert 'SCE_SQL_QOPERATOR' in sql and 'SCE_SQL_USER1' in sql
+    assert 'SCE_SQL_BIT, 28};' in sql
     for name, content in [('css', css), ('sql', sql)]:
         assert content == (root / f'src/syntax/generated/{name}_scheme_data.h').read_text(encoding='utf-8')
 print('PASS: pinned CSS/SQL full groups, attributes, styles and reproducible shared imports')
