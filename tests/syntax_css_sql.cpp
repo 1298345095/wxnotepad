@@ -74,6 +74,7 @@ void DialectWorkflows(EditorFrame* frame, SettingsStore& settings) {
         Require(frame->Revert().status == OpenStatus::Opened && editor->Send(Message::GetLexer) == fixture.lexer &&
                     TestEditor::Text(editor) == fixture.text,
                 "native Revert reloads each original scheme's current file and automatic classification");
+        NativePaint::Complete(editor);
         TestLanguages::FoldCommands(frame);
         TestEditor::ResetStream(editor, "call()\n");
         if (*fixture.lineComment) {
@@ -260,8 +261,9 @@ public:
         settings_->values.globalTabs = {7, 3, true};
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "native compositor must present the CSS/SQL test editor");
                 FileRecognition(frame);
                 OriginalOracle(frame);
                 DialectWorkflows(frame, *settings_);
