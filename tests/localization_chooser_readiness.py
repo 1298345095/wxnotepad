@@ -104,6 +104,7 @@ def publisher(root):
     delayed_popup = (root / 'delay-popup').exists()
     BusyFilter.set_accessible_type(DelayedFilterAccessible if delayed_popup else BusyFilterAccessible)
     filters = BusyFilter()
+    filters.append_text('All Files (*)')
     filters.append_text('Text files (*.txt)')
     filters.set_active(0)
     contents.pack_start(filters, True, True, 0)
@@ -191,7 +192,7 @@ def main():
                 (root / 'stall-filter').touch()
                 try:
                     observed_filters = dialogs.file_filters(window)
-                    assert set(observed_filters) == {'Text files (*.txt)'}, observed_filters
+                    assert set(observed_filters) == {'All Files (*)', 'Text files (*.txt)'}, observed_filters
                 except Exception:
                     if (root / 'filter-blocked').exists():
                         wait_marker(root / 'filter-resumed')

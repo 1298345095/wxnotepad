@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include <memory>
 #include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
@@ -2430,9 +2431,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
 }
 
 void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
-    auto* title = new wxMenu;
-    const auto appendChoice = [title](int id, const wxString& label) {
-        auto* item = title->AppendCheckItem(id, label);
+    auto title = std::make_unique<wxMenu>();
+    const auto appendChoice = [menu = title.get()](int id, const wxString& label) {
+        auto* item = menu->AppendCheckItem(id, label);
         // Keep the original radio marks, while allowing an already selected
         // excerpt command to run again through GTK's native activate signal.
 #ifdef __WXMSW__
@@ -2440,7 +2441,7 @@ void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
         information.cbSize = sizeof(information);
         information.fMask = MIIM_FTYPE;
         information.fType = MFT_RADIOCHECK;
-        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
+        SetMenuItemInfoW(static_cast<HMENU>(menu->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
                          &information);
 #elif defined(__WXGTK__)
         gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item->GetMenuItem()), TRUE);
@@ -2481,7 +2482,7 @@ void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
         },
         excerpt);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(!titleExcerpt_.empty()); }, excerpt);
-    settings->AppendSubMenu(title, _("Window Title Displa&y"));
+    settings->AppendSubMenu(title.release(), _("Window Title Displa&y"));
 }
 
 void EditorFrame::AppendAppearanceOptions(wxMenu* view) {
