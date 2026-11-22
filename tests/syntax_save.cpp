@@ -167,6 +167,7 @@ void Selected(EditorFrame* frame, const char* language, int lexer) {
 class SyntaxSaveApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
         // Preserve every existing specific-filetype/save/codec/history scenario
@@ -183,7 +184,8 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
-        CallAfter([this, frame] {
+        const bool reachability = wxGetenv("WXNOTEPAD_BASE_FILTER_REACHABILITY") != nullptr;
+        CallAfter([this, frame, reachability] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-syntax-save");
             try {
                 using enum Scintilla::Message;
@@ -194,6 +196,30 @@ public:
                 auto* editor = frame->Editor();
                 const std::string source = "int value; // 中文\r\nint next;\n";
                 editor->Send(AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                if (reachability) {
+                    editor->Send(SetSel, 7, 2);
+                    const auto history = editor->Send(GetUndoActions);
+                    Require(frame->SaveAs(Filename(directory / "reachability-seed.txt")).status == SaveStatus::Saved,
+                            "name the reachability document before explicit current-filter selections");
+                    for (const auto& definition : SyntaxCatalog()) {
+                        if (SyntaxSettingsLanguage(definition.language) != definition.language) continue;
+                        const auto label = LanguageName(definition.language).utf8_string();
+                        std::printf("REACHABILITY: %s\n", label.c_str());
+                        Choose(frame, label.c_str());
+                        const auto path = directory / ("reachable-" + std::to_string(definition.original.schemeId) +
+                                                       "." + definition.extensions.front());
+                        SaveCommand(frame, wxID_SAVEAS, Filename(path), {}, definition.language);
+                        Selected(frame, label.c_str(), definition.lexer);
+                        Require(Bytes(path) == source && Text(editor) == source && editor->Send(GetAnchor) == 7 &&
+                                    editor->Send(GetCurrentPos) == 2 && editor->Send(GetUndoActions) == history,
+                                "every delivered base remains reachable through current scheme and explicit favorites");
+                    }
+                    result_ = 0;
+                    std::filesystem::remove_all(directory);
+                    frame->Destroy();
+                    ExitMainLoop();
+                    return;
+                }
                 editor->Send(SetSel, 7, 2);
                 const auto eol = editor->Send(GetEOLMode);
                 SaveCommand(frame, wxID_SAVE, Filename(cpp));
@@ -384,17 +410,6 @@ public:
                     Require(Text(editor) == source, "native JS/TS Save As preserves document bytes");
                 }
                 std::puts("PASS: actual native JavaScript/JSX/TypeScript/TSX filter selection");
-                for (const auto& definition : SyntaxCatalog()) {
-                    if (SyntaxSettingsLanguage(definition.language) != definition.language) continue;
-                    const auto label = LanguageName(definition.language).utf8_string();
-                    Choose(frame, label.c_str());
-                    const auto path = directory / ("reachable-" + std::to_string(definition.original.schemeId) + "." +
-                                                   definition.extensions.front());
-                    SaveCommand(frame, wxID_SAVEAS, Filename(path), {}, definition.language);
-                    Selected(frame, label.c_str(), definition.lexer);
-                    Require(Bytes(path) == source && Text(editor) == source,
-                            "every delivered base remains reachable through current scheme and explicit favorites");
-                }
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
