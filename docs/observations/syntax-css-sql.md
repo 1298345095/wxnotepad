@@ -59,3 +59,14 @@ External evidence is retained at
 the independent original JSON, importer/native red runs and subsequent native
 backend results. The file recognition tracer fails on the unmodified base;
 the SQL differential tracer also caught a real missing default-option adaptation.
+
+Final integrated Windows/MSVC and Linux/GCC builds pass. The affected native
+batch passes all eleven cases on Windows and X11; Wayland also passes all
+eleven with the original eleven private sessions. The full CSS/SQL oracle,
+real chooser, canonical file filters, completion and localized app workflows
+pass on each backend. A shared markup fixture correction preserves its original
+independent oracle host and gives favorite file filters a separate frame;
+its original 44 oracle states, assertions, frozen data and deadlines remain unchanged.
+Canonical formatting, importer reproducibility, release translations and
+targeted native clang-tidy pass. Remaining analyzer diagnostics are in existing
+unchanged lines and remain in the evidence; no checks were suppressed.
