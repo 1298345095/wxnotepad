@@ -32,7 +32,7 @@ class SaveChooser final : public wxTimer {
 public:
     SaveChooser(const wxString& path, SyntaxLanguage current, const wxString& type)
         : path_(path), type_(type), current_(SyntaxSettingsLanguage(current) == SyntaxLanguage::MarkdownGitHub
-                                                 ? "Markdown"
+                                                 ? wxString("Markdown")
                                                  : LanguageName(SyntaxSettingsLanguage(current))) {
         Start(150);
     }

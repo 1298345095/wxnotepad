@@ -247,6 +247,18 @@ document language. `[Styles] FavoriteSchemes` stores original scheme identities 
 order. Text File remains fixed; unavailable entries do not become another language
 because of an internal enum position. These fields follow Save Settings On Exit
 and Save Settings Now, retaining unrelated INI fields.
+Checking appends a scheme; unchecking removes it. Drag a scheme onto an expanded
+Favorite Schemes group to place it first, or onto a favorite to place it after
+that entry. The original limits are 31 stored identities and 127 configuration
+characters, including retained unavailable entries. An edit that exceeds either
+limit remains unchecked rather than disappearing after reopening.
+
+Native Open filters list All Files first, then the current base scheme, Text File,
+and ordered favorites. Save lists those schemes first and All Files last, omitting
+duplicate current schemes. A shared base filter retains the current dialect when
+accepted. The fixed Scheme menu retains its family/dialect groups and order;
+favorites govern the chooser and file filters. All delivered bases remain
+selectable through F12 and can be added to favorites.
 
 The original scheme sections are `[Text File]`, `[C/C++ Source]`,
 `[Python Script]`, `[JSON Document]`, `[Shell Script]`, `[JavaScript]` and `[TypeScript]`. Bash, C Shell and m4

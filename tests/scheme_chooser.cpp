@@ -310,6 +310,35 @@ void FavoriteCapacity() {
     Require(reopened.values.favoriteSchemes == "1 15 " + unavailable,
             "accepted favorite replacement remains inside original limits across settings restart");
     frame->Destroy();
+    wxString wideIds;
+    for (int identity = 1000; identity <= 1022; ++identity) {
+        if (!wideIds.empty()) wideIds += ' ';
+        wideIds += wxString::Format("%d", identity);
+    }
+    // Imported unavailable IDs can occupy more than the original three digits:
+    // 119 initial characters + Go(3) + Python(3) = 125; adding JSON would be128.
+    TestFiles::WriteBytes(ini,
+                          "[Settings]\nSaveSettings=0\n[Styles]\nFavoriteSchemes=1 67 " + wideIds.utf8_string() + "\n");
+    SettingsStore wide(TestFiles::Filename(ini));
+    frame = new EditorFrame(&wide);
+    frame->Show();
+    Picker characters;
+    characters.title = "Favorite Schemes";
+    characters.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+        for (const auto* label : {"Go Source", "Python Script", "JSON Document"}) {
+            Require(NativeDialogs::SelectTreeLabel(tree, label), "character-budget checkbox target is delivered");
+            wxTreeEvent click(wxEVT_TREE_STATE_IMAGE_CLICK, &tree, tree.GetSelection());
+            Require(tree.GetEventHandler()->ProcessEvent(click), "native checkbox handles serialized-character limit");
+        }
+        Require(NativeDialogs::SelectTreeLabel(tree, "JSON Document") && tree.GetItemState(tree.GetSelection()) == 0,
+                "127-character original budget rejects an edit even below31 stored identities");
+        NativeSearch::Click(&dialog, wxID_OK);
+    };
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Favorite Schemes..."));
+    Require(characters.error.empty(), characters.error.utf8_str());
+    Require(wide.values.favoriteSchemes == "1 67 " + wideIds + " 15 32" && wide.values.favoriteSchemes.length() == 125,
+            "accepted edits retain all unavailable IDs without exceeding the original character buffer");
+    frame->Destroy();
 }
 void KeyboardChooser() {
     auto* frame = new EditorFrame;
