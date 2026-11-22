@@ -39,6 +39,12 @@ msgstr " (手动指定)"
 msgid " | Sel %lld"
 msgstr " | 选中 %lld"
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr "“%s”"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_SAVE.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -305,6 +311,10 @@ msgstr "文件(&F)"
 #: src/app/editor_frame_commands.cpp
 msgid "&File Name"
 msgstr "文件名(&F)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
+msgstr "仅文件名(&F)"
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Find All"
@@ -655,6 +665,10 @@ msgstr "选择语法高亮(&S)...\tF12"
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr "制表符设置(&T)..."
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
+msgstr "文本摘选(&T)"
 
 #. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
@@ -1546,6 +1560,10 @@ msgstr "文件模式(&M)"
 msgid "File Change Notification"
 msgstr "文件变更通知"
 
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
+msgstr "文件名和目录(&D)"
+
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYFILENAME.
 #: src/app/editor_frame_commands.cpp
 msgid "File Name and &Ext.\tShift+F9"
@@ -1629,6 +1647,10 @@ msgstr "页脚："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
 msgstr "对换行的文本"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
+msgstr "完整路径名称(&P)"
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
 #: src/app/editor_frame_commands.cpp
@@ -3266,6 +3288,10 @@ msgstr "按空白"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
 msgstr "只匹配完整单词(&W)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
+msgstr "窗口标题显示(&Y)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"

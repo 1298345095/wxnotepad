@@ -2349,6 +2349,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     AppendAppearanceOptions(view);
+    AppendWindowTitleOptions(view);
     view->AppendSeparator();
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
@@ -2418,6 +2419,61 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
 #endif
     AppendSettingsCommands(view);
     return view;
+}
+
+void EditorFrame::AppendWindowTitleOptions(wxMenu* settings) {
+    auto* title = new wxMenu;
+    const auto appendChoice = [title](int id, const wxString& label) {
+        auto* item = title->AppendCheckItem(id, label);
+        // Keep the original radio marks, while allowing an already selected
+        // excerpt command to run again through GTK's native activate signal.
+#ifdef __WXMSW__
+        MENUITEMINFOW information{};
+        information.cbSize = sizeof(information);
+        information.fMask = MIIM_FTYPE;
+        information.fType = MFT_RADIOCHECK;
+        SetMenuItemInfoW(static_cast<HMENU>(title->GetHMenu()), static_cast<UINT>(item->GetMSWId()), FALSE,
+                         &information);
+#elif defined(__WXGTK__)
+        gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item->GetMenuItem()), TRUE);
+#endif
+        return item;
+    };
+    for (const auto& [label, mode] :
+         {std::pair{wxTRANSLATE("&File Name Only"), TitlePathNameFormat::NameOnly},
+          std::pair{wxTRANSLATE("File Name and &Directory"), TitlePathNameFormat::NameFirst},
+          std::pair{wxTRANSLATE("Full &Path Name"), TitlePathNameFormat::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        // Check items allow choosing the already selected command again on GTK,
+        // including recapturing Text Excerpt. Update UI keeps one item checked.
+        appendChoice(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, mode](wxCommandEvent&) {
+                (settings_ ? settings_->values : defaults_).pathNameFormat = mode;
+                titleExcerpt_.clear();
+                UpdateDocumentState();
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(titleExcerpt_.empty() &&
+                            (settings_ ? settings_->values : defaults_).pathNameFormat == mode);
+            },
+            id);
+    }
+    const int excerpt = wxWindow::NewControlId();
+    appendChoice(excerpt, _("&Text Excerpt"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            titleExcerpt_ = editor_->CaptureTitleExcerpt(document_.IsDefaultEncoding());
+            UpdateDocumentState();
+        },
+        excerpt);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(!titleExcerpt_.empty()); }, excerpt);
+    settings->AppendSubMenu(title, _("Window Title Displa&y"));
 }
 
 void EditorFrame::AppendAppearanceOptions(wxMenu* view) {
