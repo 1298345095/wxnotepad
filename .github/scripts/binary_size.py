@@ -17,7 +17,7 @@ def unpack(data, offset, layout):
     return struct.unpack(layout, region(data, offset, struct.calcsize(layout)))
 
 
-def elf(data):
+def elf_sections(data):
     if region(data, 0, 6) != b'\x7fELF\x02\x01':
         raise ValueError('Expected a little-endian ELF64 file')
     header = unpack(data, 16, '<HHIQQQIHHHHHH')
@@ -28,9 +28,7 @@ def elf(data):
     sections = [unpack(data, section_offset + index * section_stride, '<IIQQQQIIQQ')
                 for index in range(section_count)]
     names = region(data, sections[names_index][4], sections[names_index][5])
-    result = {'format': 'ELF64', 'machine': header[1], 'sections': [], 'debug_bytes': 0,
-              'symbol_table_entries': 0, 'dynamic_symbol_entries': 0, 'defined_dynamic_symbols': 0,
-              'relr_bytes': 0, 'relr_relocations': 0, 'dynamic_relr_bytes': 0}
+    records = []
     for name_offset, kind, flags, _, offset, size, _, _, _, entry_size in sections:
         if name_offset >= len(names):
             raise ValueError('ELF section name is outside the string table')
@@ -39,32 +37,77 @@ def elf(data):
             raise ValueError('Unterminated ELF section name')
         name = names[name_offset:terminator].decode('ascii')
         content = b'' if kind == 8 else region(data, offset, size)  # SHT_NOBITS occupies no file bytes.
+        records.append((name, kind, flags, size, entry_size, content))
+    return header[1], records
+
+
+def elf_table(content, entry_size, layout, name):
+    expected_size = struct.calcsize(layout)
+    if entry_size != expected_size or len(content) % expected_size:
+        raise ValueError(f'Invalid ELF {name} entry size')
+    return struct.iter_unpack(layout, content)
+
+
+def elf_metadata(kind, content, entry_size):
+    if kind in (2, 11):  # SHT_SYMTAB, SHT_DYNSYM
+        entries = elf_table(content, entry_size, '<IBBHQQ', 'symbol')
+        if kind == 2:
+            return {'symbol_table_entries': len(content) // entry_size}
+        return {'dynamic_symbol_entries': len(content) // entry_size,
+                'defined_dynamic_symbols': sum(entry[3] != 0 for entry in entries)}
+    if kind == 19:  # SHT_RELR
+        entries = elf_table(content, entry_size, '<Q', 'RELR')
+        count = sum((value >> 1).bit_count() if value & 1 else 1 for value, in entries)
+        return {'relr_bytes': len(content), 'relr_relocations': count}
+    if kind == 6:  # SHT_DYNAMIC; repeated DT_RELRSZ entries retain the last value.
+        entries = elf_table(content, entry_size, '<qQ', 'dynamic')
+        return {'dynamic_relr_bytes': value for tag, value in entries if tag == 35}
+    return {}
+
+
+def elf(data):
+    machine, sections = elf_sections(data)
+    result = {'format': 'ELF64', 'machine': machine, 'sections': [], 'debug_bytes': 0,
+              'symbol_table_entries': 0, 'dynamic_symbol_entries': 0, 'defined_dynamic_symbols': 0,
+              'relr_bytes': 0, 'relr_relocations': 0, 'dynamic_relr_bytes': 0}
+    for name, kind, flags, size, entry_size, content in sections:
         result['sections'].append({'name': name, 'file_bytes': len(content),
                                    'memory_bytes': size if flags & 2 else 0})  # SHF_ALLOC
         if name.startswith(('.debug_', '.zdebug_')):
             result['debug_bytes'] += size
-        if kind in (2, 11):  # SHT_SYMTAB, SHT_DYNSYM
-            if entry_size != 24 or size % entry_size:
-                raise ValueError('Invalid ELF symbol entry size')
-            result['symbol_table_entries' if kind == 2 else 'dynamic_symbol_entries'] += size // entry_size
-            if kind == 11:
-                result['defined_dynamic_symbols'] += sum(unpack(content, index, '<IBBHQQ')[3] != 0
-                                                         for index in range(0, size, entry_size))
-        if kind == 19:  # SHT_RELR
-            if entry_size != 8 or size % entry_size:
-                raise ValueError('Invalid ELF RELR entry size')
-            result['relr_bytes'] += size
-            for index in range(0, size, entry_size):
-                value, = unpack(content, index, '<Q')
-                result['relr_relocations'] += (value >> 1).bit_count() if value & 1 else 1
-        if kind == 6:  # SHT_DYNAMIC
-            if entry_size != 16 or size % entry_size:
-                raise ValueError('Invalid ELF dynamic entry size')
-            for index in range(0, size, entry_size):
-                tag, value = unpack(content, index, '<qQ')
-                if tag == 35:  # DT_RELRSZ
-                    result['dynamic_relr_bytes'] = value
+        for field, value in elf_metadata(kind, content, entry_size).items():
+            if field == 'dynamic_relr_bytes':
+                result[field] = value
+            else:
+                result[field] += value
     return result
+
+
+def pe_address_range(data, sections, address, size):
+    for base, raw_size, raw_offset in sections:
+        if base <= address and address - base <= raw_size and size <= raw_size - (address - base):
+            return region(data, raw_offset + address - base, size)
+    raise ValueError('PE directory is outside a file-backed section')
+
+
+def pe_debug_records(data, sections, optional, optional_size):
+    directory_count, = unpack(data, optional + 108, '<I')
+    if directory_count > (optional_size - 112) // 8:
+        raise ValueError('PE data directories exceed the optional header')
+    if directory_count <= 6:
+        return []
+    address, size = unpack(data, optional + 112 + 6 * 8, '<II')
+    if not size:
+        return []
+    if size % 28:
+        raise ValueError('Invalid PE debug directory size')
+    content = pe_address_range(data, sections, address, size)
+    records = []
+    for offset in range(0, size, 28):
+        _, _, _, _, kind, raw_size, _, raw_offset = unpack(content, offset, '<IIHHIIII')
+        region(data, raw_offset, raw_size)
+        records.append({'type': kind, 'bytes': raw_size})
+    return records
 
 
 def pe(data):
@@ -89,25 +132,7 @@ def pe(data):
         sections.append((address, raw_size, raw_offset))
         result['sections'].append({'name': name, 'file_bytes': raw_size, 'memory_bytes': virtual_size})
 
-    def address_range(address, size):
-        for base, raw_size, raw_offset in sections:
-            if base <= address and address - base <= raw_size and size <= raw_size - (address - base):
-                return region(data, raw_offset + address - base, size)
-        raise ValueError('PE directory is outside a file-backed section')
-
-    directory_count, = unpack(data, optional + 108, '<I')
-    if directory_count > (optional_size - 112) // 8:
-        raise ValueError('PE data directories exceed the optional header')
-    if directory_count > 6:
-        address, size = unpack(data, optional + 112 + 6 * 8, '<II')
-        if size:
-            if size % 28:
-                raise ValueError('Invalid PE debug directory size')
-            content = address_range(address, size)
-            for offset in range(0, size, 28):
-                _, _, _, _, kind, raw_size, _, raw_offset = unpack(content, offset, '<IIHHIIII')
-                region(data, raw_offset, raw_size)
-                result['debug_records'].append({'type': kind, 'bytes': raw_size})
+    result['debug_records'] = pe_debug_records(data, sections, optional, optional_size)
     return result
 
 
