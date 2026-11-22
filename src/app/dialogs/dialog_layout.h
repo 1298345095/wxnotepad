@@ -4,6 +4,7 @@
 #include <wx/dialog.h>
 #include <wx/sizer.h>
 #include <algorithm>
+#include <memory>
 
 // Layout policies mirror Notepad4's dialog templates and ResizeDlg_Init[X/Y2].
 // Sizes come from native controls and translated text, not frozen pixel bounds.
@@ -31,17 +32,26 @@ inline void Fit(wxDialog& dialog, wxSizer* contents, Resize resize = Resize::Fix
     dialog.Layout();
 }
 
+// Hold an unfinished layout until wx has adopted it. If building its controls
+// throws, the local owner releases the unparented sizers rather than leaking them.
+template <class Sizer>
+void Fit(wxDialog& dialog, std::unique_ptr<Sizer> contents, Resize resize = Resize::Fixed, bool retainWidth = false) {
+    dialog.SetSizer(contents.get());
+    Fit(dialog, contents.release(), resize, retainWidth);
+}
+
 // IDD_ALIGN, IDD_SORT, IDD_LINENUM, IDD_COLUMNWRAP, IDD_LONGLINES,
 // IDD_DEFEOLMODE and IDD_CHANGENOTIFY place OK/Cancel beside the fields.
-inline wxSizer* WithSideButtons(wxDialog& dialog, wxSizer* fields) {
-    auto* layout = new wxBoxSizer(wxHORIZONTAL);
+inline std::unique_ptr<wxSizer> WithSideButtons(wxDialog& dialog, wxSizer* fields) {
+    auto layout = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     layout->Add(fields, 1, wxEXPAND | wxBOTTOM, dialog.FromDIP(MarginDip));
-    auto* buttons = new wxBoxSizer(wxVERTICAL);
+    auto buttons = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    // Native controls are owned by their parent window from construction.
     auto* ok = new wxButton(&dialog, wxID_OK);
     ok->SetDefault();
     buttons->Add(ok, 0, wxEXPAND | wxBOTTOM, dialog.FromDIP(GapDip));
     buttons->Add(new wxButton(&dialog, wxID_CANCEL), 0, wxEXPAND);
-    layout->Add(buttons, 0, wxALL, dialog.FromDIP(MarginDip));
+    layout->Add(buttons.release(), 0, wxALL, dialog.FromDIP(MarginDip));
     return layout;
 }
 } // namespace DialogLayout

@@ -124,6 +124,7 @@ add_library(app_shell STATIC
     src/app/dialogs/win_edit_input.cpp
     src/app/dialogs/zoom_input.cpp
     src/app/dialogs/print_page_setup_dialog.cpp
+    src/app/dialogs/print_page_preview.cpp
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
     src/app/dialogs/tab_settings_dialog.cpp

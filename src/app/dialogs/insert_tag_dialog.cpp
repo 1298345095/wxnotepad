@@ -41,14 +41,14 @@ void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
     wxDialog dialog(parent, wxID_ANY, _("Insert HTML/XML Tag"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    auto* fields = new wxFlexGridSizer(1);
+    auto fields = std::make_unique<wxFlexGridSizer>(1);
     fields->AddGrowableCol(0);
     // Original ResizeDlg_InitY2 gives the opening tag 75% of added height.
     fields->AddGrowableRow(1, 3);
     fields->AddGrowableRow(3, 1);
     auto* opening = AddWinEditInput(dialog, *fields, _("&Opening tag (with attributes):"), "Opening tag", "<tag>");
     auto* closing = AddWinEditInput(dialog, *fields, _("&Closing tag (can be edited):"), "Closing tag", "</tag>");
-    contents->Add(fields, 1, wxEXPAND);
+    contents->Add(fields.release(), 1, wxEXPAND);
     opening->Bind(wxEVT_TEXT, [opening, closing](wxCommandEvent&) {
         // A new opening edit overwrites even an explicitly edited closing tag.
         closing->ChangeValue(ClosingTag(opening->GetValue()));

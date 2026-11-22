@@ -53,11 +53,11 @@ bool ShowAutoSaveSettingsDialog(wxWindow* parent, AutoSaveOptions& options) {
         if (wxDirExists(path) || wxFileName::Mkdir(path, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
             wxLaunchDefaultApplication(path);
     });
-    auto* footer = new wxBoxSizer(wxHORIZONTAL);
+    auto footer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     footer->Add(folder, 0, wxRIGHT, dialog.FromDIP(10));
     footer->AddStretchSpacer();
     footer->Add(dialog.CreateStdDialogButtonSizer(wxOK | wxCANCEL));
-    layout->Add(footer, 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    layout->Add(footer.release(), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     DialogLayout::Fit(dialog, layout);
     dialog.CentreOnParent();
     dialog.Bind(

@@ -34,12 +34,12 @@ RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& prefere
     remember_ = new wxCheckBox(this, wxID_ANY, _("&Remember recent files on exit"));
     remember_->SetName("Remember recent files");
     remember_->SetValue(preferences_.saveRecentFiles);
-    auto* history = new wxBoxSizer(wxHORIZONTAL);
+    auto history = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     history->Add(remember_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(DialogPaddingDip));
     history->AddStretchSpacer();
     auto* clear = new wxButton(this, wxID_CLEAR, _("Clear History"));
     history->Add(clear);
-    layout->Add(history, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
+    layout->Add(history.release(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
     clear->Bind(wxEVT_BUTTON, [this, clearHistory = std::move(clearHistory)](wxCommandEvent&) {
         clearHistory();
         RefreshFiles();

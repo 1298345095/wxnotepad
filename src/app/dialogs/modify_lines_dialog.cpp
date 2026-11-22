@@ -64,11 +64,11 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
     auto* skip = new wxCheckBox(&dialog, wxID_ANY, _("&Skip empty lines."));
     skip->SetName("Skip empty lines");
     skip->SetValue(skipEmpty);
-    auto* footer = new wxBoxSizer(wxHORIZONTAL);
+    auto footer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     footer->Add(skip, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, dialog.FromDIP(10));
     footer->AddStretchSpacer();
     footer->Add(dialog.CreateStdDialogButtonSizer(wxOK | wxCANCEL));
-    contents->Add(footer, 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    contents->Add(footer.release(), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Both);
     prefix->SetFocus();
     dialog.CentreOnParent();

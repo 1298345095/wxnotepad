@@ -35,7 +35,7 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
 #endif
     const int margin = FromDIP(DialogLayout::MarginDip);
     const int gap = FromDIP(DialogLayout::GapDip);
-    auto* fields = new wxBoxSizer(wxVERTICAL);
+    auto fields = std::make_unique<wxBoxSizer>(wxVERTICAL);
     fields->Add(new wxStaticText(this, wxID_ANY, _("Find &what:")), 0, wxBOTTOM, gap);
     query_ = new wxTextCtrl(this, wxID_ANY, request.query, wxDefaultPosition, FromDIP(wxSize(320, -1)), textStyle);
     query_->SetMaxLength(0);
@@ -76,17 +76,17 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     bookmarkMatchedLines_ = new wxCheckBox(this, wxID_ANY, _("Boo&kmark matched line"));
     bookmarkMatchedLines_->SetName("Bookmark matched line");
     bookmarkMatchedLines_->SetValue(request.bookmarkMatchedLines);
-    auto* options = new wxBoxSizer(wxHORIZONTAL);
-    auto* leftOptions = new wxBoxSizer(wxVERTICAL);
-    auto* rightOptions = new wxBoxSizer(wxVERTICAL);
+    auto options = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    auto leftOptions = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    auto rightOptions = std::make_unique<wxBoxSizer>(wxVERTICAL);
     for (auto* option : {matchCase_, wholeWord_, regularExpression_, transformBackslashes_})
         leftOptions->Add(option, 0, wxBOTTOM, gap);
     for (auto* option : {wrapAround_, wildcardSearch_, bookmarkMatchedLines_})
         rightOptions->Add(option, 0, wxBOTTOM, gap);
-    options->Add(leftOptions, 0, wxRIGHT, margin);
-    options->Add(rightOptions);
-    fields->Add(options, 0, wxTOP, gap);
-    auto* buttons = new wxBoxSizer(wxVERTICAL);
+    options->Add(leftOptions.release(), 0, wxRIGHT, margin);
+    options->Add(rightOptions.release());
+    fields->Add(options.release(), 0, wxTOP, gap);
+    auto buttons = std::make_unique<wxBoxSizer>(wxVERTICAL);
     auto* next = new wxButton(this, wxID_FORWARD, _("Find &Next"));
     next->SetDefault();
     buttons->Add(next, 0, wxEXPAND | wxBOTTOM, gap);
@@ -114,10 +114,10 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     modeLink_->SetName("Switch Find/Replace");
     modeLink_->Bind(wxEVT_HYPERLINK, [this](wxHyperlinkEvent&) { Present(!replace_, selectionOptions_, true); });
     fields->Add(modeLink_, 0, wxTOP, gap);
-    auto* layout = new wxBoxSizer(wxHORIZONTAL);
-    layout->Add(fields, 1, wxALL | wxEXPAND, margin);
-    layout->Add(buttons, 0, wxTOP | wxRIGHT | wxBOTTOM, margin);
-    DialogLayout::Fit(*this, layout, DialogLayout::Resize::Horizontal);
+    auto layout = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    layout->Add(fields.release(), 1, wxALL | wxEXPAND, margin);
+    layout->Add(buttons.release(), 0, wxTOP | wxRIGHT | wxBOTTOM, margin);
+    DialogLayout::Fit(*this, std::move(layout), DialogLayout::Resize::Horizontal);
 
     query_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
         UpdateButtons();

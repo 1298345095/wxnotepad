@@ -25,14 +25,14 @@ SearchFeedbackDialog::SearchFeedbackDialog(wxWindow* parent, const wxString& key
     suppress_ = new wxCheckBox(this, wxID_ANY, _("&Don't show this message again."));
     suppress_->SetName(title == "wxnotepad" ? "Suppress search message" : "Suppress message");
     suppress_->Enable(allowSuppression);
-    auto* footer = new wxBoxSizer(wxHORIZONTAL);
+    auto footer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     footer->Add(suppress_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(16));
     footer->AddStretchSpacer();
     footer->Add(CreateStdDialogButtonSizer(yesNo     ? wxYES | wxNO
                                            : confirm ? wxOK | wxCANCEL
                                                      : wxOK),
                 0, wxALIGN_CENTER_VERTICAL);
-    layout->Add(footer, 0, wxEXPAND | wxALL, FromDIP(DialogLayout::MarginDip));
+    layout->Add(footer.release(), 0, wxEXPAND | wxALL, FromDIP(DialogLayout::MarginDip));
     if (yesNo) {
         Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EndModal(wxID_YES); }, wxID_YES);
         Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EndModal(wxID_NO); }, wxID_NO);

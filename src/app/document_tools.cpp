@@ -60,10 +60,10 @@ public:
         // TRANSLATORS: IDD_OPENWITH button selecting the directory containing available programs.
         auto* browse = new wxButton(this, wxID_ANY, _("&Browse Directory..."));
         browse->SetName("open-with-browse");
-        auto* directoryRow = new wxBoxSizer(wxHORIZONTAL);
+        auto directoryRow = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
         directoryRow->Add(browse, 0, wxRIGHT, FromDIP(8));
         directoryRow->Add(path_, 1, wxALIGN_CENTER_VERTICAL);
-        layout->Add(directoryRow, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(8));
+        layout->Add(directoryRow.release(), 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(8));
         layout->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(8));
         DialogLayout::Fit(*this, layout, DialogLayout::Resize::Both);
         Fill();

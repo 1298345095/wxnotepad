@@ -28,9 +28,9 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
                            IndentationSettings& indentation) {
     wxDialog dialog(parent, wxID_ANY, _("Tab Settings"));
     auto* layout = new wxBoxSizer(wxVERTICAL);
-    auto* groups = new wxBoxSizer(wxVERTICAL);
-    const auto addGroup = [groups, &dialog](const char* name, const OriginalTabs& value, wxCheckBox** inherit,
-                                            const wxString& inheritLabel) {
+    auto groups = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    const auto addGroup = [groups = groups.get(), &dialog](const char* name, const OriginalTabs& value,
+                                                           wxCheckBox** inherit, const wxString& inheritLabel) {
         const auto label = wxGetTranslation(name);
         auto* box = new wxStaticBoxSizer(wxVERTICAL, &dialog, label);
         auto* owner = box->GetStaticBox();
@@ -46,7 +46,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
         spaces->SetName(wxString(name) + " Tabs as Spaces");
         AppLocalization::SetAccessibleName(*spaces, wxString::Format(_("%s tabs as spaces"), label));
         const int gap = dialog.FromDIP(DialogLayout::GapDip);
-        auto* fields = new wxFlexGridSizer(3, gap, gap);
+        auto fields = std::make_unique<wxFlexGridSizer>(3, gap, gap);
         fields->Add(new wxStaticText(owner, wxID_ANY, _("Tab Width (1–256):")), 0, wxALIGN_CENTER_VERTICAL);
         fields->Add(tab, 0, wxEXPAND);
         fields->Add(spaces, 0, wxALIGN_CENTER_VERTICAL);
@@ -58,7 +58,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
         } else {
             fields->AddSpacer(0);
         }
-        box->Add(fields, 0, wxEXPAND | wxALL, gap);
+        box->Add(fields.release(), 0, wxEXPAND | wxALL, gap);
         groups->Add(box, 0, wxEXPAND | wxALL, gap);
         TabControls controls{tab, indent, spaces};
         controls.Set(value, true);
@@ -96,7 +96,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     dialog.Bind(wxEVT_SPINCTRL, [changed](const wxSpinEvent& event) { changed(event.GetId()); });
     dialog.Bind(wxEVT_TEXT, [changed](const wxCommandEvent& event) { changed(event.GetId()); });
     sync(true);
-    layout->Add(groups, 0, wxEXPAND);
+    layout->Add(groups.release(), 0, wxEXPAND);
     auto* tabIndents = new wxCheckBox(&dialog, wxID_ANY, _("Tab Indents"));
     tabIndents->SetValue(indentation.TabIndents());
     auto* backspace = new wxCheckBox(&dialog, wxID_ANY, _("Backspace Unindents"));

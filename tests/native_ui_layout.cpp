@@ -19,7 +19,7 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw TestEditor::Failure(message);
 }
-void AwaitNativeSize(wxDialog& dialog) {
+void AwaitNativeSize(const wxDialog& dialog) {
     // GTK delivers the window manager's resize acknowledgement asynchronously.
     // Observe the fitted height before starting the next Find/Replace switch.
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);

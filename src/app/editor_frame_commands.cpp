@@ -58,10 +58,10 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     auto* input = CreateZoomInput(&dialog, static_cast<int>(editor.Send(Message::GetZoom)));
     input->SetName("Zoom level");
     AppLocalization::SetAccessibleName(*input, _("Zoom level"));
-    auto* zoomRow = new wxBoxSizer(wxHORIZONTAL);
+    auto zoomRow = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     zoomRow->Add(input, 1, wxRIGHT, dialog.FromDIP(10));
     zoomRow->Add(new wxButton(&dialog, wxID_APPLY));
-    contents->Add(zoomRow, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(zoomRow.release(), 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     const auto apply = [input, &editor, &dialog](wxCommandEvent& event) {
         if (const auto level = ReadZoomLevel(*input)) editor.Send(Message::SetZoom, *level);

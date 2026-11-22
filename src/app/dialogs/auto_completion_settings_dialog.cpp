@@ -21,8 +21,8 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     const int gap = dialog.FromDIP(3);
     auto* layout = new wxBoxSizer(wxVERTICAL);
     auto* columns = new wxBoxSizer(wxHORIZONTAL);
-    auto* wordColumn = new wxBoxSizer(wxVERTICAL);
-    auto* insertionColumn = new wxBoxSizer(wxVERTICAL);
+    auto wordColumn = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    auto insertionColumn = std::make_unique<wxBoxSizer>(wxVERTICAL);
     auto* words = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Word completion"));
     auto* insertion = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Automatically insert"));
     const auto check = [&](wxSizer* sizer, const char* label, bool value) {
@@ -127,8 +127,8 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     punctuation->SetMaxLength(WordCompletionLimits::MaxPunctuationCharacters);
     confirmation->Add(punctuation, 0, wxEXPAND | wxALL, gap);
     wordColumn->Add(confirmation, 0, wxEXPAND | wxALL, gap);
-    columns->Add(wordColumn, 1, wxEXPAND);
-    columns->Add(insertionColumn, 1, wxEXPAND);
+    columns->Add(wordColumn.release(), 1, wxEXPAND);
+    columns->Add(insertionColumn.release(), 1, wxEXPAND);
     layout->Add(columns, 0, wxEXPAND);
     layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, gap * 2);
     DialogLayout::Fit(dialog, layout);

@@ -65,7 +65,7 @@ switches and result updates. A horizontal drag grows the text fields and moves
 the entire action column by the same amount. Other dialogs keep their own
 layout and state-commit logic.
 
-`native_dialog_layout_{1033,2052,1028}` opens 24 actual production modal entry
+`native_dialog_layout_{1033,2052,1028}` opens 25 actual production modal entry
 points per language. It checks native resizing properties, containment and
 non-overlap of all visible controls, minimum/expanded/restored geometry and the
 50/50 or 75/25 input-height allocation. It cancels each dialog and does not write
@@ -75,6 +75,21 @@ field/action motion, retained width and all original ordered-row assertions.
 Existing functional and localization regressions retain their assertions,
 timeouts and concurrency. Character Info and native system dialogs remain
 covered by their existing functional/packaged-application tests.
+
+The page-preview renderer is shared by the native paint callback and raster
+checks for standard A4, rotated custom paper, metric/inch margins, margins larger
+than the paper, and unavailable paper dimensions. One displayed inch uses
+25.4 mm, with the real `{1000, 3, false}` inch-display format supplied by
+`EditorPrinting`. Pixel coordinates stay exact; dark ink detection accommodates
+native stroke antialiasing. `WXNOTEPAD_PAGE_PREVIEW_IMAGE` optionally retains the
+actual A4 raster. Both metric and inch-display dialogs verify cancellation
+leaves stored margins unchanged.
+
+New child sizers retain temporary ownership until they are added to their
+parent, and new root layouts transfer ownership at `SetSizer`. Native controls
+continue using wx parent-window ownership. The preview's printer draft is copied
+once; accepting its native paper chooser is tracked separately from committing
+the outer dialog's settings.
 
 Use the canonical native runner documented in `docs/ci.md`, selecting
 `^(native_dialog_layout|native_replace_layout)_` for the layout-specific checks.
