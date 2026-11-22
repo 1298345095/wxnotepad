@@ -3,8 +3,9 @@ import re
 
 
 def mapped_toplevel(scene, process, surface=None, *, title=None):
-    surface_pattern = r"\d+" if surface is None else str(surface)
-    identity = rf"\tView \d+ \(role xdg_toplevel, PID {process}, surface ID {surface_pattern}, "
+    process_pattern = re.escape(str(process))
+    surface_pattern = r"\d+" if surface is None else re.escape(str(surface))
+    identity = rf"\tView \d+ \(role xdg_toplevel, PID {process_pattern}, surface ID {surface_pattern}, "
     if title is None:
         identity += "top-level window '"
     layered = False

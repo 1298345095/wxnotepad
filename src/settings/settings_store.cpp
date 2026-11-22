@@ -475,7 +475,7 @@ wxString SettingsStore::ReadString(const wxString& key, const wxString& fallback
     if (!value) return fallback;
     value->Trim().Trim(false);
     if (value->StartsWith("\"") && value->EndsWith("\"") && value->length() >= 2)
-        *value = value->Mid(1, value->length() - 2);
+        value = value->Mid(1, value->length() - 2);
     return value->empty() ? fallback : *value;
 }
 

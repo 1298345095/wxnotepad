@@ -18,10 +18,22 @@ class WestonScene(unittest.TestCase):
         title = "Save [draft]'s changes?"
         scene = "Layer 0x1 (pos 0):\n" + view(title=title)
         self.assertTrue(mapped_toplevel(scene, 42, 7))
+        self.assertTrue(mapped_toplevel(scene, "42", "7"))
         self.assertTrue(mapped_toplevel(scene, 42, title=title))
+        self.assertTrue(mapped_toplevel(scene, "42", title=title))
         self.assertFalse(mapped_toplevel(scene, 43, 7))
         self.assertFalse(mapped_toplevel(scene, 42, 8))
         self.assertFalse(mapped_toplevel(scene, 42, title="Save"))
+
+    def test_identity_values_cannot_expand_into_regex_patterns(self):
+        scene = "Layer 0x1 (pos 0):\n" + view()
+        for process in ("4.", r"4\d", "42|43", ".*"):
+            with self.subTest(process=process):
+                self.assertFalse(mapped_toplevel(scene, process, 7))
+                self.assertFalse(mapped_toplevel(scene, process, title="Save changes?"))
+        for surface in (".", r"\d", "7|8", ".*"):
+            with self.subTest(surface=surface):
+                self.assertFalse(mapped_toplevel(scene, 42, surface))
 
     def test_views_outside_layers_and_popup_roles_do_not_match(self):
         for scene in (view(), view() + "Layer 0x1 (pos 0):\n",
