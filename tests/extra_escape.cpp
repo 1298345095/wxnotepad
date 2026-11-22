@@ -5,6 +5,9 @@
 #include "file_command_driver.h"
 #include <wx/weakref.h>
 #include <memory>
+#ifdef __WXMSW__
+#include <imm.h>
+#endif
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
 #endif
@@ -131,6 +134,133 @@ void CheckComposition(EditorFrame* frame) {
             "active native composition lifecycle retains Escape/Shift+Escape cancellation ownership");
     std::puts("PASS: composition-lifecycle replay guard (real human IME evidence remains separately required)");
 }
+#ifdef __WXMSW__
+// Replay the captured TSF boundary: cancellation synchronously ends preedit
+// before wx's WH_KEYBOARD hook, while the retrieved MSG is VK_PROCESSKEY.
+// Physical SendInput still drives wx's actual keyboard hook and message loop.
+class CancelledImeKey final : public wxEventFilter {
+public:
+    explicit CancelledImeKey(EditorControl* editor) : editor_(static_cast<HWND>(editor->GetHandle())) {
+        Require(!active_, "one owned IME cancellation replay is active");
+        active_ = this;
+        keyboard_ = SetWindowsHookExW(WH_KEYBOARD, Keyboard, nullptr, GetCurrentThreadId());
+        messages_ = SetWindowsHookExW(WH_GETMESSAGE, Message, nullptr, GetCurrentThreadId());
+        if (!keyboard_ || !messages_) {
+            if (keyboard_) UnhookWindowsHookEx(keyboard_);
+            if (messages_) UnhookWindowsHookEx(messages_);
+            active_ = nullptr;
+            Require(false, "observe the owned keyboard and retrieved-message boundaries");
+        }
+        wxEvtHandler::AddFilter(this);
+        SendMessageW(editor_, WM_IME_STARTCOMPOSITION, 0, 0);
+    }
+    ~CancelledImeKey() override {
+        wxEvtHandler::RemoveFilter(this);
+        UnhookWindowsHookEx(messages_);
+        UnhookWindowsHookEx(keyboard_);
+        if (!ended_) SendMessageW(editor_, WM_IME_ENDCOMPOSITION, 0, 0);
+        active_ = nullptr;
+    }
+    bool Complete() const noexcept { return processKey_ && released_; }
+    bool InitialDownObserved() const noexcept { return initialDown_; }
+    int RawHookCode() const noexcept { return rawHookCode_; }
+    int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_CHAR_HOOK) {
+            const auto& key = static_cast<wxKeyEvent&>(event);
+            if (key.GetKeyCode() == WXK_ESCAPE) rawHookCode_ = static_cast<int>(key.GetRawKeyCode());
+        }
+        return Event_Skip;
+    }
+
+private:
+    void EndComposition() {
+        if (ended_) return;
+        ended_ = true;
+        constexpr LPARAM cancelledPreedit = GCS_COMPSTR | GCS_COMPATTR | GCS_CURSORPOS | GCS_COMPCLAUSE |
+                                            GCS_COMPREADSTR | GCS_COMPREADATTR | GCS_COMPREADCLAUSE | GCS_DELTASTART;
+        SendMessageW(editor_, WM_IME_COMPOSITION, VK_ESCAPE, cancelledPreedit);
+        SendMessageW(editor_, WM_IME_ENDCOMPOSITION, 0, 0);
+    }
+    static LRESULT CALLBACK Keyboard(int code, WPARAM key, LPARAM flags) {
+        if (code == HC_ACTION && key == VK_ESCAPE && !(HIWORD(flags) & KF_UP) && GetFocus() == active_->editor_) {
+            active_->initialDown_ = !(HIWORD(flags) & KF_REPEAT);
+            active_->EndComposition();
+        }
+        return CallNextHookEx(nullptr, code, key, flags);
+    }
+    static LRESULT CALLBACK Message(int code, WPARAM removed, LPARAM data) {
+        if (code == HC_ACTION && removed == PM_REMOVE) {
+            auto* message = reinterpret_cast<MSG*>(data);
+            if (message->hwnd == active_->editor_ && message->wParam == VK_ESCAPE) {
+                if (message->message == WM_KEYDOWN) {
+                    active_->EndComposition();
+                    message->wParam = VK_PROCESSKEY;
+                    active_->processKey_ = true;
+                } else if (message->message == WM_KEYUP) {
+                    message->wParam = VK_PROCESSKEY;
+                    active_->released_ = true;
+                }
+            }
+        }
+        return CallNextHookEx(nullptr, code, removed, data);
+    }
+    inline static CancelledImeKey* active_ = nullptr;
+    HWND editor_;
+    HHOOK keyboard_ = nullptr;
+    HHOOK messages_ = nullptr;
+    bool ended_ = false;
+    bool initialDown_ = false;
+    bool processKey_ = false;
+    bool released_ = false;
+    int rawHookCode_ = 0;
+};
+void PhysicalEscape(EditorFrame* frame) {
+    const auto window = static_cast<HWND>(frame->GetHandle());
+    const auto editor = static_cast<HWND>(frame->Editor()->GetHandle());
+    DWORD process = 0;
+    GetWindowThreadProcessId(editor, &process);
+    NativeFocus::Activate(window, editor);
+    Await([&] { return GetForegroundWindow() == window && GetFocus() == editor; },
+          "physical Escape targets the owned focused editor");
+    Require(process == GetCurrentProcessId(), "physical Escape stays inside the owned process");
+    for (const int key : {VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_ESCAPE})
+        Require(!(GetAsyncKeyState(key) & 0x8000), "physical Escape starts with released shortcut keys");
+    INPUT input[2]{};
+    for (auto& event : input) {
+        event.type = INPUT_KEYBOARD;
+        event.ki.wVk = VK_ESCAPE;
+        event.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, MAPVK_VK_TO_VSC));
+    }
+    input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    Require(SendInput(2, input, sizeof(INPUT)) == 2, "deliver the owned physical Escape press and release");
+}
+void CheckCancelledCompositionKey(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "committed IME word");
+    editor->Send(Scintilla::Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    NativeSearch::Command(frame, Setting(frame, "Minimize wxnotepad")->GetId());
+    {
+        CancelledImeKey replay(editor);
+        PhysicalEscape(frame);
+        Await([&] { return frame->IsIconized() || replay.Complete(); }, "cancelled IME key finishes native dispatch");
+        Require(!frame->IsIconized(), "IME cancellation before the keyboard hook must not also minimize");
+        Require(replay.InitialDownObserved() && replay.RawHookCode() == VK_ESCAPE && replay.Complete(),
+                "initial Escape hook and retrieved VK_PROCESSKEY follow the captured native order");
+        Require(TestEditor::Text(editor) == "committed IME word!" && editor->Send(Scintilla::Message::CanUndo),
+                "cancelled IME key preserves document bytes and Undo");
+    }
+    PhysicalEscape(frame);
+    Await([&] { return frame->IsIconized(); }, "next independent Escape still performs native minimize");
+    frame->Iconize(false);
+    frame->Raise();
+    Await([&] { return !frame->IsIconized(); }, "restore the owned frame after ordinary Escape");
+    editor->SetFocus();
+    NativeKeys::Shortcut(frame, 'Z', true);
+    Require(TestEditor::Text(editor) == "committed IME word", "working Undo survives cancelled and ordinary Escape");
+    editor->Send(Scintilla::Message::SetSavePoint);
+    std::puts("PASS: captured IME cancellation ordering through native keyboard hook, next Escape and Undo");
+}
+#endif
 void WidgetEscape(wxWindow* control) {
     control->SetFocus();
     wxYield();
@@ -383,6 +513,9 @@ public:
                 }
                 CheckMenu(frame);
                 CheckComposition(frame);
+#ifdef __WXMSW__
+                CheckCancelledCompositionKey(frame);
+#endif
                 CheckWidgetFocus(frame);
                 CheckMinimize(frame);
                 CloseCase(frame, 0);
