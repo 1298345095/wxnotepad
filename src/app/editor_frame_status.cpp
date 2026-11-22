@@ -10,6 +10,16 @@
 #include <wx/translation.h>
 #include <algorithm>
 #include <array>
+#ifdef __WXGTK__
+#include <wx/control.h>
+#include <wx/dc.h>
+#include <wx/fontutil.h>
+#include <wx/graphics.h>
+#include <gtk/gtk.h>
+#include <pango/pangocairo.h>
+#include <cmath>
+#include <memory>
+#endif
 #ifdef __WXMSW__
 #include <wx/msw/wrapwin.h>
 #include <commctrl.h>
@@ -18,6 +28,97 @@
 
 namespace {
 constexpr size_t SchemeMenuIndex = 4;
+#ifdef __WXGTK__
+class BaselineStatusBar final : public wxStatusBar {
+public:
+    using wxStatusBar::wxStatusBar;
+
+protected:
+    void DrawField(wxDC& dc, int field, int textHeight) override {
+        if (field == 0) {
+            ascent_ = 0;
+            double descent = 0;
+            auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());
+            const std::unique_ptr<PangoLayout, decltype(&g_object_unref)> layout(pango_cairo_create_layout(context),
+                                                                                 g_object_unref);
+            // Match wxCairoContext::ApplyFont, including GTK's font DPI. Using
+            // GetTextExtent's integer descent loses half-logical-pixel ascents
+            // at native scale 2 and leaves a one-device-pixel baseline error.
+            constexpr double StandardFontDpi = 96;
+            const float fontScale = static_cast<float>(
+                gdk_screen_get_resolution(gtk_widget_get_screen(GetConnectWidget())) / StandardFontDpi);
+            const auto font = fontScale == 1.0F ? dc.GetFont() : dc.GetFont().Scaled(fontScale);
+            pango_layout_set_font_description(layout.get(), font.GetNativeFontInfo()->description);
+            font.GTKSetPangoAttrs(layout.get());
+            for (int index = 0; index < GetFieldsCount(); ++index) {
+                const auto text = RenderedText(dc, index);
+                const auto bytes = text.utf8_str();
+                pango_layout_set_text(layout.get(), bytes.data(), static_cast<int>(bytes.length()));
+                PangoRectangle logical;
+                pango_layout_get_extents(layout.get(), nullptr, &logical);
+                const int baseline = pango_layout_get_baseline(layout.get());
+                // Pango can shift alphabetic runs relative to the line's CJK
+                // baseline. Measure a Latin anchor without drawing it, then
+                // remove any change it made to the original line metrics.
+                const auto anchored = text + " M";
+                const auto anchoredBytes = anchored.utf8_str();
+                pango_layout_set_text(layout.get(), anchoredBytes.data(), static_cast<int>(anchoredBytes.length()));
+                auto* iter = pango_layout_get_iter(layout.get());
+                int alphabeticBaseline = 0;
+                do {
+                    if (pango_layout_iter_get_run_readonly(iter))
+                        alphabeticBaseline = pango_layout_iter_get_run_baseline(iter);
+                } while (pango_layout_iter_next_run(iter));
+                pango_layout_iter_free(iter);
+                ascents_[index] =
+                    static_cast<double>(baseline + alphabeticBaseline - pango_layout_get_baseline(layout.get())) /
+                    PANGO_SCALE;
+                ascent_ = std::max(ascent_, ascents_[index]);
+                descent = std::max(descent, static_cast<double>(logical.height) / PANGO_SCALE - ascents_[index]);
+            }
+            textHeight_ = std::max(textHeight, static_cast<int>(std::ceil(ascent_ + descent)));
+        }
+        wxStatusBar::DrawField(dc, field, textHeight_);
+    }
+    void DrawFieldText(wxDC& dc, const wxRect& rectangle, int field, int textHeight) override {
+        // wxGTK DrawText uses each Pango layout's top, whose distance to the
+        // baseline changes when CJK fallback fonts participate. Translate only
+        // text drawing, keeping its physical clip at the original field.
+        auto* graphics = dc.GetGraphicsContext();
+        graphics->PushState();
+        graphics->Clip(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+        graphics->Translate(0, ascent_ - ascents_[field]);
+        wxStatusBar::DrawFieldText(dc, rectangle, field, textHeight);
+        graphics->PopState();
+    }
+
+private:
+    wxString RenderedText(wxDC& dc, int field) const {
+        wxRect rectangle;
+        if (!GetFieldRect(field, rectangle) || rectangle.width <= 0) return {};
+        auto text = GetStatusText(field);
+        wxEllipsizeMode mode = wxELLIPSIZE_NONE;
+        if (HasFlag(wxSTB_ELLIPSIZE_START))
+            mode = wxELLIPSIZE_START;
+        else if (HasFlag(wxSTB_ELLIPSIZE_MIDDLE))
+            mode = wxELLIPSIZE_MIDDLE;
+        else if (HasFlag(wxSTB_ELLIPSIZE_END))
+            mode = wxELLIPSIZE_END;
+        if (mode == wxELLIPSIZE_NONE) return text;
+        // Match wxStatusBarGeneric's displayed string, including the last
+        // field's grip reservation: ellipsizing can remove a fallback font.
+        constexpr int FieldTextMargin = 2;
+        int width = rectangle.width - 2 * FieldTextMargin;
+        if (ShowsSizeGrip() && ((GetLayoutDirection() == wxLayout_RightToLeft && field == 0) ||
+                                (GetLayoutDirection() != wxLayout_RightToLeft && field == GetFieldsCount() - 1)))
+            width -= GetSizeGripRect().width;
+        return wxControl::Ellipsize(text, dc, mode, width, wxELLIPSIZE_FLAGS_EXPAND_TABS);
+    }
+    std::array<double, StatusField::Count> ascents_{};
+    double ascent_ = 0;
+    int textHeight_ = 0;
+};
+#endif
 int StatusFieldAtPoint(wxStatusBar& status, const wxPoint& position) {
     for (int field = 0; field < StatusField::Count; ++field) {
         wxRect rectangle;
@@ -205,7 +306,13 @@ void EditorFrame::UpdateStatusWidths() {
 }
 
 void EditorFrame::CreatePositionStatus() {
+#ifdef __WXGTK__
+    auto* status = new BaselineStatusBar(this);
+    status->SetFieldsCount(StatusField::Count);
+    SetStatusBar(status);
+#else
     auto* status = CreateStatusBar(StatusField::Count);
+#endif
     SetStatusBarPane(StatusField::Feedback);
     status->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         UpdateStatusWidths();

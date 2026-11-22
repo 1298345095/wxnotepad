@@ -300,6 +300,9 @@ void FindReplaceDialog::Present(bool replace, int selectionOptions, bool toggle)
     replaceSelectionButton_->Show(replace);
     replacementResult_->Show(replace);
     GetSizer()->Fit(this);
+    // Fit may keep the existing size. Still arrange rows after changing which
+    // controls participate in the Find/Replace layout.
+    Layout();
     Show();
     auto* focus = selected && replace ? replacement_ : query_;
     focus->SetFocus();
