@@ -276,6 +276,41 @@ void PointerFavorites() {
     Require(reopened.error.empty(), reopened.error.utf8_str());
     frame->Destroy();
 }
+void FavoriteCapacity() {
+    // Independent pinned EditLexer.h IDs, all undelivered by #254/#255/#256.
+    const wxString unavailable = "7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 36 38 39 40 41 42 43 44";
+    const auto ini = TestFiles::TemporaryDirectory("scheme-capacity.ini");
+    TestFiles::WriteBytes(ini, "[Settings]\nSaveSettings=0\n[Styles]\nFavoriteSchemes=1 67 " +
+                                   unavailable.utf8_string() + "\n");
+    SettingsStore settings(TestFiles::Filename(ini));
+    auto* frame = new EditorFrame(&settings);
+    frame->Show();
+    Picker picker;
+    picker.title = "Favorite Schemes";
+    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+        const auto toggle = [&](const wxString& label) {
+            Require(NativeDialogs::SelectTreeLabel(tree, label), "favorite capacity target is delivered");
+            wxTreeEvent click(wxEVT_TREE_STATE_IMAGE_CLICK, &tree, tree.GetSelection());
+            Require(tree.GetEventHandler()->ProcessEvent(click), "native favorite checkbox handles capacity edit");
+        };
+        toggle("Go Source");
+        Require(NativeDialogs::SelectTreeLabel(tree, "Go Source") && tree.GetItemState(tree.GetSelection()) == 0,
+                "retained unavailable favorites count toward the original 31-slot limit");
+        toggle("Rust Source");
+        toggle("Go Source");
+        Require(NativeDialogs::SelectTreeLabel(tree, "Go Source") && tree.GetItemState(tree.GetSelection()) == 1,
+                "freeing one original favorite slot permits a replacement supported favorite");
+        NativeSearch::Click(&dialog, wxID_OK);
+    };
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Favorite Schemes..."));
+    Require(picker.error.empty(), picker.error.utf8_str());
+    Require(settings.values.favoriteSchemes == "1 15 " + unavailable && settings.Save(true),
+            "favorite capacity preserves every unavailable ID while replacing one supported slot");
+    SettingsStore reopened(TestFiles::Filename(ini));
+    Require(reopened.values.favoriteSchemes == "1 15 " + unavailable,
+            "accepted favorite replacement remains inside original limits across settings restart");
+    frame->Destroy();
+}
 void KeyboardChooser() {
     auto* frame = new EditorFrame;
     frame->SetTitle("wxnotepad scheme F12");
@@ -394,6 +429,7 @@ public:
                         "chooser acceptance/cancel preserve exact text, selection and undo history");
                 DefaultScheme();
                 Favorites();
+                FavoriteCapacity();
                 PointerFavorites();
                 KeyboardChooser();
                 result_ = 0;

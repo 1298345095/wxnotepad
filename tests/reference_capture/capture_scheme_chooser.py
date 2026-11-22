@@ -14,6 +14,7 @@ import shutil
 import time
 
 from original_host import Original, CALLBACK, user, kernel
+import scheme_native_constants as win
 
 
 class TreeItem(c.Structure):
@@ -47,7 +48,7 @@ def capture(original, output, visible=False):
     user.GetWindowRect.argtypes = [w.HWND, c.POINTER(w.RECT)]
     user.SetWindowPos.argtypes = [w.HWND, w.HWND, c.c_int, c.c_int, c.c_int, c.c_int, w.UINT]
     desktop = (user.GetThreadDesktop(kernel.GetCurrentThreadId()) if visible
-               else user.CreateDesktopW(name, None, None, 0, 0x1ff, None))
+               else user.CreateDesktopW(name, None, None, 0, win.DESKTOP_ALL_ACCESS, None))
     assert desktop
     app = None
     records = []
@@ -55,7 +56,8 @@ def capture(original, output, visible=False):
         app = Original(None, executable, desktop, "Default" if visible else name)
 
         def dialog(favorite=False):
-            user.PostMessageW(app.hwnd, 0x111, 40424 if favorite else 40400, 0)
+            user.PostMessageW(app.hwnd, win.WM_COMMAND,
+                              win.IDM_VIEW_SCHEME_FAVORITE if favorite else win.IDM_VIEW_SCHEME, 0)
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 found = []
@@ -76,86 +78,90 @@ def capture(original, output, visible=False):
             raise RuntimeError("owned original scheme dialog appears")
 
         def item(tree, identifier):
-            data = TreeItem(mask=0x4d, item=identifier, stateMask=0xf000,
-                            text=app.memory + 4096, textLength=256)
+            data = TreeItem(mask=win.TVIF_TEXT | win.TVIF_PARAM | win.TVIF_STATE | win.TVIF_CHILDREN,
+                            item=identifier, stateMask=win.TVIS_STATEIMAGEMASK,
+                            text=app.memory + win.REMOTE_TREE_TEXT_OFFSET_BYTES, textLength=256)
             assert kernel.WriteProcessMemory(app.handle, app.memory, c.byref(data), c.sizeof(data), None)
-            assert user.SendMessageW(tree, 0x113e, 0, app.memory)
+            assert user.SendMessageW(tree, win.TVM_GETITEMW, 0, app.memory)
             assert kernel.ReadProcessMemory(app.handle, app.memory, c.byref(data), c.sizeof(data), None)
             text = c.create_unicode_buffer(256)
-            assert kernel.ReadProcessMemory(app.handle, app.memory + 4096, text, c.sizeof(text), None)
-            return {"label": text.value, "check": (data.state >> 12) & 15, "identityPointer": bool(data.data)}
+            assert kernel.ReadProcessMemory(app.handle, app.memory + win.REMOTE_TREE_TEXT_OFFSET_BYTES,
+                                             text, c.sizeof(text), None)
+            return {"label": text.value, "check": (data.state >> win.TREE_STATE_IMAGE_SHIFT) & win.TREE_STATE_IMAGE_BITS,
+                    "identityPointer": bool(data.data)}
 
         def children(tree, parent=0):
-            identifier = user.SendMessageW(tree, 0x110a, 4 if parent else 0, parent)
+            identifier = user.SendMessageW(tree, win.TVM_GETNEXTITEM, win.TVGN_CHILD if parent else win.TVGN_ROOT, parent)
             result = []
             while identifier:
                 row = item(tree, identifier)
                 row["children"] = children(tree, identifier)
                 result.append(row)
-                identifier = user.SendMessageW(tree, 0x110a, 1, identifier)
+                identifier = user.SendMessageW(tree, win.TVM_GETNEXTITEM, win.TVGN_NEXT, identifier)
             return result
 
         def select(tree, label, parent=0):
-            identifier = user.SendMessageW(tree, 0x110a, 4 if parent else 0, parent)
+            identifier = user.SendMessageW(tree, win.TVM_GETNEXTITEM, win.TVGN_CHILD if parent else win.TVGN_ROOT, parent)
             while identifier:
                 if item(tree, identifier)["label"] == label:
-                    user.SendMessageW(tree, 0x110b, 9, identifier)
+                    user.SendMessageW(tree, win.TVM_SELECTITEM, win.TVGN_CARET, identifier)
                     return True
                 if select(tree, label, identifier):
                     return True
-                identifier = user.SendMessageW(tree, 0x110a, 1, identifier)
+                identifier = user.SendMessageW(tree, win.TVM_GETNEXTITEM, win.TVGN_NEXT, identifier)
             return False
 
         def snapshot(d, phase):
-            tree = user.GetDlgItem(d, 100)
-            selected = user.SendMessageW(tree, 0x110a, 9, 0)
+            tree = user.GetDlgItem(d, win.IDC_STYLELIST)
+            selected = user.SendMessageW(tree, win.TVM_GETNEXTITEM, win.TVGN_CARET, 0)
             records.append({"phase": phase, "selected": item(tree, selected)["label"] if selected else None,
-                            "default": user.SendMessageW(user.GetDlgItem(d, 101), 0xf0, 0, 0),
-                            "defaultEnabled": bool(user.IsWindowEnabled(user.GetDlgItem(d, 101))),
-                            "autoSelect": user.SendMessageW(user.GetDlgItem(d, 102), 0xf0, 0, 0),
+                            "default": user.SendMessageW(user.GetDlgItem(d, win.IDC_DEFAULTSCHEME), win.BM_GETCHECK, 0, 0),
+                            "defaultEnabled": bool(user.IsWindowEnabled(user.GetDlgItem(d, win.IDC_DEFAULTSCHEME))),
+                            "autoSelect": user.SendMessageW(user.GetDlgItem(d, win.IDC_AUTOSELECT), win.BM_GETCHECK, 0, 0),
                             "tree": children(tree), "document": app.state()})
             if visible:
                 from PIL import ImageGrab
-                assert user.SetWindowPos(d, w.HWND(-1), 0, 0, 0, 0, 0x13)
-                user.RedrawWindow(d, None, None, 0x185)
+                flags = win.SWP_NOSIZE | win.SWP_NOMOVE | win.SWP_NOACTIVATE
+                assert user.SetWindowPos(d, w.HWND(win.HWND_TOPMOST), 0, 0, 0, 0, flags)
+                user.RedrawWindow(d, None, None, win.RDW_INVALIDATE | win.RDW_ERASE | win.RDW_ALLCHILDREN | win.RDW_UPDATENOW)
                 time.sleep(.1)
                 rect = w.RECT()
                 assert user.GetWindowRect(d, c.byref(rect))
                 ImageGrab.grab(bbox=(rect.left, rect.top, rect.right, rect.bottom)).save(output / f"{phase}.png")
-                assert user.SetWindowPos(d, w.HWND(-2), 0, 0, 0, 0, 0x13)
+                assert user.SetWindowPos(d, w.HWND(win.HWND_NOTOPMOST), 0, 0, 0, 0, flags)
 
         app.reset(b"class Example {};\n", 1, 9)
         before = app.state()
         d = dialog()
         snapshot(d, "normal-initial")
-        tree = user.GetDlgItem(d, 100)
+        tree = user.GetDlgItem(d, win.IDC_STYLELIST)
         assert select(tree, "Python Script")
         snapshot(d, "selected-existing-default")
-        user.SendMessageW(user.GetDlgItem(d, 101), 0xf5, 0, 0)
+        user.SendMessageW(user.GetDlgItem(d, win.IDC_DEFAULTSCHEME), win.BM_CLICK, 0, 0)
         assert select(tree, "C/C++ Source")
         snapshot(d, "default-unchecked-then-selection")
-        user.SendMessageW(user.GetDlgItem(d, 101), 0xf5, 0, 0)
+        user.SendMessageW(user.GetDlgItem(d, win.IDC_DEFAULTSCHEME), win.BM_CLICK, 0, 0)
         assert select(tree, "C")
         snapshot(d, "group-selection")
-        user.SendMessageW(user.GetDlgItem(d, 102), 0xf5, 0, 0)
-        user.SendMessageW(d, 0x111, 2, 0)
+        user.SendMessageW(user.GetDlgItem(d, win.IDC_AUTOSELECT), win.BM_CLICK, 0, 0)
+        user.SendMessageW(d, win.WM_COMMAND, win.IDCANCEL, 0)
         d = dialog()
         snapshot(d, "cancel-reopened")
-        assert select(user.GetDlgItem(d, 100), "C/C++ Source")
-        user.SendMessageW(d, 0x111, 1, 0)
+        assert select(user.GetDlgItem(d, win.IDC_STYLELIST), "C/C++ Source")
+        user.SendMessageW(d, win.WM_COMMAND, win.IDOK, 0)
         assert app.state() == before
         d = dialog(True)
         snapshot(d, "favorite-initial")
-        assert select(user.GetDlgItem(d, 100), "Rust Source")
-        user.SendMessageW(user.GetDlgItem(d, 101), 0xf5, 0, 0)
-        user.SendMessageW(user.GetDlgItem(d, 102), 0xf5, 0, 0)
-        user.SendMessageW(d, 0x111, 1, 0)
+        assert select(user.GetDlgItem(d, win.IDC_STYLELIST), "Rust Source")
+        user.SendMessageW(user.GetDlgItem(d, win.IDC_DEFAULTSCHEME), win.BM_CLICK, 0, 0)
+        user.SendMessageW(user.GetDlgItem(d, win.IDC_AUTOSELECT), win.BM_CLICK, 0, 0)
+        user.SendMessageW(d, win.WM_COMMAND, win.IDOK, 0)
         assert app.state() == before
         d = dialog()
         snapshot(d, "favorite-accepted-normal-reopened")
-        assert select(user.GetDlgItem(d, 100), "Rust Source")
+        assert select(user.GetDlgItem(d, win.IDC_STYLELIST), "Rust Source")
         snapshot(d, "favorite-default-preserved")
-        user.SendMessageW(d, 0x111, 2, 0)
+        user.SendMessageW(d, win.WM_COMMAND, win.IDCANCEL, 0)
         (output / "observations.json").write_text(json.dumps({
             "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
             "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
