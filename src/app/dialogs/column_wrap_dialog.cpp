@@ -1,4 +1,5 @@
 #include "app/dialogs/column_wrap_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include <wx/translation.h>
 #include "app/dialogs/column_input.h"
@@ -22,8 +23,7 @@ bool ShowColumnWrapDialog(wxWindow* parent, int& column, int boundary) {
             event.Skip();
     });
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, DialogLayout::WithSideButtons(dialog, contents));
     input->SetFocus();
     input->SelectAll();
     dialog.CentreOnParent();

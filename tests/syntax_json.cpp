@@ -43,10 +43,14 @@ void Choose(EditorFrame* frame, const wxString& label) {
     const int id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "Language menu must offer JSON for any document");
     Command(frame, id);
-    auto* menu = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Scheme"));
-    for (const auto* item : menu->GetMenuItems()) {
-        if (item->IsRadio()) Require(item->IsChecked() == (item->GetId() == id), "language choices must be exclusive");
+    auto* bar = frame->GetMenuBar();
+    for (const auto& definition : SyntaxCatalog()) {
+        const auto* item = bar->FindItem(bar->FindMenuItem("Scheme", LanguageName(definition.language)));
+        Require(item && item->IsCheckable() && item->IsChecked() == (item->GetId() == id),
+                "language choices must be exclusive across families");
     }
+    const auto automatic = bar->FindMenuItem("Scheme", "Automatic");
+    Require(bar->IsChecked(automatic) == (automatic == id), "Automatic shares the exclusive language choice");
 }
 void Delete(EditorControl* editor) {
     wxKeyEvent event(wxEVT_KEY_DOWN);

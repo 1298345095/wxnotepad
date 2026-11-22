@@ -1,4 +1,5 @@
 #include "app/dialogs/find_replace_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include "app/search_shortcuts.h"
 #include <wx/translation.h>
@@ -22,8 +23,9 @@
 FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, SearchSession& search,
                                      std::function<void(const FindResult&)> reportFind,
                                      std::function<void(wxKeyEvent&)> onKey, int selectionOptions)
-    : wxDialog(parent, wxID_ANY, _("Find")), editor_(editor), search_(search), reportFind_(std::move(reportFind)),
-      selectionOptions_(selectionOptions) {
+    : wxDialog(parent, wxID_ANY, _("Find"), wxDefaultPosition, wxDefaultSize,
+               DialogLayout::Style(DialogLayout::Resize::Horizontal)),
+      editor_(editor), search_(search), reportFind_(std::move(reportFind)), selectionOptions_(selectionOptions) {
     const auto& request = search_.Request();
     long textStyle = wxTE_PROCESS_ENTER;
 #ifdef __WXGTK__
@@ -31,83 +33,91 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     // limit. A native GtkTextView retains the full query in the same row.
     textStyle |= wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_NO_VSCROLL;
 #endif
-    auto* layout = new wxBoxSizer(wxVERTICAL);
-    layout->Add(new wxStaticText(this, wxID_ANY, _("Find &what:")), 0, wxALL, 8);
-    query_ = new wxTextCtrl(this, wxID_ANY, request.query, wxDefaultPosition, wxSize(320, -1), textStyle);
+    const int margin = FromDIP(DialogLayout::MarginDip);
+    const int gap = FromDIP(DialogLayout::GapDip);
+    auto fields = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    fields->Add(new wxStaticText(this, wxID_ANY, _("Find &what:")), 0, wxBOTTOM, gap);
+    query_ = new wxTextCtrl(this, wxID_ANY, request.query, wxDefaultPosition, FromDIP(wxSize(320, -1)), textStyle);
     query_->SetMaxLength(0);
-    query_->SetMinSize(wxSize(320, query_->GetCharHeight() + FromDIP(12)));
+    query_->SetMinSize(wxSize(FromDIP(320), query_->GetCharHeight() + FromDIP(12)));
     query_->SetName("Find query");
     AppLocalization::SetAccessibleName(*query_, _("Find what"));
-    layout->Add(query_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    fields->Add(query_, 0, wxEXPAND | wxBOTTOM, gap);
     matchCase_ = new wxCheckBox(this, wxID_ANY, _("Match &case"));
     matchCase_->SetName("Match case");
     matchCase_->SetValue(request.options.matchCase);
-    layout->Add(matchCase_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     wholeWord_ = new wxCheckBox(this, wxID_ANY, _("Whole &word"));
     wholeWord_->SetName("Whole word");
     wholeWord_->SetValue(request.options.wholeWord);
     wholeWord_->SetToolTip(_("Applies to literal searches. Use word boundaries in a regular expression."));
     wholeWord_->Enable(!request.options.regularExpression);
-    layout->Add(wholeWord_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     regularExpression_ = new wxCheckBox(this, wxID_ANY, _("Regular &expression"));
     regularExpression_->SetName("Regular expression");
     regularExpression_->SetValue(request.options.regularExpression);
-    layout->Add(regularExpression_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     transformBackslashes_ = new wxCheckBox(this, wxID_ANY, _("Transform &backslashes"));
     transformBackslashes_->SetName("Transform backslashes");
     transformBackslashes_->SetValue(request.options.transformBackslashes);
-    layout->Add(transformBackslashes_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     wildcardSearch_ = new wxCheckBox(this, wxID_ANY, _("&Wildcard search"));
     wildcardSearch_->SetName("Wildcard search");
     wildcardSearch_->SetValue(request.options.wildcardSearch);
     wildcardSearch_->SetToolTip(_("* matches zero or more characters; ? matches exactly one character."));
-    layout->Add(wildcardSearch_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     replacementLabel_ = new wxStaticText(this, wxID_ANY, _("Replace &with:"));
-    layout->Add(replacementLabel_, 0, wxALL, 8);
-    replacement_ = new wxTextCtrl(this, wxID_ANY, request.replacement, wxDefaultPosition, wxSize(320, -1), textStyle);
+    fields->Add(replacementLabel_, 0, wxBOTTOM, gap);
+    replacement_ =
+        new wxTextCtrl(this, wxID_ANY, request.replacement, wxDefaultPosition, FromDIP(wxSize(320, -1)), textStyle);
     replacement_->SetMaxLength(0);
-    replacement_->SetMinSize(wxSize(320, replacement_->GetCharHeight() + FromDIP(12)));
+    replacement_->SetMinSize(wxSize(FromDIP(320), replacement_->GetCharHeight() + FromDIP(12)));
     replacement_->SetName("Replacement text");
     AppLocalization::SetAccessibleName(*replacement_, _("Replace with"));
-    layout->Add(replacement_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    fields->Add(replacement_, 0, wxEXPAND | wxBOTTOM, gap);
     wrapAround_ = new wxCheckBox(this, wxID_ANY, _("&Wrap around"));
     wrapAround_->SetName("Wrap around");
     wrapAround_->SetValue(request.wrapAround);
-    layout->Add(wrapAround_, 0, wxALL, 8);
     bookmarkMatchedLines_ = new wxCheckBox(this, wxID_ANY, _("Boo&kmark matched line"));
     bookmarkMatchedLines_->SetName("Bookmark matched line");
     bookmarkMatchedLines_->SetValue(request.bookmarkMatchedLines);
-    layout->Add(bookmarkMatchedLines_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
-    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    auto options = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    auto leftOptions = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    auto rightOptions = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    for (auto* option : {matchCase_, wholeWord_, regularExpression_, transformBackslashes_})
+        leftOptions->Add(option, 0, wxBOTTOM, gap);
+    for (auto* option : {wrapAround_, wildcardSearch_, bookmarkMatchedLines_})
+        rightOptions->Add(option, 0, wxBOTTOM, gap);
+    options->Add(leftOptions.release(), 0, wxRIGHT, margin);
+    options->Add(rightOptions.release());
+    fields->Add(options.release(), 0, wxTOP, gap);
+    auto buttons = std::make_unique<wxBoxSizer>(wxVERTICAL);
     auto* next = new wxButton(this, wxID_FORWARD, _("Find &Next"));
     next->SetDefault();
-    buttons->Add(next, 0, wxRIGHT, 8);
+    buttons->Add(next, 0, wxEXPAND | wxBOTTOM, gap);
+    buttons->Add(new wxButton(this, wxID_BACKWARD, _("Find &Previous")), 0, wxEXPAND | wxBOTTOM, gap);
     findAllButton_ = new wxButton(this, wxID_ANY, _("&Find All"));
     findAllButton_->SetName("Find All");
     findAllButton_->Enable(!query_->IsEmpty());
-    buttons->Add(findAllButton_, 0, wxRIGHT, 8);
+    buttons->Add(findAllButton_, 0, wxEXPAND | wxBOTTOM, gap);
     replaceButton_ = new wxButton(this, wxID_REPLACE, _("&Replace"));
-    buttons->Add(replaceButton_, 0, wxRIGHT, 8);
+    buttons->Add(replaceButton_, 0, wxEXPAND | wxBOTTOM, gap);
     replaceAllButton_ = new wxButton(this, wxID_REPLACE_ALL, _("Replace &All"));
-    buttons->Add(replaceAllButton_, 0, wxRIGHT, 8);
+    buttons->Add(replaceAllButton_, 0, wxEXPAND | wxBOTTOM, gap);
     replaceSelectionButton_ = new wxButton(this, wxID_ANY, _("In &Selection"));
     replaceSelectionButton_->SetName("Replace in selection");
     replaceSelectionButton_->Enable(!query_->IsEmpty());
-    buttons->Add(replaceSelectionButton_, 0, wxRIGHT, 8);
-    buttons->Add(new wxButton(this, wxID_BACKWARD, _("Find &Previous")), 0, wxRIGHT, 8);
-    buttons->Add(new wxButton(this, wxID_CANCEL, _("Close")));
-    layout->Add(buttons, 0, wxALL | wxALIGN_RIGHT, 8);
+    buttons->Add(replaceSelectionButton_, 0, wxEXPAND | wxBOTTOM, gap);
+    buttons->Add(new wxButton(this, wxID_CANCEL, _("Close")), 0, wxEXPAND);
     findAllResult_ = new wxStaticText(this, wxID_ANY, "");
     findAllResult_->SetName("Find All result");
-    layout->Add(findAllResult_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    fields->Add(findAllResult_, 0, wxTOP, gap);
     replacementResult_ = new wxStaticText(this, wxID_ANY, "");
     replacementResult_->SetName("Replacement result");
-    layout->Add(replacementResult_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    fields->Add(replacementResult_, 0, wxTOP, gap);
     modeLink_ = new wxHyperlinkCtrl(this, wxID_ANY, _("Switch to Replace"), "");
     modeLink_->SetName("Switch Find/Replace");
     modeLink_->Bind(wxEVT_HYPERLINK, [this](wxHyperlinkEvent&) { Present(!replace_, selectionOptions_, true); });
-    layout->Add(modeLink_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
-    SetSizerAndFit(layout);
+    fields->Add(modeLink_, 0, wxTOP, gap);
+    auto layout = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    layout->Add(fields.release(), 1, wxALL | wxEXPAND, margin);
+    layout->Add(buttons.release(), 0, wxTOP | wxRIGHT | wxBOTTOM, margin);
+    DialogLayout::Fit(*this, std::move(layout), DialogLayout::Resize::Horizontal);
 
     query_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
         UpdateButtons();
@@ -246,7 +256,7 @@ void FindReplaceDialog::FindAll() {
         result.status == FindStatus::InvalidPattern ? std::optional(editor_.DocumentRevision()) : std::nullopt;
     if (result.status == FindStatus::InvalidPattern) {
         findAllResult_->SetLabel(_("Invalid regular expression"));
-        GetSizer()->Fit(this);
+        DialogLayout::Fit(*this, GetSizer(), DialogLayout::Resize::Horizontal, true);
     } else {
         UpdateFindAllCount(result.count);
     }
@@ -256,7 +266,7 @@ void FindReplaceDialog::UpdateFindAllCount(size_t count) {
     const auto label = wxString::Format(wxPLURAL("%zu match", "%zu matches", count), count);
     if (findAllResult_->GetLabel() == label) return;
     findAllResult_->SetLabel(label);
-    GetSizer()->Fit(this);
+    DialogLayout::Fit(*this, GetSizer(), DialogLayout::Resize::Horizontal, true);
 }
 
 void FindReplaceDialog::Present(bool replace, int selectionOptions, bool toggle) {
@@ -299,7 +309,7 @@ void FindReplaceDialog::Present(bool replace, int selectionOptions, bool toggle)
     replaceAllButton_->Show(replace);
     replaceSelectionButton_->Show(replace);
     replacementResult_->Show(replace);
-    GetSizer()->Fit(this);
+    DialogLayout::Fit(*this, GetSizer(), DialogLayout::Resize::Horizontal, true);
     // Fit may keep the existing size. Still arrange rows after changing which
     // controls participate in the Find/Replace layout.
     Layout();
@@ -416,5 +426,5 @@ void FindReplaceDialog::ReplaceAll(bool inSelection) {
         result.status == InvalidPattern
             ? _("Invalid regular expression")
             : wxString::Format(wxPLURAL("%zu replacement", "%zu replacements", result.count), result.count));
-    GetSizer()->Fit(this);
+    DialogLayout::Fit(*this, GetSizer(), DialogLayout::Resize::Horizontal, true);
 }

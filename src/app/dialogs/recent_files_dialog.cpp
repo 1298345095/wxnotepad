@@ -1,4 +1,5 @@
 #include "app/dialogs/recent_files_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include <wx/translation.h>
 #include "settings/recent_files.h"
@@ -33,9 +34,12 @@ RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& prefere
     remember_ = new wxCheckBox(this, wxID_ANY, _("&Remember recent files on exit"));
     remember_->SetName("Remember recent files");
     remember_->SetValue(preferences_.saveRecentFiles);
-    layout->Add(remember_, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
+    auto history = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    history->Add(remember_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(DialogPaddingDip));
+    history->AddStretchSpacer();
     auto* clear = new wxButton(this, wxID_CLEAR, _("Clear History"));
-    layout->Add(clear, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
+    history->Add(clear);
+    layout->Add(history.release(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
     clear->Bind(wxEVT_BUTTON, [this, clearHistory = std::move(clearHistory)](wxCommandEvent&) {
         clearHistory();
         RefreshFiles();
@@ -48,10 +52,10 @@ RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& prefere
     capacity_->SetName("Recent file capacity");
     AppLocalization::SetAccessibleName(*capacity_, _("Maximum recent files"));
     count->Add(capacity_);
-    layout->Add(count, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
-    layout->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
-    SetSizerAndFit(layout);
-    SetMinSize(GetSize());
+    count->AddStretchSpacer(1);
+    count->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxLEFT, FromDIP(DialogPaddingDip));
+    layout->Add(count, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
+    DialogLayout::Fit(*this, layout, DialogLayout::Resize::Both);
     RefreshFiles();
     files_->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent&) { FindWindow(wxID_OK)->Enable(true); });
     files_->Bind(wxEVT_LIST_ITEM_DESELECTED,

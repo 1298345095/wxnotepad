@@ -29,7 +29,7 @@ void Choose(EditorFrame* frame, const wxString& label) {
     Command(frame, id);
     for (const auto* choice : {"Automatic", "Plain Text", "C/C++"}) {
         auto* item = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Scheme", choice));
-        Require(item && item->IsRadio() && item->IsChecked() == (label == choice),
+        Require(item && item->IsCheckable() && item->IsChecked() == (label == choice),
                 "native language choices must be mutually exclusive and show the active choice");
     }
 }

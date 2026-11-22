@@ -329,6 +329,11 @@ msgstr "高亮显示当前子行(&H)"
 msgid "&Indent"
 msgstr "增加缩进(&I)"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "&JavaScript"
+msgstr "&JavaScript"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_JOINLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "&Join Lines\tCtrl+J"
@@ -548,7 +553,7 @@ msgstr "重置缩放(&R)\tCtrl+\\"
 msgid "&Reset if a new file is opened."
 msgstr "新文件被打开时重置(&R)。"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/document_tools.cpp
 msgid "&Restart"
 msgstr "重新启动(&T)"
 
@@ -634,6 +639,11 @@ msgstr "保存时移除行尾空白(&S)。"
 msgid "&Tab Settings..."
 msgstr "制表符设置(&T)..."
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
+#: src/app/editor_frame_commands.cpp
+msgid "&Text File"
+msgstr "文本文件(&T)"
+
 # Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKTOGGLE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle\tCtrl+F2"
@@ -691,6 +701,11 @@ msgstr "查看(&V)"
 msgid "&Visual Studio"
 msgstr "&Visual Studio"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Source Code"
+msgstr "Web 源代码(&W)"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
 msgstr "通配符搜索(&I)"
@@ -712,6 +727,11 @@ msgstr "自动换行(&R)\tCtrl+Shift+W"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wrap around"
 msgstr "循环搜索(&D)"
+
+#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "&XML Document"
+msgstr "XML 文档(&X)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Yes"
@@ -1426,6 +1446,11 @@ msgstr "双引号"
 msgid "Draw Block Caret in &Selection"
 msgstr "在选区内绘制块状光标(&S)"
 
+#. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
+#: src/app/editor_frame_commands.cpp
+msgid "E&xit\tAlt+F4"
+msgstr "退出(&X)\tAlt+F4"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr "启用多选(&M)"
@@ -1579,6 +1604,10 @@ msgstr "匹配 %s%s"
 msgid "Footer:"
 msgstr "页脚："
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "For wrapped line"
+msgstr "对换行的文本"
+
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
@@ -1674,6 +1703,10 @@ msgstr "按文件类型分组(&T)。"
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
 msgstr "页眉："
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Headers and Footers"
+msgstr "页眉和页脚"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_HEX2CHAR.
 #: src/app/editor_frame_commands.cpp
@@ -1937,6 +1970,11 @@ msgstr "页边距（毫米）"
 msgid "Mark &Occurrences"
 msgstr "标记匹配选中(&K)"
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "Mark&down"
+msgstr "Mark&down"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Markdown"
 msgstr "Markdown"
@@ -2080,6 +2118,11 @@ msgstr "只有文件所有者才能更改所有者的写入权限。"
 msgid "Only words in document"
 msgstr "仅使用当前文档中的单词"
 
+#. TRANSLATORS: File submenu grouping explicit-codec Open commands; extension to IDR_MAINWND.
+#: src/app/editor_frame_commands.cpp
+msgid "Open &As"
+msgstr "以指定编码打开(&A)"
+
 #. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Open &Folder"
@@ -2175,6 +2218,10 @@ msgstr "页面设置"
 msgid "Pandoc"
 msgstr "Pandoc"
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Paper"
+msgstr "纸张"
+
 #. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Paper and &Orientation..."
@@ -2189,10 +2236,18 @@ msgstr "圆括号 ()"
 msgid "Plain Text"
 msgstr "纯文本"
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Preview"
+msgstr "预览"
+
 #. TRANSLATORS: Title of the print failure message.
 #: src/app/editor_print_job.cpp
 msgid "Print"
 msgstr "打印"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print Colors"
+msgstr "打印颜色"
 
 #. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -2631,6 +2686,11 @@ msgstr "设置(&I)"
 #: src/app/editor_frame_commands.cpp
 msgid "Settings saved"
 msgstr "当前程序设置已被保存"
+
+#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
+#: src/app/editor_frame_commands.cpp
+msgid "Shell Scri&pt"
+msgstr "Shell 脚本(&P)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Menu\tAlt+F11"
@@ -3246,6 +3306,10 @@ msgstr "ZWNJ — 零宽非连接符(&N)"
 #: src/editor/special_insert.h
 msgid "ZWSP — &Zero width space"
 msgstr "ZWSP — 零宽空格(&Z)"
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Zoom"
+msgstr "缩放"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMIN.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp

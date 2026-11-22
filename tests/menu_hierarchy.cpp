@@ -26,15 +26,54 @@ void Order(wxMenu* menu, std::initializer_list<const char*> names) {
     }
     Require(expected == names.end(), "all delivered commands appear in their original group");
 }
+void Groups(wxMenu* menu, std::initializer_list<const char*> firstItems) {
+    auto expected = firstItems.begin();
+    bool previousSeparator = true;
+    for (auto* item : menu->GetMenuItems()) {
+        if (item->IsSeparator()) {
+            Require(!previousSeparator, "menus have no leading or adjacent separators");
+        } else if (previousSeparator) {
+            Require(expected != firstItems.end() && item->GetItemLabelText() == *expected,
+                    "original menu groups start at the expected command");
+            ++expected;
+        }
+        previousSeparator = item->IsSeparator();
+    }
+    Require(!previousSeparator && expected == firstItems.end(), "all original menu groups are present");
+}
 void CheckMenu(EditorFrame* frame) {
     auto* bar = frame->GetMenuBar();
     constexpr std::array<const char*, 7> names = {{"File", "Edit", "Search", "View", "Scheme", "Settings", "Tools"}};
     Require(bar->GetMenuCount() == std::size(names), "delivered menus follow the original groups");
     for (size_t index = 0; index < std::size(names); ++index)
         Require(bar->GetMenuLabelText(index) == names[index], "original top-level menu order");
+    Order(bar->GetMenu(0), {"New",
+                            "New Window",
+                            "Open...",
+                            "Open As",
+                            "Save",
+                            "Save As...",
+                            "Save Backup",
+                            "Save Copy...",
+                            "Save with Original Time",
+                            "File Mode",
+                            "Revert",
+                            "Reload",
+                            "Encoding",
+                            "Line Endings",
+                            "Page Setup...",
+                            "Print...",
+                            "Open Containing Folder",
+                            "Update File Time",
+                            "Recent (History)...",
+                            "Exit"});
+    Groups(bar->GetMenu(0),
+           {"New", "File Mode", "Encoding", "Page Setup...", "Open Containing Folder", "Recent (History)...", "Exit"});
+    Order(Submenu(bar->GetMenu(0), "Open As"),
+          {"Open As GBK...", "Open As UTF-16LE...", "Open As Windows-1252...", "Open As DOS-437..."});
     Order(bar->GetMenu(1),
-          {"Undo", "Redo", "Cut", "Copy", "Paste", "Select All", "Swap", "Clear Clipboard", "Copy to Clipboard",
-           "Selection", "Enclose Selection", "Lines", "Convert", "Insert", "Special"});
+          {"Undo", "Redo", "Cut", "Copy", "Paste", "Delete", "Select All", "Swap", "Clear Clipboard",
+           "Copy to Clipboard", "Selection", "Enclose Selection", "Lines", "Convert", "Insert", "Special"});
     Order(Submenu(bar->GetMenu(1), "Selection"),
           {"Duplicate", "Toggle Line Comment", "Toggle Block Comment", "Indent", "Unindent", "Strip Trailing Blanks",
            "Strip First Character", "Strip Last Character", "Strip Leading Blanks", "Merge Blank Lines",
@@ -44,9 +83,15 @@ void CheckMenu(EditorFrame* frame) {
           {"Move Up", "Move Down", "Transpose", "Sort Lines...", "Modify Lines...", "Align Lines...", "Duplicate Line",
            "Cut Line", "Copy Line", "Delete Line", "Join Lines", "Split Lines", "Column Wrap...", "Join Paragraphs"});
     // Notepad4.rc 89b8b36: the character-information commands follow Hex to Character.
-    Order(Submenu(bar->GetMenu(1), "Special"),
-          {"Complete Word", "Character to Hex", "Hex to Character", "Show Hex Code", "Show Character Info",
-           "Escape C Chars", "Unescape C Chars"});
+    Order(Submenu(bar->GetMenu(1), "Special"), {"Character to Hex", "Hex to Character", "Show Hex Code",
+                                                "Show Character Info", "Escape C Chars", "Unescape C Chars"});
+    Order(Submenu(bar->GetMenu(1), "Insert"),
+          {"Complete Word", "HTML/XML Tag...", "New GUID", "Unicode Control Character", "File Name",
+           "File Name and Extension", "Full Path Name", "Current Date", "Current Date Time", "UTC Date Time",
+           "Unix Timestamp", "Other Timestamps", "Time/Date (Short Form)", "Time/Date (Long Form)",
+           "Encoding Identifier", "Script Shebang Line"});
+    Groups(Submenu(bar->GetMenu(1), "Insert"),
+           {"Complete Word", "HTML/XML Tag...", "File Name", "Current Date", "Encoding Identifier"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
     // Notepad4.rc at 89b8b36: the three source-codec commands precede
@@ -95,13 +140,24 @@ void CheckMenu(EditorFrame* frame) {
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
     Order(bar->GetMenu(5),
-          {"AutoSave Settings...", "Language", "Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...",
-           "Long Line Settings...", "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent",
-           "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
+          {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
+           "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
+           "Appearance", "File Change Notification...", "AutoSave Settings...", "Other Settings",
 #ifdef __WXMSW__
            "Advanced Settings",
 #endif
            "Save Settings On Exit", "Save Settings Now"});
+    Groups(bar->GetMenu(5), {"Insert Tabs as Spaces", "Appearance", "File Change Notification...",
+#ifdef __WXMSW__
+                             "Advanced Settings"});
+#else
+                             "Save Settings On Exit"});
+#endif
+    auto* appearance = Submenu(bar->GetMenu(5), "Appearance");
+    Order(appearance, {"Show Menu", "Show Toolbar", "Show Statusbar", "Full Screen Mode", "Scroll Past Last Line",
+                       "Auto-Shrink Horizontal Scrollbar", "Language"});
+    Groups(appearance, {"Show Menu", "Full Screen Mode", "Language"});
+    Order(Submenu(bar->GetMenu(5), "Other Settings"), {"Remember Recent Files", "Remember Search Options"});
 #ifdef __WXMSW__
     Order(Submenu(bar->GetMenu(5), "Advanced Settings"), {"Rendering Technology"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Advanced Settings"), "Rendering Technology"), {"Legacy GDI", "Direct2D"});
@@ -111,8 +167,21 @@ void CheckMenu(EditorFrame* frame) {
            "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
-    Order(bar->GetMenu(6), {"Save Before Running Tools", "Execute Document", "Open Document With...", "Run Command...",
-                            "Action on Selection", "Base64"});
+    Order(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Open Document With...",
+                            "Run Command...", "Action on Selection", "Base64"});
+    Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
+    auto* schemes = bar->GetMenu(4);
+    Order(schemes,
+          {"Use Default Code Style", "Automatic", "Text File", "JavaScript", "Web Source Code", "Markdown",
+           "Shell Script", "XML Document", "C/C++", "CMake", "Go", "JSON", "Lua", "Python", "Rust", "TOML", "YAML"});
+    Groups(schemes, {"Use Default Code Style", "Automatic", "C/C++"});
+    Order(Submenu(schemes, "Text File"), {"Plain Text"});
+    Order(Submenu(schemes, "JavaScript"), {"JavaScript", "JSX", "TypeScript", "TSX"});
+    Order(Submenu(schemes, "Web Source Code"),
+          {"Web Source Code", "JSP", "JSPX", "ASP.NET C#", "ASP.NET VB", "ASP VBScript", "ASP JavaScript"});
+    Order(Submenu(schemes, "Markdown"), {"GitHub GFM", "GitLab GLFM", "Pandoc"});
+    Order(Submenu(schemes, "Shell Script"), {"Bash", "C Shell", "m4"});
+    Order(Submenu(schemes, "XML Document"), {"XML Document", "XML Schema", "XSLT", "DTD", "Property List", "SVG"});
     const int execute = bar->FindMenuItem("Tools", "Execute Document");
     const int openWith = bar->FindMenuItem("Tools", "Open Document With...");
     const int saveTools = bar->FindMenuItem("Tools", "Save Before Running Tools");
@@ -122,6 +191,28 @@ void CheckMenu(EditorFrame* frame) {
             "save-before-tools is visible and defaults off");
     Order(Submenu(bar->GetMenu(6), "Base64"),
           {"Standard Encode", "URL Safe Encode", "Encode as HTML Embedded Image", "Decode", "Decode as Hex"});
+}
+void SchemeSelections(EditorFrame* frame) {
+    auto* bar = frame->GetMenuBar();
+    const int automatic = bar->FindMenuItem("Scheme", "Automatic");
+    const auto check = [bar, automatic](std::optional<SyntaxLanguage> selected) {
+        Require(bar->IsChecked(automatic) == !selected.has_value(), "Automatic reflects the language override");
+        for (const auto& definition : SyntaxCatalog()) {
+            const int id = bar->FindMenuItem("Scheme", LanguageName(definition.language));
+            Require(id != wxNOT_FOUND && bar->FindItem(id)->IsCheckable(),
+                    "each delivered scheme has a selectable leaf");
+            Require(bar->IsChecked(id) == (selected == definition.language),
+                    "only one scheme is checked across all families");
+        }
+    };
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    check(std::nullopt);
+    for (const auto& definition : SyntaxCatalog()) {
+        NativeSearch::Command(frame, bar->FindMenuItem("Scheme", LanguageName(definition.language)));
+        check(definition.language);
+    }
+    NativeSearch::Command(frame, automatic);
+    check(std::nullopt);
 }
 void Actions(EditorFrame* frame, SettingsStore& settings) {
     using Scintilla::Message;
@@ -139,6 +230,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     const auto encoding = frame->DocumentEncoding();
     const auto saveFind = settings.values.saveFindReplace;
     CheckMenu(frame);
+    SchemeSelections(frame);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(NativeSearch::Text(editor) == "alpha\r\nbeta\r\n" && editor->Send(Message::GetAnchor) == 1 &&
                 editor->Send(Message::GetCurrentPos) == 4 && !editor->Send(Message::CanUndo) &&
@@ -162,6 +254,10 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     command("Edit", "Duplicate Line");
     Require(NativeSearch::Text(editor) == "alpha\r\nbeta\r\n", "moved line action retains read-only behavior");
     command("File", "Read Only Mode");
+    editor->Send(Message::SetSel, 0, 5);
+    command("Edit", "Delete");
+    Require(NativeSearch::Text(editor) == "\r\nbeta\r\n", "main-menu Delete uses the existing editor command");
+    editor->Send(Message::Undo);
     editor->Send(Message::SetSel, 0, 0);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(!bar->IsEnabled(bar->FindMenuItem("Edit", "Upper Case")) &&

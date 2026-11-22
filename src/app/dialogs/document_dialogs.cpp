@@ -1,4 +1,5 @@
 #include "app/dialogs/document_dialogs.h"
+#include "app/dialogs/dialog_layout.h"
 #include <utility>
 #include "app/localization.h"
 #include <wx/translation.h>
@@ -70,7 +71,8 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {
     using enum FileEncoding;
     constexpr std::array choices = {Utf8, Utf16Le, Gbk, Utf16Be, Gb18030, Big5, Windows1252, Dos437};
-    wxDialog dialog(parent, wxID_ANY, _("Reload With Encoding"));
+    wxDialog dialog(parent, wxID_ANY, _("Reload With Encoding"), wxDefaultPosition, wxDefaultSize,
+                    DialogLayout::Style(DialogLayout::Resize::Both));
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, _("Select source &encoding to reload file:")), 0, wxALL,
                   dialog.FromDIP(DialogPaddingDip));
@@ -91,7 +93,7 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     dialog.Bind(wxEVT_LISTBOX_DCLICK, [&dialog, source](wxCommandEvent&) {
         if (source->GetSelection() != wxNOT_FOUND) dialog.EndModal(wxID_OK);
     });
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Both);
     dialog.CentreOnParent();
     source->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
@@ -102,7 +104,8 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
                                                     bool defaultSelection) {
     // Notepad4 89b8b36 EditEncoding.cpp sEncodingGroupList and resource labels.
     // Retain delivered catalog entries in a native tree instead of HWND item data.
-    wxDialog dialog(parent, wxID_ANY, _("Select Encoding"));
+    wxDialog dialog(parent, wxID_ANY, _("Select Encoding"), wxDefaultPosition, wxDefaultSize,
+                    DialogLayout::Style(DialogLayout::Resize::Both));
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(
         new wxStaticText(&dialog, wxID_ANY,
@@ -150,7 +153,7 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
     tree->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&dialog, &selected](wxTreeEvent&) {
         if (selected()) dialog.EndModal(wxID_OK);
     });
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Both);
     dialog.CentreOnParent();
     tree->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
@@ -201,7 +204,7 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
     const auto* tags = add("NoEncodingTags", _("Don't parse encoding &tags."), options.noEncodingTags);
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(DialogPaddingDip));
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, contents);
     dialog.CentreOnParent();
     if (dialog.ShowModal() != wxID_OK) return;
     options.skipUnicodeDetection = skip->GetValue();
@@ -227,9 +230,7 @@ std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, c
     reset->SetValue(initial.resetOnNewFile);
     for (auto* checkbox : {log, keepEnd, reset})
         layout->Add(checkbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
-    layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
-                dialog.FromDIP(DialogPaddingDip));
-    dialog.SetSizerAndFit(layout);
+    DialogLayout::Fit(dialog, DialogLayout::WithSideButtons(dialog, layout));
     dialog.CentreOnParent();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
     auto options = initial;
@@ -263,8 +264,7 @@ LineEndingOptionsDialog::LineEndingOptionsDialog(wxWindow* parent, const LineEnd
     warn_ = option(_("Show inconsistent line endings warning on loading."), options.warn);
     fix_ = option(_("&Ensure consistent line endings when saving."), options.cleanup.fixLineEndings);
     strip_ = option(_("&Strip trailing blanks when saving."), options.cleanup.fixTrailingBlanks);
-    contents->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
-    SetSizerAndFit(contents);
+    DialogLayout::Fit(*this, DialogLayout::WithSideButtons(*this, contents));
     CentreOnParent();
 }
 
@@ -297,18 +297,22 @@ LineEndingConversionDialog::LineEndingConversionDialog(wxWindow* parent, const L
     mode_->SetName("Line ending conversion");
     AppLocalization::SetAccessibleName(*mode_, _("Line ending conversion"));
     mode_->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
-    contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
+    auto choices = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    choices->Add(mode_, 0, wxEXPAND);
     always_ = new wxCheckBox(this, wxID_ANY, _("&Always show this dialog."));
     always_->SetValue(warn);
-    contents->Add(always_, 0, wxALL, FromDIP(DialogPaddingDip));
-    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    choices->Add(always_, 0, wxTOP, FromDIP(DialogPaddingDip));
+    auto buttons = std::make_unique<wxBoxSizer>(wxVERTICAL);
     auto* yes = new wxButton(this, wxID_OK, _("&Yes"));
     auto* no = new wxButton(this, wxID_CANCEL, _("&No"));
-    buttons->Add(yes, 0, wxRIGHT, FromDIP(5));
-    buttons->Add(no);
-    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, FromDIP(DialogPaddingDip));
+    buttons->Add(yes, 0, wxEXPAND | wxBOTTOM, FromDIP(DialogLayout::GapDip));
+    buttons->Add(no, 0, wxEXPAND);
+    auto footer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    footer->Add(choices.release(), 1, wxRIGHT, FromDIP(DialogPaddingDip));
+    footer->Add(buttons.release());
+    contents->Add(footer.release(), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
     (defaultNo ? no : yes)->SetDefault();
-    SetSizerAndFit(contents);
+    DialogLayout::Fit(*this, contents);
     CentreOnParent();
 }
 

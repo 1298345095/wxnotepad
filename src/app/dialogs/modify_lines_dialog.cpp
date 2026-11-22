@@ -1,4 +1,5 @@
 #include "app/dialogs/modify_lines_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/win_edit_input.h"
 #include <wx/translation.h>
 #include "editor/editor_control.h"
@@ -63,10 +64,12 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
     auto* skip = new wxCheckBox(&dialog, wxID_ANY, _("&Skip empty lines."));
     skip->SetName("Skip empty lines");
     skip->SetValue(skipEmpty);
-    contents->Add(skip, 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
-    dialog.SetMinSize(dialog.GetSize());
+    auto footer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    footer->Add(skip, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, dialog.FromDIP(10));
+    footer->AddStretchSpacer();
+    footer->Add(dialog.CreateStdDialogButtonSizer(wxOK | wxCANCEL));
+    contents->Add(footer.release(), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Both);
     prefix->SetFocus();
     dialog.CentreOnParent();
     dialog.Bind(

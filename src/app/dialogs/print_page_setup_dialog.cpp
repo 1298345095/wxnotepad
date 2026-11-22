@@ -1,4 +1,6 @@
 #include "app/dialogs/print_page_setup_dialog.h"
+#include "app/dialogs/dialog_layout.h"
+#include "app/dialogs/print_page_preview.h"
 #include "app/dialogs/zoom_input.h"
 #include "app/editor_printing.h"
 #include "app/localization.h"
@@ -6,6 +8,8 @@
 #include <wx/choice.h>
 #include <wx/combobox.h>
 #include <wx/dialog.h>
+#include <wx/dcclient.h>
+#include <wx/panel.h>
 #include <wx/intl.h>
 #include <wx/printdlg.h>
 #include <wx/sizer.h>
@@ -13,6 +17,7 @@
 #include <wx/statbox.h>
 #include <wx/stattext.h>
 #include <cmath>
+#include <array>
 #include <limits>
 #include <utility>
 
@@ -32,17 +37,34 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
                                                     PrintMarginDisplay units) {
     // TRANSLATORS: Title of the printing configuration dialog (IDD_PAGESETUP).
     wxDialog dialog(&parent, wxID_ANY, _("Page Setup"));
-    auto* content = new wxBoxSizer(wxVERTICAL);
+    auto content = std::make_unique<wxBoxSizer>(wxVERTICAL);
     const auto padding = dialog.FromDIP(10);
+    auto columns = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    auto settings = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    auto previewColumn = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    // Keep the original left-hand paper/margins/header/color groups and the
+    // right-hand preview/zoom column. Paper selection stays a native dialog.
+    auto paperBox = std::make_unique<wxStaticBoxSizer>(wxVERTICAL, &dialog, _("Paper"));
     // TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
     auto* paperButton = new wxButton(&dialog, wxID_ANY, _("Paper and &Orientation..."));
-    content->Add(paperButton, 0, wxEXPAND | wxALL, padding);
-    std::optional<wxPrintData> draft;
-    paperButton->Bind(wxEVT_BUTTON, [&](wxCommandEvent&) {
-        wxPageSetupDialogData data(EditorPrinting::CopyPrinterData(draft ? *draft : driver));
+    paperBox->Add(paperButton, 0, wxEXPAND | wxALL, padding);
+    settings->Add(paperBox.release(), 0, wxEXPAND | wxALL, padding);
+    wxPrintData draft = EditorPrinting::CopyPrinterData(driver);
+    bool paperChanged = false;
+    auto previewBox = std::make_unique<wxStaticBoxSizer>(wxVERTICAL, &dialog, _("Preview"));
+    auto* preview = new wxPanel(&dialog, wxID_ANY, wxDefaultPosition, dialog.FromDIP(wxSize(150, 220)));
+    preview->SetName("Print page preview");
+    AppLocalization::SetAccessibleName(*preview, _("Preview"));
+    previewBox->Add(preview, 1, wxEXPAND | wxALL, padding);
+    previewColumn->Add(previewBox.release(), 1, wxEXPAND | wxTOP | wxRIGHT | wxBOTTOM, padding);
+    paperButton->Bind(wxEVT_BUTTON, [&dialog, &draft, &paperChanged, preview](wxCommandEvent&) {
+        wxPageSetupDialogData data(EditorPrinting::CopyPrinterData(draft));
         data.EnableMargins(false);
-        wxPageSetupDialog paper(&dialog, &data);
-        if (paper.ShowModal() == wxID_OK) draft = paper.GetPageSetupDialogData().GetPrintData();
+        if (wxPageSetupDialog paper(&dialog, &data); paper.ShowModal() == wxID_OK) {
+            draft = paper.GetPageSetupDialogData().GetPrintData();
+            paperChanged = true;
+        }
+        preview->Refresh();
     });
 
     wxString marginGroup;
@@ -97,9 +119,26 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
             _("Bottom margin"), bottom),
     };
     marginBox->Add(marginFields, 1, wxEXPAND | wxALL, padding);
-    content->Add(marginBox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+    settings->Add(marginBox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
 
-    auto* fields = new wxFlexGridSizer(2, dialog.FromDIP(5), padding);
+    preview->Bind(wxEVT_PAINT, [preview, &draft, marginInputs, units](wxPaintEvent&) {
+        wxPaintDC dc(preview);
+        dc.SetBackground(wxBrush(preview->GetBackgroundColour()));
+        dc.Clear();
+        std::array<double, 4> displayMargins{};
+        for (size_t index = 0; index < displayMargins.size(); ++index)
+            displayMargins[index] = marginInputs[index].control.GetValue();
+        const auto bounds = preview->GetClientRect().Deflate(preview->FromDIP(8));
+        DrawPrintPagePreview(dc, bounds, draft, displayMargins, units);
+    });
+    for (const auto& input : marginInputs)
+        input.control.Bind(wxEVT_TEXT, [preview](wxCommandEvent& event) {
+            preview->Refresh();
+            event.Skip();
+        });
+
+    auto headerBox = std::make_unique<wxStaticBoxSizer>(wxVERTICAL, &dialog, _("Headers and Footers"));
+    auto fields = std::make_unique<wxFlexGridSizer>(2, dialog.FromDIP(5), padding);
     fields->AddGrowableCol(1);
     // TRANSLATORS: IDS_PRINT_HEADER and IDS_PRINT_FOOTER choice to omit the header or footer.
     const auto blank = _("Leave blank");
@@ -125,8 +164,13 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
                    {// TRANSLATORS: IDS_PRINT_FOOTER choice: show the page number at the bottom of each page.
                     _("Page Number"), blank},
                    std::to_underlying(options.footer));
+    headerBox->Add(fields.release(), 0, wxEXPAND | wxALL, padding);
+    settings->Add(headerBox.release(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+    auto colorBox = std::make_unique<wxStaticBoxSizer>(wxVERTICAL, &dialog, _("Print Colors"));
+    auto colorFields = std::make_unique<wxFlexGridSizer>(2, dialog.FromDIP(5), padding);
+    colorFields->AddGrowableCol(1);
     auto* const colour =
-        AddChoices(dialog, *fields,
+        AddChoices(dialog, *colorFields,
                    // TRANSLATORS: Caption for IDC_PAGESETUP_COLOR_MODE_LIST.
                    _("Print color mode:"),
                    // TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
@@ -147,18 +191,24 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
                    },
                    std::to_underlying(options.colour));
     colour->SetName("Print color mode");
+    colorBox->Add(colorFields.release(), 0, wxEXPAND | wxALL, padding);
+    settings->Add(colorBox.release(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
     const auto zoomLabel = wxString::Format(
         // TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
         _("Print zoom (%d%% to %d%%):"), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
-    fields->Add(new wxStaticText(&dialog, wxID_ANY, zoomLabel), 0, wxALIGN_CENTER_VERTICAL);
+    auto zoomBox = std::make_unique<wxStaticBoxSizer>(wxVERTICAL, &dialog, _("Zoom"));
+    zoomBox->Add(new wxStaticText(&dialog, wxID_ANY, zoomLabel), 0, wxALL, padding);
     auto* zoom = CreateZoomInput(&dialog, options.zoom);
     zoom->SetName("Print zoom");
     // TRANSLATORS: Screen reader name for the IDC_PAGESETUP_ZOOMLEVEL percentage field.
     AppLocalization::SetAccessibleName(*zoom, _("Print zoom"));
-    fields->Add(zoom, 1, wxEXPAND);
-    content->Add(fields, 0, wxEXPAND | wxALL, padding);
+    zoomBox->Add(zoom, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+    previewColumn->Add(zoomBox.release(), 0, wxEXPAND | wxRIGHT | wxBOTTOM, padding);
+    columns->Add(settings.release(), 1, wxEXPAND);
+    columns->Add(previewColumn.release(), 0, wxEXPAND);
+    content->Add(columns.release(), 0, wxEXPAND);
     content->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, padding);
-    dialog.SetSizerAndFit(content);
+    DialogLayout::Fit(dialog, std::move(content));
     dialog.CentreOnParent();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
 
@@ -168,5 +218,6 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
     options.zoom = ReadZoomLevel(*zoom).value_or(PrintOptions{}.zoom);
     for (const auto& [control, option] : marginInputs)
         option = static_cast<int>(std::lround(control.GetValue() * units.unitsPerDisplayUnit));
-    return draft;
+    if (paperChanged) return draft;
+    return std::nullopt;
 }

@@ -2,6 +2,7 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/auto_save_settings_dialog.h"
 #include "app/editor_printing.h"
 #include "app/editor_print_job.h"
@@ -57,9 +58,11 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     auto* input = CreateZoomInput(&dialog, static_cast<int>(editor.Send(Message::GetZoom)));
     input->SetName("Zoom level");
     AppLocalization::SetAccessibleName(*input, _("Zoom level"));
-    contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
-                  dialog.FromDIP(10));
+    auto zoomRow = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    zoomRow->Add(input, 1, wxRIGHT, dialog.FromDIP(10));
+    zoomRow->Add(new wxButton(&dialog, wxID_APPLY));
+    contents->Add(zoomRow.release(), 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     const auto apply = [input, &editor, &dialog](wxCommandEvent& event) {
         if (const auto level = ReadZoomLevel(*input)) editor.Send(Message::SetZoom, *level);
         // As in the original, invalid OK closes without changing zoom; Apply
@@ -68,7 +71,7 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     };
     dialog.Bind(wxEVT_BUTTON, apply, wxID_OK);
     dialog.Bind(wxEVT_BUTTON, apply, wxID_APPLY);
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, contents);
     input->SetSelection(-1, -1);
     input->SetFocus();
     dialog.CentreOnParent();
@@ -273,18 +276,16 @@ wxMenu* EditorFrame::CreateFileMenu() {
                              wxOK | wxICON_ERROR, this);
         },
         newWindow);
-    const int restart = wxWindow::NewControlId();
-    file->Append(restart, _("&Restart"));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Restart(); }, restart);
     file->Append(wxID_OPEN, _("&Open...\tCtrl+O"));
+    auto* openAs = new wxMenu;
     const int openGbk = wxWindow::NewControlId();
-    file->Append(openGbk, _("Open As &GBK..."));
+    openAs->Append(openGbk, _("Open As &GBK..."));
     const int openUtf16 = wxWindow::NewControlId();
-    file->Append(openUtf16, _("Open As UTF-16LE..."));
+    openAs->Append(openUtf16, _("Open As UTF-16LE..."));
     for (const auto& [label, encoding] : {std::pair{wxTRANSLATE("Open As Windows-1252..."), FileEncoding::Windows1252},
                                           std::pair{wxTRANSLATE("Open As DOS-437..."), FileEncoding::Dos437}}) {
         const int id = wxWindow::NewControlId();
-        file->Append(id, wxGetTranslation(label));
+        openAs->Append(id, wxGetTranslation(label));
         Bind(
             wxEVT_MENU,
             [this, encoding](wxCommandEvent&) {
@@ -294,6 +295,8 @@ wxMenu* EditorFrame::CreateFileMenu() {
             },
             id);
     }
+    // TRANSLATORS: File submenu grouping explicit-codec Open commands; extension to IDR_MAINWND.
+    file->AppendSubMenu(openAs, _("Open &As"));
     file->Append(wxID_SAVE, _("&Save\tCtrl+S"));
     file->Append(wxID_SAVEAS, _("Save &As...\tF6"));
     const int saveBackup = wxWindow::NewControlId();
@@ -428,7 +431,6 @@ wxMenu* EditorFrame::CreateFileMenu() {
         },
         saveCopyId_);
     Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, saveCopyId_);
-    file->AppendSeparator();
     auto* endings = new wxMenu;
     AppendLineEndingCommands(endings);
     file->AppendSubMenu(endings, _("Line Endin&gs"));
@@ -451,7 +453,6 @@ wxMenu* EditorFrame::CreateFileMenu() {
         },
         wxID_PRINT);
     file->AppendSeparator();
-    file->Append(updateTime, _("Update File Time"));
     const int containingFolder = wxWindow::NewControlId();
     // TRANSLATORS: Open the current document's containing directory in the native file manager.
     file->Append(containingFolder, _("Open Containing &Folder"));
@@ -466,7 +467,13 @@ wxMenu* EditorFrame::CreateFileMenu() {
         containingFolder);
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, containingFolder);
+    file->Append(updateTime, _("Update File Time"));
+    file->AppendSeparator();
     AppendRecentFilesCommand(file);
+    file->AppendSeparator();
+    // TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
+    file->Append(wxID_EXIT, _("E&xit\tAlt+F4"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Close(); }, wxID_EXIT);
     return file;
 }
 
@@ -490,6 +497,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
     edit->Append(wxID_CUT, _("Cu&t\tCtrl+X"));
     edit->Append(wxID_COPY, _("&Copy\tCtrl+C"));
     edit->Append(wxID_PASTE, _("&Paste\tCtrl+V"));
+    edit->Append(wxID_DELETE, _("&Delete"));
     edit->Append(wxID_SELECTALL, _("Select &All\tCtrl+A"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectAll); }, wxID_SELECTALL);
     Bind(
@@ -1177,25 +1185,6 @@ void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
 
 wxMenu* EditorFrame::CreateLanguageMenu() {
     auto* languages = new wxMenu;
-    const auto addLanguage = [this, languages](const wxString& label, std::optional<SyntaxLanguage> language) {
-        const int id = wxWindow::NewControlId();
-        languages->AppendRadioItem(id, label);
-        Bind(
-            wxEVT_MENU,
-            [this, id, language](wxCommandEvent&) {
-                GetMenuBar()->Check(id, true);
-                ChooseLanguage(language);
-            },
-            id);
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this, language](wxUpdateUIEvent& event) { event.Check(document_.LanguageOverride() == language); }, id);
-        return id;
-    };
-    automaticLanguageId_ = addLanguage(_("&Automatic"), std::nullopt);
-    for (const auto& definition : SyntaxCatalog())
-        addLanguage("&" + LanguageName(definition.language), definition.language);
-    languages->AppendSeparator();
     const int useCode = wxWindow::NewControlId();
     languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));
     Bind(
@@ -1216,6 +1205,42 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
             event.Check((settings_ ? settings_->values : defaults_).fonts.Scheme(document_.Language()).useCode);
         },
         useCode);
+    languages->AppendSeparator();
+    const auto addLanguage = [this](wxMenu* menu, const wxString& label, std::optional<SyntaxLanguage> language) {
+        const int id = wxWindow::NewControlId();
+        // Notepad4 checks the active scheme across all families. Native radio
+        // groups are local to each submenu and would select inactive families.
+        menu->AppendCheckItem(id, label);
+        Bind(wxEVT_MENU, [this, language](wxCommandEvent&) { ChooseLanguage(language); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, language](wxUpdateUIEvent& event) { event.Check(document_.LanguageOverride() == language); }, id);
+        return id;
+    };
+    automaticLanguageId_ = addLanguage(languages, _("&Automatic"), std::nullopt);
+    const auto addFamily = [&addLanguage, languages](const wxString& label,
+                                                     std::initializer_list<SyntaxLanguage> members) {
+        auto* family = new wxMenu;
+        for (const auto language : members)
+            addLanguage(family, "&" + LanguageName(language), language);
+        languages->AppendSubMenu(family, label);
+    };
+    using enum SyntaxLanguage;
+    // TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
+    addFamily(_("&Text File"), {PlainText});
+    // TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
+    addFamily(_("&JavaScript"), {JavaScript, Jsx, TypeScript, Tsx});
+    // TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
+    addFamily(_("&Web Source Code"), {Html, Jsp, Jspx, AspxCs, AspxVb, AspVb, AspJs});
+    // TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
+    addFamily(_("Mark&down"), {MarkdownGitHub, MarkdownGitLab, MarkdownPandoc});
+    // TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
+    addFamily(_("Shell Scri&pt"), {Bash, CShell, M4});
+    // TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
+    addFamily(_("&XML Document"), {Xml, Xsd, Xslt, Dtd, Plist, Svg});
+    languages->AppendSeparator();
+    for (const auto language : {Cpp, CMake, Go, Json, Lua, Python, Rust, Toml, Yaml})
+        addLanguage(languages, "&" + LanguageName(language), language);
     return languages;
 }
 
@@ -1227,7 +1252,6 @@ wxMenu* EditorFrame::CreateViewMenu() {
     view->Append(textFont, _("Default &Text Font..."));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ChooseDefaultFont(true); }, codeFont);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ChooseDefaultFont(false); }, textFont);
-    view->AppendSeparator();
     AppendCaretCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
@@ -1656,7 +1680,9 @@ void EditorFrame::AppendCaretCommands(wxMenu* view) {
 
 void EditorFrame::AppendSettingsCommands(wxMenu* view) {
     if (settings_) {
+#ifndef __WXMSW__
         view->AppendSeparator();
+#endif
         const int saveOnExit = wxWindow::NewControlId();
         view->AppendCheckItem(saveOnExit, _("Save Settings On E&xit"));
         Bind(
@@ -1801,6 +1827,23 @@ void EditorFrame::AppendFileNameCopyCommands(wxMenu* copy) {
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    const int completeWord = wxWindow::NewControlId();
+    auto* completionItem = new wxMenuItem(insert, completeWord, _("Complete &Word\tAlt+/"));
+    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
+    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_DIVIDE, completeWord));
+    insert->Append(completionItem);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            CompleteWord(*editor_, SyntaxFor(document_.EffectiveLanguage()), preferences.completion);
+        },
+        completeWord);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        completeWord);
+    insert->AppendSeparator();
     const int insertTag = wxWindow::NewControlId();
     insert->Append(insertTag, _("&HTML/XML Tag...\tAlt+X"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
@@ -2140,27 +2183,11 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
             information->SetName("Character information");
             contents->Add(information, 0, wxALL, dialog.FromDIP(12));
             contents->Add(dialog.CreateSeparatedButtonSizer(wxOK), 0, wxEXPAND | wxALL, dialog.FromDIP(8));
-            dialog.SetSizerAndFit(contents);
+            DialogLayout::Fit(dialog, contents);
             dialog.CentreOnParent();
             dialog.ShowModal();
         },
         showCharacter);
-    const int completeWord = wxWindow::NewControlId();
-    auto* completionItem = edit->Append(completeWord, _("Complete &Word\tAlt+/"));
-    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
-    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_DIVIDE, completeWord));
-    Bind(
-        wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            const auto& preferences = settings_ ? settings_->values : defaults_;
-            CompleteWord(*editor_, SyntaxFor(document_.EffectiveLanguage()), preferences.completion);
-        },
-        completeWord);
-    Bind(
-        wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
-        completeWord);
-    edit->AppendSeparator();
     for (const auto& [label, mapping] :
          {std::pair{wxTRANSLATE("C&haracter to Hex\tCtrl+Alt+X"), CustomCaseCommand::CharacterToHex},
           std::pair{wxTRANSLATE("Hex to Cha&racter\tCtrl+Alt+C"), CustomCaseCommand::HexToCharacter},
@@ -2271,18 +2298,6 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
 
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
-    const int autoSave = wxWindow::NewControlId();
-    // TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
-    view->Append(autoSave, _("AutoSave Settings..."));
-    Bind(
-        wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            auto& preferences = settings_ ? settings_->values : defaults_;
-            if (ShowAutoSaveSettingsDialog(this, preferences.autoSave))
-                document_.ConfigureAutoSave(preferences.autoSave);
-        },
-        autoSave);
-    AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
     const int wordWrapSettings = wxWindow::NewControlId();
     view->Append(wordWrapSettings, _("Word Wrap Settings..."));
@@ -2320,6 +2335,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     AppendAppearanceOptions(view);
+    view->AppendSeparator();
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);
@@ -2327,17 +2343,19 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(fileWatchingOptions_.mode != FileWatchingMode::None); },
         fileChanges);
+    const int autoSave = wxWindow::NewControlId();
+    // TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
+    view->Append(autoSave, _("AutoSave Settings..."));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoSaveSettingsDialog(this, preferences.autoSave))
+                document_.ConfigureAutoSave(preferences.autoSave);
+        },
+        autoSave);
     if (settings_) {
         auto* other = new wxMenu;
-        const int saveFind = wxWindow::NewControlId();
-        other->AppendCheckItem(saveFind, _("Remember &Search Options"));
-        Bind(
-            wxEVT_MENU,
-            [this](wxCommandEvent&) { settings_->values.saveFindReplace = !settings_->values.saveFindReplace; },
-            saveFind);
-        Bind(
-            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
-            saveFind);
         const int saveRecent = wxWindow::NewControlId();
         other->AppendCheckItem(saveRecent, _("Remember &Recent Files"));
         Bind(
@@ -2347,6 +2365,15 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         Bind(
             wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveRecentFiles); },
             saveRecent);
+        const int saveFind = wxWindow::NewControlId();
+        other->AppendCheckItem(saveFind, _("Remember &Search Options"));
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveFindReplace = !settings_->values.saveFindReplace; },
+            saveFind);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
+            saveFind);
         view->AppendSubMenu(other, _("Other Sett&ings"));
     }
 #ifdef __WXMSW__
@@ -2457,6 +2484,8 @@ void EditorFrame::AppendAppearanceOptions(wxMenu* view) {
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoShrinkScrollWidth()); },
         shrinkScrollWidth);
+    appearance->AppendSeparator();
+    AppendUILanguageCommands(appearance);
     view->AppendSubMenu(appearance, _("Appea&rance"));
 }
 

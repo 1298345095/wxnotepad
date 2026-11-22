@@ -1,4 +1,5 @@
 #include "app/dialogs/long_line_settings_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include <wx/translation.h>
 #include "settings/original_settings_constants.h"
@@ -37,8 +38,7 @@ bool ShowLongLineSettingsDialog(wxWindow* parent, int& limit, int& mode) {
     background->SetValue(mode != 1);
     layout->Add(line, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
     layout->Add(background, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
-    layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(layout);
+    DialogLayout::Fit(dialog, DialogLayout::WithSideButtons(dialog, layout));
     input->SetFocus();
     input->SelectAll();
     dialog.CentreOnParent();

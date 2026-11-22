@@ -10,7 +10,8 @@ wxTextCtrl* AddWinEditInput(wxDialog& dialog, wxSizer& contents, const wxString&
     contents.Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
     auto display = value;
     display.Replace("\r\n", "\n");
-    auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
+    auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition,
+                                 wxSize(dialog.FromDIP(400), dialog.GetCharHeight() + dialog.FromDIP(12)),
                                  wxTE_MULTILINE | wxTE_PROCESS_ENTER);
     input->SetName(name);
     AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(label));

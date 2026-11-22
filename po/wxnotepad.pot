@@ -299,6 +299,11 @@ msgstr ""
 msgid "&Indent"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "&JavaScript"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Join Lines\tCtrl+J"
 msgstr ""
@@ -494,7 +499,7 @@ msgstr ""
 msgid "&Reset if a new file is opened."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/document_tools.cpp
 msgid "&Restart"
 msgstr ""
 
@@ -569,6 +574,11 @@ msgstr ""
 msgid "&Tab Settings..."
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
+#: src/app/editor_frame_commands.cpp
+msgid "&Text File"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle\tCtrl+F2"
 msgstr ""
@@ -619,6 +629,11 @@ msgstr ""
 msgid "&Visual Studio"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Source Code"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
 msgstr ""
@@ -637,6 +652,11 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wrap around"
+msgstr ""
+
+#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "&XML Document"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1327,6 +1347,11 @@ msgstr ""
 msgid "Draw Block Caret in &Selection"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
+#: src/app/editor_frame_commands.cpp
+msgid "E&xit\tAlt+F4"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr ""
@@ -1472,6 +1497,10 @@ msgstr ""
 msgid "Footer:"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "For wrapped line"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
 msgstr ""
@@ -1552,6 +1581,10 @@ msgstr ""
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
+msgstr ""
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Headers and Footers"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1806,6 +1839,11 @@ msgstr ""
 msgid "Mark &Occurrences"
 msgstr ""
 
+#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
+#: src/app/editor_frame_commands.cpp
+msgid "Mark&down"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Markdown"
 msgstr ""
@@ -1940,6 +1978,11 @@ msgstr ""
 msgid "Only words in document"
 msgstr ""
 
+#. TRANSLATORS: File submenu grouping explicit-codec Open commands; extension to IDR_MAINWND.
+#: src/app/editor_frame_commands.cpp
+msgid "Open &As"
+msgstr ""
+
 #. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_OPENFOLDER button; open the backup directory in the file manager.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Open &Folder"
@@ -2034,6 +2077,10 @@ msgstr ""
 msgid "Pandoc"
 msgstr ""
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Paper"
+msgstr ""
+
 #. TRANSLATORS: Opens native paper and orientation controls from IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Paper and &Orientation..."
@@ -2048,9 +2095,17 @@ msgstr ""
 msgid "Plain Text"
 msgstr ""
 
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Preview"
+msgstr ""
+
 #. TRANSLATORS: Title of the print failure message.
 #: src/app/editor_print_job.cpp
 msgid "Print"
+msgstr ""
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Print Colors"
 msgstr ""
 
 #. TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
@@ -2466,6 +2521,11 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Settings saved"
+msgstr ""
+
+#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
+#: src/app/editor_frame_commands.cpp
+msgid "Shell Scri&pt"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -3037,6 +3097,10 @@ msgstr ""
 
 #: src/editor/special_insert.h
 msgid "ZWSP — &Zero width space"
+msgstr ""
+
+#: src/app/dialogs/print_page_setup_dialog.cpp
+msgid "Zoom"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp

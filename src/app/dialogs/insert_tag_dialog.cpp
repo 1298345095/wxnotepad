@@ -1,5 +1,6 @@
 #include "app/dialogs/insert_tag_dialog.h"
-#include "app/localization.h"
+#include "app/dialogs/dialog_layout.h"
+#include "app/dialogs/win_edit_input.h"
 #include <wx/translation.h>
 #include "editor/editor_control.h"
 #include <wx/dialog.h>
@@ -40,24 +41,20 @@ void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
     wxDialog dialog(parent, wxID_ANY, _("Insert HTML/XML Tag"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const auto field = [contents, &dialog](const wxString& label, const char* name, const char* initial) {
-        contents->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
-        auto* input = new wxTextCtrl(&dialog, wxID_ANY, initial, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
-                                     wxTE_MULTILINE | wxTE_PROCESS_ENTER);
-        input->SetName(name);
-        AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(label));
-        contents->Add(input, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
-        return input;
-    };
-    auto* opening = field(_("&Opening tag (with attributes):"), "Opening tag", "<tag>");
-    auto* closing = field(_("&Closing tag (can be edited):"), "Closing tag", "</tag>");
+    auto fields = std::make_unique<wxFlexGridSizer>(1);
+    fields->AddGrowableCol(0);
+    // Original ResizeDlg_InitY2 gives the opening tag 75% of added height.
+    fields->AddGrowableRow(1, 3);
+    fields->AddGrowableRow(3, 1);
+    auto* opening = AddWinEditInput(dialog, *fields, _("&Opening tag (with attributes):"), "Opening tag", "<tag>");
+    auto* closing = AddWinEditInput(dialog, *fields, _("&Closing tag (can be edited):"), "Closing tag", "</tag>");
+    contents->Add(fields.release(), 1, wxEXPAND);
     opening->Bind(wxEVT_TEXT, [opening, closing](wxCommandEvent&) {
         // A new opening edit overwrites even an explicitly edited closing tag.
         closing->ChangeValue(ClosingTag(opening->GetValue()));
     });
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
-    dialog.SetMinSize(dialog.GetSize());
+    DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Both);
     const auto accept = [opening, closing, &editor, &dialog] {
         auto before = opening->GetValue();
         auto after = closing->GetValue();

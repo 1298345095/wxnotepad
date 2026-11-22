@@ -1,4 +1,5 @@
 #include "app/dialogs/auto_completion_settings_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include <wx/translation.h>
 #include "settings/original_settings.h"
@@ -20,6 +21,8 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     const int gap = dialog.FromDIP(3);
     auto* layout = new wxBoxSizer(wxVERTICAL);
     auto* columns = new wxBoxSizer(wxHORIZONTAL);
+    auto wordColumn = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    auto insertionColumn = std::make_unique<wxBoxSizer>(wxVERTICAL);
     auto* words = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Word completion"));
     auto* insertion = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Automatically insert"));
     const auto check = [&](wxSizer* sizer, const char* label, bool value) {
@@ -83,10 +86,8 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     const auto* tags = check(insertion, wxTRANSLATE("Auto close HTML and XML tags"),
                              (completion.completeOption & WordCompletionOption::CloseTags) != 0);
     const auto* indent = check(insertion, wxTRANSLATE("Auto Indent"), preferences.autoIndent);
-    columns->Add(words, 1, wxEXPAND | wxALL, gap);
-    columns->Add(insertion, 1, wxEXPAND | wxALL, gap);
-    layout->Add(columns, 0, wxEXPAND);
-    auto* scopes = new wxBoxSizer(wxHORIZONTAL);
+    wordColumn->Add(words, 0, wxEXPAND | wxALL, gap);
+    insertionColumn->Add(insertion, 0, wxEXPAND | wxALL, gap);
     auto* completeScope = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Complete words inside"));
     auto* scanScope = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Scan document words inside"));
     constexpr std::array completeOptions = {std::pair{"Complete inside comments", WordCompletionScope::Comment},
@@ -106,9 +107,8 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     }
     completeScope->Add(completeRow);
     scanScope->Add(scanRow);
-    scopes->Add(completeScope, 1, wxEXPAND | wxALL, gap);
-    scopes->Add(scanScope, 1, wxEXPAND | wxALL, gap);
-    layout->Add(scopes, 0, wxEXPAND);
+    wordColumn->Add(completeScope, 0, wxEXPAND | wxALL, gap);
+    insertionColumn->Add(scanScope, 0, wxEXPAND | wxALL, gap);
     auto* confirmation = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Finish completion (Esc cancels)"));
     auto* keys = new wxBoxSizer(wxHORIZONTAL);
     constexpr std::array keyOptions = {std::pair{"Complete with Enter", CompletionFillUp::Enter},
@@ -126,9 +126,12 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     AppLocalization::SetAccessibleName(*punctuation, _("Fill-up punctuation"));
     punctuation->SetMaxLength(WordCompletionLimits::MaxPunctuationCharacters);
     confirmation->Add(punctuation, 0, wxEXPAND | wxALL, gap);
-    layout->Add(confirmation, 0, wxEXPAND | wxALL, gap);
+    wordColumn->Add(confirmation, 0, wxEXPAND | wxALL, gap);
+    columns->Add(wordColumn.release(), 1, wxEXPAND);
+    columns->Add(insertionColumn.release(), 1, wxEXPAND);
+    layout->Add(columns, 0, wxEXPAND);
     layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, gap * 2);
-    dialog.SetSizerAndFit(layout);
+    DialogLayout::Fit(dialog, layout);
     dialog.CentreOnParent();
     // Numeric controls use the original edit's input restriction, not wx's
     // modal validation: invalid programmatic text is normalized only on OK.

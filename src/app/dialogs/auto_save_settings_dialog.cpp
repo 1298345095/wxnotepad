@@ -1,4 +1,5 @@
 #include "app/dialogs/auto_save_settings_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/localization.h"
 #include "settings/auto_save_options.h"
 #include <wx/button.h>
@@ -52,9 +53,12 @@ bool ShowAutoSaveSettingsDialog(wxWindow* parent, AutoSaveOptions& options) {
         if (wxDirExists(path) || wxFileName::Mkdir(path, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
             wxLaunchDefaultApplication(path);
     });
-    layout->Add(folder, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
-    layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(layout);
+    auto footer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    footer->Add(folder, 0, wxRIGHT, dialog.FromDIP(10));
+    footer->AddStretchSpacer();
+    footer->Add(dialog.CreateStdDialogButtonSizer(wxOK | wxCANCEL));
+    layout->Add(footer.release(), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    DialogLayout::Fit(dialog, layout);
     dialog.CentreOnParent();
     dialog.Bind(
         wxEVT_BUTTON,

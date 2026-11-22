@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/dialogs/dialog_layout.h"
 #include "editor/editor_control.h"
 #include "app/localization.h"
 #include "app/native_launch.h"
@@ -258,10 +259,8 @@ void EditorFrame::ShowRunCommand() {
     const auto update = [input, run] { run->Enable(HasProgram(input->GetValue())); };
     input->Bind(wxEVT_TEXT, [update](wxCommandEvent&) { update(); });
     update();
-    dialog.SetSizerAndFit(contents);
+    DialogLayout::Fit(dialog, contents, DialogLayout::Resize::Horizontal);
     const auto minimum = dialog.GetSize();
-    dialog.SetMinSize(minimum);
-    dialog.SetMaxSize(wxSize(-1, minimum.y));
     if (preferences.runCommandWidthDIP > 0)
         dialog.SetSize(wxSize(std::max(minimum.x, dialog.FromDIP(preferences.runCommandWidthDIP)), minimum.y));
     else if (settings_) {
@@ -290,7 +289,7 @@ void EditorFrame::ShowRunCommand() {
             } else {
                 // TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
                 feedback->SetLabel(wxString::Format(_("Could not run command: %s"), error));
-                dialog.GetSizer()->Fit(&dialog);
+                DialogLayout::Fit(dialog, dialog.GetSizer(), DialogLayout::Resize::Horizontal, true);
                 input->SetFocus();
             }
         },

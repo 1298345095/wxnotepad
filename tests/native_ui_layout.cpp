@@ -19,13 +19,28 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw TestEditor::Failure(message);
 }
+void AwaitNativeSize(const wxDialog& dialog) {
+    // GTK delivers the window manager's resize acknowledgement asynchronously.
+    // Observe the fitted height before starting the next Find/Replace switch.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    const auto requested = dialog.GetSize();
+    while (dialog.GetSize().y != dialog.GetMinSize().y && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(1);
+    }
+    if (requested != dialog.GetSize())
+        std::cout << "Native size acknowledgement: " << requested.x << ',' << requested.y << " -> "
+                  << dialog.GetSize().x << ',' << dialog.GetSize().y << '\n';
+}
 void ReplacementLayout(EditorFrame* frame) {
+    int retainedWidth = 0;
     for (int command : {wxID_FIND, wxID_REPLACE, wxID_FIND, wxID_REPLACE}) {
         NativeSearch::Command(frame, command);
         const auto* input = wxWindow::FindWindowByName("Replacement text", frame);
         const auto* wrap = wxWindow::FindWindowByName("Wrap around", frame);
         Require(input && wrap, "actual search dialog exposes replacement and wrap controls");
-        const auto* dialog = input->GetParent();
+        auto* dialog = wxDynamicCast(input->GetParent(), wxDialog);
+        Require(dialog, "search controls belong to their actual native dialog");
         const wxWindow* label = nullptr;
         for (const auto* child : dialog->GetChildren()) {
             if (child->IsKindOf(wxCLASSINFO(wxStaticText)) && child->GetLabel() == _("Replace &with:")) label = child;
@@ -34,6 +49,32 @@ void ReplacementLayout(EditorFrame* frame) {
         const bool replace = command == wxID_REPLACE;
         Require(input->IsShown() == replace && label->IsShown() == replace,
                 "replacement controls follow the current Find/Replace mode");
+        Require((dialog->GetWindowStyleFlag() & wxRESIZE_BORDER) != 0, "Find and Replace have a native sizing border");
+        AwaitNativeSize(*dialog);
+        const auto minimum = dialog->GetMinSize();
+        Require(dialog->GetMaxSize().y == minimum.y && dialog->GetSize().y == minimum.y && dialog->GetMaxSize().x == -1,
+                "search dialogs allow horizontal dragging and lock their fitted height");
+        Require(dialog->GetSize().x >= retainedWidth, "switching Find/Replace preserves user-expanded width");
+        const auto* query = wxWindow::FindWindowByName("Find query", dialog);
+        const auto* next = dialog->FindWindow(wxID_FORWARD);
+        const auto* previous = dialog->FindWindow(wxID_BACKWARD);
+        Require(query && next && previous && next->GetPosition().x > query->GetRect().GetRight() &&
+                    next->GetPosition().y < previous->GetPosition().y,
+                "original search action column stays to the right of the input fields");
+#ifdef __WXMSW__
+        MINMAXINFO limits{};
+        SendMessageW(static_cast<HWND>(dialog->GetHandle()), WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&limits));
+        Require(limits.ptMinTrackSize.y == limits.ptMaxTrackSize.y,
+                "Windows native drag loop receives identical minimum and maximum height");
+#endif
+        const int inputWidth = query->GetSize().x;
+        const int buttonX = next->GetPosition().x;
+        const int delta = dialog->FromDIP(60);
+        dialog->SetSize(dialog->GetSize() + wxSize(delta, 0));
+        dialog->Layout();
+        Require(query->GetSize().x == inputWidth + delta && next->GetPosition().x == buttonX + delta,
+                "horizontal expansion grows inputs and moves the entire action column by the same amount");
+        retainedWidth = dialog->GetSize().x;
         if (!replace) continue;
         const auto labelRect = label->GetRect();
         const auto inputRect = input->GetRect();
