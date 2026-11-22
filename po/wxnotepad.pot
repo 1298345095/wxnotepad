@@ -34,6 +34,12 @@ msgstr ""
 msgid " | Sel %lld"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr ""
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "\"%s\" is read only. Save to a different file?"
@@ -265,6 +271,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&File Name"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
 msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -572,6 +582,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
 msgstr ""
 
 #. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
@@ -1428,6 +1442,10 @@ msgid "File Change Notification"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "File Name and &Ext.\tShift+F9"
 msgstr ""
 
@@ -1503,6 +1521,10 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -3020,6 +3042,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp

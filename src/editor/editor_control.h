@@ -82,6 +82,7 @@ public:
     NativeByteSnapshot RawNativeBytes() const;
     std::string NativeSelectedBytes(bool binary = true);
     std::string NativeBytesAfter(intptr_t position);
+    wxString CaptureTitleExcerpt(bool defaultEncoding);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     void InsertGuid();
     void InsertEncodingIdentifier(std::string_view name, const SyntaxDefinition& syntax);
