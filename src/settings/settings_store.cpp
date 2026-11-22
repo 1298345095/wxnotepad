@@ -146,6 +146,9 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.escapeFunction = static_cast<EscapeFunction>(
         std::clamp(ReadInt("EscFunction", std::to_underlying(defaults.escapeFunction)),
                    std::to_underlying(EscapeFunction::None), std::to_underlying(EscapeFunction::Exit)));
+    values.pathNameFormat = static_cast<TitlePathNameFormat>(std::clamp(
+        ReadInt("PathNameFormat", std::to_underlying(defaults.pathNameFormat)),
+        std::to_underlying(TitlePathNameFormat::NameOnly), std::to_underlying(TitlePathNameFormat::FullPath)));
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.wordWrapMode =
         std::clamp(ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
@@ -527,6 +530,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
         WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
         WriteInt("EscFunction", std::to_underlying(values.escapeFunction), std::to_underlying(defaults.escapeFunction));
+        WriteInt("PathNameFormat", std::to_underlying(values.pathNameFormat),
+                 std::to_underlying(defaults.pathNameFormat));
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
         WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),

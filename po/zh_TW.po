@@ -75,6 +75,12 @@ msgstr " (覆寫)"
 msgid " | Sel %lld"
 msgstr " | 選取 %lld"
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr "「%s」"
+
 # Original Notepad4 zh-Hant: IDS_READONLY_SAVE; adapted where needed.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -334,6 +340,10 @@ msgstr "檔案(&F)"
 #: src/app/editor_frame_commands.cpp
 msgid "&File Name"
 msgstr "檔案名稱(&F)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
+msgstr "只檔名(&F)"
 
 # Original Notepad4 zh-Hant: IDD_FIND/IDC_FINDALL; adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -705,6 +715,10 @@ msgstr "儲存檔案時移除行尾空白(&S)。"
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr "Tab 設定(&T)..."
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
+msgstr "選取的文字(&T)"
 
 #. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
@@ -1642,6 +1656,10 @@ msgstr "檔案模式(&M)"
 msgid "File Change Notification"
 msgstr "檔案變更通知"
 
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
+msgstr "檔案名稱與資料夾(&D)"
+
 # Original Notepad4 zh-Hant: CMD_COPYFILENAME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "File Name and &Ext.\tShift+F9"
@@ -1729,6 +1747,10 @@ msgstr "頁尾："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
 msgstr "換行的文字"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
+msgstr "完整路徑名稱(&P)"
 
 # Original Notepad4 zh-Hant: CMD_COPYPATHNAME; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -3409,6 +3431,10 @@ msgstr "依空白"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
 msgstr "完整單詞(&O)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
+msgstr "視窗標題顯示(&Y)"
 
 # Original Notepad4 zh-Hant: IDS_EOLMODENAME_CRLF; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
