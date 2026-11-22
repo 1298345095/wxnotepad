@@ -531,7 +531,8 @@ public:
                 CheckModes(frame);
                 CheckPreview(frame);
                 CheckEdits(frame);
-                for (const auto* language : {"CSS", "SCSS", "Less", "HSS", "SQL"}) {
+                for (const auto* language :
+                     {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet", "SQL Query"}) {
                     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
                     CheckPreview(frame, false);
                     CheckEdits(frame);

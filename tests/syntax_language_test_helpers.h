@@ -35,6 +35,7 @@ struct SchemeFixture {
     const char* blockOpen;
     const char* blockClose;
     const char* settingsSection = nullptr;
+    const char* filterName = nullptr;
 };
 
 inline std::string ResumeHighlighting(EditorFrame* frame, const SchemeFixture& fixture,
@@ -138,7 +139,8 @@ inline void NativeFiles(EditorFrame* frame, std::span<const SchemeFixture> schem
                                               TestFiles::Filename(destination));
         TestSyntax::Command(frame, wxID_SAVEAS);
         save.Stop();
-        Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.name) + " (") &&
+        const auto* filterName = fixture.filterName ? fixture.filterName : fixture.name;
+        Require(save.choosers == 1 && save.initialType.StartsWith(wxString(filterName) + " (") &&
                     TestFiles::Bytes(destination) == fixture.text,
                 "native Save As offers current language filter and retains saved bytes");
     }

@@ -173,10 +173,11 @@ void CheckMenu(EditorFrame* frame) {
     auto* schemes = bar->GetMenu(4);
     Order(schemes, {"Use Default Code Style", "Automatic", "Text File", "CSS Style Sheet", "JavaScript",
                     "Web Source Code", "Markdown", "Shell Script", "XML Document", "C/C++", "CMake", "Go", "JSON",
-                    "Lua", "Python", "Rust", "SQL", "TOML", "YAML"});
+                    "Lua", "Python", "Rust", "SQL Query", "TOML", "YAML"});
     Groups(schemes, {"Use Default Code Style", "Automatic", "C/C++"});
     Order(Submenu(schemes, "Text File"), {"Plain Text"});
-    Order(Submenu(schemes, "CSS Style Sheet"), {"CSS", "SCSS", "Less", "HSS"});
+    Order(Submenu(schemes, "CSS Style Sheet"),
+          {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet"});
     Order(Submenu(schemes, "JavaScript"), {"JavaScript", "JSX", "TypeScript", "TSX"});
     Order(Submenu(schemes, "Web Source Code"),
           {"Web Source Code", "JSP", "JSPX", "ASP.NET C#", "ASP.NET VB", "ASP VBScript", "ASP JavaScript"});

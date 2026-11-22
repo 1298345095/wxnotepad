@@ -9,9 +9,12 @@ from localization_package import Process, menu_id, menus
 from resource_process import native_edit, wait_state
 
 LANGUAGES = {
-    'en': (1033, 'Automatic', 'CSS Style Sheet'),
-    'zh_CN': (2052, '自动(A)', 'CSS 样式表(H)'),
-    'zh_TW': (1028, '自動(A)', 'CSS 樣式表(H)'),
+    'en': (1033, 'Automatic', 'CSS Style Sheet',
+           ['CSS Style Sheet', 'SCSS Style Sheet', 'Less Style Sheet', 'HSS Style Sheet', 'SQL Query']),
+    'zh_CN': (2052, '自动(A)', 'CSS 样式表(H)',
+              ['CSS 样式表', 'SCSS 样式表', 'Less 样式表', 'HSS 样式表', 'SQL 查询']),
+    'zh_TW': (1028, '自動(A)', 'CSS 樣式表(H)',
+              ['CSS 樣式表', 'SCSS 樣式表', 'Less 樣式表', 'HSS 樣式表', 'SQL 查詢']),
 }
 
 
@@ -21,7 +24,7 @@ def main():
     parser.add_argument('--language', choices=LANGUAGES, default='en')
     args = parser.parse_args()
     source = args.executable.resolve()
-    language, automatic, family = LANGUAGES[args.language]
+    language, automatic, family, titles = LANGUAGES[args.language]
     with tempfile.TemporaryDirectory(prefix='wxnotepad-css-sql-') as directory:
         folder = Path(directory)
         executable = folder / source.name
@@ -31,7 +34,7 @@ def main():
         config = folder / 'Notepad4.ini'
         config.write_text('[Settings]\nSaveSettings=0\nWordWrap=0\nDetectIndentation=0\nWarnLineEndings=0\n'
                           f'[Settings2]\nUILanguage={language}\n[Unrelated]\nRetained=保留\n', encoding='utf-16')
-        for extension, name in [('css', 'CSS'), ('scss', 'SCSS'), ('less', 'Less'), ('hss', 'HSS'), ('sql', 'SQL')]:
+        for variant, (extension, name) in enumerate(zip(['css', 'scss', 'less', 'hss', 'sql'], titles)):
             path = folder / ('case.' + extension)
             original = ('/* 界 */\r\na { color: red; }\n' if extension != 'sql'
                         else '-- 界\r\nSELECT COUNT(*) FROM sample;\n').encode('utf-8')
@@ -41,13 +44,18 @@ def main():
                 try:
                     assert int(app.state['length']) == len(original) + restart, app.state
                     choices = menus(app.state)
-                    identity = menu_id(app.state, name)
-                    assert choices[identity]['enabled'] == '1' and choices[identity]['checked'] == '0', choices[identity]
-                    family_id = menu_id(app.state, family)
+                    family_ids = [identity for identity, item in choices.items()
+                                  if item['label'].replace('&', '') == family]
+                    assert family_ids, (family, choices)
+                    family_id = min(family_ids, key=lambda identity: choices[identity]['path'].count('/'))
                     family_path = choices[family_id]['path']
                     children = [item['label'].replace('&', '') for item in choices.values()
                                 if item['path'].rsplit('/', 1)[0] == family_path]
-                    assert children == ['CSS', 'SCSS', 'Less', 'HSS'], children
+                    assert children == titles[:4], children
+                    identity = (next(identity for identity, item in choices.items()
+                                     if item['path'] == family_path + f'/{variant}') if variant < 4
+                                else menu_id(app.state, name))
+                    assert choices[identity]['enabled'] == '1' and choices[identity]['checked'] == '0', choices[identity]
                     app.choose(identity)
                     assert menus(app.state)[identity]['checked'] == '1'
                     assert app.state['dirty'] == '0' and app.state['encoding'] == 'UTF-8' and app.state['bom'] == '0'

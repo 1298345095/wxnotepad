@@ -919,9 +919,9 @@ msgid_plural "CR: %llu lines."
 msgstr[0] ""
 msgstr[1] ""
 
-#. TRANSLATORS: CSS is the original stylesheet language abbreviation.
+#. TRANSLATORS: Original CSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "CSS"
+msgid "CSS Style Sheet"
 msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1588,9 +1588,9 @@ msgstr ""
 msgid "Group by file &type."
 msgstr ""
 
-#. TRANSLATORS: HSS is the original stylesheet dialect abbreviation.
+#. TRANSLATORS: Original HSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "HSS"
+msgid "HSS Style Sheet"
 msgstr ""
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
@@ -1758,9 +1758,9 @@ msgstr ""
 msgid "Left:"
 msgstr ""
 
-#. TRANSLATORS: Less is the original stylesheet language's name.
+#. TRANSLATORS: Original Less stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "Less"
+msgid "Less Style Sheet"
 msgstr ""
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
@@ -2333,18 +2333,18 @@ msgstr ""
 msgid "S&wap\tCtrl+K"
 msgstr ""
 
-#. TRANSLATORS: SCSS is the original Sass stylesheet dialect abbreviation.
+#. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "SCSS"
+msgid "SCSS Style Sheet"
 msgstr ""
 
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
 msgstr ""
 
-#. TRANSLATORS: SQL is the original query-language abbreviation.
+#. TRANSLATORS: Original SQL Query scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "SQL"
+msgid "SQL Query"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp

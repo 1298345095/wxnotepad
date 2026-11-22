@@ -18,11 +18,16 @@ using Scintilla::Message;
 using TestLanguages::Require;
 constexpr auto extensions = std::to_array<const char*>({"css", "scss", "less", "hss", "wxss", "sql", "mysql", "hsql"});
 constexpr std::array<TestLanguages::SchemeFixture, 5> schemes = {{
-    {"CSS", SyntaxLanguage::Css, SCLEX_CSS, "css", "a {\n  color: #123456;\n}\n", "", "/*", "*/"},
-    {"SCSS", SyntaxLanguage::Scss, SCLEX_CSS, "scss", "$x: red;\na {\n  color: $x;\n}\n", "//", "/*", "*/"},
-    {"Less", SyntaxLanguage::Less, SCLEX_CSS, "less", "@x: red;\na {\n  color: @x;\n}\n", "//", "/*", "*/"},
-    {"HSS", SyntaxLanguage::Hss, SCLEX_CSS, "hss", "a {\n  color: #123456;\n}\n", "//", "/*", "*/"},
-    {"SQL", SyntaxLanguage::Sql, SCLEX_SQL, "sql", "BEGIN\n SELECT COUNT(*) FROM sample;\nEND;\n", "--", "/*", "*/"},
+    {"CSS Style Sheet", SyntaxLanguage::Css, SCLEX_CSS, "css", "a {\n  color: #123456;\n}\n", "", "/*", "*/", nullptr,
+     "CSS Style Sheet"},
+    {"SCSS Style Sheet", SyntaxLanguage::Scss, SCLEX_CSS, "scss", "$x: red;\na {\n  color: $x;\n}\n", "//", "/*", "*/",
+     nullptr, "CSS Style Sheet"},
+    {"Less Style Sheet", SyntaxLanguage::Less, SCLEX_CSS, "less", "@x: red;\na {\n  color: @x;\n}\n", "//", "/*", "*/",
+     nullptr, "CSS Style Sheet"},
+    {"HSS Style Sheet", SyntaxLanguage::Hss, SCLEX_CSS, "hss", "a {\n  color: #123456;\n}\n", "//", "/*", "*/", nullptr,
+     "CSS Style Sheet"},
+    {"SQL Query", SyntaxLanguage::Sql, SCLEX_SQL, "sql", "BEGIN\n SELECT COUNT(*) FROM sample;\nEND;\n", "--", "/*",
+     "*/", nullptr, "SQL Query"},
 }};
 void FileRecognition(EditorFrame* frame) {
     for (const auto* extension : extensions) {
@@ -97,22 +102,23 @@ void DialectWorkflows(EditorFrame* frame, SettingsStore& settings) {
     }
     editor->Send(Message::SetSavePoint);
     TestEditor::ResetStream(editor, "a { color: $tone; }\n");
-    for (const auto* name : {"SCSS", "Less", "HSS", "CSS", "SCSS", "CSS"}) {
+    for (const auto* name : {"SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet", "CSS Style Sheet",
+                             "SCSS Style Sheet", "CSS Style Sheet"}) {
         TestLanguages::Choose(frame, name);
         TestSyntax::Paint(frame);
         const auto position = TestEditor::Text(editor).find("$tone");
         Require(editor->Send(Message::GetStyleIndexAt, position) ==
-                    (std::string_view(name) == "CSS" ? SCE_CSS_OPERATOR : SCE_CSS_VARIABLE),
+                    (std::string_view(name) == "CSS Style Sheet" ? SCE_CSS_OPERATOR : SCE_CSS_VARIABLE),
                 "switching CSS dialects in one document replaces the prior lexer.lang property");
     }
-    TestLanguages::Choose(frame, "CSS");
+    TestLanguages::Choose(frame, "CSS Style Sheet");
     TabDialog::Show(frame, [](wxDialog* dialog) {
         Require(!TabDialog::Option(dialog, "Use Global Tab Settings")->GetValue(),
                 "original CSS settings have independent indentation");
         TabDialog::Width(dialog, "Scheme Tab Width")->SetValue(5);
         TabDialog::Width(dialog, "Scheme Indentation Width")->SetValue(3);
     });
-    TestLanguages::Choose(frame, "Less");
+    TestLanguages::Choose(frame, "Less Style Sheet");
     Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 3,
             "CSS dialects share the original settings identity");
     SettingsStore restored(settings.Path());

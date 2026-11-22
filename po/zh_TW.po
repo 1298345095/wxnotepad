@@ -1087,10 +1087,10 @@ msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] "CR：%llu 行。"
 
-#. TRANSLATORS: CSS is the original stylesheet language abbreviation.
+#. TRANSLATORS: Original CSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "CSS"
-msgstr "CSS"
+msgid "CSS Style Sheet"
+msgstr "CSS 樣式表"
 
 # Original Notepad4 zh-Hant: IDD_SORT/IDC_SORT_IGNORE_CASE; adapted where needed.
 #: src/app/dialogs/sort_lines_dialog.cpp
@@ -1820,10 +1820,10 @@ msgstr "跳到選取範圍結尾(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "依檔案類型分組(&T)。"
 
-#. TRANSLATORS: HSS is the original stylesheet dialect abbreviation.
+#. TRANSLATORS: Original HSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "HSS"
-msgstr "HSS"
+msgid "HSS Style Sheet"
+msgstr "HSS 樣式表"
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -2006,10 +2006,10 @@ msgstr "左邊界"
 msgid "Left:"
 msgstr "左："
 
-#. TRANSLATORS: Less is the original stylesheet language's name.
+#. TRANSLATORS: Original Less stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "Less"
-msgstr "Less"
+msgid "Less Style Sheet"
+msgstr "Less 樣式表"
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
 #: src/app/editor_frame_commands.cpp
@@ -2634,19 +2634,19 @@ msgstr "行排序(&O)...\tAlt+O"
 msgid "S&wap\tCtrl+K"
 msgstr "交換(&W)\tCtrl+K"
 
-#. TRANSLATORS: SCSS is the original Sass stylesheet dialect abbreviation.
+#. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "SCSS"
-msgstr "SCSS"
+msgid "SCSS Style Sheet"
+msgstr "SCSS 樣式表"
 
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
 msgstr "SHY — 軟連字號(&X)"
 
-#. TRANSLATORS: SQL is the original query-language abbreviation.
+#. TRANSLATORS: Original SQL Query scheme title.
 #: src/syntax/syntax_catalog.cpp
-msgid "SQL"
-msgstr "SQL"
+msgid "SQL Query"
+msgstr "SQL 查詢"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"
@@ -3574,3 +3574,18 @@ msgstr "m4"
 # Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
 #~ msgid "&Expand All"
 #~ msgstr "全部展開(&E)"
+
+#~ msgid "CSS"
+#~ msgstr "CSS"
+
+#~ msgid "HSS"
+#~ msgstr "HSS"
+
+#~ msgid "Less"
+#~ msgstr "Less"
+
+#~ msgid "SCSS"
+#~ msgstr "SCSS"
+
+#~ msgid "SQL"
+#~ msgstr "SQL"
