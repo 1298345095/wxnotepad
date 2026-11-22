@@ -472,6 +472,10 @@ msgstr "合併重複行(&M)。"
 msgid "&Millisecond (ms)"
 msgstr "毫秒(&M) (ms)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Minimize wxnotepad"
+msgstr "最小化 wxnotepad(&M)"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_MODIFYLINES; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Modify Lines...\tAlt+M"
@@ -1076,6 +1080,10 @@ msgstr "大括號 {}"
 msgid "C Shell"
 msgstr "C Shell"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "C# Source"
+msgstr "C# 原始碼"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/View/Caret Style submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
@@ -1582,6 +1590,10 @@ msgstr "在選取範圍內繪製方塊游標(&S)"
 msgid "E&xit\tAlt+F4"
 msgstr "結束(&X)\tAlt+F4"
 
+#: src/app/editor_frame_commands.cpp
+msgid "E&xit wxnotepad"
+msgstr "離開 wxnotepad(&X)"
+
 # Original Notepad4 zh-Hant: IDM_SET_MULTIPLE_SELECTION; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
@@ -1636,6 +1648,10 @@ msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
 #: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "執行文件(&D)\tCtrl+L"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Extra Esc &Key Function"
+msgstr "額外 Esc 鍵功能(&K)"
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
@@ -1980,6 +1996,10 @@ msgid "JSX"
 msgstr "JSX"
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java Source"
+msgstr "Java 原始碼"
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr "JavaScript"
 
@@ -1992,6 +2012,10 @@ msgstr "聯結段落(&P)\tCtrl+Shift+J"
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
 msgstr "左右對齊（段落模式）(&P)。"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin Source"
+msgstr "Kotlin 原始碼"
 
 # Original Notepad4 zh-Hant: IDD_WARNLINEENDS/IDC_EOL_SUM_LF (count adapted); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -3624,11 +3648,20 @@ msgstr "m4"
 #~ msgid "All files (*.*)"
 #~ msgstr "所有檔案 (*.*)"
 
+#~ msgid "C#"
+#~ msgstr "C#"
+
 #~ msgid "CSS"
 #~ msgstr "CSS"
 
 #~ msgid "HSS"
 #~ msgstr "HSS"
+
+#~ msgid "Java"
+#~ msgstr "Java"
+
+#~ msgid "Kotlin"
+#~ msgstr "Kotlin"
 
 #~ msgid "Less"
 #~ msgstr "Less"

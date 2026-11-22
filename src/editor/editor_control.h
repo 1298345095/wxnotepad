@@ -53,6 +53,7 @@ public:
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
     // Use an already obtained clipboard offer without dispatching native events.
     bool CanPasteText(bool clipboardHasText) const noexcept;
+    bool InputMethodComposing() const noexcept;
     Scintilla::Position FormatPrintRange(const Scintilla::Internal::PrintSurface& printer, bool draw,
                                          Scintilla::CharacterRangeFull range, Scintilla::Rectangle area);
     void SetColorCallTipMode(ColorCallTipMode mode);
@@ -175,6 +176,12 @@ private:
     template <typename Event, typename Handler>
     void BindCoreEvent(const wxEventTypeTag<Event>& type, Handler handler, int id = wxID_ANY);
     wxTimer caretTimer_;
+#ifdef __WXGTK__
+    bool inputMethodComposing_ = false;
+    unsigned long preeditStartHandler_ = 0;
+    unsigned long preeditEndHandler_ = 0;
+    void GTKHandleRealized() override;
+#endif
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
     wxTimer dwellTimer_;

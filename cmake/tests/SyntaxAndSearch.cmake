@@ -1,4 +1,27 @@
 add_editor_test(open_smoke open_utf8 30)
+add_editor_test(syntax_java_languages original_java_csharp_kotlin_schemes 120)
+set(java_language_references
+    "JAVA_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/java_languages_reference.tsv\""
+    "JAVA_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/java_operations_reference.tsv\"")
+target_compile_definitions(syntax_java_languages PRIVATE ${java_language_references})
+if(WIN32)
+    add_test(NAME original_java_csharp_kotlin_dpi96 COMMAND syntax_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_dpi96 PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_JAVA_DPI96=1")
+    add_gui_program(directwrite_java_languages tests/syntax_java_languages.cpp app_shell)
+    target_compile_definitions(directwrite_java_languages PRIVATE WXNOTEPAD_TEST_DIRECTWRITE ${java_language_references})
+    add_test(NAME original_java_csharp_kotlin_directwrite COMMAND directwrite_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_directwrite PROPERTIES TIMEOUT 120)
+    add_test(NAME original_java_csharp_kotlin_directwrite_dpi96 COMMAND directwrite_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_directwrite_dpi96 PROPERTIES TIMEOUT 120
+        ENVIRONMENT "WXNOTEPAD_JAVA_DPI96=1")
+else()
+    add_test(NAME original_java_csharp_kotlin_scale2 COMMAND syntax_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_scale2 PROPERTIES TIMEOUT 120 ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+endif()
+add_test(NAME original_java_csharp_kotlin_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/java_languages_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/java-languages-process")
+set_tests_properties(original_java_csharp_kotlin_process PROPERTIES TIMEOUT 180)
 add_editor_test(syntax_markdown original_markdown_dialects 90)
 target_compile_definitions(syntax_markdown PRIVATE
     "MARKDOWN_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markdown_reference.tsv\"")

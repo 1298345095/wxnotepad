@@ -34,6 +34,29 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         for (const unsigned style : {SCE_SQL_WORD, SCE_SQL_WORD2, SCE_SQL_USER1, SCE_SQL_HEX, SCE_SQL_HEX2})
             result.ignoredWords[style >> 5] |= 1U << (style & 31);
         break;
+    case Java:
+        result.wordCharacters['$' >> 5] |= 1U << ('$' & 31);
+        result.wordCharacters[':' >> 5] |= 1U << (':' & 31);
+        for (const auto style : {SCE_JAVA_CLASS, SCE_JAVA_INTERFACE, SCE_JAVA_ENUM})
+            result.genericTypes[style >> 5] |= 1U << (style & 31);
+        break;
+    case CSharp:
+        result.wordCharacters['@' >> 5] |= 1U << ('@' & 31);
+        for (const auto style :
+             {SCE_CSHARP_VERBATIM_STRING, SCE_CSHARP_INTERPOLATED_VERBATIM_STRING, SCE_CSHARP_RAWSTRING_SL,
+              SCE_CSHARP_INTERPOLATED_RAWSTRING_SL, SCE_CSHARP_RAWSTRING_ML, SCE_CSHARP_INTERPOLATED_RAWSTRING_ML})
+            result.rawStrings[style >> 5] |= 1U << (style & 31);
+        for (const auto style :
+             {SCE_CSHARP_CLASS, SCE_CSHARP_INTERFACE, SCE_CSHARP_STRUCT, SCE_CSHARP_ENUM, SCE_CSHARP_WORD2})
+            result.genericTypes[style >> 5] |= 1U << (style & 31);
+        break;
+    case Kotlin:
+        result.wordCharacters['$' >> 5] |= 1U << ('$' & 31);
+        result.wordCharacters[':' >> 5] |= 1U << (':' & 31);
+        result.rawStrings[SCE_KOTLIN_RAWSTRING >> 5] |= 1U << (SCE_KOTLIN_RAWSTRING & 31);
+        for (const auto style : {SCE_KOTLIN_CLASS, SCE_KOTLIN_INTERFACE, SCE_KOTLIN_ENUM})
+            result.genericTypes[style >> 5] |= 1U << (style & 31);
+        break;
     case Toml:
     case Yaml:
     case CMake:

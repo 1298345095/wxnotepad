@@ -9,6 +9,9 @@
 
 namespace {
 #include "syntax/generated/cpp_scheme_data.h"
+#include "syntax/generated/java_scheme_data.h"
+#include "syntax/generated/csharp_scheme_data.h"
+#include "syntax/generated/kotlin_scheme_data.h"
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
 #include "syntax/generated/bash_scheme_data.h"
@@ -157,6 +160,57 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      cppOriginal,
      {SyntaxMenuFamily::Standalone, 0}},
+    {wxTRANSLATE("C# Source"),
+     csharpExtensions,
+     csharpLists,
+     csharpStyles,
+     {},
+     SCLEX_CSHARP,
+     SyntaxLanguage::CSharp,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_CSHARP_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     csharpOriginal,
+     {SyntaxMenuFamily::Standalone, 10}},
+    {wxTRANSLATE("Java Source"),
+     javaExtensions,
+     javaLists,
+     javaStyles,
+     {},
+     SCLEX_JAVA,
+     SyntaxLanguage::Java,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_JAVA_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     javaOriginal,
+     {SyntaxMenuFamily::Standalone, 40}},
+    {wxTRANSLATE("Kotlin Source"),
+     kotlinExtensions,
+     kotlinLists,
+     kotlinStyles,
+     {},
+     SCLEX_KOTLIN,
+     SyntaxLanguage::Kotlin,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_KOTLIN_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     kotlinOriginal,
+     {SyntaxMenuFamily::Standalone, 60}},
     {wxTRANSLATE("Python"),
      pythonExtensions,
      pythonLists,
@@ -1006,6 +1060,12 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         using enum SyntaxLanguage;
     case Cpp:
         return "C/C++ Source";
+    case Java:
+        return javaSettingsSection;
+    case CSharp:
+        return csharpSettingsSection;
+    case Kotlin:
+        return kotlinSettingsSection;
     case Python:
         return "Python Script";
     case Json:

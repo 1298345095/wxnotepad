@@ -48,6 +48,9 @@ enum class SyntaxLanguage : uint8_t {
     Less,
     Hss,
     Sql,
+    Java,
+    CSharp,
+    Kotlin,
     Count
 };
 namespace SyntaxDetectionLimits {

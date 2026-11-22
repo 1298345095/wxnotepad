@@ -57,6 +57,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_include_directories(printing PRIVATE ${GTK_UNIX_PRINT_INCLUDE_DIRS})
 endif()
 add_editor_test(full_screen original_full_screen 60)
+add_gui_program(extra_escape tests/extra_escape.cpp app_shell)
+add_test(NAME original_extra_escape COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "$<TARGET_FILE:extra_escape>")
+set_tests_properties(original_extra_escape PROPERTIES TIMEOUT 60)
+add_test(NAME original_extra_escape_lifecycle COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/extra_escape_process.py" "$<TARGET_FILE:extra_escape>")
+set_tests_properties(original_extra_escape_lifecycle PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_extra_escape_localization COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/extra_escape_localization.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/extra-escape-localization")
+set_tests_properties(packaged_extra_escape_localization PROPERTIES TIMEOUT 120)
 add_test(NAME original_full_screen_settings COMMAND full_screen)
 set_tests_properties(original_full_screen_settings PROPERTIES TIMEOUT 60
     ENVIRONMENT "WXNOTEPAD_FULL_SCREEN_SETTINGS=1")
