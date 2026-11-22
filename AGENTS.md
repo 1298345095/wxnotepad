@@ -8,6 +8,13 @@ The user authorizes agents to run `codegraph init` in each new worktree for this
 
 Prefer reusing suitable code from Notepad4 and wxSTC. Let project requirements and maintainability guide the choice: adapt existing code or implement a focused solution when reuse would add unnecessary complexity or compromise the intended behavior.
 
+### Local reference sources
+
+When developing on this machine, read upstream source code from these directories:
+
+- wxWidgets: `E:\NewNotepad4\wx-v3.3.3`
+- Notepad4: `E:\NewNotepad4\notepad4`
+
 ### Issue tracker
 
 Issues and specs live in GitHub Issues; prefer an available GitHub integration/plugin, with `gh` CLI as fallback. See `docs/agents/issue-tracker.md`.
