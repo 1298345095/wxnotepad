@@ -57,6 +57,13 @@ void PrefixAndOrdering() {
     unicode.AddDocumentWord(second, false);
     unicode.AddDocumentWord(first, false);
     RequireCandidates(unicode, first + '\n' + second, 2);
+
+    CompletionCandidates unicodeCase("Ä", true);
+    Require(unicodeCase.MatchesPrefix("Äpfel") && !unicodeCase.MatchesPrefix("äpfel"),
+            "cached prefix folding preserves non-ASCII UTF-8 bytes");
+    CompletionCandidates longUnicodeCase("prefixÄ", true);
+    Require(longUnicodeCase.MatchesPrefix("PREFIXÄpfel") && !longUnicodeCase.MatchesPrefix("PREFIXäpfel"),
+            "long prefix folding changes only ASCII uppercase letters");
 }
 
 void KeywordsAndSubwords() {

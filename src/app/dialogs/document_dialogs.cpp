@@ -69,18 +69,7 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {
     using enum FileEncoding;
-    struct SourceEncoding {
-        const char* label;
-        FileEncoding encoding;
-    };
-    const std::array<SourceEncoding, 8> choices = {{{"UTF-8", Utf8},
-                                                    {"UTF-16LE", Utf16Le},
-                                                    {"GBK (CP936)", Gbk},
-                                                    {"UTF-16BE", Utf16Be},
-                                                    {"GB18030 (CP54936)", Gb18030},
-                                                    {"Big5 (CP950)", Big5},
-                                                    {"Windows-1252", Windows1252},
-                                                    {"DOS-437", Dos437}}};
+    constexpr std::array choices = {Utf8, Utf16Le, Gbk, Utf16Be, Gb18030, Big5, Windows1252, Dos437};
     wxDialog dialog(parent, wxID_ANY, _("Reload With Encoding"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, _("Select source &encoding to reload file:")), 0, wxALL,
@@ -88,9 +77,9 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     auto* source = new wxListBox(&dialog, wxID_ANY);
     source->SetName("Source encoding");
     AppLocalization::SetAccessibleName(*source, _("Source encoding"));
-    for (const auto& choice : choices) {
-        const auto index = source->Append(choice.label);
-        if (initial == choice.encoding) source->SetSelection(static_cast<int>(index));
+    for (const auto encoding : choices) {
+        const auto index = source->Append(FindFileEncodingInfo(encoding)->displayName);
+        if (initial == encoding) source->SetSelection(static_cast<int>(index));
     }
     contents->Add(source, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
@@ -106,7 +95,7 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     dialog.CentreOnParent();
     source->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
-    return choices[source->GetSelection()].encoding;
+    return choices[source->GetSelection()];
 }
 
 std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optional<EncodingChoice> initial,

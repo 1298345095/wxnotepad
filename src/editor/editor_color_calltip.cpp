@@ -1,4 +1,5 @@
 #include "editor/editor_core.h"
+#include "editor/ascii_character.h"
 #include <GraphicUtils.h>
 #include <charconv>
 #include <format>
@@ -9,10 +10,6 @@ namespace {
 constexpr intptr_t ScanRadiusBytes = 10;
 constexpr size_t ScanHeadroom = 8;
 constexpr uint32_t RgbMask = 0xFFFFFF;
-
-constexpr bool IsHexDigit(char value) noexcept {
-    return (value >= '0' && value <= '9') || (value >= 'A' && value <= 'F') || (value >= 'a' && value <= 'f');
-}
 
 uint32_t PreviewColor(uint32_t value, ColorCallTipMode mode, ptrdiff_t digits) noexcept {
     using enum ColorCallTipMode;
@@ -72,12 +69,12 @@ void EditorControl::ShowColorCallTip(intptr_t position) {
     Send(GetTextRangeFull, 0, reinterpret_cast<intptr_t>(&range));
     const auto* hover = range.lpstrText + (position - start);
     auto* prefix = range.lpstrText + (position - start);
-    while (IsHexDigit(*prefix))
+    while (Ascii::HexDigit(*prefix) >= 0)
         --prefix;
     const bool hash = *prefix == '#';
     if (!hash && !((*prefix == 'x' || *prefix == 'X') && prefix[-1] == '0')) return;
     auto* tail = range.lpstrText + (position - start) + 1;
-    while (IsHexDigit(*tail))
+    while (Ascii::HexDigit(*tail) >= 0)
         ++tail;
     const auto digits = tail - prefix - 1;
     if (!(hash && (digits == 3 || digits == 4)) && digits != 6 && digits != 8) return;

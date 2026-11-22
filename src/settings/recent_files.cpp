@@ -1,4 +1,5 @@
 #include "settings/recent_files.h"
+#include "settings/environment_expansion.h"
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/utils.h>
@@ -54,11 +55,7 @@ wxString RecentFiles::ExpandPath(wxString path) {
         path = wxFileName::DirName(DocumentsDirectory()).GetPathWithSep() + path;
     }
 #ifdef __WXMSW__
-    const DWORD size = ExpandEnvironmentStringsW(path.wc_str(), nullptr, 0);
-    if (size) {
-        std::wstring expanded(size, L'\0');
-        if (ExpandEnvironmentStringsW(path.wc_str(), expanded.data(), size)) path = expanded.c_str();
-    }
+    path = ExpandWindowsEnvironment(path);
 #endif
     wxFileName filename(path);
     filename.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_TILDE,

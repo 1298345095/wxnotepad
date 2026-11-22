@@ -2,7 +2,10 @@
 import argparse
 import json
 from pathlib import Path
-import re
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from cmake_cache import read_cmake_cache
 
 
 def stc_artifact(path):
@@ -31,11 +34,7 @@ def inspect(cmake_directory, artifact_directory=None):
               'runtime_checked': artifact_directory is not None,
               'forbidden_sdk_artifacts': [], 'forbidden_runtime_artifacts': [], 'errors': []}
     try:
-        cache = {}
-        for line in (cmake_directory / 'CMakeCache.txt').read_text(encoding='utf-8').splitlines():
-            entry = re.match(r'([^#/][^:]*):[^=]+=(.*)', line)
-            if entry:
-                cache[entry[1]] = entry[2]
+        cache = read_cmake_cache(cmake_directory)
         triplet = cache['VCPKG_TARGET_TRIPLET']
         prefix = (Path(cache['VCPKG_INSTALLED_DIR']) / triplet).resolve()
         configuration = Path(cache['wxWidgets_DIR']).resolve()

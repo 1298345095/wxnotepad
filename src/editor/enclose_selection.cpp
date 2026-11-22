@@ -1,23 +1,12 @@
 #include "editor/editor_control.h"
+#include "editor/win_edit_line_endings.h"
 #include <ScintillaTypes.h>
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 namespace {
 std::string EnclosureBytes(const wxString& text, Scintilla::EndOfLine mode) {
     auto bytes = text.ToStdString(wxConvUTF8);
-    // Original Edit.cpp::ConvertWinEditLineEndings converts CRLF pairs only.
-    if (mode != Scintilla::EndOfLine::CrLf) {
-        size_t output = 0;
-        for (size_t input = 0; input < bytes.size(); ++input) {
-            if (bytes[input] == '\r' && input + 1 < bytes.size() && bytes[input + 1] == '\n') {
-                ++input;
-                bytes[output++] = mode == Scintilla::EndOfLine::Lf ? '\n' : '\r';
-            } else {
-                bytes[output++] = bytes[input];
-            }
-        }
-        bytes.resize(output);
-    }
+    ConvertWinEditLineEndings(bytes, mode);
     return bytes;
 }
 } // namespace

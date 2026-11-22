@@ -270,15 +270,28 @@ void ColumnCases(EditorControl* editor) {
     }
     std::puts(
         "PASS: literal Column Wrap Unicode/UTF-16, whitespace, long-word, EOL, partial/reversed and no-op fixtures");
-    TestEditor::ResetStream(editor, "");
     const std::string nulText("a  \0b c", 7);
-    editor->Send(AddText, nulText.size(), reinterpret_cast<intptr_t>(nulText.data()));
-    editor->Send(EmptyUndoBuffer);
-    editor->Send(SetSavePoint);
-    editor->Send(SetSel, 0, 7);
-    editor->WrapToColumn(80);
-    Require(TestEditor::Text(editor) == std::string("a\0b c", 5),
-            "explicit-length wrapping preserves embedded NUL and following text");
+    const std::string wrappedNulText("a\0b c", 5);
+    for (bool reversed : {false, true}) {
+        TestEditor::ResetStream(editor, "");
+        editor->Send(AddText, nulText.size(), reinterpret_cast<intptr_t>(nulText.data()));
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
+        editor->Send(SetSel, reversed ? 7 : 0, reversed ? 0 : 7);
+        Require(editor->WrapToColumn(80), "stream wrapping accepts embedded NUL");
+        Require(TestEditor::Text(editor) == wrappedNulText,
+                "explicit-length wrapping preserves embedded NUL and following text");
+        TestEditor::RequireSelection(editor, reversed ? 5 : 0, reversed ? 0 : 5,
+                                     "binary replacement preserves selection direction");
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == nulText && !editor->Send(CanUndo) && !editor->Send(GetModify),
+                "one Undo restores all binary bytes and the save point");
+        TestEditor::RequireSelection(editor, reversed ? 7 : 0, reversed ? 0 : 7,
+                                     "Undo restores the binary selection endpoints");
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == wrappedNulText && !editor->Send(CanRedo),
+                "one Redo restores the complete binary replacement");
+    }
 }
 void DialogCases(EditorFrame* frame) {
     using enum DialogAction;

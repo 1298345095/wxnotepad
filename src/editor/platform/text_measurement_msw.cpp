@@ -1,6 +1,7 @@
 // Native measurement follows Notepad4 89b8b36 SurfaceGDI.cxx. Font scaling and
 // italic bounds retain wxWidgets 3.3.3's MSW DC/text-measurement conventions.
 #include "text_measurement.h"
+#include "editor/display_units.h"
 #include "native_drawing_error.h"
 #include <wx/dc.h>
 #include <wx/font.h>
@@ -20,7 +21,6 @@
 
 namespace Scintilla::Internal {
 namespace {
-constexpr double PointsPerInch = 72.0;
 [[noreturn]] void ThrowLastError(const char* operation) {
     throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), operation);
 }
@@ -96,7 +96,7 @@ struct MeasurementFont::Data {
 
     HFONT Handle(int fontDpi) const {
         auto logical = description;
-        logical.lfHeight = -static_cast<LONG>(std::lround(points * fontDpi / PointsPerInch));
+        logical.lfHeight = -static_cast<LONG>(std::lround(points * fontDpi / DisplayUnits::PointsPerInch));
         const auto key = std::pair{GetCurrentThreadId(), static_cast<int>(logical.lfHeight)};
         const std::lock_guard lock(mutex);
         if (const auto found = fonts.find(key); found != fonts.end()) return found->second.get();

@@ -15,16 +15,10 @@ std::wstring SelectedUnits(EditorControl& editor, intptr_t start, intptr_t end) 
     UTF16FromUTF8(bytes, units.data(), units.size());
     return units;
 }
-void ReplaceUnits(EditorControl& editor, intptr_t start, intptr_t end, std::wstring_view units) {
-    using enum Scintilla::Message;
+std::string Utf8FromUnits(std::wstring_view units) {
     std::string bytes(UTF8Length(units), '\0');
     UTF8FromUTF16(units, bytes.data(), bytes.size());
-    const bool backwards = editor.Send(GetAnchor) > editor.Send(GetCurrentPos);
-    editor.Send(SetTargetStart, start);
-    editor.Send(SetTargetEnd, end);
-    editor.Send(ReplaceTarget, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
-    const auto resultEnd = start + static_cast<intptr_t>(bytes.size());
-    editor.Send(SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
+    return bytes;
 }
 
 bool FlushTabStop(std::wstring& output, std::wstring& spaces, wchar_t unit, wchar_t next) {
@@ -64,7 +58,7 @@ bool EditorControl::TabsToSpaces(bool onlyIndent) {
             output += unit;
         }
     }
-    if (modified) ReplaceUnits(*this, start, end, output);
+    if (modified) ReplaceRangeAndSelect(start, end, Utf8FromUnits(output));
     return true;
 }
 
@@ -107,6 +101,6 @@ bool EditorControl::SpacesToTabs(bool onlyIndent) {
         }
     }
     output += spaces;
-    if (modified || output.size() != input.size()) ReplaceUnits(*this, start, end, output);
+    if (modified || output.size() != input.size()) ReplaceRangeAndSelect(start, end, Utf8FromUnits(output));
     return true;
 }

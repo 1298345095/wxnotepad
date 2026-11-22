@@ -8,33 +8,14 @@ import sys
 import tempfile
 import threading
 import time
+from original_windows import find_editors, find_frames
 
 
 def find_editor_windows(user, process, callback):
-    top = []
-    def window(hwnd, _):
-        pid = w.DWORD()
-        user.GetWindowThreadProcessId(hwnd, c.byref(pid))
-        if pid.value == process.pid:
-            name = c.create_unicode_buffer(128)
-            user.GetClassNameW(hwnd, name, 128)
-            if name.value == "Notepad4":
-                top.append(hwnd)
-        return True
-    deadline = time.monotonic() + 10
-    while not top and time.monotonic() < deadline:
-        user.EnumWindows(callback(window), 0)
-        time.sleep(.05)
+    top = find_frames(user, process, callback)
     if not top:
         raise RuntimeError("original Notepad4 window was not found")
-    children = []
-    def child(hwnd, _):
-        name = c.create_unicode_buffer(128)
-        user.GetClassNameW(hwnd, name, 128)
-        if name.value == "Scintilla":
-            children.append(hwnd)
-        return True
-    user.EnumChildWindows(top[0], callback(child), 0)
+    children = find_editors(user, top[0], callback)
     return top[0], children[0]
 
 

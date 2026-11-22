@@ -56,12 +56,7 @@ bool EditorControl::CompressWhitespace() {
          reinterpret_cast<intptr_t>(buffer.data()));
     buffer[count] = next;
     const auto result = CompressSpaces(buffer, count, previous);
-    if (result.modified) {
-        const auto resultLength = result.length;
-        const bool backwards = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
-        Send(Message::SetTargetRange, start, end);
-        Send(Message::ReplaceTarget, resultLength, reinterpret_cast<intptr_t>(buffer.data()));
-        Send(Message::SetSel, backwards ? start + resultLength : start, backwards ? start : start + resultLength);
-    }
+    if (result.modified)
+        ReplaceRangeAndSelect(start, end, std::string_view(buffer.data(), static_cast<size_t>(result.length)));
     return true;
 }

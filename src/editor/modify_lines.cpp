@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/win_edit_line_endings.h"
 #include <ScintillaTypes.h>
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
@@ -15,34 +16,8 @@ struct ModifyLinesText {
     ModifyLinesText(const wxString& text, intptr_t firstLine, intptr_t lastLine, Scintilla::EndOfLine mode) {
         prefix = text.ToStdString(wxConvUTF8);
         prefix.resize(prefix.find('\0') == std::string::npos ? prefix.size() : prefix.find('\0'));
-        NormalizeLineEndings(mode);
+        lineCount = ConvertWinEditLineEndings(prefix, mode);
         ParseSubstitution(firstLine, lastLine);
-    }
-
-    void NormalizeLineEndings(Scintilla::EndOfLine mode) {
-        // Original ConvertWinEditLineEndingsEx converts CRLF pairs only and
-        // counts every separator, including lone CR and LF.
-        size_t output = 0;
-        for (size_t input = 0; input < prefix.size(); ++input) {
-            char value = prefix[input];
-            if (value != '\r') {
-                if (value == '\n') ++lineCount;
-                prefix[output++] = value;
-                continue;
-            }
-            ++lineCount;
-            if (input + 1 < prefix.size() && prefix[input + 1] == '\n') {
-                if (mode == Scintilla::EndOfLine::CrLf) {
-                    prefix[output++] = value;
-                    value = '\n';
-                } else {
-                    value = mode == Scintilla::EndOfLine::Lf ? '\n' : '\r';
-                }
-                ++input;
-            }
-            prefix[output++] = value;
-        }
-        prefix.resize(output);
     }
 
     void ParseSubstitution(intptr_t firstLine, intptr_t lastLine) {

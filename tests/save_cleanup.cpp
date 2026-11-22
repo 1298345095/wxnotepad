@@ -193,6 +193,38 @@ void Policies(EditorFrame* frame, const std::filesystem::path& directory) {
     std::puts("PASS: native original options; independent/together policies, selection, undo order, final lines, no-op "
               "and read-only");
 }
+void SelectionScopes(EditorFrame* frame, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    const std::string source = "first \t\nsecond \t\nlast \t";
+    const std::string cleaned = "first\nsecond\nlast";
+    Options(frame, false, true);
+    for (const auto mode : {Scintilla::SelectionMode::Stream, Scintilla::SelectionMode::Rectangle}) {
+        Load(editor, source);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(mode)));
+        if (mode == Scintilla::SelectionMode::Rectangle) {
+            editor->Send(SetRectangularSelectionAnchor, 3);
+            editor->Send(SetRectangularSelectionCaret, 1);
+        } else {
+            editor->Send(SetSel, 3, 1);
+        }
+        const auto output = directory / "selection-scope.txt";
+        Require(frame->SaveAs(Filename(output)).status == SaveStatus::Saved && Bytes(output) == cleaned &&
+                    NativeSearch::Text(editor) == cleaned,
+                "save cleanup must strip every line even when the selection contains no trailing blanks");
+        Require(editor->Send(GetSelectionMode) == static_cast<intptr_t>(std::to_underlying(mode)),
+                "save cleanup must retain the selection mode");
+        editor->Send(Undo);
+        Require(NativeSearch::Text(editor) == source && !editor->Send(CanUndo),
+                "whole-document cleanup from a partial selection must undo in one step");
+        editor->Send(Redo);
+        Require(NativeSearch::Text(editor) == cleaned && !editor->Send(GetModify),
+                "redo must restore the saved cleanup bytes and save point");
+    }
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
+    Options(frame, true, true);
+}
+
 void Encodings(EditorFrame* frame, const std::filesystem::path& directory) {
     using namespace std::string_literals;
     struct Sample {
@@ -308,6 +340,7 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 Policies(frame, directory);
+                SelectionScopes(frame, directory);
                 Encodings(frame, directory);
                 Failures(frame, directory);
                 Defaults(frame);

@@ -93,6 +93,9 @@ void Zoom(EditorFrame& frame) {
     Require(PageSetup(frame, "150%", wxID_OK) == "100%", "Page Setup Cancel leaves print zoom unchanged");
     Require(PageSetup(frame, "invalid", wxID_OK) == "150%", "Page Setup OK retains valid print zoom");
     Require(PageSetup(frame, {}, wxID_CANCEL) == "100%", "Page Setup invalid zoom falls back to 100 percent");
+    PageSetup(frame, "150%", wxID_OK);
+    Require(PageSetup(frame, "501", wxID_OK) == "150%", "Page Setup starts invalid input from a non-default zoom");
+    Require(PageSetup(frame, {}, wxID_CANCEL) == "100%", "Page Setup out-of-range zoom falls back to 100 percent");
     std::puts("PASS: original Page Setup confirmation, cancellation and invalid zoom");
 }
 

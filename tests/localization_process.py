@@ -12,7 +12,7 @@ import time
 
 from localization_native import Dialogs
 from localization_layout import capture_and_check
-from localization_package import (ROOT, Process, bundle_application, cache_values, environment, language_id,
+from localization_package import (ROOT, Process, bundle_application, read_cmake_cache, environment, language_id,
                                   menu_id, menus, read_settings, settings, wait_child)
 from resource_process import native_edit, wait_state
 
@@ -173,7 +173,7 @@ class Acceptance:
                 app.stop()
             assert self.config.read_bytes() == original, 'Startup fallback/normalization must not rewrite configured preference'
             print(f'PASS: original integer {configured!r}, preferred {preferred} -> {code}, checked {checked}', flush=True)
-        cache = cache_values(self.args.cmake_dir.resolve())
+        cache = read_cmake_cache(self.args.cmake_dir.resolve())
         gettext = Path(cache['WXNOTEPAD_MSGFMT']).parent
         for code in ('zh_CN', 'zh_TW'):
             app_mo = self.executable.parent / 'locale' / code / 'LC_MESSAGES/wxnotepad.mo'

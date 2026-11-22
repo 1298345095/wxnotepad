@@ -10,6 +10,7 @@ import tempfile
 import time
 
 from resource_process import command, observation_context
+from app_observation import read_state
 from settings_process import Application
 
 
@@ -92,10 +93,10 @@ def command_contention(executable, folder, environment):
                     reader.enter_context(obstruct_publication(folder / "command", mode))
                 time.sleep(.25)
                 assert app.process.poll() is None, "pending command cannot close before its reader releases it"
-                state = dict(line.split("\t", 1) for line in (folder / "state").read_text(encoding="utf-8").splitlines())
+                state = read_state(folder)
                 assert state["sequence"] == "0", f"unconsumed command was acknowledged: {state}"
             app.wait_for_close(requested)
-            state = dict(line.split("\t", 1) for line in (folder / "state").read_text(encoding="utf-8").splitlines())
+            state = read_state(folder)
             assert state["sequence"] == "1" and state["result"] == "ok", state
             assert not (folder / "command").exists(), "close command was consumed"
             print(f"PASS: command {mode}, clean exit={app.process.returncode}", flush=True)
@@ -108,7 +109,7 @@ def partial_command(executable, folder, environment):
     try:
         command(folder, "1\n")
         time.sleep(.25)
-        state = dict(line.split("\t", 1) for line in (folder / "state").read_text(encoding="utf-8").splitlines())
+        state = read_state(folder)
         assert state["sequence"] == "0" and (folder / "command").exists(), state
         app.close()
         print("PASS: incomplete command retained until a complete close packet arrives", flush=True)
@@ -148,8 +149,7 @@ def main():
                     print("EXIT TIMEOUT " + json.dumps(observation_context(folder, app.process)), flush=True)
                     raise
                 print(f"PASS: mode={mode}, clean exit={app.process.returncode}", flush=True)
-                state = dict(line.split("\t", 1) for line in
-                             (folder / "state").read_text(encoding="utf-8").splitlines())
+                state = read_state(folder)
                 assert state["sequence"] == str(app.sequence + 1) and state["result"] == "ok", state
                 assert state["dirty"] == "0" and not (folder / "command").exists(), state
             finally:

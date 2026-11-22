@@ -1,22 +1,18 @@
 #include "app/new_window.h"
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/native_launch.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
-#include <wx/log.h>
 #include <wx/stdpaths.h>
 #include <wx/toplevel.h>
-#include <wx/utils.h>
 #include <wx/msgdlg.h>
 #include <wx/translation.h>
 #include <limits>
-#include <string>
 #include <array>
 #include <vector>
 #ifdef __WXMSW__
 #include <windows.h>
-#elif defined(__WXGTK__)
-#include <glib.h>
 #endif
 
 bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argument) {
@@ -132,27 +128,6 @@ bool EditorFrame::LaunchWindow(bool currentFile) {
         arguments.emplace_back("--startup-file");
         arguments.push_back(document_.Path());
     }
-#ifdef __WXGTK__
-    // wxExecute's Unix async return only confirms fork(), not a successful exec().
-    // GLib confirms exec failure before returning and reaps independent children.
-    std::vector<std::string> utf8;
-    for (const auto& argument : arguments)
-        utf8.push_back(argument.utf8_string());
-    std::vector<char*> nativeArguments;
-    for (auto& argument : utf8)
-        nativeArguments.push_back(argument.data());
-    nativeArguments.push_back(nullptr);
-    return g_spawn_async(launchWorkingDirectory_.utf8_str(), nativeArguments.data(), nullptr, G_SPAWN_DEFAULT, nullptr,
-                         nullptr, nullptr, nullptr) != FALSE;
-#else
-    std::vector<const wchar_t*> nativeArguments;
-    for (const auto& argument : arguments)
-        nativeArguments.push_back(argument.wc_str());
-    nativeArguments.push_back(nullptr);
-    wxExecuteEnv environment;
-    environment.cwd = launchWorkingDirectory_;
-    // The menu reports launch failures on this frame, without deferred wxLogGui dialogs.
-    const wxLogNull noGuiLog;
-    return wxExecute(nativeArguments.data(), wxEXEC_ASYNC, nullptr, &environment) > 0;
-#endif
+    wxString error;
+    return NativeLaunch::SpawnArguments(arguments, launchWorkingDirectory_, error);
 }

@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/ascii_character.h"
 #include <array>
 #include <charconv>
 #include <string>
@@ -8,11 +9,6 @@ namespace {
 using Scintilla::Message;
 bool IsAlphaNumeric(char ch) {
     return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
-}
-int GetHexDigit(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    ch = static_cast<char>(ch | 0x20);
-    return ch >= 'a' && ch <= 'f' ? ch - 'a' + 10 : -1;
 }
 void ConvertNumRadix(std::string& output, uint64_t num, unsigned radix) {
     // Adapted from Notepad4 89b8b36 Edit.cpp::ConvertNumRadix.
@@ -43,7 +39,7 @@ uint64_t ReadHexadecimal(const char*& p) {
         if (*p == '_') {
             ++p;
         } else {
-            const int hex = GetHexDigit(*p);
+            const int hex = Ascii::HexDigit(*p);
             if (hex < 0) break;
             value = (value << 4) | static_cast<unsigned>(hex);
             ++p;
@@ -144,11 +140,6 @@ bool EditorControl::ConvertNumberRadix(unsigned radix) {
     // selections, but replacement and direction use only the main selection.
     const auto start = Send(Message::GetSelectionStart);
     const auto end = Send(Message::GetSelectionEnd);
-    const bool backwards = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
-    Send(Message::SetTargetStart, start);
-    Send(Message::SetTargetEnd, end);
-    Send(Message::ReplaceTarget, output.size(), reinterpret_cast<intptr_t>(output.data()));
-    const auto resultEnd = start + static_cast<intptr_t>(output.size());
-    Send(Message::SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
+    ReplaceRangeAndSelect(start, end, output);
     return true;
 }

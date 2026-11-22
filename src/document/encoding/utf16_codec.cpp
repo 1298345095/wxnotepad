@@ -1,23 +1,12 @@
 #include "document/encoding/utf16_codec.h"
+#include "document/encoding/wx_conversion.h"
 #include <wx/strconv.h>
-#include <vector>
 #include <algorithm>
 
 namespace {
 std::optional<std::string> Convert(std::string_view bytes, const wxMBConv& from, const wxMBConv& to) {
-    if (bytes.empty()) return std::string{};
-    const auto size = from.ToWChar(nullptr, 0, bytes.data(), bytes.size());
-    if (size == wxCONV_FAILED) return std::nullopt;
-    std::vector<wchar_t> wide(size);
-    const auto written = from.ToWChar(wide.data(), wide.size(), bytes.data(), bytes.size());
-    if (written == wxCONV_FAILED) return std::nullopt;
-    const auto length = to.FromWChar(nullptr, 0, wide.data(), written);
-    if (length == wxCONV_FAILED) return std::nullopt;
-    std::string result(length, '\0');
-    const auto converted = to.FromWChar(result.data(), result.size(), wide.data(), written);
-    if (converted == wxCONV_FAILED) return std::nullopt;
-    result.resize(converted);
-    return result;
+    const auto wide = EncodingConversion::ToWide(from, bytes);
+    return wide ? EncodingConversion::FromWide(to, *wide) : std::nullopt;
 }
 } // namespace
 

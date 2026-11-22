@@ -1,4 +1,5 @@
 #include "editor/platform/text_measurement.h"
+#include "editor/display_units.h"
 #include "editor/platform/native_drawing_error.h"
 #include <wx/dc.h>
 #include <wx/font.h>
@@ -21,8 +22,6 @@
 
 namespace Scintilla::Internal {
 namespace {
-constexpr double DefaultFontDpi = 96;
-constexpr float PointsPerInch = 72;
 constexpr size_t Utf8MaximumBytes = 6;
 template <typename T> struct ObjectUnref {
     void operator()(T* object) const { g_object_unref(object); }
@@ -280,7 +279,7 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
     data_->options = std::move(options);
 
     auto* screen = gdk_screen_get_default();
-    data_->fontScale = screen ? static_cast<float>(gdk_screen_get_resolution(screen) / DefaultFontDpi) : 1;
+    data_->fontScale = screen ? static_cast<float>(gdk_screen_get_resolution(screen) / DisplayUnits::DefaultDpi) : 1;
 }
 
 TextMeasurement::TextMeasurement(GtkPrintContext& printer, int fontDpi) : data_(std::make_unique<Data>()) {
@@ -296,7 +295,7 @@ TextMeasurement::TextMeasurement(GtkPrintContext& printer, int fontDpi) : data_(
     // factors; capture both to reproduce their rounding on the workers.
     const auto screenDpi = wxDisplay::GetStdPPIValue();
     data_->fontScale = static_cast<double>(fontDpi) / screenDpi;
-    data_->printerPointAdjustment = static_cast<float>(screenDpi) / PointsPerInch;
+    data_->printerPointAdjustment = static_cast<float>(screenDpi) / DisplayUnits::PointsPerInch;
 }
 
 TextMeasurement::~TextMeasurement() = default;

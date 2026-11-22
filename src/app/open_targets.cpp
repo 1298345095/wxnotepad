@@ -4,6 +4,7 @@
 #include "app/native_launch.h"
 #include "app/desktop_launch.h"
 #include "syntax/syntax_catalog.h"
+#include "settings/environment_expansion.h"
 #include "diagnostics/trace.h"
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
@@ -155,15 +156,7 @@ std::optional<wxString> ExistingPath(const wxString& target, const wxString& doc
     // Expand only leading native filesystem variables, preserving URL encoding.
 #ifdef __WXMSW__
     if (target.StartsWith("%")) {
-        const auto length = ExpandEnvironmentStringsW(target.wc_str(), nullptr, 0);
-        if (length != 0) {
-            std::wstring expanded(length, L'\0');
-            const auto count = ExpandEnvironmentStringsW(target.wc_str(), expanded.data(), length);
-            if (count != 0 && count <= length) {
-                expanded.resize(count - 1);
-                if (const auto path = existing(wxString(expanded))) return path;
-            }
-        }
+        if (const auto path = existing(ExpandWindowsEnvironment(target))) return path;
     }
 #else
     if (target.StartsWith("$") || target.StartsWith("~")) {

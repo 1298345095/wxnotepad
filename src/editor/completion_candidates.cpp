@@ -1,6 +1,7 @@
 // Adapted from Notepad4 89b8b36 EditAutoC.cpp: WordList.
 // Copyright and BSD 3-Clause license: licenses/Notepad4.txt.
 #include "editor/completion_candidates.h"
+#include "editor/ascii_character.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -9,10 +10,6 @@ namespace {
 constexpr unsigned SortKeyLength = 4;
 constexpr unsigned InitialBufferSize = 4096;
 constexpr size_t InitialTreePathCapacity = 32;
-
-unsigned char LowerAscii(unsigned char ch) noexcept {
-    return ch >= 'A' && ch <= 'Z' ? static_cast<unsigned char>(ch + 'a' - 'A') : ch;
-}
 
 constexpr bool IsKeywordSeparator(unsigned char ch) noexcept {
     return ch <= ' ' || ch == '(' || ch == ')' || ch == ',' || ch == '.' || ch == ';' || ch == '^';
@@ -53,7 +50,7 @@ uint32_t CompletionCandidates::SortKey(std::string_view word) const noexcept {
         key <<= 8;
         if (index < word.size()) {
             const auto ch = static_cast<unsigned char>(word[index]);
-            key |= ignoreCase_ ? LowerAscii(ch) : ch;
+            key |= ignoreCase_ ? Ascii::Lower(ch) : ch;
         }
     }
     return key;
@@ -65,7 +62,7 @@ bool CompletionCandidates::MatchesPrefix(std::string_view word) const noexcept {
     for (size_t index = 0; index < root_.size(); ++index) {
         const auto left = static_cast<unsigned char>(root_[index]);
         const auto right = static_cast<unsigned char>(word[index]);
-        if ((ignoreCase_ ? LowerAscii(left) : left) != (ignoreCase_ ? LowerAscii(right) : right)) return false;
+        if ((ignoreCase_ ? Ascii::Lower(left) : left) != (ignoreCase_ ? Ascii::Lower(right) : right)) return false;
     }
     return true;
 }

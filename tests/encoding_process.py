@@ -21,6 +21,8 @@ def run(executable):
         fixture = folder / "fallback.txt"
         cases = [
             ("DefaultEncoding=936", b"\xd6\xd0\xce\xc4\r\n", "CP936", 0, 8, None),
+            ("DefaultEncoding=54936", b"\xd6\xd0\x81\x30\x81\x30\r\n", "CP54936", 0, 7, None),
+            ("DefaultEncoding=950", b"\xa4\xa4\r\n", "CP950", 0, 5, None),
             ("DefaultEncoding=1252", b"\x80\xa0\r\n", "CP1252", 0, 7, None),
             ("DefaultEncoding=437", b"\xda\xc4\xbf\r\n", "CP437", 0, 11, None),
             ("DefaultEncoding=437\nLoadASCIIasUTF8=0", b"plain", "CP437", 0, 5, None),
@@ -54,7 +56,8 @@ def run(executable):
                 assert "Keep=1" in config.read_text(encoding="utf-16")
                 if seed == "DefaultEncoding=3" or seed.startswith("DefaultEncoding=-4294967296"):
                     assert "DefaultEncoding=" not in config.read_text(encoding="utf-16")
-                elif seed.startswith("DefaultEncoding=1252") or seed.startswith("DefaultEncoding=437"):
+                elif seed.splitlines()[0] in {"DefaultEncoding=1252", "DefaultEncoding=437",
+                                             "DefaultEncoding=54936", "DefaultEncoding=950"}:
                     saved = config.read_text(encoding="utf-16")
                     assert seed.splitlines()[0] in saved, saved
                 print(f"PASS: fresh-process {seed!r} -> {encoding}, BOM={bom}, exact Save")

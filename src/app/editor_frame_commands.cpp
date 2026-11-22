@@ -12,6 +12,7 @@
 #include "app/dialogs/long_line_settings_dialog.h"
 #include "app/dialogs/word_wrap_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
+#include "app/dialogs/zoom_input.h"
 #include "editor/editor_control.h"
 #include "editor/editor_ids.h"
 #include "editor/character_information.h"
@@ -37,7 +38,6 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/strconv.h>
-#include <cstdlib>
 #include "app/dialogs/modify_lines_dialog.h"
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -54,22 +54,14 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
                                    wxString::Format(_("Zoom level (%d%% to %d%%):"), Scintilla::MinZoomLevel,
                                                     Scintilla::MaxZoomLevel)),
                   0, wxALL, dialog.FromDIP(10));
-    auto* input =
-        new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", static_cast<int>(editor.Send(Message::GetZoom))));
+    auto* input = CreateZoomInput(&dialog, static_cast<int>(editor.Send(Message::GetZoom)));
     input->SetName("Zoom level");
     AppLocalization::SetAccessibleName(*input, _("Zoom level"));
-    input->SetMaxLength(8);
-    for (int level : {500, 450, 400, 350, 300, 250, 200, 175, 150, 125, 100, 75, 50, 25})
-        input->Append(wxString::Format("%d%%", level));
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(10));
     const auto apply = [input, &editor, &dialog](wxCommandEvent& event) {
-        const auto value = input->GetValue().ToStdString(wxConvUTF8);
-        char* end = nullptr;
-        const long level = std::strtol(value.c_str(), &end, 10);
-        if (end != value.c_str() && level >= Scintilla::MinZoomLevel && level <= Scintilla::MaxZoomLevel)
-            editor.Send(Message::SetZoom, level);
+        if (const auto level = ReadZoomLevel(*input)) editor.Send(Message::SetZoom, *level);
         // As in the original, invalid OK closes without changing zoom; Apply
         // keeps the dialog open, and Cancel retains any already applied zoom.
         if (event.GetId() == wxID_OK) dialog.EndModal(wxID_OK);

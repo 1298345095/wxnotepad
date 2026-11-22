@@ -13,6 +13,9 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools'))
+from cmake_cache import read_cmake_cache
+
 WORK = ROOT / '.ci'
 REPORTS = WORK / 'reports'
 VCPKG = WORK / 'vcpkg'
@@ -303,7 +306,7 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
     # CTest-only display probes have no application SDK. A cache selecting the
     # application or either SDK field must still validate its complete helper path.
     if (cmake_dir / 'CMakeCache.txt').exists():
-        cache = _cmake_cache(cmake_dir)
+        cache = read_cmake_cache(cmake_dir)
         if (cache.get('CMAKE_PROJECT_NAME') == 'wxnotepad' or
                 'VCPKG_INSTALLED_DIR' in cache or 'VCPKG_TARGET_TRIPLET' in cache):
             environment['GIO_LAUNCH_DESKTOP'] = str(linux_gio_helper(cache))
@@ -397,18 +400,9 @@ def linux_gio_helper(cache):
     return helper.resolve()
 
 
-def _cmake_cache(directory):
-    values = {}
-    for line in (directory / 'CMakeCache.txt').read_text(encoding='utf-8').splitlines():
-        entry = re.match(r'([^#/][^:]*):[^=]+=(.*)', line)
-        if entry:
-            values[entry[1]] = entry[2]
-    return values
-
-
 def bundle(cmake_dir, executable, output_root, *, report_dir=None):
     """Collect a configured wxnotepad build and return its distributed executable."""
-    cache = _cmake_cache(cmake_dir)
+    cache = read_cmake_cache(cmake_dir)
     source_root = Path(cache['CMAKE_HOME_DIRECTORY'])
     installed = Path(cache['VCPKG_INSTALLED_DIR']).resolve()
     triplet = cache['VCPKG_TARGET_TRIPLET']

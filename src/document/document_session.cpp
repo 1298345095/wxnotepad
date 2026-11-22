@@ -354,23 +354,6 @@ void EnsureConsistentLineEndings(EditorControl& editor) {
     }
 }
 
-void StripTrailingBlanks(EditorControl& editor) {
-    using enum Scintilla::Message;
-    editor.Send(BeginUndoAction);
-    const auto lines = editor.Send(GetLineCount);
-    for (intptr_t line = 0; line < lines; ++line) {
-        const auto start = editor.Send(PositionFromLine, line);
-        const auto end = editor.Send(GetLineEndPosition, line);
-        auto position = end;
-        while (position >= start) {
-            const auto ch = editor.Send(GetCharAt, --position);
-            if (ch != ' ' && ch != '\t') break;
-        }
-        if (++position < end) editor.Send(DeleteRange, position, end - position);
-    }
-    editor.Send(EndUndoAction);
-}
-
 struct LoadedDocument {
     std::string text;
     NativeByteRanges raw;
@@ -849,7 +832,7 @@ void DocumentSession::ApplySaveCleanup() {
     // EditFixPositions and EditStripTrailingBlanks(true), in their save order.
     // See licenses/Notepad4.txt.
     if (saveCleanup_.fixLineEndings) EnsureConsistentLineEndings(editor_);
-    if (saveCleanup_.fixTrailingBlanks) StripTrailingBlanks(editor_);
+    if (saveCleanup_.fixTrailingBlanks) editor_.StripTrailingBlanks(true);
 }
 
 OpenResult DocumentSession::Load(const DocumentLoad::Intent& intent,

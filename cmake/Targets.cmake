@@ -94,6 +94,7 @@ add_library(editor_features STATIC
     src/document/encoding/single_byte_codec.cpp
     src/document/encoding/chinese_codec.cpp
     src/document/encoding/utf16_codec.cpp
+    src/document/encoding/wx_conversion.cpp
     src/document/encoding/encoding_detection.cpp
     src/search/search_session.cpp
     src/syntax/syntax_catalog.cpp
@@ -114,11 +115,14 @@ add_library(app_shell STATIC
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
     src/settings/recent_files.cpp
+    src/settings/environment_expansion.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
     src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp
+    src/app/dialogs/win_edit_input.cpp
+    src/app/dialogs/zoom_input.cpp
     src/app/dialogs/print_page_setup_dialog.cpp
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp

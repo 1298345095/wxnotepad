@@ -1,6 +1,7 @@
 // Conversion boundaries adapted from Notepad4 89b8b36 EditLoadFile/EditSaveFile.
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 #include "document/encoding/chinese_codec.h"
+#include "document/encoding/wx_conversion.h"
 #include "UniConversion.h"
 #include <algorithm>
 #include <array>
@@ -10,26 +11,6 @@
 #endif
 
 namespace {
-std::optional<std::wstring> Wide(const wxMBConv& converter, std::string_view bytes) {
-    if (bytes.empty()) return std::wstring{};
-    const auto size = converter.ToWChar(nullptr, 0, bytes.data(), bytes.size());
-    if (size == wxCONV_FAILED) return std::nullopt;
-    std::wstring text(size, L'\0');
-    const auto written = converter.ToWChar(text.data(), text.size(), bytes.data(), bytes.size());
-    if (written == wxCONV_FAILED) return std::nullopt;
-    text.resize(written);
-    return text;
-}
-std::optional<std::string> Narrow(const wxMBConv& converter, std::wstring_view text) {
-    if (text.empty()) return std::string{};
-    const auto size = converter.FromWChar(nullptr, 0, text.data(), text.size());
-    if (size == wxCONV_FAILED) return std::nullopt;
-    std::string bytes(size, '\0');
-    const auto written = converter.FromWChar(bytes.data(), bytes.size(), text.data(), text.size());
-    if (written == wxCONV_FAILED) return std::nullopt;
-    bytes.resize(written);
-    return bytes;
-}
 #ifndef __WXMSW__
 // Windows CP54936 retains the original GB18030 mapping. glibc implements
 // newer revisions: these 19 two-byte/four-byte swaps were measured against
@@ -150,6 +131,7 @@ std::optional<std::string> CompatibilityEncode(unsigned scalar, FileEncoding enc
 } // namespace
 
 std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding encoding, bool strict) {
+    using namespace EncodingConversion;
     if (bytes.empty()) return std::string{};
 #ifdef __WXMSW__
     const UINT page = encoding == FileEncoding::Gb18030 ? 54936 : 950;
@@ -169,7 +151,7 @@ std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding en
         if (const auto compatible = CompatibilityDecode(piece, encoding);
             compatible.has_value() && !(strict && lead == 0xff))
             text += *compatible;
-        else if (const auto converted = Wide(converter, piece))
+        else if (const auto converted = ToWide(converter, piece))
             text += *converted;
         else if (strict)
             return std::nullopt;
@@ -178,11 +160,12 @@ std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding en
         offset += width;
     }
 #endif
-    return Narrow(wxMBConvUTF8(), text);
+    return FromWide(wxMBConvUTF8(), text);
 }
 
 LegacyEncoded EncodeChinese(std::string_view utf8, FileEncoding encoding) {
-    const auto text = Wide(wxMBConvUTF8(), utf8);
+    using namespace EncodingConversion;
+    const auto text = ToWide(wxMBConvUTF8(), utf8);
     if (text->empty()) return {{}, false};
 #ifdef __WXMSW__
     const UINT page = encoding == FileEncoding::Gb18030 ? 54936 : 950;
@@ -211,7 +194,7 @@ LegacyEncoded EncodeChinese(std::string_view utf8, FileEncoding encoding) {
         const auto scalar = utf8.substr(offset, width);
         auto converted =
             CompatibilityEncode(static_cast<unsigned>(Scintilla::Internal::UnicodeFromUTF8(lead)), encoding);
-        if (!converted) converted = Narrow(converter, *Wide(wxMBConvUTF8(), scalar));
+        if (!converted) converted = FromWide(converter, *ToWide(wxMBConvUTF8(), scalar));
         if (converted && DecodeChinese(*converted, encoding) == scalar)
             result.bytes += *converted;
         else {

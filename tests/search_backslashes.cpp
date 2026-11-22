@@ -35,13 +35,14 @@ void Load(EditorControl& editor, std::string_view text) {
     editor.Send(SetSel, 0, 0);
 }
 void CheckEscapeForms(EditorControl& editor, SearchSession& search) {
-    const std::array<std::pair<const char*, std::string>, 6> forms{{
+    const std::array<std::pair<const char*, std::string>, 7> forms{{
         {R"(\a\b\e\f\n\r\t\v\\)", "\a\b\x{1b}\f\n\r\t\v\\"},
         {R"(\x41\xFF\x00Z)", std::string("A\x{ff}\0Z", 4)},
         {R"(\u4E2D\uD83D\uDE00)", "中😀"},
         // Sonar treats literal replacement scalars as source-decoding errors.
         {R"(\uD800\u0041\uDC00)", "\u{FFFD}A\u{FFFD}"},
         {R"(\uD800\uD800\uDC00)", "\u{FFFD}𐀀"},
+        {R"(\u0000\uD800\u0041\uDBFF\uDFFF)", std::string("\0\u{FFFD}A\u{10FFFF}", 9)},
         {R"(\x1 \xGG \u123 \uGGGG \q \0 \U00000041 \)", R"(\x1 \xGG \u123 \uGGGG \q \0 \U00000041 \)"},
     }};
     for (const auto& [escaped, expected] : forms) {

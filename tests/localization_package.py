@@ -12,15 +12,8 @@ from resource_process import command, wait_state
 from settings_process import Application
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def cache_values(directory):
-    result = {}
-    for line in (directory / 'CMakeCache.txt').read_text(encoding='utf-8').splitlines():
-        if '=' in line and ':' in line.split('=', 1)[0] and not line.startswith('//'):
-            key, value = line.split('=', 1)
-            result[key.split(':', 1)[0]] = value
-    return result
+sys.path.insert(0, str(ROOT / 'tools'))
+from cmake_cache import read_cmake_cache
 
 
 def bundle_application(source, cmake, folder, reports=None):

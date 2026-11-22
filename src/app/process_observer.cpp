@@ -42,24 +42,6 @@ bool NativeFramePresented(EditorFrame* frame) {
 }
 #endif
 
-const char* ObservationEncodingName(FileEncoding encoding) {
-    switch (encoding) {
-        using enum FileEncoding;
-    case Utf8:
-        return "UTF-8";
-    case Utf16Le:
-        return "UTF-16LE";
-    case Utf16Be:
-        return "UTF-16BE";
-    case Windows1252:
-        return "CP1252";
-    case Dos437:
-        return "CP437";
-    default:
-        return "CP936";
-    }
-}
-
 #ifdef WXNOTEPAD_DIAGNOSTICS
 unsigned long long DiagnosticRequest(const wxString& sequence) {
     unsigned long long value = 0;
@@ -178,7 +160,8 @@ void ProcessObserver::Publish() {
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
-    const char* encoding = ObservationEncodingName(frame_->DocumentEncoding());
+    const auto* encodingInfo = FindFileEncodingInfo(frame_->DocumentEncoding());
+    const char* encoding = encodingInfo ? encodingInfo->observationName : "CP936";
     wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"

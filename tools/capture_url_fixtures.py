@@ -7,43 +7,17 @@ import json
 import platform
 from pathlib import Path
 import subprocess
-import time
+from original_windows import find_editors, find_frames
 
 
 def find_editor_windows(user, process):
     callback = c.WINFUNCTYPE(w.BOOL, w.HWND, c.c_ssize_t)
-    windows = []
-
-    @callback
-    def top(hwnd, _):
-        pid = w.DWORD()
-        user.GetWindowThreadProcessId(hwnd, c.byref(pid))
-        if pid.value == process.pid:
-            name = c.create_unicode_buffer(128)
-            user.GetClassNameW(hwnd, name, 128)
-            if name.value == "Notepad4":
-                windows.append(hwnd)
-        return True
-
-    deadline = time.monotonic() + 10
-    while not windows and time.monotonic() < deadline:
-        user.EnumWindows(top, 0)
-        time.sleep(0.05)
+    windows = find_frames(user, process, callback)
     if len(windows) != 1:
         process.terminate()
         raise RuntimeError(f"expected owned original Notepad4 window: {windows}")
     frame = windows[0]
-    children = []
-
-    @callback
-    def child(hwnd, _):
-        name = c.create_unicode_buffer(128)
-        user.GetClassNameW(hwnd, name, 128)
-        if name.value == "Scintilla":
-            children.append(hwnd)
-        return True
-
-    user.EnumChildWindows(frame, child, 0)
+    children = find_editors(user, frame, callback)
     if len(children) != 1:
         process.terminate()
         raise RuntimeError(f"expected owned original Scintilla: {children}")
