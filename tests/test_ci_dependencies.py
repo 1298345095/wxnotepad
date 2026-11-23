@@ -56,13 +56,19 @@ class DependencyTools(unittest.TestCase):
             directory = Path(folder)
             vcpkg = directory / 'vcpkg'
             tools = vcpkg / 'installed' / CI.TRIPLET / 'tools/gettext/bin'
-            tools.mkdir(parents=True)
             suffix = '.exe' if sys.platform == 'win32' else ''
-            # A real incompatible executable verifies the version protocol;
-            # no replacement gettext implementation is used.
-            shutil.copy2(shutil.which('ninja'), tools / ('xgettext' + suffix))
-            with self.assertRaisesRegex(SystemExit, r'Expected pinned GNU gettext 0\.23\.2:'):
+            native_check_output = CI.subprocess.check_output
+
+            def incompatible_tool(command, **kwargs):
+                self.assertEqual(command, [tools / ('xgettext' + suffix), '--version'])
+                # Keep the real tool at its installed path: hosted Windows may
+                # supply a launcher that cannot be copied under another name.
+                return native_check_output([shutil.which('ninja'), '--version'], **kwargs)
+
+            with mock.patch.object(CI.subprocess, 'check_output', side_effect=incompatible_tool) as version, \
+                    self.assertRaisesRegex(SystemExit, r'Expected pinned GNU gettext 0\.23\.2:'):
                 self.exercise(directory, vcpkg, CI.TRIPLET)
+            self.assertEqual(version.call_count, 1)
             self.assertFalse((directory / 'github-env').exists())
             self.assertFalse((directory / 'reports/localization-check.log').exists())
 
