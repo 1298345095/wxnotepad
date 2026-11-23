@@ -1433,6 +1433,10 @@ msgstr "無法開啟所在資料夾。"
 msgid "Could not open the destination for writing."
 msgstr "無法開啟目的檔案進行寫入。"
 
+#: src/app/new_window.cpp
+msgid "Could not open the document in a new window."
+msgstr "無法在新視窗中開啟文件。"
+
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr "無法開啟檔案進行讀取。"
@@ -2407,6 +2411,11 @@ msgstr "以指定編碼開啟(&A)"
 msgid "Open &Folder"
 msgstr "開啟資料夾(&F)"
 
+#. TRANSLATORS: IDM_FILE_NEWWINDOW2 opens the current disk document in another process.
+#: src/app/document_tools.cpp
+msgid "Open &in New Window\tAlt+0"
+msgstr "在新視窗中開啟(&I)\tAlt+0"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING/IDC_ASCIIASUTF8; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
@@ -2453,6 +2462,10 @@ msgstr "開啟文件方式"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
 msgstr "開啟檔案"
+
+#: src/app/new_window.cpp
+msgid "Open in New Window failed"
+msgstr "在新視窗中開啟失敗"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings/Other Settings submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2866,7 +2879,7 @@ msgstr "重新啟動前是否儲存對 %s 的變更？"
 #. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
 #. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
 #. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
-#: src/app/document_tools.cpp src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/new_window.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr "執行工具前儲存對 %s 的變更嗎？"

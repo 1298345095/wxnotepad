@@ -1248,6 +1248,10 @@ msgstr ""
 msgid "Could not open the destination for writing."
 msgstr ""
 
+#: src/app/new_window.cpp
+msgid "Could not open the document in a new window."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr ""
@@ -2135,6 +2139,11 @@ msgstr ""
 msgid "Open &Folder"
 msgstr ""
 
+#. TRANSLATORS: IDM_FILE_NEWWINDOW2 opens the current disk document in another process.
+#: src/app/document_tools.cpp
+msgid "Open &in New Window\tAlt+0"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
 msgstr ""
@@ -2177,6 +2186,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
+msgstr ""
+
+#: src/app/new_window.cpp
+msgid "Open in New Window failed"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2555,7 +2568,7 @@ msgstr ""
 #. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
 #. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
 #. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
-#: src/app/document_tools.cpp src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/new_window.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr ""
