@@ -12,6 +12,9 @@ namespace {
 #include "syntax/generated/java_scheme_data.h"
 #include "syntax/generated/csharp_scheme_data.h"
 #include "syntax/generated/kotlin_scheme_data.h"
+#include "syntax/generated/batch_scheme_data.h"
+#include "syntax/generated/powershell_scheme_data.h"
+#include "syntax/generated/autohotkey_scheme_data.h"
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
 #include "syntax/generated/bash_scheme_data.h"
@@ -148,6 +151,57 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      {SyntaxMenuFamily::TextFile, 0},
      // TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
      wxTRANSLATE("Text File")},
+    {wxTRANSLATE("AutoHotkey Script"),
+     autohotkeyExtensions,
+     autohotkeyLists,
+     autohotkeyStyles,
+     {},
+     SCLEX_AUTOHOTKEY,
+     SyntaxLanguage::AutoHotkey,
+     true,
+     ";",
+     "/*",
+     "*/",
+     SCE_AHK_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     autohotkeyOriginal,
+     {SyntaxMenuFamily::Standalone, 0}},
+    {wxTRANSLATE("Batch File"),
+     batchExtensions,
+     batchLists,
+     batchStyles,
+     {},
+     SCLEX_BATCH,
+     SyntaxLanguage::Batch,
+     true,
+     "@rem ",
+     nullptr,
+     nullptr,
+     SCE_BAT_COMMENT,
+     false,
+     false,
+     nullptr,
+     batchOriginal,
+     {SyntaxMenuFamily::Standalone, 0}},
+    {wxTRANSLATE("PowerShell Script"),
+     powershellExtensions,
+     powershellLists,
+     powershellStyles,
+     {},
+     SCLEX_POWERSHELL,
+     SyntaxLanguage::PowerShell,
+     true,
+     "#",
+     "<#",
+     "#>",
+     SCE_POWERSHELL_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     powershellOriginal,
+     {SyntaxMenuFamily::Standalone, 76}},
     {wxTRANSLATE("C/C++"),
      cppExtensions,
      cppLists,
@@ -1210,6 +1264,12 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return csharpSettingsSection;
     case Kotlin:
         return kotlinSettingsSection;
+    case Batch:
+        return batchSettingsSection;
+    case PowerShell:
+        return powershellSettingsSection;
+    case AutoHotkey:
+        return autohotkeySettingsSection;
     case Python:
         return "Python Script";
     case Json:
