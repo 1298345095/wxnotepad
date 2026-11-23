@@ -236,3 +236,10 @@ foreach(configuration malformed clamped unsupported invalid duplicate bounded nu
     add_test(NAME original_toolbar_${configuration} COMMAND toolbar_customization 1033 ${configuration})
     set_tests_properties(original_toolbar_${configuration} PROPERTIES TIMEOUT 60)
 endforeach()
+
+if(WIN32)
+    add_executable(clipboard_read_error tests/clipboard_read_error.cpp)
+    target_link_libraries(clipboard_read_error PRIVATE wx::base)
+    add_test(NAME native_clipboard_read_error_identity COMMAND clipboard_read_error)
+    set_tests_properties(native_clipboard_read_error_identity PROPERTIES TIMEOUT 20)
+endif()

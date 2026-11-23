@@ -7,7 +7,12 @@
 #include <wx/clipbrd.h>
 #include <wx/stattext.h>
 #include <wx/modalhook.h>
+#include <algorithm>
+#include <chrono>
 #include <memory>
+#ifdef __WXMSW__
+#include "clipboard_read_error.h"
+#endif
 
 namespace {
 using enum Scintilla::Message;
@@ -40,6 +45,62 @@ void ReportClipboard(const ClipboardObservation& state, const char* fixture, con
                  fixture, phase, static_cast<void*>(state.owner), state.ownerProcess, state.ownerThread,
                  static_cast<void*>(state.openHolder), state.openHolderProcess, state.openHolderThread, state.sequence,
                  state.unicodeAvailable);
+}
+bool ReadOwnedClipboard(wxTextDataObject& data, HWND editor, const ClipboardObservation& publication,
+                        const char* fixture) {
+    // This new local read-availability ceiling borrows SettleClipboard's
+    // existing test policy. The original CTest 90-second guard is unchanged.
+    constexpr auto ReadAvailabilityTimeout = std::chrono::milliseconds(250);
+    constexpr auto ReadPollInterval = std::chrono::milliseconds(10);
+    const auto started = std::chrono::steady_clock::now();
+    const auto deadline = started + ReadAvailabilityTimeout;
+    const auto unchanged = [&](const ClipboardObservation& state) {
+        return publication.owner == editor && publication.ownerProcess == GetCurrentProcessId() &&
+               publication.unicodeAvailable && state.owner == publication.owner &&
+               state.ownerProcess == publication.ownerProcess && state.sequence == publication.sequence &&
+               state.unicodeAvailable;
+    };
+    unsigned attempts = 0;
+    while (std::chrono::steady_clock::now() < deadline) {
+        const auto before = ObserveClipboard();
+        if (!unchanged(before)) {
+            ReportClipboard(before, fixture, "changed-before-read");
+            return false;
+        }
+        bool received = false, busyOnly = false, hasError = false;
+        DWORD code = 0;
+        {
+            ClipboardReadErrors errors;
+            if (std::chrono::steady_clock::now() >= deadline) return false;
+            ++attempts;
+            received = wxTheClipboard->GetData(data);
+            busyOnly = errors.BusyOnly();
+            hasError = errors.HasError();
+            code = errors.LastCode();
+        }
+        const auto after = ObserveClipboard();
+        const auto elapsed = std::chrono::steady_clock::now() - started;
+        if (!received || hasError || attempts > 1) {
+            std::fprintf(
+                stderr,
+                "Character Info clipboard [%s] attempt=%u received=%d busyOnly=%d error=0x%08lx "
+                "elapsedMs=%lld\n",
+                fixture, attempts, received, busyOnly, code,
+                static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()));
+            ReportClipboard(before, fixture, "read-attempt-before");
+            ReportClipboard(after, fixture, "read-attempt-after");
+            std::fflush(stderr);
+        }
+        if (!unchanged(after) || std::chrono::steady_clock::now() >= deadline) return false;
+        if (received) return !hasError;
+        if (!busyOnly) return false;
+        wxYield();
+        const auto remaining =
+            std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+        if (remaining.count() > 0)
+            wxMilliSleep(static_cast<unsigned long>(std::min(ReadPollInterval, remaining).count()));
+    }
+    return false;
 }
 const char* ClassifyClipboard(bool received, const wxString& text, const wxString& expected) {
     if (!received) return "read-failed";
@@ -233,8 +294,11 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const c
         if (!lock) throw TestEditor::Failure("open native clipboard to observe command result");
 #ifdef __WXMSW__
         const auto beforeRead = ObserveClipboard();
-#endif
+        const bool received = ReadOwnedClipboard(clipboard, static_cast<HWND>(frame->Editor()->GetHandle()),
+                                                 feedback.visibleClipboard, fixture);
+#else
         const bool received = wxTheClipboard->GetData(clipboard);
+#endif
         const bool matches = received && clipboard.GetText() == expected;
 #ifdef __WXMSW__
         const auto afterRead = ObserveClipboard();
