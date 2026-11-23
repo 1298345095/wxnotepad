@@ -243,3 +243,97 @@ if(WIN32)
     add_test(NAME native_clipboard_read_error_identity COMMAND clipboard_read_error)
     set_tests_properties(native_clipboard_read_error_identity PROPERTIES TIMEOUT 20)
 endif()
+
+if(WIN32)
+    add_test(NAME native_localization_button_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py")
+    set_tests_properties(native_localization_button_readiness PROPERTIES TIMEOUT 30)
+endif()
+
+add_gui_program(extra_escape tests/extra_escape.cpp app_shell)
+add_test(NAME original_extra_escape COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "$<TARGET_FILE:extra_escape>")
+set_tests_properties(original_extra_escape PROPERTIES TIMEOUT 60)
+if(WIN32)
+    add_gui_program(ime_escape tests/ime_escape.cpp app_shell)
+    target_link_libraries(ime_escape PRIVATE imm32 comctl32)
+    add_test(NAME windows_pinyin_escape_gdi COMMAND ime_escape 0)
+    add_test(NAME windows_pinyin_escape_directwrite COMMAND ime_escape 1)
+    set_tests_properties(windows_pinyin_escape_gdi windows_pinyin_escape_directwrite PROPERTIES
+        TIMEOUT 45 SKIP_RETURN_CODE 77)
+endif()
+add_test(NAME original_extra_escape_lifecycle COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/extra_escape_process.py" "$<TARGET_FILE:extra_escape>")
+set_tests_properties(original_extra_escape_lifecycle PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_extra_escape_localization COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/extra_escape_localization.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/extra-escape-localization")
+set_tests_properties(packaged_extra_escape_localization PROPERTIES TIMEOUT 120)
+
+add_editor_test(window_title original_window_title 60)
+target_compile_definitions(window_title PRIVATE
+    "WINDOW_TITLE_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/window_title_reference.tsv\"")
+add_dependencies(window_title wxnotepad_catalogs)
+if(WIN32)
+    add_test(NAME original_window_title_native_ansi COMMAND window_title --native-ansi)
+    set_tests_properties(original_window_title_native_ansi PROPERTIES TIMEOUT 60)
+endif()
+foreach(language zh_CN zh_TW)
+    add_test(NAME original_window_title_${language} COMMAND window_title --localized ${language})
+    set_tests_properties(original_window_title_${language} PROPERTIES TIMEOUT 60)
+endforeach()
+add_test(NAME original_window_title_process COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_title_process.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_window_title_process PROPERTIES TIMEOUT 180)
+
+add_editor_test(syntax_java_languages original_java_csharp_kotlin_schemes 120)
+set(java_language_references
+    "JAVA_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/java_languages_reference.tsv\""
+    "JAVA_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/java_operations_reference.tsv\"")
+target_compile_definitions(syntax_java_languages PRIVATE ${java_language_references})
+if(WIN32)
+    add_test(NAME original_java_csharp_kotlin_dpi96 COMMAND syntax_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_dpi96 PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_JAVA_DPI96=1")
+    add_gui_program(directwrite_java_languages tests/syntax_java_languages.cpp app_shell)
+    target_compile_definitions(directwrite_java_languages PRIVATE WXNOTEPAD_TEST_DIRECTWRITE ${java_language_references})
+    add_test(NAME original_java_csharp_kotlin_directwrite COMMAND directwrite_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_directwrite PROPERTIES TIMEOUT 120)
+    add_test(NAME original_java_csharp_kotlin_directwrite_dpi96 COMMAND directwrite_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_directwrite_dpi96 PROPERTIES TIMEOUT 120
+        ENVIRONMENT "WXNOTEPAD_JAVA_DPI96=1")
+else()
+    add_test(NAME original_java_csharp_kotlin_scale2 COMMAND syntax_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_scale2 PROPERTIES TIMEOUT 120 ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+endif()
+add_test(NAME original_java_csharp_kotlin_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/java_languages_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/java-languages-process")
+set_tests_properties(original_java_csharp_kotlin_process PROPERTIES TIMEOUT 180)
+
+add_test(NAME original_scheme_base_filter_reachability COMMAND syntax_save)
+set_tests_properties(original_scheme_base_filter_reachability PROPERTIES TIMEOUT 90
+    ENVIRONMENT "WXNOTEPAD_BASE_FILTER_REACHABILITY=1")
+
+add_editor_test(scheme_chooser original_scheme_chooser 90)
+add_editor_test(scheme_filters original_scheme_file_filters 90)
+add_dependencies(scheme_chooser wxnotepad_catalogs)
+foreach(language 1033 2052 1028)
+    add_test(NAME original_scheme_layout_${language} COMMAND scheme_chooser)
+    set_tests_properties(original_scheme_layout_${language} PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_SCHEME_LAYOUT_LANGUAGE=${language}")
+endforeach()
+add_test(NAME original_scheme_settings_lifecycle COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/scheme_selection_process.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_scheme_settings_lifecycle PROPERTIES TIMEOUT 90)
+
+add_editor_test(syntax_css_sql original_css_sql_schemes 90)
+target_compile_definitions(syntax_css_sql PRIVATE
+    "CSS_SQL_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_reference.tsv\""
+    "CSS_SQL_COMPLETION_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_completion_reference.tsv\""
+    "CSS_SQL_TYPING_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_typing_reference.tsv\"")
+foreach(language IN ITEMS en zh_CN zh_TW)
+    add_test(NAME original_css_sql_process_${language} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
+    set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)
+endforeach()
