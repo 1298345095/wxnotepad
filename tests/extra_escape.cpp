@@ -49,7 +49,7 @@ void WindowActionKey(EditorFrame* frame, bool shift = false, [[maybe_unused]] bo
         Require(request.Write(shift ? "key:shift+Escape" : "key:Escape"), "publish native Escape gesture");
     }
     Await(
-        [&] {
+        [&focus] {
             wxFFile request(focus, "rb");
             wxString pending;
             return request.IsOpened() && request.ReadAll(&pending) && pending.empty();
@@ -116,7 +116,8 @@ void CheckComposition(EditorFrame* frame) {
 #endif
         WindowActionKey(frame, shift, true);
 #ifdef __WXGTK__
-        Await([&] { return observation.received; }, "native Escape reaches the composing editor dispatch path");
+        Await([&observation] { return observation.received; },
+              "native Escape reaches the composing editor dispatch path");
 #endif
 #ifdef __WXMSW__
         SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_IME_ENDCOMPOSITION, 0, 0);
@@ -220,7 +221,7 @@ void PhysicalEscape(EditorFrame* frame) {
     DWORD process = 0;
     GetWindowThreadProcessId(editor, &process);
     NativeFocus::Activate(window, editor);
-    Await([&] { return GetForegroundWindow() == window && GetFocus() == editor; },
+    Await([window, editor] { return GetForegroundWindow() == window && GetFocus() == editor; },
           "physical Escape targets the owned focused editor");
     Require(process == GetCurrentProcessId(), "physical Escape stays inside the owned process");
     for (const int key : {VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_ESCAPE})
@@ -242,7 +243,8 @@ void CheckCancelledCompositionKey(EditorFrame* frame) {
     {
         CancelledImeKey replay(editor);
         PhysicalEscape(frame);
-        Await([&] { return frame->IsIconized() || replay.Complete(); }, "cancelled IME key finishes native dispatch");
+        Await([frame, &replay] { return frame->IsIconized() || replay.Complete(); },
+              "cancelled IME key finishes native dispatch");
         Require(!frame->IsIconized(), "IME cancellation before the keyboard hook must not also minimize");
         Require(replay.InitialDownObserved() && replay.RawHookCode() == VK_ESCAPE && replay.Complete(),
                 "initial Escape hook and retrieved VK_PROCESSKEY follow the captured native order");
@@ -250,10 +252,10 @@ void CheckCancelledCompositionKey(EditorFrame* frame) {
                 "cancelled IME key preserves document bytes and Undo");
     }
     PhysicalEscape(frame);
-    Await([&] { return frame->IsIconized(); }, "next independent Escape still performs native minimize");
+    Await([frame] { return frame->IsIconized(); }, "next independent Escape still performs native minimize");
     frame->Iconize(false);
     frame->Raise();
-    Await([&] { return !frame->IsIconized(); }, "restore the owned frame after ordinary Escape");
+    Await([frame] { return !frame->IsIconized(); }, "restore the owned frame after ordinary Escape");
     editor->SetFocus();
     NativeKeys::Shortcut(frame, 'Z', true);
     Require(TestEditor::Text(editor) == "committed IME word", "working Undo survives cancelled and ordinary Escape");
@@ -314,7 +316,7 @@ void WidgetEscape(wxWindow* control) {
         Require(process == GetCurrentProcessId() && IsChild(window, focused),
                 "modeless Escape belongs to this process and its native field");
         NativeFocus::Activate(window, focused);
-        Await([&] { return GetForegroundWindow() == window && GetFocus() == focused; },
+        Await([window, focused] { return GetForegroundWindow() == window && GetFocus() == focused; },
               "the owned modeless field receives native foreground focus");
         wchar_t type[128]{};
         GetClassNameW(focused, type, 128);
@@ -378,17 +380,18 @@ void CheckWidgetFocus(EditorFrame* frame) {
     auto* dialog = wxDynamicCast(wxGetTopLevelParent(query), wxDialog);
     Require(dialog && dialog->IsShown(), "native modeless Find dialog is shown");
     WidgetEscape(query);
-    Await([&] { return !dialog->IsShown(); }, "Escape dismisses the focused modeless dialog");
+    Await([dialog] { return !dialog->IsShown(); }, "Escape dismisses the focused modeless dialog");
     Require(driver.prompts == 0 && frame->IsShown(), "dialog Escape does not invoke the main-frame exit preference");
     wxDialog modal(frame, wxID_ANY, "wxnotepad Escape modal", wxDefaultPosition, wxSize(360, 150));
-    auto* field = new wxTextCtrl(&modal, wxID_ANY, "native field", wxPoint(15, 15), wxSize(300, 25));
-    new wxButton(&modal, wxID_CANCEL, "Cancel", wxPoint(15, 55));
+    // These synchronous modal children leave scope before their parent dialog.
+    wxTextCtrl field(&modal, wxID_ANY, "native field", wxPoint(15, 15), wxSize(300, 25));
+    wxButton cancel(&modal, wxID_CANCEL, "Cancel", wxPoint(15, 55));
     bool delivered = false;
-    modal.Bind(wxEVT_SHOW, [&](wxShowEvent& event) {
+    modal.Bind(wxEVT_SHOW, [&modal, &field, &delivered](wxShowEvent& event) {
         if (event.IsShown())
-            NativeKeys::AfterPresentation(&modal, [&](bool ready) {
+            NativeKeys::AfterPresentation(&modal, [&field, &delivered](bool ready) {
                 Require(ready, "owned native modal dialog is presented");
-                WidgetEscape(field);
+                WidgetEscape(&field);
                 delivered = true;
             });
         event.Skip();
@@ -428,7 +431,7 @@ void CheckMinimize(EditorFrame* frame) {
     editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
     editor->Send(SetSel, 10, 3);
     const auto contents = TestEditor::Text(editor);
-    const auto expectDocument = [&] {
+    const auto expectDocument = [editor, &contents] {
         Require(TestEditor::Text(editor) == contents && editor->Send(GetAnchor) == 10 &&
                     editor->Send(GetCurrentPos) == 3 && editor->Send(CanUndo) && editor->Send(GetModify),
                 "Escape and native minimize/restore preserve document bytes, selection, modified state and history");
@@ -447,9 +450,10 @@ void CheckMinimize(EditorFrame* frame) {
     }
     const auto normal = frame->GetSize();
     NativeKeys::Shortcut(frame, WXK_F11, false);
-    Await([&] { return frame->GetSize() != normal; }, "F11 enters the native fullscreen window");
+    Await([frame, normal] { return frame->GetSize() != normal; }, "F11 enters the native fullscreen window");
     NativeKeys::Shortcut(frame, WXK_ESCAPE, false);
-    Await([&] { return frame->GetSize() == normal; }, "Escape restores fullscreen before the configured action");
+    Await([frame, normal] { return frame->GetSize() == normal; },
+          "Escape restores fullscreen before the configured action");
     Require(!frame->IsIconized(), "leaving fullscreen does not also minimize the window");
     for (const int modifiers : {int{wxMOD_CONTROL}, int{wxMOD_ALT}, wxMOD_CONTROL | wxMOD_SHIFT}) {
         NativeKeys::Shortcut(frame, WXK_ESCAPE, (modifiers & wxMOD_CONTROL) != 0, (modifiers & wxMOD_ALT) != 0,
@@ -457,7 +461,7 @@ void CheckMinimize(EditorFrame* frame) {
         Require(!frame->IsIconized(), "arbitrary modified Escape is not plain Escape");
     }
     WindowActionKey(frame);
-    Await([&] { return !NativeWindowVisible(frame); }, "configured Escape actually minimizes the native window");
+    Await([frame] { return !NativeWindowVisible(frame); }, "configured Escape actually minimizes the native window");
     frame->Iconize(false);
     frame->Raise();
 #ifdef __WXGTK__
@@ -465,7 +469,7 @@ void CheckMinimize(EditorFrame* frame) {
         Require(wxExecute("xdotool key --clearmodifiers super+Tab", wxEXEC_SYNC | wxEXEC_NODISABLE) == 0,
                 "restore the owned minimized window through the private compositor switcher");
 #endif
-    Await([&] { return NativeWindowVisible(frame); }, "native window restores from minimized state");
+    Await([frame] { return NativeWindowVisible(frame); }, "native window restores from minimized state");
     editor->SetFocus();
     expectDocument();
     NativeKeys::Shortcut(frame, 'Z', true);
@@ -533,6 +537,70 @@ public:
     }
 
 private:
+    struct CloseState {
+        std::string text;
+        wxString identity;
+        bool shift;
+    };
+    static CloseState PrepareCloseCandidate(EditorFrame* candidate, int scenario, const std::filesystem::path& path) {
+        using enum Scintilla::Message;
+        auto* editor = candidate->Editor();
+        if (scenario == 2)
+            Require(candidate->SaveFirst(TestFiles::Filename(path)).status == SaveStatus::Saved,
+                    "failed-Save case begins with a named saved document");
+        editor->Send(AddText, 15, reinterpret_cast<intptr_t>("unsaved content"));
+        wxYield();
+        const CloseState state{TestEditor::Text(editor), candidate->DocumentPath(), scenario == 1 || scenario == 4};
+        if (scenario == 1) editor->Send(SetReadOnly, 1);
+        if (scenario == 2) {
+            std::filesystem::remove(path);
+            std::filesystem::create_directory(path);
+        }
+        if (state.shift) {
+            auto* menu = Setting(candidate, "Extra Esc Key Function")->GetSubMenu();
+            NativeSearch::Command(candidate, menu->FindItem("None"));
+        } else
+            NativeSearch::Command(candidate, Setting(candidate, "Exit wxnotepad")->GetId());
+        if (scenario == 1) {
+            const auto normal = candidate->GetSize();
+#ifdef __WXMSW__
+            constexpr auto fullScreenLabel = "Toggle Full Screen";
+#else
+            constexpr auto fullScreenLabel = "Toggle Full Screen [Esc]";
+#endif
+            NativeSearch::Command(candidate, candidate->GetMenuBar()->FindMenuItem("View", fullScreenLabel));
+            Await([candidate, editor,
+                   normal] { return candidate->GetSize() != normal && editor->GetClientSize().x > 100; },
+                  "candidate native fullscreen presentation finishes before Shift+Escape");
+            editor->Send(CallTipShow, 1, reinterpret_cast<intptr_t>("Shift+Escape bypasses CallTip/fullscreen"));
+        }
+        return state;
+    }
+    static void CheckCancelledClose(const wxWeakRef<EditorFrame>& retained, int scenario, const CloseState& before,
+                                    NativeDialogs::FileCommandDriver& driver) {
+        using enum Scintilla::Message;
+        Await([&retained] { return retained && retained->IsEnabled(); }, "Cancel/failed Save returns to the editor");
+        if (scenario == 2)
+            Await([&driver] { return driver.errors == 1; }, "failed Save shows the existing native error");
+        auto* editor = retained ? retained->Editor() : nullptr;
+        Require(retained && !retained->IsBeingDeleted() && TestEditor::Text(editor) == before.text &&
+                    editor->Send(GetModify) && retained->DocumentPath() == before.identity,
+                "Cancel and failed Save preserve the same owned document and history");
+        Require((editor->Send(GetReadOnly) != 0) == (scenario == 1), "exit cancellation preserves read-only mode");
+        // SCI_CANUNDO is false in read-only mode even with retained history.
+        if (scenario == 1) editor->Send(SetReadOnly, 0);
+        Require(editor->Send(CanUndo), "cancelled close retains the document undo history");
+        if (scenario == 1) editor->Send(SetReadOnly, 1);
+        retained->Destroy();
+    }
+    static void CheckSuccessfulClose(const wxWeakRef<EditorFrame>& retained, int scenario,
+                                     const std::filesystem::path& path,
+                                     const NativeDialogs::FileCommandDriver& driver) {
+        Await([&retained] { return !retained; }, "successful Save/Discard closes the owned frame");
+        if (scenario == 3)
+            Require(driver.choosers == 1 && TestFiles::Bytes(path) == "unsaved content",
+                    "Save from Escape writes the actual unnamed document before closing");
+    }
     void CloseCase(EditorFrame* sentinel, int scenario) {
         if (scenario == 5) {
             status_ = 0;
@@ -547,69 +615,20 @@ private:
             wxWeakRef<EditorFrame> retained(candidate);
             try {
                 Require(ready, "owned close candidate is presented before actual native Escape");
-                using enum Scintilla::Message;
-                auto* editor = candidate->Editor();
                 const auto path =
                     TestFiles::TemporaryDirectory() / ("escape-save-" + std::to_string(scenario) + ".txt");
-                if (scenario == 2)
-                    Require(candidate->SaveFirst(TestFiles::Filename(path)).status == SaveStatus::Saved,
-                            "failed-Save case begins with a named saved document");
-                editor->Send(AddText, 15, reinterpret_cast<intptr_t>("unsaved content"));
-                wxYield();
-                const auto before = TestEditor::Text(editor);
-                const auto originalPath = candidate->DocumentPath();
-                if (scenario == 1) editor->Send(SetReadOnly, 1);
-                if (scenario == 2) {
-                    std::filesystem::remove(path);
-                    std::filesystem::create_directory(path);
-                }
-                const bool shift = scenario == 1 || scenario == 4;
-                if (shift) {
-                    auto* menu = Setting(candidate, "Extra Esc Key Function")->GetSubMenu();
-                    NativeSearch::Command(candidate, menu->FindItem("None"));
-                } else
-                    NativeSearch::Command(candidate, Setting(candidate, "Exit wxnotepad")->GetId());
-                if (scenario == 1) {
-                    const auto normal = candidate->GetSize();
-#ifdef __WXMSW__
-                    constexpr auto fullScreenLabel = "Toggle Full Screen";
-#else
-                    constexpr auto fullScreenLabel = "Toggle Full Screen [Esc]";
-#endif
-                    NativeSearch::Command(candidate, candidate->GetMenuBar()->FindMenuItem("View", fullScreenLabel));
-                    Await([&] { return candidate->GetSize() != normal && editor->GetClientSize().x > 100; },
-                          "candidate native fullscreen presentation finishes before Shift+Escape");
-                    editor->Send(CallTipShow, 1,
-                                 reinterpret_cast<intptr_t>("Shift+Escape bypasses CallTip/fullscreen"));
-                }
+                const auto before = PrepareCloseCandidate(candidate, scenario, path);
                 const int choice = scenario < 2 ? wxID_CANCEL : scenario == 4 ? wxID_NO : wxID_YES;
                 NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, choice,
                                                         scenario == 3 ? TestFiles::Filename(path) : wxString{});
                 candidate->SetTitle(wxString::Format("wxnotepad Escape candidate %d", scenario));
-                WindowActionKey(candidate, shift);
-                Await([&] { return driver.prompts == 1; },
+                WindowActionKey(candidate, before.shift);
+                Await([&driver] { return driver.prompts == 1; },
                       "actual Escape exit opens the existing unsaved confirmation");
-                if (scenario < 3) {
-                    Await([&] { return retained && retained->IsEnabled(); },
-                          "Cancel/failed Save returns to the editor");
-                    if (scenario == 2)
-                        Await([&] { return driver.errors == 1; }, "failed Save shows the existing native error");
-                    Require(retained && !retained->IsBeingDeleted() && TestEditor::Text(editor) == before &&
-                                editor->Send(GetModify) && retained->DocumentPath() == originalPath,
-                            "Cancel and failed Save preserve the same owned document and history");
-                    Require((editor->Send(GetReadOnly) != 0) == (scenario == 1),
-                            "exit cancellation preserves read-only mode");
-                    // SCI_CANUNDO is false in read-only mode even with retained history.
-                    if (scenario == 1) editor->Send(SetReadOnly, 0);
-                    Require(editor->Send(CanUndo), "cancelled close retains the document undo history");
-                    if (scenario == 1) editor->Send(SetReadOnly, 1);
-                    retained->Destroy();
-                } else {
-                    Await([&] { return !retained; }, "successful Save/Discard closes the owned frame");
-                    if (scenario == 3)
-                        Require(driver.choosers == 1 && TestFiles::Bytes(path) == "unsaved content",
-                                "Save from Escape writes the actual unnamed document before closing");
-                }
+                if (scenario < 3)
+                    CheckCancelledClose(retained, scenario, before, driver);
+                else
+                    CheckSuccessfulClose(retained, scenario, path, driver);
                 driver.Stop();
                 Require(sentinel->IsShown() && !sentinel->IsBeingDeleted(),
                         "exit closes only its owned application window");
