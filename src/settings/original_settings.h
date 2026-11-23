@@ -25,8 +25,12 @@ struct OriginalTabs {
     bool useGlobal = true;
 };
 
+enum class TitlePathNameFormat { NameOnly = 0, NameFirst = 1, FullPath = 2 };
+
 // Defaults and INI names follow Notepad4 89b8b36, Notepad4.cpp::LoadSettings.
 struct OriginalSettings {
+    static constexpr auto DefaultToolbarButtons =
+        "22 3 0 1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 16 0 17";
     FontSettings fonts;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
@@ -35,8 +39,12 @@ struct OriginalSettings {
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
     bool showToolbar = true;
+    int autoScaleToolbar = DisplayUnits::DefaultDpi;
+    wxString toolbarButtons = DefaultToolbarButtons;
     bool showStatusbar = true;
     int fullScreenMode = FullScreenMode_Default;
+    EscapeFunction escapeFunction = EscapeFunction::None;
+    TitlePathNameFormat pathNameFormat = TitlePathNameFormat::NameFirst;
     bool wordWrap = true;
     int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
     WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;
@@ -52,6 +60,8 @@ struct OriginalSettings {
     bool showIndentGuides = false;
     bool simpleIndentGuides = false;
     bool autoSelect = true;
+    int defaultScheme = 0;
+    wxString favoriteSchemes;
     bool noCgiGuess = false;
     bool noHtmlGuess = false;
     bool fixLineEndings = false;

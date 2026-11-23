@@ -264,7 +264,7 @@ constexpr auto rustStyles = std::to_array<SyntaxStyle>({
     {SCE_RUST_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_RUST_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata rustOriginal = {640, 4, 4, (1 << 0) | (1 << 1), SCE_RUST_FUNCTION_DEFINITION, '\\', SCE_RUST_ESCAPECHAR, SCE_RUST_FORMAT_SPECIFIER, 0, SCE_RUST_CHARACTER, SCE_RUST_LIFETIME, SCE_RUST_OPERATOR, 0, SCE_RUST_TASKMARKER, SCE_RUST_CHARACTER, SCE_RUST_FORMAT_SPECIFIER};
+constexpr SyntaxOriginalMetadata rustOriginal = {640, 4, 4, (1 << 0) | (1 << 1), SCE_RUST_FUNCTION_DEFINITION, '\\', SCE_RUST_ESCAPECHAR, SCE_RUST_FORMAT_SPECIFIER, 0, SCE_RUST_CHARACTER, SCE_RUST_LIFETIME, SCE_RUST_OPERATOR, 0, SCE_RUST_TASKMARKER, SCE_RUST_CHARACTER, SCE_RUST_FORMAT_SPECIFIER, 67};
 constexpr const char* rustSettingsSection = "Rust Source";
 constexpr auto rustExtensions = std::to_array<const char*>({"rs"});
 // clang-format on

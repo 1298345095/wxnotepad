@@ -17,10 +17,48 @@
 
 namespace {
 constexpr int DialogPaddingDip = 10;
+struct SchemeFilters {
+    wxString wildcard;
+    std::vector<SaveFileType> types;
+};
+SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, const wxString& favorites, bool open) {
+    SchemeFilters result;
+    const auto all = [&] {
+        const wxString pattern = wxASCII_STR(wxFileSelectorDefaultWildcardStr);
+        // TRANSLATORS: Original IDS_FILTER_ALL caption; %s is the platform all-file wildcard (*.* on Windows, * on
+        // Unix).
+        result.wildcard += wxString::Format(_("All Files (%s)"), pattern) + "|" + pattern + "|";
+        result.types.emplace_back(SaveType::AllFiles);
+    };
+    if (open) all();
+    const auto currentBase = SyntaxSettingsLanguage(current);
+    const auto add = [&](SyntaxLanguage language, bool active) {
+        const auto& definition = SyntaxFor(language);
+        wxArrayString patterns;
+        for (const auto* extension : definition.extensions)
+            patterns.Add("*." + wxString(extension));
+        if (const auto extension = wxFileName(path).GetExt();
+            active && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
+            patterns.Add("*." + extension);
+        const auto pattern = wxJoin(patterns, ';');
+        const auto* label = language == SyntaxLanguage::MarkdownGitHub ? wxTRANSLATE("Markdown") : definition.name;
+        result.wildcard += wxGetTranslation(label) + " (" + pattern + ")|" + pattern + "|";
+        result.types.emplace_back(active ? current : language);
+    };
+    add(currentBase, true);
+    if (currentBase != SyntaxLanguage::PlainText) add(SyntaxLanguage::PlainText, false);
+    for (const auto language : FavoriteSyntaxSchemes(favorites)) {
+        if (language != currentBase) add(language, false);
+    }
+    if (!open) all();
+    result.wildcard.RemoveLast();
+    return result;
+}
 } // namespace
 
-OpenFileDialog::OpenFileDialog(wxWindow* parent)
-    : wxFileDialog(parent, _("Open file"), {}, {}, _("Text files (*.txt)") + "|*.txt|" + _("All files (*.*)") + "|*.*",
+OpenFileDialog::OpenFileDialog(wxWindow* parent, SyntaxLanguage current, const wxString& path,
+                               const wxString& favorites)
+    : wxFileDialog(parent, _("Open file"), {}, {}, FileSchemeFilters(current, path, favorites, true).wildcard,
                    wxFD_OPEN | wxFD_FILE_MUST_EXIST) {
 }
 
@@ -30,42 +68,18 @@ std::optional<wxString> OpenFileDialog::Choose() {
 }
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
-                                             const wxString& path, const SaveFileLocation& initial) {
-    wxString wildcard;
-    std::vector<SaveFileType> types;
-    // Original Markdown has one file-filter identity and three menu dialects.
-    // Keep the active dialect when its shared current filter is accepted.
-    const bool currentMarkdown = SyntaxSettingsLanguage(currentLanguage) == SyntaxLanguage::MarkdownGitHub;
-    const auto addLanguage = [&](const SyntaxDefinition& definition, bool current) {
-        wxArrayString patterns;
-        for (const auto* extension : definition.extensions)
-            patterns.Add("*." + wxString(extension));
-        if (const auto extension = wxFileName(path).GetExt();
-            current && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
-            patterns.Add("*." + extension);
-        const auto pattern = wxJoin(patterns, ';');
-        const bool markdown = definition.language == SyntaxLanguage::MarkdownGitHub;
-        wildcard += wxGetTranslation(markdown ? wxTRANSLATE("Markdown") : definition.name) + " (" + pattern + ")|" +
-                    pattern + "|";
-        types.emplace_back(current && markdown ? currentLanguage : definition.language);
-    };
-    addLanguage(SyntaxFor(currentMarkdown ? SyntaxLanguage::MarkdownGitHub : currentLanguage), true);
-    for (const auto& definition : SyntaxCatalog()) {
-        if (definition.language == SyntaxLanguage::MarkdownGitLab ||
-            definition.language == SyntaxLanguage::MarkdownPandoc ||
-            (currentMarkdown && definition.language == SyntaxLanguage::MarkdownGitHub))
-            continue;
-        if (definition.language != currentLanguage) addLanguage(definition, false);
-    }
-    wildcard += _("All Files (*)") + "|*";
-    types.emplace_back(SaveType::AllFiles);
+                                             const wxString& path, const SaveFileLocation& initial,
+                                             const wxString& favorites) {
+    // Pinned Styles.cpp::Style_GetFileDialogFilter; unavailable fixed text schemes
+    // are omitted. Current dialect remains distinct from its shared base filter.
+    const auto filters = FileSchemeFilters(currentLanguage, path, favorites, false);
     const wxFileName current(path);
     wxFileDialog dialog(parent, title, initial.directory.empty() ? current.GetPath() : initial.directory,
-                        initial.filename.empty() ? current.GetFullName() : initial.filename, wildcard,
+                        initial.filename.empty() ? current.GetFullName() : initial.filename, filters.wildcard,
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     dialog.SetFilterIndex(0);
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
-    return ChosenSaveFile{dialog.GetPath(), types.at(static_cast<size_t>(dialog.GetFilterIndex()))};
+    return ChosenSaveFile{dialog.GetPath(), filters.types.at(static_cast<size_t>(dialog.GetFilterIndex()))};
 }
 
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {

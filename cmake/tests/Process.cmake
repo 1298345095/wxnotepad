@@ -99,10 +99,10 @@ foreach(scenario startup lifecycle restart native dynamic layout errors base64)
         --scenario "${scenario}")
     set_tests_properties(packaged_ui_localization_${scenario} PROPERTIES TIMEOUT 180)
 endforeach()
+add_test(NAME native_localization_button_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py")
+set_tests_properties(native_localization_button_readiness PROPERTIES TIMEOUT 30)
 if(NOT WIN32)
-    add_test(NAME native_localization_button_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
-        "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py")
-    set_tests_properties(native_localization_button_readiness PROPERTIES TIMEOUT 30)
     add_test(NAME native_localization_input_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_button_readiness.py" --input)
     set_tests_properties(native_localization_input_readiness PROPERTIES TIMEOUT 30)

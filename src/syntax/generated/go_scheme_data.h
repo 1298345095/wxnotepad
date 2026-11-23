@@ -127,7 +127,7 @@ constexpr auto goStyles = std::to_array<SyntaxStyle>({
     {SCE_GO_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_GO_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata goOriginal = {64, 4, 4, (1 << 0) | (1 << 1), SCE_GO_FUNCTION_DEFINITION, '\\', SCE_GO_ESCAPECHAR, SCE_GO_FORMAT_SPECIFIER, 0, SCE_GO_CHARACTER, 0, SCE_GO_OPERATOR, SCE_GO_OPERATOR2, SCE_GO_TASKMARKER, SCE_GO_CHARACTER, SCE_GO_FORMAT_SPECIFIER};
+constexpr SyntaxOriginalMetadata goOriginal = {64, 4, 4, (1 << 0) | (1 << 1), SCE_GO_FUNCTION_DEFINITION, '\\', SCE_GO_ESCAPECHAR, SCE_GO_FORMAT_SPECIFIER, 0, SCE_GO_CHARACTER, 0, SCE_GO_OPERATOR, SCE_GO_OPERATOR2, SCE_GO_TASKMARKER, SCE_GO_CHARACTER, SCE_GO_FORMAT_SPECIFIER, 15};
 constexpr const char* goSettingsSection = "Go Source";
 constexpr auto goExtensions = std::to_array<const char*>({"go", "gop", "ql"});
 // clang-format on

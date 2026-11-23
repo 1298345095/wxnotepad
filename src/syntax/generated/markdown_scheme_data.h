@@ -72,7 +72,7 @@ constexpr auto markdownStyles = std::to_array<SyntaxStyle>({
     {SCE_MARKDOWN_DIFF_DEL_CURLY, 0x000000, 0xFF8080, false, false, false},
     {SCE_MARKDOWN_DIFF_DEL_SQUARE, 0x000000, 0xFF8080, false, false, false},
 });
-constexpr SyntaxOriginalMetadata markdownOriginal = {1028, 4, 4, (1 << 0) | (1 << 1) | (1 << 2), 0, '\\', SCE_MARKDOWN_ESCAPECHAR, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+constexpr SyntaxOriginalMetadata markdownOriginal = {1028, 4, 4, (1 << 0) | (1 << 1) | (1 << 2), 0, '\\', SCE_MARKDOWN_ESCAPECHAR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 92};
 constexpr const char* markdownSettingsSection = "Markdown";
 constexpr auto markdownExtensions = std::to_array<const char*>({"md", "markdown", "mdown", "mkdn", "mkd", "litcoffee", "rmd", "jmd"});
 // clang-format on

@@ -917,6 +917,6 @@ constexpr auto cppStyles = std::to_array<SyntaxStyle>({
     {SCE_C_ASM_INSTRUCTION, 0x0080FF, 0xFFFFFF, false, false, false},
     {SCE_C_ASM_REGISTER, 0xFF8000, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata cppOriginal = {960, 4, 4, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', SCE_C_ESCAPECHAR, 0, 0, SCE_C_CHARACTER, SCE_C_NUMBER, SCE_C_OPERATOR, 0, SCE_C_COMMENTDOC_TAG_XML, SCE_C_CHARACTER, SCE_C_ESCAPECHAR};
+constexpr SyntaxOriginalMetadata cppOriginal = {960, 4, 4, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', SCE_C_ESCAPECHAR, 0, 0, SCE_C_CHARACTER, SCE_C_NUMBER, SCE_C_OPERATOR, 0, SCE_C_COMMENTDOC_TAG_XML, SCE_C_CHARACTER, SCE_C_ESCAPECHAR, 1};
 constexpr const char* cppSettingsSection = "C/C++ Source";
 // clang-format on

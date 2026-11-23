@@ -165,6 +165,11 @@ public:
                 Require(menus->IsChecked(menu) && menus->IsChecked(status), "both command checks reflect visibility");
                 NativePaint::Complete(frame->Editor());
 #ifdef __WXMSW__
+                std::printf("Initial native geometry: editor=%dx%d client=%dx%d toolbar=%dx%d status=%dx%d DPI=%d\n",
+                            frame->Editor()->GetSize().x, frame->Editor()->GetSize().y, frame->GetClientSize().x,
+                            frame->GetClientSize().y, frame->GetToolBar()->GetSize().x,
+                            frame->GetToolBar()->GetSize().y, frame->GetStatusBar()->GetSize().x,
+                            frame->GetStatusBar()->GetSize().y, frame->GetDPI().x);
                 WaitForLayout([&] { return frame->Editor()->GetSize().y == frame->GetClientSize().y; },
                               "initial editor height matches the native frame client area");
 #endif

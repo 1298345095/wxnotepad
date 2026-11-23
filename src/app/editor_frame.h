@@ -4,6 +4,7 @@
 #include <wx/frame.h>
 #include <array>
 #include <memory>
+#include <vector>
 #include "document/document_session.h"
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
@@ -74,7 +75,7 @@ private:
     bool FullScreenActive() const;
     void SetFullScreen(bool active);
     void HandleFullScreenKey(int modifiers);
-    bool HandleFullScreenEscape();
+    bool HandleEscapeKey(int modifiers);
 #ifdef __WXMSW__
     struct FullScreenPlacement;
     std::unique_ptr<FullScreenPlacement> fullScreenPlacement_;
@@ -101,6 +102,7 @@ private:
     void RecordRecentFile();
     int revertId_;
     wxString lastSaveCopyDirectory_;
+    wxString titleExcerpt_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;
@@ -124,6 +126,11 @@ private:
     void ApplyWrapSymbols();
     void CreateMenus();
     void CreateDefaultToolbar();
+    wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;
+    void AppendToolbarCommands(wxMenu* appearance);
+    void RebuildToolbar();
+    void CustomizeToolbar();
+    std::vector<int> toolbarButtons_;
     int FindMenuCommand(const wxString& label) const;
     void CreatePositionStatus();
     void ShowEditorContextMenu(wxContextMenuEvent& event);
@@ -162,6 +169,7 @@ private:
     void AppendCompletionOptions(wxMenu* view);
     void AppendSelectionOptions(wxMenu* view);
     void AppendAppearanceOptions(wxMenu* view);
+    void AppendWindowTitleOptions(wxMenu* settings);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
     void AppendCallTipCommands(wxMenu* view);
@@ -219,6 +227,7 @@ private:
     int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
+    void ShowSyntaxScheme(bool favorite = false);
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const DocumentLoad::Intent& intent);

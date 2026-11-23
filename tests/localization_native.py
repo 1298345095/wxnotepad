@@ -197,16 +197,31 @@ class Dialogs:
             pixbuf = Gdk.pixbuf_get_from_window(root, 0, 0, root.get_width(), root.get_height())
             assert pixbuf and pixbuf.savev(str(prefix.with_suffix('.png')), 'png', [], [])
 
-    def click(self, window, caption):
+    def click(self, window, caption, *, deadline=None):
+        if deadline is None:
+            deadline = time.monotonic() + 10
         if sys.platform == 'win32':
             self.activate(window)
-            for child in self.children(window):
-                if plain(self.title(child)) == caption:
-                    self.user.SendMessageW(child, 0x00F5, 0, 0)  # BM_CLICK
-                    return
+            self.user.IsWindowEnabled.argtypes = [wintypes.HWND]
+            observed = []
+            while time.monotonic() < deadline:
+                observed = []
+                for child in self.children(window):
+                    kind = ctypes.create_unicode_buffer(256)
+                    self.user.GetClassNameW(child, kind, len(kind))
+                    if kind.value.lower() != 'button':
+                        continue
+                    name = plain(self.title(child))
+                    enabled = bool(self.user.IsWindowEnabled(child))
+                    observed.append((name, enabled))
+                    if name == caption and enabled:
+                        # Wait for native publication; deliver the action once.
+                        self.user.SendMessageW(child, 0x00F5, 0, 0)  # BM_CLICK
+                        return
+                time.sleep(.03)
+            raise AssertionError(f'Native button {caption!r} not ready; observed button names/enabled: {observed}')
         else:
             from gi.repository import GLib
-            deadline = time.monotonic() + 10
             observed = []
             while time.monotonic() < deadline:
                 # A removed descendant can leave children() with a partial tree.
@@ -232,7 +247,6 @@ class Dialogs:
                     return
                 time.sleep(.03)
             raise AssertionError(f'Native button {caption!r} not ready; observed button roles/names: {observed}')
-        raise AssertionError(f'Native button {caption!r} not present: {self.texts(window)}')
 
     def wait_text(self, window, text):
         deadline = time.monotonic() + 10
@@ -571,7 +585,7 @@ class Dialogs:
                         continue
                     text = ctypes.create_unicode_buffer(length + 1)
                     self.user.SendMessageW(child, 0x0148, index, ctypes.cast(text, ctypes.c_void_p).value)
-                    if '*.' in text.value:
+                    if '(*' in text.value:
                         filters.append(text.value)
             return filters
         # The chooser can still publish its filter controls after navigation.
@@ -582,12 +596,12 @@ class Dialogs:
         for child, action in controls:
             assert action.do_action(0), 'Native chooser filter popup Open action'
             self.wait_chooser_popup(child, True, deadline)
-            filters = [text for text in self.texts(window) if '*.' in text]
+            filters = [text for text in self.texts(window) if '(*' in text]
             assert action.do_action(0), 'Native chooser filter popup Close action'
             self.wait_chooser_popup(child, False, deadline)
             if filters:
                 return filters
-        return [text for text in self.texts(window) if '*.' in text]
+        return [text for text in self.texts(window) if '(*' in text]
 
     def answer(self, process, choice, title='wxnotepad', window=None):
         window = window if window is not None else self.wait(process, title)

@@ -59,7 +59,7 @@ runs:
         )
         case "$DEPENDENCY_PROFILE" in
           build) ;;
-          gui) linux_packages+=(gdb xvfb xauth x11-utils dbus-x11 xdotool fonts-dejavu-core fonts-noto-cjk
+          gui) linux_packages+=(gdb xvfb xauth x11-utils dbus-x11 xdotool openbox fonts-dejavu-core fonts-noto-cjk
                                 python3-gi gir1.2-atspi-2.0 at-spi2-core locales
                                 meson libinput-dev libdrm-dev libx11-xcb-dev libxcb-xkb-dev wayland-protocols) ;;
           tidy) linux_packages+=(clang-tidy-18) ;;

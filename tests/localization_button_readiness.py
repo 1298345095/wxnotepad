@@ -1,4 +1,4 @@
-"""Exercise native button publication through the packaged UI's AT-SPI driver."""
+"""Exercise native button publication through the packaged UI's native driver."""
 from pathlib import Path
 import subprocess
 import sys
@@ -16,6 +16,9 @@ INPUT_TEXT = 'native value 中文'
 
 
 def publisher(root):
+    if sys.platform == 'win32':
+        windows_publisher(root)
+        return
     sys.path.append('/usr/lib/python3/dist-packages')
     import gi
     gi.require_version('Gtk', '3.0')
@@ -90,6 +93,70 @@ def publisher(root):
     Gtk.main()
 
 
+def windows_publisher(root):
+    import ctypes
+    from ctypes import wintypes
+    user = ctypes.WinDLL('user32', use_last_error=True)
+    user.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+                                   ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                   wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, ctypes.c_void_p]
+    user.CreateWindowExW.restype = wintypes.HWND
+    user.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p]
+    user.SetWindowLongPtrW.restype = wintypes.LPARAM
+    user.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user.DefWindowProcW.restype = wintypes.LPARAM
+    user.DestroyWindow.argtypes = [wintypes.HWND]
+    user.EnableWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+    user.SetTimer.argtypes = [wintypes.HWND, ctypes.c_size_t, wintypes.UINT, ctypes.c_void_p]
+    user.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
+    visible_child = 0x40000000 | 0x10000000  # WS_CHILD | WS_VISIBLE.
+    window = user.CreateWindowExW(0, 'STATIC', TITLE, 0x00CF0000 | 0x10000000, 80, 80, 320, 160,
+                                 None, None, None, None)  # WS_OVERLAPPEDWINDOW | WS_VISIBLE.
+    assert window, ctypes.WinError(ctypes.get_last_error())
+    placeholder = user.CreateWindowExW(0, 'STATIC', 'Close', visible_child, 20, 20, 180, 30,
+                                      window, None, None, None)
+    assert placeholder
+    actions = 0
+    publication = None
+    button = None
+
+    @ctypes.WINFUNCTYPE(wintypes.LPARAM, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+    def procedure(handle, message, first, second):
+        nonlocal actions, publication, button
+        if message == 0x0111 and second:  # WM_COMMAND / BN_CLICKED.
+            actions += 1
+            (root / 'actions').write_text(str(actions), encoding='utf-8')
+            return 0
+        if message == 0x0113:  # WM_TIMER.
+            if (root / 'stop').exists():
+                user.PostQuitMessage(0)
+            if (root / 'initial-observed').exists() and (root / 'publish').exists():
+                (root / 'publish').unlink()
+                publication = time.monotonic() + BUTTON_PUBLICATION_DELAY_MS / 1000
+            if publication is not None and time.monotonic() >= publication:
+                if button is None:
+                    user.DestroyWindow(placeholder)
+                    button = user.CreateWindowExW(0, 'BUTTON', 'Close', visible_child | 0x08000000,
+                                                  20, 20, 180, 30, window, None, None, None)  # WS_DISABLED.
+                    assert button
+                    (root / 'disabled-button').touch()
+                    publication = time.monotonic() + BUTTON_PUBLICATION_DELAY_MS / 1000
+                else:
+                    publication = None
+                    (root / 'published').touch()
+                    user.EnableWindow(button, True)
+            return 0
+        return user.DefWindowProcW(handle, message, first, second)
+
+    assert user.SetWindowLongPtrW(window, -4, procedure)  # GWLP_WNDPROC.
+    assert user.SetTimer(window, 1, COMMAND_POLL_MS, None)
+    message = wintypes.MSG()
+    while user.GetMessageW(ctypes.byref(message), None, 0, 0) > 0:
+        user.TranslateMessage(ctypes.byref(message))
+        user.DispatchMessageW(ctypes.byref(message))
+    user.DestroyWindow(window)
+
+
 def wait_marker(path):
     deadline = time.monotonic() + 10
     while not path.exists() and time.monotonic() < deadline:
@@ -129,9 +196,19 @@ def main():
                 assert (root / 'value').read_text(encoding='utf-8') == INPUT_TEXT
             else:
                 dialogs.wait_text(window, 'Close')
-                before = [(node.get_role_name(), plain(node.get_name())) for node in dialogs.children(window)]
-                assert ('label', 'Close') in before, before
-                assert ('push button', 'Close') not in before, before
+                if sys.platform == 'win32':
+                    import ctypes
+                    def role(node):
+                        name = ctypes.create_unicode_buffer(256)
+                        dialogs.user.GetClassNameW(node, name, len(name))
+                        return name.value
+                    before = [(role(node), plain(dialogs.title(node))) for node in dialogs.children(window)]
+                    assert ('Static', 'Close') in before, before
+                    assert ('Button', 'Close') not in before, before
+                else:
+                    before = [(node.get_role_name(), plain(node.get_name())) for node in dialogs.children(window)]
+                    assert ('label', 'Close') in before, before
+                    assert ('push button', 'Close') not in before, before
                 assert not (root / 'published').exists()
                 (root / 'initial-observed').touch()
                 (root / 'publish').touch()
@@ -141,6 +218,8 @@ def main():
                     print('Initial native tree:', before, flush=True)
                     raise
                 assert (root / 'published').exists(), 'The native button must be published before activation'
+                if sys.platform == 'win32':
+                    assert (root / 'disabled-button').exists(), 'The native button must become enabled before activation'
             wait_marker(root / 'actions')
             assert (root / 'actions').read_text(encoding='utf-8') == '1', 'Exactly one native action is delivered'
             (root / 'stop').touch()

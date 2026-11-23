@@ -3,6 +3,9 @@ file(GLOB lexlib_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/lexlib/
 add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJava.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSharp.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexKotlin.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexRust.cxx"
@@ -12,6 +15,8 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTOML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexYAML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCMake.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSS.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexSQL.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
@@ -28,6 +33,7 @@ add_library(editor_runtime STATIC
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/character_information.cpp
+    src/editor/title_excerpt.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
@@ -118,6 +124,7 @@ add_library(app_shell STATIC
     src/settings/environment_expansion.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
+    src/app/dialogs/scheme_chooser.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
     src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp
@@ -145,6 +152,7 @@ add_library(app_shell STATIC
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
+    src/app/dialogs/toolbar_customization_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(NOT WIN32)

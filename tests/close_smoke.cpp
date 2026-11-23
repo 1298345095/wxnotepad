@@ -32,26 +32,44 @@ void TraceFrame(const char* transition, const EditorFrame* frame) {
     std::fprintf(stderr, " frame=%p\n", static_cast<const void*>(frame));
     std::fflush(stderr);
 }
-EditorFrame* NewFrame() {
-    auto* frame = new EditorFrame;
-    frame->SetFileWatchingOptions({.mode = FileWatchingMode::None});
-    TraceFrame("created", frame);
-    frame->Bind(wxEVT_DESTROY, [frame](wxWindowDestroyEvent& event) {
-        if (event.GetEventObject() == frame) TraceFrame("destroy event", frame);
-        event.Skip();
-    });
-    return frame;
-}
-bool CloseFrame(EditorFrame* frame) {
-    TraceFrame("close begin", frame);
-    const bool closed = frame->Close();
-    TraceFrame(closed ? "close returned true" : "close returned false", frame);
-    return closed;
-}
-void DestroyFrame(EditorFrame* frame) {
-    TraceFrame("destroy requested", frame);
-    frame->Destroy();
-}
+class FrameLifecycle {
+public:
+    EditorFrame* NewFrame() {
+        // Each caller has finished its assertions and stopped its dialog driver.
+        // Process deferred destruction before the next independent scenario; the
+        // original Cancel scenario's still-live frame remains available.
+        wxYield();
+        if (completedDestructions_ != scheduledDestructions_)
+            throw std::runtime_error("completed scenarios must destroy their deferred frames before the next one");
+        auto* frame = new EditorFrame;
+        frame->SetFileWatchingOptions({.mode = FileWatchingMode::None});
+        TraceFrame("created", frame);
+        frame->Bind(wxEVT_DESTROY, [this, frame](wxWindowDestroyEvent& event) {
+            if (event.GetEventObject() == frame) {
+                ++completedDestructions_;
+                TraceFrame("destroy event", frame);
+            }
+            event.Skip();
+        });
+        return frame;
+    }
+    bool CloseFrame(EditorFrame* frame) {
+        TraceFrame("close begin", frame);
+        const bool closed = frame->Close();
+        if (closed) ++scheduledDestructions_;
+        TraceFrame(closed ? "close returned true" : "close returned false", frame);
+        return closed;
+    }
+    void DestroyFrame(EditorFrame* frame) {
+        TraceFrame("destroy requested", frame);
+        ++scheduledDestructions_;
+        frame->Destroy();
+    }
+
+private:
+    unsigned scheduledDestructions_ = 0;
+    unsigned completedDestructions_ = 0;
+};
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -70,9 +88,9 @@ struct Sample {
     bool prompt;
     bool named = false;
 };
-void CheckWhitespaceTransition(const std::filesystem::path& directory, const std::filesystem::path& source,
-                               const Sample& sample, const char* action) {
-    auto* candidate = NewFrame();
+void CheckWhitespaceTransition(FrameLifecycle& frames, const std::filesystem::path& directory,
+                               const std::filesystem::path& source, const Sample& sample, const char* action) {
+    auto* candidate = frames.NewFrame();
     if (sample.named)
         Require(candidate->SaveFirst(Filename(directory / "named-whitespace.txt")).status == SaveStatus::Saved,
                 "named whitespace fixture must save");
@@ -86,7 +104,7 @@ void CheckWhitespaceTransition(const std::filesystem::path& directory, const std
     FileCommandDriver driver(FileDialogProfile::Save, wxID_CANCEL, {}, Trace);
     const bool closing = std::string_view(action) == "Close";
     const bool opening = std::string_view(action) == "Open";
-    const bool completed = closing   ? CloseFrame(candidate)
+    const bool completed = closing   ? frames.CloseFrame(candidate)
                            : opening ? candidate->Open(Filename(source)).status == OpenStatus::Opened
                                      : candidate->NewDocument();
     driver.Stop();
@@ -102,9 +120,9 @@ void CheckWhitespaceTransition(const std::filesystem::path& directory, const std
                     !candidate->Editor()->Send(Scintilla::Message::GetModify),
                 "successful replacement must establish the new document");
     }
-    if (!closing || sample.prompt) DestroyFrame(candidate);
+    if (!closing || sample.prompt) frames.DestroyFrame(candidate);
 }
-void CheckWhitespacePrompts(const std::filesystem::path& directory) {
+void CheckWhitespacePrompts(FrameLifecycle& frames, const std::filesystem::path& directory) {
     const auto source = directory / "open-whitespace.txt";
     std::ofstream(source, std::ios::binary) << "opened";
     const std::array<Sample, 13> samples = {{
@@ -124,12 +142,12 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     }};
     for (const auto& sample : samples) {
         for (const auto* action : {"New", "Open", "Close"}) {
-            CheckWhitespaceTransition(directory, source, sample, action);
+            CheckWhitespaceTransition(frames, directory, source, sample, action);
         }
         std::printf("PASS: New/Open/Close whitespace rule: %s\n", sample.name);
     }
 
-    auto* explicitSave = NewFrame();
+    auto* explicitSave = frames.NewFrame();
     const std::string whitespace = " \t\r\n\v\f";
     Add(explicitSave, whitespace);
     Require(explicitSave->Open(std::nullopt).status == OpenStatus::Cancelled &&
@@ -160,7 +178,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     Require(saveAsDriver.choosers == 1 && Bytes(secondPath) == whitespace &&
                 !explicitSave->Editor()->Send(Scintilla::Message::GetModify),
             "explicit Save As must preserve exact whitespace bytes and establish its save point");
-    DestroyFrame(explicitSave);
+    frames.DestroyFrame(explicitSave);
     std::puts("PASS: explicit whitespace Save/Save As and cancelled/failed operation state");
 }
 
@@ -170,12 +188,12 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         Trace("OnInit");
         SetExitOnFrameDelete(false);
-        auto* frame = NewFrame();
+        auto* frame = frames_.NewFrame();
         CallAfter([this, frame] {
             try {
                 Add(frame, "Unsaved 中文\r\n");
                 FileCommandDriver driver(FileDialogProfile::Save, wxID_CANCEL, {}, Trace);
-                Require(!CloseFrame(frame), "Cancel must veto the actual close event");
+                Require(!frames_.CloseFrame(frame), "Cancel must veto the actual close event");
                 driver.Stop();
                 Require(driver.prompts == 1, "dirty close must show the native confirmation");
                 Require(!frame->IsBeingDeleted(), "Cancel must retain the window");
@@ -187,41 +205,41 @@ public:
                 std::puts("PASS: close Cancel retains document and window");
                 const auto directory = TestFiles::TemporaryDirectory("wxnotepad-close");
                 std::filesystem::create_directory(directory);
-                CheckWhitespacePrompts(directory);
-                auto* saved = NewFrame();
+                CheckWhitespacePrompts(frames_, directory);
+                auto* saved = frames_.NewFrame();
                 const auto path = directory / "known.txt";
                 Add(saved, "first");
                 Require(saved->SaveFirst(Filename(path)).status == SaveStatus::Saved, "named-close setup must save");
                 Add(saved, " 中文\r\n");
                 FileCommandDriver saveDriver(FileDialogProfile::Save, wxID_YES, {}, Trace);
-                Require(CloseFrame(saved), "successful Save must allow closing");
+                Require(frames_.CloseFrame(saved), "successful Save must allow closing");
                 saveDriver.Stop();
                 Require(saveDriver.prompts == 1, "named dirty document must show native confirmation");
                 Require(Bytes(path) == "first \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\r\n",
                         "close Save must write changes to the known path");
                 std::puts("PASS: close Save writes changes to known path");
-                auto* clean = NewFrame();
+                auto* clean = frames_.NewFrame();
                 FileCommandDriver cleanDriver(FileDialogProfile::Save, wxID_CANCEL, {}, Trace);
-                Require(CloseFrame(clean), "unmodified document must close directly");
+                Require(frames_.CloseFrame(clean), "unmodified document must close directly");
                 cleanDriver.Stop();
                 Require(cleanDriver.prompts == 0, "unmodified close must not show a confirmation");
                 std::puts("PASS: unmodified document closes directly");
-                auto* discard = NewFrame();
+                auto* discard = frames_.NewFrame();
                 const auto discardPath = directory / "discard.txt";
                 Add(discard, "original bytes");
                 Require(discard->SaveFirst(Filename(discardPath)).status == SaveStatus::Saved,
                         "discard setup must save");
                 Add(discard, " changed");
                 FileCommandDriver discardDriver(FileDialogProfile::Save, wxID_NO, {}, Trace);
-                Require(CloseFrame(discard), "Discard must allow closing");
+                Require(frames_.CloseFrame(discard), "Discard must allow closing");
                 discardDriver.Stop();
                 Require(discardDriver.prompts == 1 && Bytes(discardPath) == "original bytes",
                         "Discard must prompt and leave disk unchanged");
                 std::puts("PASS: close Discard does not write changes");
-                auto* cancelledSave = NewFrame();
+                auto* cancelledSave = frames_.NewFrame();
                 Add(cancelledSave, "pending");
                 FileCommandDriver cancelledDriver(FileDialogProfile::Save, wxID_YES, {}, Trace);
-                Require(!CloseFrame(cancelledSave), "cancelling the Save chooser must veto closing");
+                Require(!frames_.CloseFrame(cancelledSave), "cancelling the Save chooser must veto closing");
                 cancelledDriver.Stop();
                 Require(cancelledDriver.prompts == 1 && cancelledDriver.choosers == 1,
                         "close Save must show native confirmation and chooser");
@@ -230,20 +248,20 @@ public:
                         "cancelled Save must retain text, identity and dirty state");
                 Add(cancelledSave, " continued");
                 Require(Text(cancelledSave) == "pending continued", "cancelled Save must allow continued editing");
-                DestroyFrame(cancelledSave);
+                frames_.DestroyFrame(cancelledSave);
                 std::puts("PASS: cancelled close Save retains the editable document");
-                auto* firstSave = NewFrame();
+                auto* firstSave = frames_.NewFrame();
                 const auto firstPath = directory / "first-close.txt";
                 Add(firstSave, "First 中文😀\r\n");
                 FileCommandDriver firstDriver(FileDialogProfile::Save, wxID_YES, Filename(firstPath), Trace);
-                Require(CloseFrame(firstSave), "successful first Save must allow closing");
+                Require(frames_.CloseFrame(firstSave), "successful first Save must allow closing");
                 firstDriver.Stop();
                 Require(firstDriver.prompts == 1 && firstDriver.choosers == 1,
                         "first close Save must use the native confirmation and path chooser");
                 Require(Bytes(firstPath) == "First \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\x{f0}\x{9f}\x{98}\x{80}\r\n",
                         "first close Save must preserve exact UTF-8 bytes without BOM");
                 std::puts("PASS: first close Save uses the native path chooser");
-                auto* failedSave = NewFrame();
+                auto* failedSave = frames_.NewFrame();
                 const auto failedPath = directory / "failure.txt";
                 Add(failedSave, "original");
                 Require(failedSave->SaveFirst(Filename(failedPath)).status == SaveStatus::Saved,
@@ -255,7 +273,7 @@ public:
                     std::ofstream(failedPath / "sentinel", std::ios::binary) << "keep";
                 }
                 FileCommandDriver failedDriver(FileDialogProfile::Save, wxID_YES, {}, Trace);
-                Require(!CloseFrame(failedSave), "failed Save must veto closing");
+                Require(!frames_.CloseFrame(failedSave), "failed Save must veto closing");
                 failedDriver.Stop();
                 Require(failedDriver.prompts == 1 && failedDriver.errors == 1 && failedDriver.choosers == 0,
                         "failed known-path Save must show its error without another path chooser");
@@ -266,14 +284,14 @@ public:
                 failedSave->Editor()->Send(Scintilla::Message::Undo);
                 Require(Text(failedSave) == "original" && !failedSave->Editor()->Send(Scintilla::Message::GetModify),
                         "failed close Save must retain history and the previous save point");
-                DestroyFrame(failedSave);
+                frames_.DestroyFrame(failedSave);
                 std::filesystem::remove_all(directory);
                 std::puts("PASS: failed close Save retains document, identity and history");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
-            if (!frame->IsBeingDeleted()) DestroyFrame(frame);
+            if (!frame->IsBeingDeleted()) frames_.DestroyFrame(frame);
             Trace("ExitMainLoop requested");
             ExitMainLoop();
         });
@@ -292,6 +310,7 @@ public:
     ~CloseApp() override { Trace("app destructor"); }
 
 private:
+    FrameLifecycle frames_;
     int result_ = 1;
 };
 } // namespace

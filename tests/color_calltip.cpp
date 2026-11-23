@@ -5,10 +5,15 @@
 #include "native_renderer_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
+#ifdef __WXMSW__
+#include "native_tree_input.h"
+#endif
 #include <array>
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include <vector>
+#include <SciLexer.h>
 #include <wx/dcmemory.h>
 #include <wx/filename.h>
 #include <wx/imagpng.h>
@@ -16,6 +21,10 @@
 #include <wx/display.h>
 #include <wx/colordlg.h>
 #include <wx/modalhook.h>
+#ifdef __WXGTK__
+#include <wx/weakref.h>
+#include <wx/toolbar.h>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -23,6 +32,187 @@ using Scintilla::Message;
 void Require(bool condition, const char* reason) {
     if (!condition) throw std::runtime_error(reason);
 }
+
+#ifdef __WXGTK__
+void ObservePopupPointerAncestry(gpointer owner) {
+    if (!owner) return;
+    if (!GTK_IS_WIDGET(owner)) return;
+    for (auto* widget = GTK_WIDGET(owner); widget; widget = gtk_widget_get_parent(widget))
+        std::fprintf(stderr, "CallTip GTK pointer ancestry widget=%p class=%s name=%s\n", static_cast<void*>(widget),
+                     G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
+}
+
+void ObservePopupWindow(GtkWidget* widget, GtkWidget* frameWidget, GtkWidget* tipWidget) {
+    auto* window = gtk_widget_get_window(widget);
+    auto* transient = gtk_window_get_transient_for(GTK_WINDOW(widget));
+    const auto hint = gtk_window_get_type_hint(GTK_WINDOW(widget));
+    GdkWindow* parent = nullptr;
+    GdkWindow* toplevel = nullptr;
+    int type = -1;
+    bool visible = false, viewable = false, destroyed = false;
+    unsigned surfaceId = 0;
+    if (window) {
+        parent = gdk_window_get_parent(window);
+        toplevel = gdk_window_get_effective_toplevel(window);
+        type = gdk_window_get_window_type(window);
+        visible = gdk_window_is_visible(window);
+        viewable = gdk_window_is_viewable(window);
+        destroyed = gdk_window_is_destroyed(window);
+        auto* display = gdk_window_get_display(window);
+        if (GDK_IS_WAYLAND_DISPLAY(display)) {
+            if (auto* surface = gdk_wayland_window_get_wl_surface(window))
+                surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+        }
+    }
+    std::fprintf(stderr,
+                 "CallTip GTK window widget=%p class=%s name=%s type=%d hint=%d is_frame=%d is_tip=%d "
+                 "is_tooltip=%d visible=%d realized=%d mapped=%d transient=%p gdk=%p native_parent=%p "
+                 "native_toplevel=%p gdk_type=%d gdk_visible=%d gdk_viewable=%d destroyed=%d surface=%u\n",
+                 static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
+                 gtk_window_get_window_type(GTK_WINDOW(widget)), hint, widget == frameWidget, widget == tipWidget,
+                 hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget), gtk_widget_get_realized(widget),
+                 gtk_widget_get_mapped(widget), static_cast<void*>(transient), static_cast<void*>(window),
+                 static_cast<void*>(parent), static_cast<void*>(toplevel), type, visible, viewable, destroyed,
+                 surfaceId);
+}
+
+void ObservePopupState(const char* phase, EditorFrame* frame) {
+    auto* tip = frame ? wxWindow::FindWindowByName("Color CallTip", frame->Editor()) : nullptr;
+    auto* tipWidget = tip ? GTK_WIDGET(tip->GetHandle()) : nullptr;
+    auto* frameWidget = frame ? GTK_WIDGET(frame->GetHandle()) : nullptr;
+    auto* display = gdk_display_get_default();
+    auto* seat = display ? gdk_display_get_default_seat(display) : nullptr;
+    auto* pointer = seat ? gdk_seat_get_pointer(seat) : nullptr;
+    int pointerX = 0, pointerY = 0;
+    auto* pointerWindow = pointer ? gdk_device_get_window_at_position(pointer, &pointerX, &pointerY) : nullptr;
+    gpointer pointerOwner = nullptr;
+    if (pointerWindow) gdk_window_get_user_data(pointerWindow, &pointerOwner);
+    std::fprintf(stderr, "CallTip GTK observation phase=%s frame=%p tip=%p pointer_window=%p pointer=%d,%d\n", phase,
+                 static_cast<void*>(frameWidget), static_cast<void*>(tipWidget), static_cast<void*>(pointerWindow),
+                 pointerX, pointerY);
+    ObservePopupPointerAncestry(pointerOwner);
+    auto* windows = gtk_window_list_toplevels();
+    for (auto* item = windows; item; item = item->next)
+        ObservePopupWindow(GTK_WIDGET(item->data), frameWidget, tipWidget);
+    g_list_free(windows);
+}
+
+class PopupWarnings final {
+public:
+    explicit PopupWarnings(EditorFrame* frame) : frame_(frame) {
+        handler_ = g_log_set_handler(
+            "Gdk", GLogLevelFlags(G_LOG_LEVEL_WARNING | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION), Warning, this);
+    }
+    PopupWarnings(const PopupWarnings&) = delete;
+    PopupWarnings& operator=(const PopupWarnings&) = delete;
+    PopupWarnings(PopupWarnings&&) = delete;
+    PopupWarnings& operator=(PopupWarnings&&) = delete;
+    ~PopupWarnings() { g_log_remove_handler("Gdk", handler_); }
+
+private:
+    static void Warning(const gchar* domain, GLogLevelFlags level, const gchar* message, gpointer data) {
+        g_log_default_handler(domain, level, message, nullptr);
+        if (g_strcmp0(message, "Tried to map a popup with a non-top most parent") == 0)
+            ObservePopupState("Gdk-warning", static_cast<PopupWarnings*>(data)->frame_.get());
+    }
+    wxWeakRef<EditorFrame> frame_;
+    guint handler_ = 0;
+};
+
+void MovePrivatePointer(EditorFrame* frame, GtkWidget* target, wxPoint point) {
+    auto* top = GTK_WIDGET(frame->GetHandle());
+    int x = 0, y = 0;
+    Require(gtk_widget_get_toplevel(target) == top &&
+                gtk_widget_translate_coordinates(target, top, point.x, point.y, &x, &y),
+            "native pointer target belongs to the owned frame");
+    Require(x >= 0 && y >= 0 && x < gtk_widget_get_allocated_width(top) && y < gtk_widget_get_allocated_height(top),
+            "native pointer target stays inside the owned frame");
+    auto* frameWindow = gtk_widget_get_window(top);
+    auto* surface = gdk_wayland_window_get_wl_surface(frameWindow);
+    Require(surface, "native pointer requires the owned Wayland surface");
+    wxString focusFile;
+    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native pointer uses the private driver");
+    const auto deadline = std::chrono::steady_clock::now() + NativeKeys::FocusAcknowledgementTimeout;
+    const auto expiry =
+        g_get_monotonic_time() +
+        std::chrono::duration_cast<std::chrono::microseconds>(NativeKeys::FocusAcknowledgementTimeout).count();
+    {
+        wxFFile request(focusFile + ".pointer-pending", "wb");
+        Require(request.IsOpened() &&
+                    request.Write(NativeTrace::Request(wxString::Format(
+                        "pointer:%lu:%u:%d:%d:%lld", wxGetProcessId(),
+                        wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)), x, y, static_cast<long long>(expiry)))),
+                "write the owned native pointer request");
+    }
+    Require(wxRenameFile(focusFile + ".pointer-pending", focusFile, true), "publish native pointer request once");
+    auto* pointer = gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(top)));
+    const auto arrived = [&] {
+        wxString pending;
+        wxFFile request(focusFile, "rb");
+        if (!request.IsOpened() || !request.ReadAll(&pending) || !pending.empty()) return false;
+        int px = 0, py = 0;
+        auto* window = gdk_device_get_window_at_position(pointer, &px, &py);
+        double localX = px, localY = py;
+        while (window && window != frameWindow) {
+            gdk_window_coords_to_parent(window, localX, localY, &localX, &localY);
+            window = gdk_window_get_parent(window);
+        }
+        return window == frameWindow && localX == x && localY == y;
+    };
+    while (!arrived() && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(arrived(), "native pointer reaches the requested owned client point");
+}
+
+GtkWidget* TooltipTool(GtkWidget* widget) {
+    if (gtk_widget_get_has_tooltip(widget) && gtk_widget_get_visible(widget)) return widget;
+    if (!GTK_IS_CONTAINER(widget)) return nullptr;
+    auto* children = gtk_container_get_children(GTK_CONTAINER(widget));
+    GtkWidget* found = nullptr;
+    for (auto* item = children; item && !found; item = item->next)
+        found = TooltipTool(GTK_WIDGET(item->data));
+    g_list_free(children);
+    return found;
+}
+
+void ReplayNativeTooltip(EditorFrame* frame) {
+    auto* toolbar = frame->GetToolBar();
+    Require(toolbar, "tooltip replay uses the delivered toolbar");
+    auto* tool = TooltipTool(GTK_WIDGET(toolbar->GTKGetToolbar()));
+    Require(tool, "tooltip replay uses an actual toolbar tool with help");
+    MovePrivatePointer(frame, tool,
+                       {gtk_widget_get_allocated_width(tool) / 2, gtk_widget_get_allocated_height(tool) / 2});
+    gtk_widget_trigger_tooltip_query(tool);
+    const auto visible = [frame] {
+        bool found = false;
+        auto* windows = gtk_window_list_toplevels();
+        for (auto* item = windows; item; item = item->next) {
+            auto* window = GTK_WINDOW(item->data);
+            found |= gtk_window_get_type_hint(window) == GDK_WINDOW_TYPE_HINT_TOOLTIP &&
+                     gtk_widget_get_mapped(GTK_WIDGET(window)) &&
+                     gtk_window_get_transient_for(window) == GTK_WINDOW(frame->GetHandle());
+        }
+        g_list_free(windows);
+        return found;
+    };
+    const auto deadline = std::chrono::steady_clock::now() + NativeKeys::FocusAcknowledgementTimeout;
+    while (!visible() && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(visible(), "actual native toolbar tooltip is visible before the captured hover mismatch");
+    ObservePopupState("tooltip-replay", frame);
+}
+
+void ReplayNativeTooltipIfRequested(EditorFrame* frame, bool typingInteraction) {
+    if (!typingInteraction) return;
+    if (!wxGetenv("WXNOTEPAD_CALLTIP_REPLAY_GTK_TOOLTIP")) return;
+    auto* display = gtk_widget_get_display(frame->Editor()->GetConnectWidget());
+    if (GDK_IS_WAYLAND_DISPLAY(display)) ReplayNativeTooltip(frame);
+}
+#endif
 
 wxMenu* CallTipMenu(EditorFrame* frame) {
     auto* bar = frame->GetMenuBar();
@@ -70,12 +260,20 @@ bool WaitFor(Check check, std::chrono::milliseconds timeout = std::chrono::milli
     return false;
 }
 
-void Hover(EditorControl* editor, intptr_t position) {
+struct HoverObservation {
+    wxPoint point;
+    wxPoint previous;
+};
+
+HoverObservation Hover(EditorControl* editor, intptr_t position) {
+    static wxPoint previous{-1, -1};
     const int x = static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)) + 1;
     const int y = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
                                    editor->Send(Message::TextHeight, 0) / 2);
 #ifdef __WXGTK__
     auto* widget = editor->GetConnectWidget();
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget)))
+        MovePrivatePointer(static_cast<EditorFrame*>(wxGetTopLevelParent(editor)), widget, {x, y});
     auto* event = gdk_event_new(GDK_MOTION_NOTIFY);
     event->motion.window = static_cast<GdkWindow*>(g_object_ref(editor->GTKGetDrawingWindow()));
     event->motion.send_event = TRUE;
@@ -85,12 +283,87 @@ void Hover(EditorControl* editor, intptr_t position) {
     gtk_widget_event(widget, event);
     gdk_event_free(event);
 #else
+#ifdef __WXMSW__
+    // The next genuine mouse message must agree with this fixture's hover.
+    // Retain wx motion delivery: wxMSW filters repeated native coordinates.
+    const auto screen = editor->ClientToScreen({x, y});
+    const auto handle = static_cast<HWND>(editor->GetHandle());
+    const auto hit = WindowFromPoint(POINT{screen.x, screen.y});
+    DWORD process = 0;
+    GetWindowThreadProcessId(hit, &process);
+    if (hit != handle || process != GetCurrentProcessId()) {
+        wchar_t kind[128]{};
+        GetClassNameW(hit, kind, 128);
+        RECT editorRect{}, hitRect{};
+        GetWindowRect(handle, &editorRect);
+        GetWindowRect(hit, &hitRect);
+        std::fprintf(stderr,
+                     "CallTip native pointer not ready: point=%d,%d editor=%p hit=%p hit_pid=%lu class=%ls "
+                     "parent=%p root=%p foreground=%p active=%p focus=%p editor_rect=%ld,%ld,%ld,%ld "
+                     "hit_rect=%ld,%ld,%ld,%ld\n",
+                     screen.x, screen.y, static_cast<void*>(handle), static_cast<void*>(hit), process, kind,
+                     static_cast<void*>(GetParent(hit)), static_cast<void*>(GetAncestor(hit, GA_ROOT)),
+                     static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetActiveWindow()),
+                     static_cast<void*>(GetFocus()), editorRect.left, editorRect.top, editorRect.right,
+                     editorRect.bottom, hitRect.left, hitRect.top, hitRect.right, hitRect.bottom);
+    }
+    NativeTreeInput::Move(handle, screen);
+#endif
     wxMouseEvent event(wxEVT_MOTION);
     event.SetPosition(wxPoint(x, y));
     event.SetEventObject(editor);
     editor->GetEventHandler()->ProcessEvent(event);
 #endif
+    const HoverObservation observed{{x, y}, previous};
+    previous = observed.point;
+    return observed;
 }
+
+class DwellEvents final : public wxEvtHandler {
+public:
+    explicit DwellEvents(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
+    ~DwellEvents() override { editor_->PopEventHandler(false); }
+    bool ProcessEvent(wxEvent& event) override {
+        const auto type = event.GetEventType();
+        const char* kind = type == wxEVT_MOTION         ? "motion"
+                           : type == wxEVT_LEAVE_WINDOW ? "leave"
+                           : type == wxEVT_KEY_DOWN     ? "key"
+                           : type == wxEVT_TIMER        ? "timer"
+                                                        : nullptr;
+        if (kind) {
+            const auto elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started_)
+                    .count();
+            const auto point = type == wxEVT_MOTION || type == wxEVT_LEAVE_WINDOW
+                                   ? static_cast<wxMouseEvent&>(event).GetPosition()
+                                   : wxPoint{-1, -1};
+            const auto interval = type == wxEVT_TIMER ? static_cast<wxTimerEvent&>(event).GetInterval() : 0;
+            events_.push_back({kind, elapsed, event.GetId(), event.GetTimestamp(), point, interval});
+        }
+        return wxEvtHandler::ProcessEvent(event);
+    }
+    void Report() const {
+        for (const auto& event : events_)
+            std::fprintf(stderr,
+                         "color preview event: kind=%s elapsed_ms=%lld id=%d timestamp=%ld point=%d,%d "
+                         "timer_interval_ms=%d\n",
+                         event.kind, event.elapsed, event.id, event.timestamp, event.point.x, event.point.y,
+                         event.interval);
+    }
+
+private:
+    struct Event {
+        const char* kind;
+        long long elapsed;
+        int id;
+        long timestamp;
+        wxPoint point;
+        int interval;
+    };
+    EditorControl* editor_;
+    const std::chrono::steady_clock::time_point started_ = std::chrono::steady_clock::now();
+    std::vector<Event> events_;
+};
 
 wxWindow* VisibleCallTip(EditorControl* editor) {
     auto* popup = wxWindow::FindWindowByName("Color CallTip", editor);
@@ -146,7 +419,7 @@ void CapturePreview(wxWindow* popup, const char* placement) {
     });
 }
 
-void CheckPreview(EditorFrame* frame) {
+void CheckPreview(EditorFrame* frame, bool typingInteraction = true) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     auto* modes = CallTipMenu(frame);
@@ -159,12 +432,23 @@ void CheckPreview(EditorFrame* frame) {
     editor->Send(SetText, 0, reinterpret_cast<intptr_t>("pre #aB3 and"));
     editor->Send(SetSel, 0, 0);
     NativePaint::Complete(editor);
+#ifdef __WXGTK__
+    ReplayNativeTooltipIfRequested(frame, typingInteraction);
+#endif
     Hover(editor, 5);
     Require(WaitFor([editor] { return VisibleCallTip(editor); }), "dwell shows a native preview of the original color");
     auto* popup = VisibleCallTip(editor);
     Require(editor->Send(CallTipActive) && wxWindow::FindFocus() == focus,
             "the mapped popup keeps the actual calltip active without taking keyboard focus");
-    const auto sample = NativePaint::Read(popup, wxRect(3, 3, 2, 2));
+    std::vector<wxColour> sample;
+    try {
+        sample = NativePaint::Read(popup, wxRect(3, 3, 2, 2));
+    } catch (...) {
+#ifdef __WXGTK__
+        ObservePopupState("paint-failure", frame);
+#endif
+        throw;
+    }
     Require(std::ranges::all_of(sample, [](const wxColour& color) { return color == wxColour(170, 187, 51); }),
             "the native popup paints the RGB independently observed in the original chooser");
     const auto display = wxDisplay::GetFromWindow(frame);
@@ -174,6 +458,15 @@ void CheckPreview(EditorFrame* frame) {
                 popup->GetDPI().x, popup->GetDPI().y, popup->GetContentScaleFactor(), popup->GetSize().x,
                 popup->GetSize().y);
     CapturePreview(popup, "inline");
+    if (!typingInteraction) {
+#ifdef __WXMSW__
+        NativeCompletion::Key(editor, VK_ESCAPE);
+#else
+        NativeCompletion::Key(editor, GDK_KEY_Escape);
+#endif
+        Require(!VisibleCallTip(editor), "native Escape dismisses the language's color preview");
+        return;
+    }
     wxMouseEvent leave(wxEVT_LEAVE_WINDOW);
     leave.SetEventObject(editor);
     editor->GetEventHandler()->ProcessEvent(leave);
@@ -187,6 +480,9 @@ void CheckPreview(EditorFrame* frame) {
     letter.SetEventObject(editor);
     letter.m_uniChar = 'q';
     editor->GetEventHandler()->ProcessEvent(letter);
+    if (!VisibleCallTip(editor) || NativeSearch::Text(editor) != "qpre #aB3 and")
+        std::fprintf(stderr, "color typing: lexer=%zd visible=%d text=[%s]\n", editor->Send(GetLexer),
+                     VisibleCallTip(editor) != nullptr, NativeSearch::Text(editor).c_str());
     Require(VisibleCallTip(editor) && NativeSearch::Text(editor) == "qpre #aB3 and",
             "ordinary typing changes the document and retains the existing CallTip");
     NativeSearch::Command(frame, modes->FindItem("Off"));
@@ -323,7 +619,7 @@ struct ColorEditCase {
     ColorChoice choice = ColorChoice::Accept;
 };
 
-void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
+void CheckColorEdit(EditorFrame* frame, size_t caseIndex, const ColorEditCase& edit) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     NativeSearch::Command(frame, CallTipMenu(frame)->FindItem(edit.mode));
@@ -332,8 +628,34 @@ void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
     editor->Send(EmptyUndoBuffer);
     editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
-    Hover(editor, edit.hover);
-    Require(WaitFor([editor] { return VisibleCallTip(editor); }), "original color previews before edit");
+    DwellEvents events(editor);
+#ifdef __WXMSW__
+    if (caseIndex == 3 && editor->Send(GetLexer) == SCLEX_NULL && wxGetenv("WXNOTEPAD_CALLTIP_REPLAY_NATIVE_MOTION")) {
+        // CI captured a genuine motion here after the synthetic token hover.
+        // Leave this native move queued until Hover's normal event-loop wait.
+        const wxPoint capturedNativeMotion{414, 409};
+        Require(editor->GetClientRect().Contains(capturedNativeMotion), "captured native motion stays in the editor");
+        NativeTreeInput::Move(static_cast<HWND>(editor->GetHandle()), editor->ClientToScreen(capturedNativeMotion));
+    }
+#endif
+    const auto hover = Hover(editor, edit.hover);
+    const auto point = hover.point;
+    const bool preview = WaitFor([editor] { return VisibleCallTip(editor); });
+    if (!preview) {
+        const auto mouse = editor->ScreenToClient(wxGetMousePosition());
+        const auto client = editor->GetClientSize();
+        std::fprintf(stderr,
+                     "color preview failed: case=%zu lexer=%zd style=%zd mode=%s source=[%s] hover=%td "
+                     "point=%d,%d previous=%d,%d hit=%zd "
+                     "client=%dx%d dpi=%dx%d calltip=%zd completion=%zd frameActive=%d editorFocus=%d mouse=%d,%d\n",
+                     caseIndex, editor->Send(GetLexer), editor->Send(GetStyleIndexAt, edit.hover), edit.mode,
+                     edit.source, edit.hover, point.x, point.y, hover.previous.x, hover.previous.y,
+                     editor->Send(PositionFromPointClose, point.x, point.y), client.x, client.y, editor->GetDPI().x,
+                     editor->GetDPI().y, editor->Send(CallTipActive), editor->Send(AutoCActive), frame->IsActive(),
+                     editor->HasFocus(), mouse.x, mouse.y);
+        events.Report();
+    }
+    Require(preview, "original color previews before edit");
     const bool changed = std::string_view(edit.expected) != edit.source;
     const bool cancel = edit.choice == ColorChoice::Cancel;
     ChooseColor chooser(edit.initial, cancel, changed || cancel ? wxColour(205, 171, 239) : edit.initial,
@@ -361,15 +683,16 @@ void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
 }
 
 void CheckEdits(EditorFrame* frame) {
-    CheckColorEdit(frame, {"ARGB", "pre #1Bd4 and", 5, {187, 221, 68}, "pre #11cdabef and", 5, 9, 13});
-    CheckColorEdit(frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0, ColorChoice::Cancel});
-    CheckColorEdit(frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and"});
-    CheckColorEdit(frame, {"RGBA", "pre #0BD0 and", 6, {0, 187, 221}, "pre #cdabef and", 5, 9, 11});
-    CheckColorEdit(frame, {"BGRA", "pre #00a5ef00 and", 7, {239, 165, 0}, "pre #efabcd and", 5, 13, 11});
-    CheckColorEdit(frame, {"ABGR", "pre 0X12a5EF74 and", 6, {116, 239, 165}, "pre 0X12efabcdand", 6, 15, 14});
+    CheckColorEdit(frame, 1, {"ARGB", "pre #1Bd4 and", 5, {187, 221, 68}, "pre #11cdabef and", 5, 9, 13});
+    CheckColorEdit(frame, 2, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0, ColorChoice::Cancel});
+    CheckColorEdit(frame, 3, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and"});
+    CheckColorEdit(frame, 4, {"RGBA", "pre #0BD0 and", 6, {0, 187, 221}, "pre #cdabef and", 5, 9, 11});
+    CheckColorEdit(frame, 5, {"BGRA", "pre #00a5ef00 and", 7, {239, 165, 0}, "pre #efabcd and", 5, 13, 11});
+    CheckColorEdit(frame, 6, {"ABGR", "pre 0X12a5EF74 and", 6, {116, 239, 165}, "pre 0X12efabcdand", 6, 15, 14});
 #ifdef __WXMSW__
     CheckColorEdit(
-        frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #CDABEF and", 5, 8, 11, ColorChoice::AcceptUppercase});
+        frame, 7,
+        {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #CDABEF and", 5, 8, 11, ColorChoice::AcceptUppercase});
 #endif
     std::puts("PASS: native chooser RGB, cancel/same, all modes, alpha, 0X range and exact Undo/Redo");
 }
@@ -502,12 +825,25 @@ void CheckPersistence(EditorFrame* frame, const wxString& path) {
 class ColorCallTipApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        if (wxGetenv("WXNOTEPAD_CALLTIP_DPI96"))
+            Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,
+                    "create the complementary owned 96-DPI CallTip window");
+#endif
         const auto file = TestFiles::TemporaryDirectory() / "color-calltip.ini";
         TestFiles::WriteBytes(file, "[Settings]\nSaveSettings=0\n");
         path_ = TestFiles::Filename(file);
         settings_ = std::make_unique<SettingsStore>(path_);
         auto* frame = new EditorFrame(settings_.get());
+#ifdef __WXGTK__
+        popupWarnings_ = std::make_unique<PopupWarnings>(frame);
+#endif
         TestRenderer::Select(frame->Editor());
+        std::printf("Native CallTip DPI: %d x %d\n", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
+#ifdef __WXMSW__
+        if (wxGetenv("WXNOTEPAD_CALLTIP_DPI96"))
+            Require(frame->Editor()->GetDPI().y == 96, "the complementary native CallTip fixture uses 96 DPI");
+#endif
 #ifdef __WXMSW__
         frame->ShowWithoutActivating();
 #else
@@ -516,9 +852,41 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "native compositor presents the CallTip test editor");
+#ifdef __WXMSW__
+                std::unique_ptr<wxFrame> startupCover;
+                if (wxGetenv("WXNOTEPAD_CALLTIP_REPLAY_MSW_COVER")) {
+                    startupCover = std::make_unique<wxFrame>(nullptr, wxID_ANY, "Owned CallTip startup cover");
+                    startupCover->SetSize(frame->GetScreenRect());
+                    startupCover->Show();
+                    const auto cover = static_cast<HWND>(startupCover->GetHandle());
+                    NativeFocus::Activate(cover, cover);
+                    NativeTreeInput::Wait(
+                        [cover] { return GetForegroundWindow() == cover && GetActiveWindow() == cover; },
+                        "controlled startup cover becomes the owned foreground window");
+                    std::fprintf(stderr, "CallTip startup replay cover=%p frame=%p foreground=%p active=%p focus=%p\n",
+                                 cover, frame->GetHandle(), GetForegroundWindow(), GetActiveWindow(), GetFocus());
+                }
+                const auto nativeFrame = static_cast<HWND>(frame->GetHandle());
+                const auto nativeEditor = static_cast<HWND>(frame->Editor()->GetHandle());
+                NativeFocus::Activate(nativeFrame, nativeEditor);
+                NativeTreeInput::Wait(
+                    [nativeFrame, nativeEditor] {
+                        return IsWindowVisible(nativeFrame) && IsWindowEnabled(nativeFrame) &&
+                               GetForegroundWindow() == nativeFrame && GetActiveWindow() == nativeFrame &&
+                               GetFocus() == nativeEditor;
+                    },
+                    "owned CallTip frame and editor acquire native input readiness before the focus baseline");
+#endif
                 CheckModes(frame);
                 CheckPreview(frame);
                 CheckEdits(frame);
+                for (const auto* language :
+                     {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet", "SQL Query"}) {
+                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
+                    CheckPreview(frame, false);
+                    CheckEdits(frame);
+                }
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
                 CheckCompletionPriority(frame);
 #ifdef __WXMSW__
                 CheckImePriority(frame);
@@ -542,6 +910,9 @@ public:
 private:
     wxString path_;
     std::unique_ptr<SettingsStore> settings_;
+#ifdef __WXGTK__
+    std::unique_ptr<PopupWarnings> popupWarnings_;
+#endif
     int result_ = 0;
 };
 } // namespace

@@ -556,10 +556,15 @@ class Acceptance:
                     except BaseException:
                         capture_and_check(self.dialogs, app, window, self.logs / f'navigation-failure-{suffix}.png', system_dialog=True)
                         raise
-                    expected = {'en': 'All files (*.*)', 'zh_CN': '所有文件 (*.*)', 'zh_TW': '所有檔案 (*.*)'}[code]
+                    # Independent platform literals: original Windows IDS_FILTER_ALL
+                    # uses *.*; the Unix all-file filter uses * for extensionless names.
+                    if sys.platform == 'win32':
+                        expected = {'en': 'All Files (*.*)', 'zh_CN': '所有文件 (*.*)', 'zh_TW': '所有檔案 (*.*)'}[code]
+                    else:
+                        expected = {'en': 'All Files (*)', 'zh_CN': '所有文件 (*)', 'zh_TW': '所有檔案 (*)'}[code]
                     filters = self.dialogs.file_filters(window)
                     assert expected in filters, (expected, filters)
-                    text_filter = {'en': 'Text files (*.txt)', 'zh_CN': '文本文件 (*.txt)', 'zh_TW': '文字檔案 (*.txt)'}[code]
+                    text_filter = {'en': 'Plain Text (*.txt)', 'zh_CN': '纯文本 (*.txt)', 'zh_TW': '純文字 (*.txt)'}[code]
                     assert text_filter in filters, (text_filter, filters)
                     (self.logs / f'filters-{suffix}.json').write_text(json.dumps(filters, ensure_ascii=False), encoding='utf-8')
                     capture_and_check(self.dialogs, app, window, self.logs / f'open-filters-{suffix}.png', system_dialog=True)

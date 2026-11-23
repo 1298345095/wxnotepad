@@ -369,7 +369,7 @@ constexpr auto cssStyles = std::to_array<SyntaxStyle>({
     {SCE_CSS_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_CSS_OPERATOR2, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata cssOriginal = {4099, 2, 2, (1 << 0) | (1 << 1), 0, '\\', SCE_CSS_ESCAPECHAR, 0, 0, 0, 0, SCE_CSS_OPERATOR, SCE_CSS_OPERATOR2, SCE_CSS_CDO_CDC, SCE_CSS_ESCAPECHAR, SCE_CSS_URL};
+constexpr SyntaxOriginalMetadata cssOriginal = {4099, 2, 2, (1 << 0) | (1 << 1), 0, '\\', SCE_CSS_ESCAPECHAR, 0, 0, 0, 0, SCE_CSS_OPERATOR, SCE_CSS_OPERATOR2, SCE_CSS_CDO_CDC, SCE_CSS_ESCAPECHAR, SCE_CSS_URL, 27};
 constexpr const char* cssSettingsSection = "CSS Style Sheet";
 constexpr auto cssExtensions = std::to_array<const char*>({"css", "scss", "less", "hss", "wxss"});
 // clang-format on

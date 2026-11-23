@@ -529,6 +529,13 @@ With only `--cmake-dir`, the executable defaults to that directory's native
 
 To exercise the exact CI test wrapper against an existing native build:
 
+The Escape minimize/restore fixture requires the Ubuntu `openbox` test package
+on X11. Its test wrapper starts an owned Openbox with a private configuration
+inside the existing authenticated Xvfb session and checks native WM readiness
+within three seconds. Only the new Escape cases use this wrapper; existing
+session concurrency and case deadlines are unchanged. Wayland uses the retained
+private Weston compositor. Openbox is not an application runtime dependency.
+
 ```text
 python3 .github/scripts/ci.py test --backend x11 --cmake-dir /path/to/native/cmake-build
 python3 .github/scripts/ci.py test --backend wayland --cmake-dir /path/to/native/cmake-build

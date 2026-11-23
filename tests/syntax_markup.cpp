@@ -9,6 +9,8 @@
 #include "native_key_helpers.h"
 #include "syntax_test_helpers.h"
 #include "tab_settings_helpers.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include <SciLexer.h>
 #include <wx/app.h>
 #include <wx/menu.h>
@@ -419,7 +421,9 @@ void NativeTabsAndFoldedFind(EditorFrame* frame) {
     Require(editor->Send(Message::GetLineVisible, 3), "shared Expand All restores markup visibility");
     std::puts("PASS: native HTML/XML tabs, alias/file precedence and folded markup Find");
 }
-void NativeFiles(EditorFrame* frame) {
+void NativeFiles(SettingsStore& settings) {
+    auto* frame = new EditorFrame(&settings);
+    frame->ShowWithoutActivating();
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
     Require(frame->NewDocument(), "New before native file workflow succeeds");
@@ -456,6 +460,7 @@ void NativeFiles(EditorFrame* frame) {
     Require(StatusMetadata(frame).Contains("Web Source Code") && TestEditor::Text(editor) == text,
             "explicit Automatic restores HTML without changing text");
     std::puts("PASS: native first Save, XML filter, cancel, Open, same-path override and Automatic");
+    frame->Destroy();
 }
 #ifdef __WXGTK__
 class BlockFirstFileAccept final : private wxTimer {
@@ -555,6 +560,11 @@ class MarkupApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(TestFiles::TemporaryDirectory("markup.ini")));
+        settings_->values = OriginalSettings{};
+        settings_->values.favoriteSchemes = "25 26"; // Original XML and Web native filter choices.
+        // Preserve the frozen oracle's original host configuration. Favorite
+        // preferences belong to the separate native file-dialog workflow.
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
@@ -563,7 +573,7 @@ public:
 #ifdef __WXGTK__
                 if (wxGetenv("WXNOTEPAD_TEST_BLOCK_FILE_ACCEPT")) {
                     BlockFirstFileAccept blocker;
-                    NativeFiles(frame);
+                    NativeFiles(*settings_);
                     Require(blocker.responses >= 2, "a blocked first response must be followed by native acceptance");
                     Require(blocker.clicksWhileBusy == 0, "accept must not restart GTK's pending validation");
                     std::puts("PASS: vetoed native file response is retried after GTK finishes validation");
@@ -590,7 +600,7 @@ public:
                 OriginalOracle(frame);
                 Commands(frame);
                 NativeTabsAndFoldedFind(frame);
-                NativeFiles(frame);
+                NativeFiles(*settings_);
                 // Keep the new family fixtures independent of the tab and
                 // Find dialog preferences exercised on the original frame.
                 auto* families = new EditorFrame;
@@ -616,6 +626,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

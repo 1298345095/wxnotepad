@@ -395,8 +395,10 @@ class Collector final {
 
     AddWordResult AddCssSpecialWord(CompletionCandidates& words, int currentStyle, int previousStyle, int ch,
                                     int previous) {
-        currentStyle -= css_style(SCE_CSS_DEFAULT);
-        previousStyle -= css_style(SCE_CSS_DEFAULT);
+        if (definition_.lexer == SCLEX_HTML) {
+            currentStyle -= css_style(SCE_CSS_DEFAULT);
+            previousStyle -= css_style(SCE_CSS_DEFAULT);
+        }
         if (ch == '@' && currentStyle == SCE_CSS_DEFAULT) {
             words.AddKeywords(cssKeywords[1]);
             return AddWordResult_IgnoreLexer;
@@ -463,8 +465,60 @@ class Collector final {
         }
         return AddWordResult_IgnoreLexer;
     }
+    AddWordResult AddJavaSpecialWord(CompletionCandidates& words, int currentStyle, int ch) {
+        // Pinned EditLexer.h keyword indexes, used by EditAutoC.cpp's original
+        // annotation, documentation and preprocessor completion cases.
+        constexpr size_t JavaAnnotation = 7;
+        constexpr size_t JavaDoc = 9;
+        if (ch == '@') {
+            if (currentStyle == SCE_JAVA_DEFAULT) {
+                AddList(words, definition_, JavaAnnotation);
+                return AddWordResult_IgnoreLexer;
+            }
+            if (currentStyle >= SCE_JAVA_COMMENTBLOCKDOC && currentStyle <= SCE_JAVA_TASKMARKER) {
+                AddList(words, definition_, JavaDoc);
+                return AddWordResult_Finish;
+            }
+        }
+        return AddWordResult_None;
+    }
+    AddWordResult AddCSharpSpecialWord(CompletionCandidates& words, int currentStyle, int ch, int previous) {
+        constexpr size_t CSharpPreprocessor = 3;
+        constexpr size_t CSharpDoc = 10;
+        if (ch == '#' && currentStyle == SCE_CSHARP_DEFAULT) {
+            AddList(words, definition_, CSharpPreprocessor);
+            return AddWordResult_Finish;
+        }
+        if ((ch == '<' || (previous == '<' && ch == '/')) && currentStyle > SCE_CSHARP_DEFAULT &&
+            currentStyle < SCE_CSHARP_TASKMARKER) {
+            AddList(words, definition_, CSharpDoc);
+            return AddWordResult_Finish;
+        }
+        return AddWordResult_None;
+    }
+    AddWordResult AddKotlinSpecialWord(CompletionCandidates& words, int currentStyle, int ch) {
+        constexpr size_t KotlinAnnotation = 6;
+        constexpr size_t KotlinDoc = 8;
+        if (ch == '@') {
+            if (currentStyle == SCE_KOTLIN_DEFAULT) {
+                AddList(words, definition_, KotlinAnnotation);
+                return AddWordResult_IgnoreLexer;
+            }
+            if (currentStyle >= SCE_KOTLIN_COMMENTLINE && currentStyle <= SCE_KOTLIN_TASKMARKER) {
+                AddList(words, definition_, KotlinDoc);
+                return AddWordResult_Finish;
+            }
+        }
+        return AddWordResult_None;
+    }
     AddWordResult AddSchemeSpecialWord(CompletionCandidates& words, int currentStyle, int ch, int previous) {
         switch (definition_.lexer) {
+        case SCLEX_JAVA:
+            return AddJavaSpecialWord(words, currentStyle, ch);
+        case SCLEX_CSHARP:
+            return AddCSharpSpecialWord(words, currentStyle, ch, previous);
+        case SCLEX_KOTLIN:
+            return AddKotlinSpecialWord(words, currentStyle, ch);
         case SCLEX_BASH:
             if (ch == '$') {
                 AddList(words, definition_, 2);
@@ -493,8 +547,9 @@ class Collector final {
                                     int previous) {
         if ((ch == '\\' || (previous == '\\' && (ch == '^' || ch == ':'))) && settings_.latexInputMethod)
             words.AddKeywords(ch == ':' ? EmojiInputSequenceString : LaTeXInputSequenceString);
-        if (definition_.lexer == SCLEX_HTML && currentStyle >= css_style(SCE_CSS_DEFAULT) &&
-            currentStyle < SCE_PHP_DEFAULT)
+        if (definition_.lexer == SCLEX_CSS ||
+            (definition_.lexer == SCLEX_HTML && currentStyle >= css_style(SCE_CSS_DEFAULT) &&
+             currentStyle < SCE_PHP_DEFAULT))
             return AddCssSpecialWord(words, currentStyle, previousStyle, ch, previous);
         if (definition_.lexer == SCLEX_HTML && currentStyle >= js_style(SCE_JS_DEFAULT) &&
             currentStyle < css_style(SCE_CSS_DEFAULT))

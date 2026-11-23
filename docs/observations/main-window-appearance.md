@@ -21,6 +21,8 @@ Toolbar visibility is independent of the menu/status preferences and fullscreen.
 The editor has no added border. The title follows the original filename,
 `[directory]`, modified `* ` and read-only indications with wxnotepad's identity.
 Native typography, colors and title decorations follow the active platform.
+Toolbar layout and numeric sizing preferences are documented in
+[toolbar customization](toolbar-customization.md).
 
 The thirteen status panes retain line/total lines, column, character, selection
 characters/bytes, selected lines, matches, feedback/flexible space, scheme,

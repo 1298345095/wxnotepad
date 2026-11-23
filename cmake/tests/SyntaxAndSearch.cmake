@@ -1,4 +1,27 @@
 add_editor_test(open_smoke open_utf8 30)
+add_editor_test(syntax_java_languages original_java_csharp_kotlin_schemes 120)
+set(java_language_references
+    "JAVA_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/java_languages_reference.tsv\""
+    "JAVA_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/java_operations_reference.tsv\"")
+target_compile_definitions(syntax_java_languages PRIVATE ${java_language_references})
+if(WIN32)
+    add_test(NAME original_java_csharp_kotlin_dpi96 COMMAND syntax_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_dpi96 PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_JAVA_DPI96=1")
+    add_gui_program(directwrite_java_languages tests/syntax_java_languages.cpp app_shell)
+    target_compile_definitions(directwrite_java_languages PRIVATE WXNOTEPAD_TEST_DIRECTWRITE ${java_language_references})
+    add_test(NAME original_java_csharp_kotlin_directwrite COMMAND directwrite_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_directwrite PROPERTIES TIMEOUT 120)
+    add_test(NAME original_java_csharp_kotlin_directwrite_dpi96 COMMAND directwrite_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_directwrite_dpi96 PROPERTIES TIMEOUT 120
+        ENVIRONMENT "WXNOTEPAD_JAVA_DPI96=1")
+else()
+    add_test(NAME original_java_csharp_kotlin_scale2 COMMAND syntax_java_languages)
+    set_tests_properties(original_java_csharp_kotlin_scale2 PROPERTIES TIMEOUT 120 ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+endif()
+add_test(NAME original_java_csharp_kotlin_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/java_languages_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/java-languages-process")
+set_tests_properties(original_java_csharp_kotlin_process PROPERTIES TIMEOUT 180)
 add_editor_test(syntax_markdown original_markdown_dialects 90)
 target_compile_definitions(syntax_markdown PRIVATE
     "MARKDOWN_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markdown_reference.tsv\"")
@@ -23,7 +46,21 @@ add_editor_test(syntax_markup original_markup_schemes 90)
 target_compile_definitions(syntax_markup PRIVATE
     "MARKUP_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markup_reference.tsv\"")
 add_editor_test(syntax_save automatic_language_save 60)
+add_test(NAME original_scheme_base_filter_reachability COMMAND syntax_save)
+set_tests_properties(original_scheme_base_filter_reachability PROPERTIES TIMEOUT 90
+    ENVIRONMENT "WXNOTEPAD_BASE_FILTER_REACHABILITY=1")
 add_editor_test(syntax_manual manual_language_choice 60)
+add_editor_test(scheme_chooser original_scheme_chooser 90)
+add_editor_test(scheme_filters original_scheme_file_filters 90)
+add_dependencies(scheme_chooser wxnotepad_catalogs)
+foreach(language 1033 2052 1028)
+    add_test(NAME original_scheme_layout_${language} COMMAND scheme_chooser)
+    set_tests_properties(original_scheme_layout_${language} PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_SCHEME_LAYOUT_LANGUAGE=${language}")
+endforeach()
+add_test(NAME original_scheme_settings_lifecycle COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/scheme_selection_process.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_scheme_settings_lifecycle PROPERTIES TIMEOUT 90)
 add_editor_test(syntax_large large_language_selection 60)
 if(WXNOTEPAD_ENABLE_COVERAGE)
     # The byte-exact 32 MiB round-trips took 88.5s under CPU contention with
@@ -158,3 +195,13 @@ add_editor_test(replace_regex replace_regular_expression 30)
 add_editor_test(replace_all_regex replace_all_regular_expression 30)
 add_editor_test(replace_selection replace_in_selection 30)
 add_editor_test(search_backslashes original_search_backslashes 30)
+add_editor_test(syntax_css_sql original_css_sql_schemes 90)
+target_compile_definitions(syntax_css_sql PRIVATE
+    "CSS_SQL_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_reference.tsv\""
+    "CSS_SQL_COMPLETION_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_completion_reference.tsv\""
+    "CSS_SQL_TYPING_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_typing_reference.tsv\"")
+foreach(language IN ITEMS en zh_CN zh_TW)
+    add_test(NAME original_css_sql_process_${language} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
+    set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)
+endforeach()

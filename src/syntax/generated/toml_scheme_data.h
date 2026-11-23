@@ -27,7 +27,7 @@ constexpr auto tomlStyles = std::to_array<SyntaxStyle>({
     {SCE_TOML_NUMBER, 0xFF0000, 0xFFFFFF, false, false, false},
     {SCE_TOML_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
 });
-constexpr SyntaxOriginalMetadata tomlOriginal = {11, 2, 2, (1 << 0) | (1 << 1), 0, '\\', SCE_TOML_ESCAPECHAR, 0, 0, 0, 0, SCE_TOML_OPERATOR, 0, SCE_TOML_COMMENT, SCE_TOML_STRING_SQ, SCE_TOML_ESCAPECHAR};
+constexpr SyntaxOriginalMetadata tomlOriginal = {11, 2, 2, (1 << 0) | (1 << 1), 0, '\\', SCE_TOML_ESCAPECHAR, 0, 0, 0, 0, SCE_TOML_OPERATOR, 0, SCE_TOML_COMMENT, SCE_TOML_STRING_SQ, SCE_TOML_ESCAPECHAR, 71};
 constexpr const char* tomlSettingsSection = "TOML File";
 constexpr auto tomlExtensions = std::to_array<const char*>({"toml", "pylintrc"});
 // clang-format on

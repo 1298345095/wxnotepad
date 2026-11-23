@@ -1,0 +1,386 @@
+#include "app/editor_frame.h"
+#include "editor/editor_control.h"
+#include "settings/settings_store.h"
+#include "syntax_language_test_helpers.h"
+#include "native_completion_helpers.h"
+#include "native_paint_helpers.h"
+#include "tab_settings_helpers.h"
+#include <wx/wx.h>
+#include <array>
+#include <cstdio>
+#include <memory>
+#include <exception>
+#include <utility>
+#include <wx/timer.h>
+#include <wx/treectrl.h>
+#include <wx/checkbox.h>
+#include <wx/modalhook.h>
+#include <fstream>
+#include <sstream>
+#include <vector>
+
+namespace {
+using Scintilla::Message;
+using TestLanguages::Require;
+constexpr auto extensions = std::to_array<const char*>({"css", "scss", "less", "hss", "wxss", "sql", "mysql", "hsql"});
+constexpr std::array<TestLanguages::SchemeFixture, 5> schemes = {{
+    {"CSS Style Sheet", SyntaxLanguage::Css, SCLEX_CSS, "css", "a {\n  color: #123456;\n}\n", "", "/*", "*/", nullptr,
+     "CSS Style Sheet"},
+    {"SCSS Style Sheet", SyntaxLanguage::Scss, SCLEX_CSS, "scss", "$x: red;\na {\n  color: $x;\n}\n", "//", "/*", "*/",
+     nullptr, "CSS Style Sheet"},
+    {"Less Style Sheet", SyntaxLanguage::Less, SCLEX_CSS, "less", "@x: red;\na {\n  color: @x;\n}\n", "//", "/*", "*/",
+     nullptr, "CSS Style Sheet"},
+    {"HSS Style Sheet", SyntaxLanguage::Hss, SCLEX_CSS, "hss", "a {\n  color: #123456;\n}\n", "//", "/*", "*/", nullptr,
+     "CSS Style Sheet"},
+    {"SQL Query", SyntaxLanguage::Sql, SCLEX_SQL, "sql", "BEGIN\n SELECT COUNT(*) FROM sample;\nEND;\n", "--", "/*",
+     "*/", nullptr, "SQL Query"},
+}};
+void FileRecognition(EditorFrame* frame) {
+    for (const auto* extension : extensions) {
+        const auto path = TestFiles::TemporaryDirectory(std::string("case.") + extension);
+        TestFiles::WriteBytes(path, "/* file recognition */\n");
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "original extension must Open");
+        const int expected = std::string_view(extension).ends_with("sql") ? SCLEX_SQL : SCLEX_CSS;
+        Require(frame->Editor()->Send(Message::GetLexer) == expected,
+                "standalone original CSS dialects and SQL must install their dedicated lexer");
+    }
+}
+class CommentSpacing final : public wxModalDialogHook {
+public:
+    CommentSpacing() { Register(); }
+    bool opened = false;
+    std::exception_ptr failure;
+    int Enter(wxDialog* dialog) override {
+        if (dialog->GetTitle() == "Auto Completion Settings") {
+            opened = true;
+            wxTheApp->CallAfter([this, dialog] {
+                try {
+                    auto* option = wxDynamicCast(wxWindow::FindWindowByName("Space after comment", dialog), wxCheckBox);
+                    Require(option, "native settings exposes optional comment spacing");
+                    NativeSearch::Toggle(option, false);
+                    NativeSearch::Click(dialog, wxID_OK);
+                } catch (...) {
+                    failure = std::current_exception();
+                    dialog->EndModal(wxID_CANCEL);
+                }
+            });
+        }
+        return wxID_NONE;
+    }
+};
+void MandatorySqlCommentSpace(EditorFrame* frame) {
+    TestLanguages::Choose(frame, "SQL Query");
+    CommentSpacing settings;
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Auto Completion Settings..."));
+    if (settings.failure) std::rethrow_exception(settings.failure);
+    Require(settings.opened, "native comment spacing setting opens");
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "SELECT 1;\n");
+    // Pinned EditAutoC.cpp::GetLineCommentString uses L"-- "; Edit.cpp::EditCommentLine
+    // retains this mandatory pad even with AutoInsertMask_SpaceAfterComment clear.
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
+    Require(TestEditor::Text(editor) == "-- SELECT 1;\n", "SQL retains mandatory space when optional spacing is off");
+    TestSyntax::Command(frame, wxID_UNDO);
+    Require(TestEditor::Text(editor) == "SELECT 1;\n", "SQL comment Undo restores exact original bytes");
+    TestSyntax::Command(frame, wxID_REDO);
+    Require(TestEditor::Text(editor) == "-- SELECT 1;\n", "SQL comment Redo restores exact mandatory-space bytes");
+    editor->Send(Message::SetSavePoint);
+    std::puts("PASS: SQL mandatory comment pad with optional spacing disabled and exact Undo/Redo");
+}
+void OriginalOracle(EditorFrame* frame) {
+    const auto rows = TestLanguages::OriginalStyleFoldStates(
+        frame, std::filesystem::path(CSS_SQL_REFERENCE),
+        [frame](const std::string& name, const std::string& text) {
+            const auto path = TestFiles::TemporaryDirectory(name);
+            TestFiles::WriteBytes(path, text);
+            Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+                    "original CSS dialect/SQL fixture must Open");
+        },
+        [](EditorFrame* current) { NativePaint::Complete(current->Editor()); },
+        "CSS dialect/SQL styles must match independent pinned original",
+        "CSS dialect/SQL folds must match independent pinned original");
+    Require(rows == 20, "all five original languages and four incremental editing states must run");
+    std::puts("PASS: 20 independent original CSS/SCSS/Less/HSS/SQL incremental style/fold states");
+}
+void DialectWorkflows(EditorFrame* frame, SettingsStore& settings) {
+    auto* editor = frame->Editor();
+    for (const auto& fixture : schemes) {
+        editor->Send(Message::SetSavePoint);
+        const auto path = TestFiles::TemporaryDirectory(std::string("workflow.") + fixture.extension);
+        TestFiles::WriteBytes(path, fixture.text);
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "language workflow must Open");
+        TestSyntax::Paint(frame);
+        const bool css = fixture.lexer == SCLEX_CSS;
+        Require(editor->Send(Message::GetTabWidth) == (css ? 2 : 7) &&
+                    editor->Send(Message::GetIndent) == (css ? 2 : 3) && !editor->Send(Message::GetUseTabs),
+                "CSS retains independent original 2/2 spaces; SQL inherits global indentation");
+        constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+        const auto fontSize = editor->Send(Message::StyleGetSizeFractional, defaultStyle);
+        TestLanguages::Choose(frame, "Plain Text");
+        TestLanguages::Choose(frame, fixture.name);
+        Require(TestEditor::Text(editor) == fixture.text && !frame->DocumentIsModified() &&
+                    !editor->Send(Message::CanUndo),
+                "manual scheme installation preserves bytes and history");
+        Require(editor->Send(Message::StyleGetSizeFractional, defaultStyle) == fontSize,
+                "restoring a CSS dialect or SQL retains its inherited original font size");
+        TestLanguages::Choose(frame, "Automatic");
+        Require(frame->Revert().status == OpenStatus::Opened && editor->Send(Message::GetLexer) == fixture.lexer &&
+                    TestEditor::Text(editor) == fixture.text,
+                "native Revert reloads each original scheme's current file and automatic classification");
+        NativePaint::Complete(editor);
+        TestLanguages::FoldCommands(frame);
+        TestEditor::ResetStream(editor, "call()\n");
+        if (*fixture.lineComment) {
+            TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
+            Require(TestEditor::Text(editor) == std::string(fixture.lineComment) + " call()\n",
+                    "dialect line comments use original delimiter");
+            TestSyntax::Command(frame, wxID_UNDO);
+        }
+        editor->Send(Message::SetSel, 0, 6);
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
+        const auto commented = TestEditor::Text(editor);
+        Require(commented.starts_with("/*") && commented.contains("*/"),
+                "all five schemes share original block comments");
+        TestSyntax::Command(frame, wxID_UNDO);
+        Require(TestEditor::Text(editor) == "call()\n", "comments undo to exact original bytes");
+        TestSyntax::Command(frame, wxID_REDO);
+        Require(TestEditor::Text(editor) == commented, "comments redo to exact original bytes");
+        editor->Send(Message::SetSavePoint);
+        TestLanguages::SaveNaming(frame, fixture, path);
+    }
+    editor->Send(Message::SetSavePoint);
+    TestEditor::ResetStream(editor, "a { color: $tone; }\n");
+    for (const auto* name : {"SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet", "CSS Style Sheet",
+                             "SCSS Style Sheet", "CSS Style Sheet"}) {
+        TestLanguages::Choose(frame, name);
+        TestSyntax::Paint(frame);
+        const auto position = TestEditor::Text(editor).find("$tone");
+        Require(editor->Send(Message::GetStyleIndexAt, position) ==
+                    (std::string_view(name) == "CSS Style Sheet" ? SCE_CSS_OPERATOR : SCE_CSS_VARIABLE),
+                "switching CSS dialects in one document replaces the prior lexer.lang property");
+    }
+    TestLanguages::Choose(frame, "CSS Style Sheet");
+    TabDialog::Show(frame, [](wxDialog* dialog) {
+        Require(!TabDialog::Option(dialog, "Use Global Tab Settings")->GetValue(),
+                "original CSS settings have independent indentation");
+        TabDialog::Width(dialog, "Scheme Tab Width")->SetValue(5);
+        TabDialog::Width(dialog, "Scheme Indentation Width")->SetValue(3);
+    });
+    TestLanguages::Choose(frame, "Less Style Sheet");
+    Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 3,
+            "CSS dialects share the original settings identity");
+    SettingsStore restored(settings.Path());
+    Require(restored.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::Css))].tabWidth == 5,
+            "CSS settings survive configuration reload");
+    editor->Send(Message::SetSavePoint);
+    std::puts("PASS: original dialect switching, comments/history, indentation identity, naming and exact disk bytes");
+}
+class SchemePicker final : public wxTimer {
+public:
+    explicit SchemePicker(const char* label) : label_(label) { Start(DialogPollMilliseconds); }
+    int shown = 0;
+    std::exception_ptr failure;
+    void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Select Scheme") continue;
+            Stop();
+            ++shown;
+            try {
+                auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Syntax schemes", dialog), wxTreeCtrl);
+                Require(tree && NativeDialogs::SelectTreeLabel(*tree, wxString::FromUTF8(label_)),
+                        "original CSS/SQL base title must exist in the real scheme chooser");
+                NativeSearch::Click(dialog, wxID_OK);
+            } catch (...) {
+                failure = std::current_exception();
+                dialog->EndModal(wxID_CANCEL);
+            }
+        }
+    }
+
+private:
+    static constexpr int DialogPollMilliseconds = 40;
+    const char* label_;
+};
+void ChooserWorkflows(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const auto before = TestEditor::Text(editor);
+    const auto undo = editor->Send(Message::CanUndo);
+    for (const auto& [title, lexer] : {std::pair{"SQL Query", SCLEX_SQL}, std::pair{"CSS Style Sheet", SCLEX_CSS}}) {
+        SchemePicker picker(title);
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Syntax Scheme..."));
+        picker.Stop();
+        if (picker.failure) std::rethrow_exception(picker.failure);
+        Require(picker.shown == 1 && editor->Send(Message::GetLexer) == lexer,
+                "real scheme chooser must install original CSS/SQL base lexer");
+        Require(TestEditor::Text(editor) == before && editor->Send(Message::CanUndo) == undo,
+                "scheme chooser selection preserves document bytes and pending history");
+    }
+    NativePaint::Complete(editor);
+    Require(editor->Send(Message::GetStyleIndexAt, before.find("$tone")) == SCE_CSS_OPERATOR,
+            "choosing CSS after SQL restores the original standard CSS dialect");
+    std::puts("PASS: real scheme chooser selects original CSS and SQL identities without changing bytes/history");
+}
+std::vector<std::string> ExpectedCandidates(const std::string& words) {
+    std::vector<std::string> expected;
+    std::istringstream candidates(words);
+    for (std::string word; candidates >> word;)
+        expected.push_back(word);
+    return expected;
+}
+void ConfirmFirst(EditorControl* editor, const std::vector<std::string>& expected) {
+    if (expected.empty()) return;
+    editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>(expected.front().c_str()));
+#ifdef __WXMSW__
+    NativeCompletion::Key(editor, VK_RETURN);
+#else
+    NativeCompletion::Key(editor, GDK_KEY_Return);
+#endif
+}
+void OriginalCompletions(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    std::ifstream input(std::filesystem::path(CSS_SQL_COMPLETION_REFERENCE));
+    Require(input.is_open(), "independent original completion fixtures must open");
+    std::string line;
+    size_t rows = 0;
+    while (std::getline(input, line)) {
+        if (line.empty() || line.front() == '#') continue;
+        std::istringstream row(line);
+        std::string name, beforeHex, afterHex, confirmedHex, words;
+        std::getline(row, name, '\t');
+        std::getline(row, beforeHex, '\t');
+        std::getline(row, afterHex, '\t');
+        std::getline(row, confirmedHex, '\t');
+        std::getline(row, words);
+        editor->Send(Message::SetSavePoint);
+        const auto path = TestFiles::TemporaryDirectory(name);
+        TestFiles::WriteBytes(path, TestLanguages::Unhex(beforeHex));
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "completion fixture must Open");
+        editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+        TestSyntax::Paint(frame);
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Complete Word"));
+        const auto actual = NativeCompletion::Candidates(editor);
+        const auto expected = ExpectedCandidates(words);
+        Require(actual == expected && TestEditor::Text(editor) == TestLanguages::Unhex(afterHex),
+                "manual completion candidate list and immediate result match independent original");
+        ConfirmFirst(editor, expected);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(confirmedHex),
+                "native Enter inserts the independently captured original candidate");
+        TestSyntax::Command(frame, wxID_UNDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(beforeHex), "completion is one undoable edit");
+        TestSyntax::Command(frame, wxID_REDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(confirmedHex), "completion redo restores exact bytes");
+        editor->Send(Message::SetSavePoint);
+        ++rows;
+    }
+    Require(rows == 12, "all independent CSS dialect/SQL completion cases must execute");
+    std::puts("PASS: original native completion lists, Enter insertion and Undo/Redo");
+}
+void OriginalTyping(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    std::ifstream input(std::filesystem::path(CSS_SQL_TYPING_REFERENCE));
+    Require(input.is_open(), "independent original native typing fixtures must open");
+    size_t rows = 0;
+    for (std::string line; std::getline(input, line);) {
+        if (line.empty() || line.front() == '#') continue;
+        std::array<std::string, 8> columns;
+        std::istringstream row(line);
+        for (auto& column : columns)
+            std::getline(row, column, '\t');
+        const auto& [name, beforeHex, characterText, afterHex, confirmedHex, undoHex, redoHex, words] = columns;
+        editor->Send(Message::SetSavePoint);
+        const auto path = TestFiles::TemporaryDirectory(name);
+        TestFiles::WriteBytes(path, TestLanguages::Unhex(beforeHex));
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "typing fixture must Open");
+        editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+        NativePaint::Complete(editor);
+        const int character = std::stoi(characterText);
+        std::fprintf(stderr, "typing fixture=%s character=%d\n", name.c_str(), character);
+#ifdef __WXMSW__
+        // wxMSW suppresses WM_CHAR after a handled keydown (for example the
+        // preceding completion Enter). Deliver the complete next native key.
+        const auto handle = static_cast<HWND>(editor->GetHandle());
+        const auto virtualKey = LOBYTE(VkKeyScanW(static_cast<wchar_t>(character)));
+        SendMessageW(handle, WM_KEYDOWN, virtualKey, 0);
+        SendMessageW(handle, WM_CHAR, character, 0);
+        SendMessageW(handle, WM_KEYUP, virtualKey, 0);
+#else
+        if (character == '(')
+            NativeKeys::Shortcut(frame, '9', false, false, true);
+        else if (character == '"')
+            NativeKeys::Shortcut(frame, '\'', false, false, true);
+        else
+            NativeKeys::Shortcut(frame, character == 'l' ? 'L' : character, false, false, character == 'L');
+#endif
+        wxYield();
+        const auto expected = ExpectedCandidates(words);
+        const auto actual = NativeCompletion::Candidates(editor);
+        if (TestEditor::Text(editor) != TestLanguages::Unhex(afterHex) || actual != expected) {
+            std::fprintf(stderr, "native typing expected=[%s] actual=[%s] candidates=%zu/%zu\n",
+                         TestLanguages::Unhex(afterHex).c_str(), TestEditor::Text(editor).c_str(), actual.size(),
+                         expected.size());
+            for (const auto& candidate : actual)
+                std::fprintf(stderr, "[%s] ", candidate.c_str());
+            std::fprintf(stderr, "\n");
+        }
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(afterHex) && actual == expected,
+                "native automatic completion and paired characters match independent original bytes and lists");
+        ConfirmFirst(editor, expected);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(confirmedHex),
+                "automatic native Enter confirms the original candidate");
+        editor->Send(Message::AutoCCancel);
+        TestSyntax::Command(frame, wxID_UNDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(undoHex),
+                "native typed completion and paired characters retain original Undo boundary");
+        TestSyntax::Command(frame, wxID_REDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(redoHex),
+                "native typed completion and paired characters retain original Redo bytes");
+        editor->Send(Message::SetSavePoint);
+        ++rows;
+    }
+    Require(rows == 15, "all five languages' automatic completion and paired-character contexts must run");
+    std::puts("PASS: 15 original native automatic completion/brace/quote/Undo/Redo cases");
+}
+class CssSqlApp final : public wxApp {
+public:
+    bool OnInit() override {
+        wxInitAllImageHandlers();
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(TestFiles::TemporaryDirectory("Notepad4.ini")));
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        settings_->values.warnLineEndings = false;
+        settings_->values.detectIndentation = false;
+        settings_->values.globalTabs = {7, 3, true};
+        auto* frame = new EditorFrame(settings_.get());
+        frame->Show();
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
+            try {
+                Require(presented, "native compositor must present the CSS/SQL test editor");
+                FileRecognition(frame);
+                OriginalOracle(frame);
+                DialectWorkflows(frame, *settings_);
+                ChooserWorkflows(frame);
+                OriginalCompletions(frame);
+                OriginalTyping(frame);
+                TestLanguages::NativeFiles(frame, schemes);
+                MandatorySqlCommentSpace(frame);
+                result_ = 0;
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+            }
+            frame->Destroy();
+            ExitMainLoop();
+        });
+        return true;
+    }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
+private:
+    std::unique_ptr<SettingsStore> settings_;
+    int result_ = 1;
+};
+} // namespace
+wxIMPLEMENT_APP(CssSqlApp);

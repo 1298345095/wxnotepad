@@ -34,6 +34,12 @@ msgstr ""
 msgid " | Sel %lld"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_TITLEEXCERPT quotation marks around a captured selection.
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\""
+msgstr ""
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "\"%s\" is read only. Save to a different file?"
@@ -88,6 +94,10 @@ msgid_plural "%zu replacements"
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Add ->"
+msgstr ""
+
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_commands.cpp
 msgid "&All Levels\tShift+Alt+A"
@@ -101,12 +111,24 @@ msgstr ""
 msgid "&Append text to lines:"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "&Auto Scale Toolbar"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Auto-reload (unmodified)."
 msgstr ""
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "&Auto-select by filename extension."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Automatic"
+msgstr ""
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Available toolbar buttons:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -133,6 +155,11 @@ msgstr ""
 #. TRANSLATORS: IDD_RUN button opening the native program chooser.
 #: src/app/run_command.cpp
 msgid "&Browse..."
+msgstr ""
+
+#. TRANSLATORS: Original Scheme/CSS Style Sheet family and dialect order.
+#: src/syntax/syntax_catalog.cpp
+msgid "&CSS Style Sheet"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -184,6 +211,10 @@ msgstr ""
 msgid "&Current Block\tAlt+C"
 msgstr ""
 
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Current toolbar buttons:"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr ""
@@ -211,7 +242,7 @@ msgid "&Default..."
 msgstr ""
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Delete"
 msgstr ""
 
@@ -260,11 +291,19 @@ msgid "&Ensure consistent line endings when saving."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Favorite Schemes..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&File"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&File Name"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name Only"
 msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -299,8 +338,8 @@ msgstr ""
 msgid "&Indent"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/JavaScript family; includes TypeScript and JSX/TSX dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/JavaScript family, including TypeScript and JSX/TSX.
+#: src/syntax/syntax_catalog.cpp
 msgid "&JavaScript"
 msgstr ""
 
@@ -360,6 +399,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Millisecond (ms)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Minimize wxnotepad"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -458,7 +501,7 @@ msgid "&Prefix text to lines:"
 msgstr ""
 
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Print...\tCtrl+P"
 msgstr ""
 
@@ -489,6 +532,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Replace"
+msgstr ""
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "&Reset"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -570,12 +617,20 @@ msgstr ""
 msgid "&Strip trailing blanks when saving."
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+msgid "&Syntax Scheme...\tF12"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Text File family; contains the delivered plain-text scheme.
 #: src/app/editor_frame_commands.cpp
+msgid "&Text Excerpt"
+msgstr ""
+
+#. TRANSLATORS: Original Scheme/Text File family.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Text File"
 msgstr ""
 
@@ -629,8 +684,8 @@ msgstr ""
 msgid "&Visual Studio"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Web Source Code family; includes HTML, JSP and ASP dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Web Source Code family, including HTML, JSP and ASP.
+#: src/syntax/syntax_catalog.cpp
 msgid "&Web Source Code"
 msgstr ""
 
@@ -654,8 +709,8 @@ msgstr ""
 msgid "&Wrap around"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/XML Document family; contains XML and related document dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/XML Document family and document dialects.
+#: src/syntax/syntax_catalog.cpp
 msgid "&XML Document"
 msgstr ""
 
@@ -677,6 +732,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "1/&4 Page"
+msgstr ""
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "<- &Remove"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -724,17 +783,16 @@ msgstr ""
 msgid "Align Lines"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_FILTER_ALL caption; %s is the platform all-file wildcard (*.* on Windows, * on
+#. Unix).
 #: src/app/dialogs/document_dialogs.cpp
-msgid "All Files (*)"
+#, c-format
+msgid "All Files (%s)"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
-msgstr ""
-
-#: src/app/dialogs/document_dialogs.cpp
-msgid "All files (*.*)"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -884,6 +942,10 @@ msgstr ""
 msgid "C Shell"
 msgstr ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "C# Source"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "C&aret Style"
 msgstr ""
@@ -896,8 +958,18 @@ msgstr ""
 msgid "C/C++"
 msgstr ""
 
+#. TRANSLATORS: Original C/C++ base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "C/C++ Source"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "CMake"
+msgstr ""
+
+#. TRANSLATORS: Original CMake base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "CMake Script"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -913,6 +985,11 @@ msgid "CR: %llu line."
 msgid_plural "CR: %llu lines."
 msgstr[0] ""
 msgstr[1] ""
+
+#. TRANSLATORS: Original CSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "CSS Style Sheet"
+msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
@@ -1283,6 +1360,14 @@ msgstr ""
 msgid "Current screen color (WYSIWYG)"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Customi&ze Toolbar..."
+msgstr ""
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "Customize Toolbar"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "D&elete Line\tCtrl+Shift+D"
 msgstr ""
@@ -1348,8 +1433,12 @@ msgid "Draw Block Caret in &Selection"
 msgstr ""
 
 #. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "E&xit\tAlt+F4"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "E&xit wxnotepad"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1398,12 +1487,20 @@ msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
-#: src/app/document_tools.cpp
+#: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
 msgid "Execute &Document\tCtrl+L"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Extra Esc &Key Function"
 msgstr ""
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
+msgstr ""
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Favorite Schemes"
 msgstr ""
 
 #: src/app/dialogs/recent_files_dialog.cpp
@@ -1421,6 +1518,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_file_watching.cpp
 msgid "File Change Notification"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Directory"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1502,6 +1603,10 @@ msgid "For wrapped line"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
 msgstr ""
 
@@ -1528,6 +1633,11 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Go"
+msgstr ""
+
+#. TRANSLATORS: Original Go base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Go Source"
 msgstr ""
 
 #: src/app/dialogs/go_to_line_dialog.cpp
@@ -1576,6 +1686,11 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Group by file &type."
+msgstr ""
+
+#. TRANSLATORS: Original HSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "HSS Style Sheet"
 msgstr ""
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
@@ -1673,6 +1788,11 @@ msgstr ""
 msgid "JSON"
 msgstr ""
 
+#. TRANSLATORS: Original JSON base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "JSON Document"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSP"
 msgstr ""
@@ -1686,6 +1806,10 @@ msgid "JSX"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
+msgid "Java Source"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
 msgid "JavaScript"
 msgstr ""
 
@@ -1695,6 +1819,10 @@ msgstr ""
 
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Kotlin Source"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1741,6 +1869,11 @@ msgstr ""
 #. TRANSLATORS: Left paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Left:"
+msgstr ""
+
+#. TRANSLATORS: Original Less stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Less Style Sheet"
 msgstr ""
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
@@ -1821,6 +1954,11 @@ msgstr ""
 msgid "Lua"
 msgstr ""
 
+#. TRANSLATORS: Original Lua base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Lua Script"
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr ""
@@ -1839,12 +1977,13 @@ msgstr ""
 msgid "Mark &Occurrences"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Markdown family; contains GitHub, GitLab and Pandoc dialects.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Markdown family and dialect order.
+#: src/syntax/syntax_catalog.cpp
 msgid "Mark&down"
 msgstr ""
 
-#: src/app/dialogs/document_dialogs.cpp
+#. TRANSLATORS: Original Markdown base-scheme chooser title, shared by its dialects.
+#: src/app/dialogs/document_dialogs.cpp src/syntax/syntax_catalog.cpp
 msgid "Markdown"
 msgstr ""
 
@@ -1896,8 +2035,16 @@ msgstr ""
 msgid "Modify Lines"
 msgstr ""
 
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "Move &Down"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Move &Down\tAlt+Down"
+msgstr ""
+
+#: src/app/dialogs/toolbar_customization_dialog.cpp
+msgid "Move &Up"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2156,6 +2303,11 @@ msgstr ""
 msgid "Python"
 msgstr ""
 
+#. TRANSLATORS: Original Python base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Python Script"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr ""
@@ -2305,6 +2457,11 @@ msgstr ""
 msgid "Rust"
 msgstr ""
 
+#. TRANSLATORS: Original Rust base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Rust Source"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "S&ort Lines...\tAlt+O"
 msgstr ""
@@ -2313,8 +2470,18 @@ msgstr ""
 msgid "S&wap\tCtrl+K"
 msgstr ""
 
+#. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SCSS Style Sheet"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
+msgstr ""
+
+#. TRANSLATORS: Original SQL Query scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "SQL Query"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -2483,6 +2650,10 @@ msgstr ""
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr ""
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Select Scheme"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
 msgstr ""
@@ -2515,6 +2686,14 @@ msgstr ""
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Separator"
+msgstr ""
+
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Set selected scheme as &default."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Sett&ings"
 msgstr ""
@@ -2523,9 +2702,14 @@ msgstr ""
 msgid "Settings saved"
 msgstr ""
 
-#. TRANSLATORS: IDR_MAINWND Scheme/Shell Script family; contains Bash, C Shell and m4.
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original Scheme/Shell Script family, including Bash, C Shell and m4.
+#: src/syntax/syntax_catalog.cpp
 msgid "Shell Scri&pt"
+msgstr ""
+
+#. TRANSLATORS: Original Shell base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Shell Script"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2673,6 +2857,10 @@ msgstr ""
 msgid "Symbol &before wrap:"
 msgstr ""
 
+#: src/app/dialogs/scheme_chooser.cpp
+msgid "Syntax schemes"
+msgstr ""
+
 #: src/app/language_commands.cpp
 msgid "System Language"
 msgstr ""
@@ -2687,6 +2875,11 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "TOML"
+msgstr ""
+
+#. TRANSLATORS: Original TOML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "TOML File"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -2721,8 +2914,9 @@ msgstr ""
 msgid "Tabs as Spaces"
 msgstr ""
 
-#: src/app/dialogs/document_dialogs.cpp
-msgid "Text files (*.txt)"
+#. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Text File"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
@@ -2978,6 +3172,10 @@ msgstr ""
 msgid "Use Global Tab Settings"
 msgstr ""
 
+#: src/app/editor_frame_toolbar.cpp
+msgid "Use Lar&ge Toolbar"
+msgstr ""
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Scheme Tab Settings"
 msgstr ""
@@ -3008,6 +3206,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Window Title Displa&y"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -3081,6 +3283,11 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "YAML"
+msgstr ""
+
+#. TRANSLATORS: Original YAML base-scheme chooser title, independent of its INI section key.
+#: src/syntax/syntax_catalog.cpp
+msgid "YAML Document"
 msgstr ""
 
 #: src/app/editor_frame.cpp
