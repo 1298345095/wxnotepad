@@ -51,6 +51,9 @@ enum class SyntaxLanguage : uint8_t {
     Java,
     CSharp,
     Kotlin,
+    Ini,
+    Makefile,
+    Diff,
     Count
 };
 namespace SyntaxDetectionLimits {

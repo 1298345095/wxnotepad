@@ -107,6 +107,8 @@ void OriginalOperations(EditorFrame* frame) {
             std::getline(row, field, '\t');
         auto* editor = frame->Editor();
         OpenBytes(frame, fields[0], Unhex(fields[2]));
+        // The original retains its fixture's selected insertion EOL when the
+        // public text reset has no newline; replay that independently recorded state.
         editor->Send(Message::SetEOLMode, std::stoul(fields[11]));
         const auto position = std::stoul(fields[3]);
         editor->Send(Message::SetSel, fields[1] == "comment" ? 0 : position, position);
@@ -187,7 +189,8 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         OpenBytes(frame, std::string("workflow.") + fixture.extension, fixture.text);
         const bool make = fixture.lexer == SCLEX_MAKEFILE;
         Require(editor->Send(Message::GetTabWidth) == (make ? 4 : 7) &&
-                    editor->Send(Message::GetIndent) == (make ? 4 : 3) && editor->Send(Message::GetUseTabs) == make,
+                    editor->Send(Message::GetIndent) == (make ? 4 : 3) &&
+                    (editor->Send(Message::GetUseTabs) != 0) == make,
                 "Make retains original independent 4/4 literal tabs; INI/Diff inherit global settings");
         constexpr auto style = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
         const auto font = editor->Send(Message::StyleGetSizeFractional, style);

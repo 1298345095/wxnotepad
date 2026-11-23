@@ -37,7 +37,7 @@ fixtures = [
      'build 界.o: compile 界.c\ndefault 界.o\n', b'rule compile'),
     ('case.diff', 'diff --git a/界.txt b/界.txt\r\nindex 123..456 100644\n'
      '--- a/界.txt\r\n+++ b/界.txt\n@@ -1,2 +1,2 @@\r\n context\n-old\r\n+new\n'
-     '\\ No newline at end of file\n@@ malformed\n+incomplete\n', b'@@ -1'),
+     '\\ No newline at end of file\n@@ malformed\n+incomplete\n', b'diff --git'),
     ('case.patch', '*** old.txt\n--- new.txt\r\n***************\n*** 1,3 ****\n'
      '  same\n- old\n! changed\n--- 1,3 ----\n  same\n+ new\n! revised 界\n'
      '*** broken\n? incomplete\n', b'*** 1,3'),
@@ -173,6 +173,7 @@ for filename, data, fields in [
     (root / filename).write_text('\n'.join(lines) + '\n', encoding='utf-8', newline='\n')
 (root / 'provenance.json').write_text(json.dumps(dict(
     revision='89b8b36e0ee2c23f73be922315f17261ccfbbe1a',
-    executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest()), indent=2) + '\n', encoding='utf-8')
+    executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
+    capture_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()), indent=2) + '\n', encoding='utf-8')
 print('PASS: captured', len(states) * 4, 'original style/fold states,', len(operations), 'editing operations and',
       len(completions), 'completion cases')

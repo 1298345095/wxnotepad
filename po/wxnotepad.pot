@@ -1412,6 +1412,11 @@ msgstr ""
 msgid "Detect Indentation"
 msgstr ""
 
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
+msgstr ""
+
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Document line number."
 msgstr ""
@@ -1759,6 +1764,11 @@ msgstr ""
 msgid "Indentation Width (0–256):"
 msgstr ""
 
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
+msgstr ""
+
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Insert &after selection:"
 msgstr ""
@@ -1957,6 +1967,11 @@ msgstr ""
 #. TRANSLATORS: Original Lua base-scheme chooser title, independent of its INI section key.
 #: src/syntax/syntax_catalog.cpp
 msgid "Lua Script"
+msgstr ""
+
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
 msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp

@@ -23,6 +23,9 @@ The original `LexProps`, `LexMakefile` and `LexDiff` lexers supply coloring and
 folding. INI has `;` line comments; Makefile has `#` line comments; neither has
 block comments. Diff has no comment command. Makefile's completion word
 characters include `!`, `$` and `-`, as in the original completion cache.
+Keyword indentation uses the original case-sensitive first word and style/fold
+gates: a newline inside an existing `define` body indents, while the captured
+incomplete `define` at EOF does not gain an invented closing directive.
 
 Makefile retains independent 4/4 literal-tab settings; INI and Diff inherit
 global tabs by default. Changing schemes does not rewrite existing whitespace.

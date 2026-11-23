@@ -17,6 +17,7 @@ struct CompletionStyles {
     bool xml = false;
     int operatorStyle = 0;
     int operatorStyle2 = 0;
+    int autoIndentWordStyle = 0;
 };
 CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition);
 inline bool CompletionStyleContains(const std::array<uint32_t, 8>& mask, unsigned value) {

@@ -1509,6 +1509,11 @@ msgstr "默认换行模式"
 msgid "Detect Indentation"
 msgstr "自动检查制表符和缩进设置"
 
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
+msgstr "Diff 文件"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_DLN.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Document line number."
@@ -1884,6 +1889,11 @@ msgstr "缩进指示(&G)\tCtrl+Shift+G"
 msgid "Indentation Width (0–256):"
 msgstr "缩进尺寸 (0–256):"
 
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
+msgstr "Ini 配置文件"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_ENCLOSESELECTION / IDC_MODIFY_LINE_TIP2.
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Insert &after selection:"
@@ -2089,6 +2099,11 @@ msgstr "Lua"
 #: src/syntax/syntax_catalog.cpp
 msgid "Lua Script"
 msgstr "Lua 脚本"
+
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
+msgstr "Makefile"
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"

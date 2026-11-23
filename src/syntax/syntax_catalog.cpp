@@ -29,6 +29,9 @@ namespace {
 #include "syntax/generated/cmake_scheme_data.h"
 #include "syntax/generated/css_scheme_data.h"
 #include "syntax/generated/sql_scheme_data.h"
+#include "syntax/generated/ini_scheme_data.h"
+#include "syntax/generated/make_scheme_data.h"
+#include "syntax/generated/diff_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
 constexpr auto textExtensions = std::to_array<const char*>({"txt"});
@@ -852,6 +855,60 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      sqlOriginal,
      {SyntaxMenuFamily::Standalone, 100}},
+    // TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+    {wxTRANSLATE("Ini Config File"),
+     iniExtensions,
+     iniLists,
+     iniStyles,
+     {},
+     SCLEX_PROPERTIES,
+     SyntaxLanguage::Ini,
+     true,
+     ";",
+     nullptr,
+     nullptr,
+     SCE_PROPS_COMMENT,
+     false,
+     false,
+     nullptr,
+     iniOriginal,
+     {SyntaxMenuFamily::Standalone, 35}},
+    // TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+    {wxTRANSLATE("Makefile"),
+     makeExtensions,
+     makeLists,
+     makeStyles,
+     {},
+     SCLEX_MAKEFILE,
+     SyntaxLanguage::Makefile,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_MAKE_COMMENT,
+     false,
+     false,
+     nullptr,
+     makeOriginal,
+     {SyntaxMenuFamily::Standalone, 75}},
+    // TRANSLATORS: Original NP2LEX_DIFF scheme title.
+    {wxTRANSLATE("Diff File"),
+     diffExtensions,
+     diffLists,
+     diffStyles,
+     {},
+     SCLEX_DIFF,
+     SyntaxLanguage::Diff,
+     true,
+     nullptr,
+     nullptr,
+     nullptr,
+     SCE_DIFF_COMMENT,
+     false,
+     false,
+     nullptr,
+     diffOriginal,
+     {SyntaxMenuFamily::Standalone, 25}},
 });
 
 bool Space(char ch) {
@@ -1122,6 +1179,12 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return cssSettingsSection;
     case Sql:
         return sqlSettingsSection;
+    case Ini:
+        return iniSettingsSection;
+    case Makefile:
+        return makeSettingsSection;
+    case Diff:
+        return diffSettingsSection;
     default:
         return "Text File";
     }
@@ -1140,6 +1203,10 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
         const auto ch = extension[index].GetValue();
         if (ch >= 'A' && ch <= 'Z') extension[index] = ch + ('a' - 'A');
     }
+    // Original MySQL settings use the generic Config scheme and remain eligible
+    // for shebang/XML sniffing, rather than the Ini Config File association.
+    const auto lowerName = name.Lower();
+    if (lowerName.StartsWith("my") && (extension == "ini" || extension == "cnf")) return PlainText;
     // Dialect-specific associations precede their canonical scheme's full list.
     if (extension == "asp") return AspVb;
     if (extension == "aspx") return AspxCs;
@@ -1149,6 +1216,10 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
             if (extension == candidate) return definition.language;
         }
     }
+    // Even an original association whose lexer is not delivered precedes the
+    // Makefile/Kbuild filename fallback (for example Makefile.rb or Kbuild.cfg).
+    if (!extension.empty() && OriginalFilenameMatch("file." + extension) != FilenameMatch::Unknown) return PlainText;
+    if (lowerName.StartsWith("makefile") || lowerName.StartsWith("kbuild")) return Makefile;
     for (const auto* build : {"mozconfig", "apkbuild", "pkgbuild"}) {
         if (name.CmpNoCase(build) == 0) return Bash;
     }
