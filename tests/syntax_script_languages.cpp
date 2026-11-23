@@ -137,7 +137,8 @@ void Operations(EditorFrame* frame) {
         constexpr size_t ReadOnlyColumn = 15;
         constexpr size_t SelectionModeColumn = 16;
         constexpr size_t NoticeColumn = 17;
-        std::array<std::string, NoticeColumn + 1> fields;
+        constexpr size_t EnabledColumn = 18;
+        std::array<std::string, EnabledColumn + 1> fields;
         for (auto& field : fields)
             std::getline(row, field, '\t');
         std::println(stderr, "script operation {} {} {}", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
@@ -168,7 +169,12 @@ void Operations(EditorFrame* frame) {
             wxYield();
         } else {
             const auto command = fields[1] == "completion" ? "Complete Word" : fields[1].c_str();
-            TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", command));
+            const auto identifier = frame->GetMenuBar()->FindMenuItem("Edit", command);
+            frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            const bool enabled = fields[EnabledColumn] == "1";
+            Require(frame->GetMenuBar()->IsEnabled(identifier) == enabled,
+                    "original script commands retain their supported/unsupported native menu state");
+            if (enabled) TestSyntax::Command(frame, identifier);
         }
         Require(feedback.count == std::stoi(fields[NoticeColumn]), "original rectangular-selection feedback count");
         Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[4]), "original completion/typing bytes");

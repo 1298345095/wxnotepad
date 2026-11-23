@@ -72,6 +72,9 @@ user = host.user
 user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWORD, c.c_void_p]
 user.CreateDesktopW.restype = w.HANDLE
 user.CloseDesktop.argtypes = [w.HANDLE]
+user.GetMenu.argtypes = [w.HWND]
+user.GetMenu.restype = w.HMENU
+user.GetMenuState.argtypes = [w.HMENU, w.UINT, w.UINT]
 desktop_name = 'wxnotepad-original-scripts-267'
 desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x10000000, None)
 assert desktop
@@ -171,13 +174,16 @@ try:
             app.send(2171, int(readonly))
             app.send(4003, 0, -1)
             notices = 0
+            enabled = True
             if character == 13:
                 app.send(2329)  # SCI_NEWLINE is the actual Enter editing command.
             elif character:
                 user.SendMessageW(app.editor, 0x102, character, 0)
             else:
-                notices = command(app, {'completion': 40373, 'Toggle Line Comment': 40354,
-                                       'Toggle Block Comment': 40355}[kind], bool(mode))
+                identifier = {'completion': 40373, 'Toggle Line Comment': 40354, 'Toggle Block Comment': 40355}[kind]
+                enabled = not (user.GetMenuState(user.GetMenu(app.hwnd), identifier, 0) & 3)
+                if enabled:
+                    notices = command(app, identifier, bool(mode))
             changed = app.state()
             items = candidates(app)
             if items and kind == 'completion':
@@ -193,7 +199,7 @@ try:
                                str(changed['anchor']), str(changed['caret']), ','.join(item.hex() for item in items),
                                confirmed['hex'], str(confirmed['anchor']), str(confirmed['caret']),
                                undo['hex'], redo['hex'], str(caret), str(anchor), str(int(readonly)), str(mode),
-                               str(notices)])
+                               str(notices), str(int(enabled))])
             print(scheme, kind, repr(before), character, [item.decode() for item in items], flush=True)
         finally:
             app.close()
