@@ -93,6 +93,8 @@ add_library(editor_features STATIC
     src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
     src/editor/font_settings.cpp
+    src/editor/style_profile_application.cpp
+    src/syntax/style_profile.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp

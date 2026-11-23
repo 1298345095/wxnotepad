@@ -219,6 +219,10 @@ msgstr ""
 msgid "&Decode"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default"
+msgstr ""
+
 #. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
@@ -1374,6 +1378,10 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "DTD"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Dar&k"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2811,6 +2819,10 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Square brackets []"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "St&yle Theme"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
