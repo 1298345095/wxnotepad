@@ -91,8 +91,7 @@ void Choosers(EditorFrame* frame, SettingsStore& settings) {
             }
         });
         timer.Start(40);
-        frame->SetTitle("wxnotepad script F12");
-        NativeKeys::Shortcut(frame, WXK_F12, false, false, false, nullptr, "wxnotepad script F12");
+        NativeKeys::Shortcut(frame, WXK_F12, false);
         timer.Stop();
         if (failure) std::rethrow_exception(failure);
         Require(shown == 1 && frame->Editor()->Send(Message::GetLexer) == fixture.lexer &&
