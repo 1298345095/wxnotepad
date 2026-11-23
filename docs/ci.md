@@ -121,6 +121,9 @@ The regional-language fixture reads glibc's `%x` in an independent Python proces
 under its private `LOCPATH`. Ubuntu 26.04's uutils `date` ignores that locale for
 this format ([upstream #10284](https://github.com/uutils/coreutils/issues/10284)).
 The existing before/after time boundary and exact output comparisons remain.
+The same independent glibc client checks the private locale's comma decimal
+separator after loading all locale categories. The runner's confined `locale`
+utility cannot read that private directory; its system policy remains unchanged.
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
 - actionlint 1.7.12 predates the official `ubuntu-26.04` runner label. Its

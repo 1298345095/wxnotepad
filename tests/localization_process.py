@@ -492,7 +492,11 @@ class Acceptance:
         subprocess.run(['localedef', '--no-archive', '-i', 'de_DE', '-f', 'UTF-8',
                         str(locale_root / 'de_DE.UTF-8')], check=True)
         regional = dict(os.environ, LOCPATH=str(locale_root), LC_ALL='de_DE.UTF-8')
-        assert subprocess.check_output(['locale', 'decimal_point'], env=regional, text=True).strip() == ','
+        # The CI image's AppArmor profile confines locale. Use an independent
+        # libc client that can load this private directory, including LC_ALL.
+        regional_numeric = [sys.executable, '-c',
+                            'import locale; locale.setlocale(locale.LC_ALL, ""); print(locale.localeconv()["decimal_point"])']
+        assert subprocess.check_output(regional_numeric, env=regional, text=True).strip() == ','
         # Ubuntu 26.04's uutils date ignores the private locale for %x. Read the
         # native libc format in an independent process, preserving LOCPATH.
         regional_date = [sys.executable, '-c',
