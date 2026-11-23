@@ -854,6 +854,10 @@ msgstr ""
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr ""
+
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "AutoSave Settings"
@@ -900,6 +904,10 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
 msgstr ""
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
@@ -2261,6 +2269,10 @@ msgstr ""
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
 msgstr ""
 
 #: src/app/dialogs/print_page_setup_dialog.cpp

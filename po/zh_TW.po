@@ -1009,6 +1009,10 @@ msgstr "自動補上 HTML 與 XML 結束標籤"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自動縮短水平捲軸"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr "AutoHotkey 指令碼"
+
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "AutoSave Settings"
@@ -1060,6 +1064,10 @@ msgstr "備份間隔（秒）"
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
 msgstr "Bash"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
+msgstr "批次檔案"
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -2540,6 +2548,10 @@ msgstr "圓括號 ()"
 msgid "Plain Text"
 msgstr "純文字"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
+msgstr "PowerShell 指令碼"
+
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Preview"
 msgstr "預覽"
@@ -3815,15 +3827,3 @@ msgstr "m4"
 
 #~ msgid "← &Remove"
 #~ msgstr "← 移除(&R)"
-
-#: src/syntax/syntax_catalog.cpp
-msgid "Batch File"
-msgstr "批次檔案"
-
-#: src/syntax/syntax_catalog.cpp
-msgid "PowerShell Script"
-msgstr "PowerShell 指令碼"
-
-#: src/syntax/syntax_catalog.cpp
-msgid "AutoHotkey Script"
-msgstr "AutoHotkey 指令碼"
