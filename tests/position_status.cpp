@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "steady_stopwatch.h"
@@ -287,7 +288,7 @@ public:
                     "PASS: batched edits moving a selection and returning its endpoints refresh selected contents");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

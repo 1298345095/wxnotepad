@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "settings/settings_store.h"
@@ -517,7 +518,7 @@ public:
                 SaveBeforeTools(frame, *settings_);
                 SelfLaunch(frame);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

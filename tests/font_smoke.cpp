@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/platform/core_headers.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
@@ -95,7 +96,7 @@ public:
 #endif
                 result_ = 0;
             } catch (const FontFailure& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

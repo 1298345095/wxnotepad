@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
@@ -114,7 +115,7 @@ public:
                 std::println("PASS: SelectOption={:d} at startup, New, Open and reopen", option);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

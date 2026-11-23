@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "diagnostics/print.h"
 #include <SciLexer.h>
 #include <array>
 #include "app/editor_frame.h"
@@ -89,11 +90,7 @@ public:
         try {
             Request("quit");
         } catch (const std::exception& error) {
-            try {
-                std::println(stderr, "Clipboard peer shutdown failed: {}", error.what());
-            } catch (const std::exception&) {
-                // Continue removing the owned directory if diagnostic output fails.
-            }
+            DiagnosticPrint::Print(stderr, "Clipboard peer shutdown failed: {}\n", error.what());
         } catch (...) {
             std::fputs("Clipboard peer shutdown failed: unknown exception\n", stderr);
         }
@@ -2515,7 +2512,7 @@ public:
                 RunClipboardScenario(frame, editor, peer);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

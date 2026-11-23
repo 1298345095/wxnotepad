@@ -3,6 +3,7 @@
 #include "editor/editor_ids.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "diagnostics/print.h"
 #include "diagnostics/trace.h"
 #include <wx/app.h>
 #include <wx/ffile.h>
@@ -12,8 +13,6 @@
 #include <wx/toolbar.h>
 #include <wx/log.h>
 #include <cstdio>
-#include <exception>
-#include <print>
 #include <limits>
 #include <utility>
 #ifdef __WXMSW__
@@ -259,14 +258,10 @@ void ProcessObserver::Publish() {
     if (!published && !publishPending_) {
         const unsigned long error = wxSysErrorCode();
         const char* stage = !written ? "write" : !closed ? "close" : "rename";
-        try {
-            std::println(
-                stderr,
-                "Observation publication failed: stage={} error={:d} sequence={} result={} directory={}; retry pending",
-                stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(), observation_.utf8_str().data());
-        } catch (const std::exception&) {
-            // A failed diagnostic must still allow the pending publication to retry.
-        }
+        DiagnosticPrint::Print(
+            stderr,
+            "Observation publication failed: stage={} error={:d} sequence={} result={} directory={}; retry pending\n",
+            stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(), observation_.utf8_str().data());
         std::fflush(stderr);
     }
     publishPending_ = !published;
@@ -274,13 +269,9 @@ void ProcessObserver::Publish() {
 
 void ProcessObserver::CommandFailure(const char* stage, unsigned long error) {
     if (!commandPending_) {
-        try {
-            std::println(stderr,
-                         "Observation command failed: stage={} error={:d} last_ack={} directory={}; retry pending",
-                         stage, error, sequence_.utf8_str().data(), observation_.utf8_str().data());
-        } catch (const std::exception&) {
-            // A failed diagnostic must still allow the pending command to retry.
-        }
+        DiagnosticPrint::Print(
+            stderr, "Observation command failed: stage={} error={:d} last_ack={} directory={}; retry pending\n", stage,
+            error, sequence_.utf8_str().data(), observation_.utf8_str().data());
         std::fflush(stderr);
     }
     commandPending_ = true;

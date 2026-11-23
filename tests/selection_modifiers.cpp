@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "native_selection_helpers.h"
 #include "editor/editor_control.h"
@@ -261,7 +262,7 @@ public:
                 std::puts("PASS: Alt+Shift keyboard rectangle, all-range replacement and grouped Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

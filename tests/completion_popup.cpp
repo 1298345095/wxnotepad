@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include "native_completion_helpers.h"
 #include "native_paint_helpers.h"
@@ -185,7 +186,7 @@ public:
                 Require(presented, "native compositor presents completion test editor");
                 CheckPopup(frame);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

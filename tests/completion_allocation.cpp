@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/word_completion.h"
 #include "syntax/syntax_catalog.h"
 #include "completion_allocation_fault.h"
@@ -136,7 +137,7 @@ public:
                 CheckAllocationFailures(frame, presented);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

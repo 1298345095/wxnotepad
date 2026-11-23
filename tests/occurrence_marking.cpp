@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_paint_helpers.h"
 #include <wx/app.h>
@@ -251,7 +252,7 @@ public:
                           "mouse/paint and large-document lifecycle");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

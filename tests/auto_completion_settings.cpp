@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <array>
 #include "settings/settings_store.h"
@@ -284,7 +285,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: native insertion controls, Cancel/OK, live typing and settings persistence");
             } catch (const std::exception& e) {
-                std::println(stderr, "FAIL: {}", e.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", e.what());
             }
             frame->Destroy();
             ExitMainLoop();

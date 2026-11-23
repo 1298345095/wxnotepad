@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "encoded_file_helpers.h"
@@ -328,7 +329,7 @@ public:
                 LossDecision(frame, TestFiles::TemporaryDirectory("headers"));
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

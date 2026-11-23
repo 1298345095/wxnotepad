@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -517,7 +518,7 @@ public:
                 EmptyRules(frame);
                 FormatOnlyDecisions(frame);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

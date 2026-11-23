@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <print>
 #include <array>
@@ -294,7 +295,7 @@ public:
                 WarningChoices(directory, settings);
                 UnknownFileDefaults(directory, settings);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

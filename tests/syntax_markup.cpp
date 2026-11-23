@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
@@ -614,7 +615,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original markup document association");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

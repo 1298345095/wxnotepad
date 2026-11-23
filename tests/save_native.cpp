@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
@@ -357,7 +358,7 @@ public:
                 std::puts("PASS: native Save failure error and retained disk/session/history");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::permissions(directory, std::filesystem::perms::owner_all);
             std::filesystem::remove_all(directory);

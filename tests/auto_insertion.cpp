@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include "native_search_helpers.h"
 #include "syntax/syntax_scheme.h"
@@ -85,7 +86,7 @@ public:
                 std::puts("PASS: original character notifications, styles, read-only state and Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

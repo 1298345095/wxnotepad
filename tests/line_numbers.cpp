@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <print>
 #include "settings/settings_store.h"
@@ -301,7 +302,7 @@ public:
                 FileTransitions(frame, settings_.get());
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

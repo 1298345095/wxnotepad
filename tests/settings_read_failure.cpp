@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <cstdio>
@@ -34,7 +35,7 @@ public:
         if (chmod(path.c_str(), S_IRUSR | S_IWUSR) != 0) return 2;
 #endif
         if (saved || explicitSaved || suppressed || schemeSaved) {
-            std::println(stderr, "FAIL: unreadable existing configuration must reject every write");
+            DiagnosticPrint::Print(stderr, "FAIL: unreadable existing configuration must reject every write\n");
             return 1;
         }
         std::puts("PASS: all settings write operations reject an unreadable existing INI");

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
@@ -109,7 +110,7 @@ public:
             std::puts("PASS: settings field parsing and history replacement preserve original INI semantics");
             return 0;
         } catch (const std::exception& error) {
-            std::println(stderr, "FAIL: {}", error.what());
+            DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             return 1;
         }
     }

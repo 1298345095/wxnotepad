@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include <print>
 #include "native_search_helpers.h"
@@ -393,7 +394,7 @@ public:
                 gated->Destroy();
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

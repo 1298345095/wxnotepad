@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "native_completion_helpers.h"
@@ -528,7 +529,7 @@ public:
                 NativeAnsiBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);
             frame->Destroy();

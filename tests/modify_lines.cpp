@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <print>
 #include <array>
@@ -555,7 +556,7 @@ public:
                 SavedBytes(frame);
                 std::puts("PASS: original Modify Lines");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

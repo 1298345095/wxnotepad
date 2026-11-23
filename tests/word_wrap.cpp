@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include "native_key_helpers.h"
@@ -412,7 +413,7 @@ public:
                 Combined(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
 #ifdef __WXMSW__
                 auto* editor = frame->Editor();
                 const auto dpi = editor->GetDPI();

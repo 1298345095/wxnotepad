@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include <print>
 #include "native_search_helpers.h"
@@ -272,7 +273,7 @@ public:
                 Files(frame, directory);
                 SearchRevalidation(frame);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

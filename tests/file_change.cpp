@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <print>
 #include <array>
@@ -621,7 +622,7 @@ public:
                 CheckFileChangeScenarios(frame, directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             if (frame) {
                 frame->SetFileWatchingOptions({FileWatchingMode::None});

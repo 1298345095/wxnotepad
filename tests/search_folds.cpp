@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
@@ -360,7 +361,7 @@ public:
                 std::puts("PASS: structural replacement leaves reachable text, valid caret and exact saved bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

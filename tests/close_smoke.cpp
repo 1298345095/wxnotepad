@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "diagnostics/print.h"
 #include <array>
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -15,22 +16,22 @@
 #include <string_view>
 
 namespace {
-void TracePrefix(const char* transition) {
+void TracePrefix(const char* transition) noexcept {
     static const auto start = std::chrono::steady_clock::now();
     static unsigned sequence = 0;
     const auto elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
-    std::print(stderr, "CLOSE-LIFECYCLE {:d} +{:d}ms {}", ++sequence, static_cast<long long>(elapsed.count()),
-               transition);
+    DiagnosticPrint::Print(stderr, "CLOSE-LIFECYCLE {:d} +{:d}ms {}", ++sequence,
+                           static_cast<long long>(elapsed.count()), transition);
 }
-void Trace(const char* transition) {
+void Trace(const char* transition) noexcept {
     TracePrefix(transition);
     std::fputc('\n', stderr);
     std::fflush(stderr);
 }
-void TraceFrame(const char* transition, const EditorFrame* frame) {
+void TraceFrame(const char* transition, const EditorFrame* frame) noexcept {
     TracePrefix(transition);
-    std::println(stderr, " frame={:p}", static_cast<const void*>(frame));
+    DiagnosticPrint::Print(stderr, " frame={:p}\n", static_cast<const void*>(frame));
     std::fflush(stderr);
 }
 class FrameLifecycle {
@@ -290,7 +291,7 @@ public:
                 std::puts("PASS: failed close Save retains document, identity and history");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             if (!frame->IsBeingDeleted()) frames_.DestroyFrame(frame);
             Trace("ExitMainLoop requested");

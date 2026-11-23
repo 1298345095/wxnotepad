@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include "diagnostics/print.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -432,13 +433,9 @@ public:
     ~BackupDirectoryWriteBlock() {
         std::error_code error;
         fs::permissions(directory_, original_, error);
-        if (error) {
-            try {
-                std::println(stderr, "FAIL: restore private backup directory permissions: {}", error.message().c_str());
-            } catch (const std::exception&) {
-                // Preserve teardown when its diagnostic cannot be written.
-            }
-        }
+        if (error)
+            DiagnosticPrint::Print(stderr, "FAIL: restore private backup directory permissions: {}\n",
+                                   error.message().c_str());
     }
     BackupDirectoryWriteBlock(const BackupDirectoryWriteBlock&) = delete;
     BackupDirectoryWriteBlock& operator=(const BackupDirectoryWriteBlock&) = delete;
@@ -536,7 +533,7 @@ public:
 #endif
                 std::puts("PASS: native periodic backup settings");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

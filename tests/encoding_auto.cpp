@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "document/document_session.h"
 #include "editor/editor_control.h"
 #include "editor/platform/native_encoding.h"
@@ -443,7 +444,7 @@ public:
                 CheckQuickReloadWithUtf8SystemAnsi();
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

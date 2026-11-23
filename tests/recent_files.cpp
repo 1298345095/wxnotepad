@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "file_helpers.h"
@@ -207,7 +208,7 @@ private:
                     "restart chooser history order");
             result_ = 0;
         } catch (const std::exception& error) {
-            std::println(stderr, "FAIL: {}", error.what());
+            DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
         }
         frame->Destroy();
         ExitMainLoop();
@@ -351,7 +352,7 @@ private:
             std::puts("PASS: Recent command tracks available file history");
             result_ = 0;
         } catch (const std::exception& error) {
-            std::println(stderr, "FAIL: {}", error.what());
+            DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
         }
         // Destroy is deferred: release the native watcher before removing its directory.
         wxWeakRef<EditorFrame> closing = frame;

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "settings/settings_store.h"
@@ -195,7 +196,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: application renderer default and original menu choices");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

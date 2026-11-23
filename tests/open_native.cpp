@@ -1,4 +1,5 @@
 #include "status_helpers.h"
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -29,9 +30,9 @@ using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
 
-void TraceFileCommand(const char* transition) {
+void TraceFileCommand(const char* transition) noexcept {
     if (!std::string_view(transition).starts_with("driver callback"))
-        std::println(stderr, "native-open-driver: {}", transition);
+        DiagnosticPrint::Print(stderr, "native-open-driver: {}\n", transition);
 }
 
 #ifdef __WXGTK__
@@ -366,7 +367,7 @@ public:
                 frame->Destroy();
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 if (!frame->IsBeingDeleted()) frame->Destroy();
             }
             std::filesystem::remove_all(directory);

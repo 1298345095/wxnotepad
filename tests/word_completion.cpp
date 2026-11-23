@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_completion_helpers.h"
 #include <print>
 #include <wx/vlbox.h>
@@ -295,7 +296,7 @@ public:
                 Require(TestEditor::Text(editor) == "pri" && !editor->Send(Message::CanUndo),
                         "confirmation is one Undo step");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "native_paint_helpers.h"
@@ -493,7 +494,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: native default toolbar");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

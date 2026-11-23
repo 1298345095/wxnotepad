@@ -1,15 +1,21 @@
 #include "app/editor_frame.h"
 #include "app/process_observer.h"
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "file_helpers.h"
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
+#include <wx/ffile.h>
 #include <wx/log.h>
 #include <chrono>
 #include <cstdio>
-#include <print>
 #include <memory>
 #include <stdexcept>
+#ifdef __WXMSW__
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #include <gdk/gdkwayland.h>
@@ -28,6 +34,73 @@ template <typename Predicate> void Await(Predicate ready, const char* message) {
     } while (std::chrono::steady_clock::now() < deadline);
     Require(false, message);
 }
+
+class CapturedStderr final {
+public:
+    explicit CapturedStderr(const std::filesystem::path& path) : output_(TestFiles::Filename(path), "wb") {
+        Require(output_.IsOpened(), "open the observer's private diagnostic capture");
+        Require(std::fflush(stderr) == 0, "flush stderr before capturing the observer diagnostic");
+        descriptor_ = Descriptor(stderr);
+        saved_ = Duplicate(descriptor_);
+        Require(saved_ >= 0, "retain stderr before capturing the observer diagnostic");
+        if (!Redirect(Descriptor(output_.fp()), descriptor_)) {
+            Close(saved_);
+            saved_ = -1;
+            throw std::runtime_error("redirect stderr to the observer's private diagnostic capture");
+        }
+    }
+    ~CapturedStderr() {
+        if (!Restore()) std::fputs("FAIL: restore stderr after the observer diagnostic capture\n", stderr);
+    }
+    CapturedStderr(const CapturedStderr&) = delete;
+    CapturedStderr& operator=(const CapturedStderr&) = delete;
+    CapturedStderr(CapturedStderr&&) = delete;
+    CapturedStderr& operator=(CapturedStderr&&) = delete;
+
+    bool Restore() noexcept {
+        if (saved_ < 0) return true;
+        const bool flushed = std::fflush(stderr) == 0;
+        if (!Redirect(saved_, descriptor_)) return false;
+        const bool closed = Close(saved_);
+        saved_ = -1;
+        std::clearerr(stderr);
+        return flushed && closed;
+    }
+
+private:
+    static int Descriptor(FILE* stream) noexcept {
+#ifdef __WXMSW__
+        return _fileno(stream);
+#else
+        return ::fileno(stream);
+#endif
+    }
+    static int Duplicate(int descriptor) noexcept {
+#ifdef __WXMSW__
+        return _dup(descriptor);
+#else
+        return ::dup(descriptor);
+#endif
+    }
+    static bool Redirect(int source, int destination) noexcept {
+#ifdef __WXMSW__
+        return _dup2(source, destination) == 0;
+#else
+        return ::dup2(source, destination) == destination;
+#endif
+    }
+    static bool Close(int descriptor) noexcept {
+#ifdef __WXMSW__
+        return _close(descriptor) == 0;
+#else
+        return ::close(descriptor) == 0;
+#endif
+    }
+    wxFFile output_;
+    int descriptor_ = -1;
+    int saved_ = -1;
+};
+
 class ObserverApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -44,12 +117,12 @@ public:
                 try {
                     Run();
                 } catch (const std::exception& error) {
-                    std::println(stderr, "FAIL: {}", error.what());
+                    DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                     Finish(1);
                 }
             } else if (std::chrono::steady_clock::now() >= initialDeadline_) {
                 waitingForInitialState_ = false;
-                std::println(stderr, "FAIL: initial native observation is published");
+                DiagnosticPrint::Print(stderr, "FAIL: initial native observation is published\n");
                 Finish(1);
             } else {
                 event.RequestMore();
@@ -63,7 +136,7 @@ public:
                 initialDeadline_ = std::chrono::steady_clock::now() + std::chrono::seconds(15);
                 waitingForInitialState_ = true;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 Finish(1);
             }
         });
@@ -126,7 +199,7 @@ private:
                     Check();
                     Finish(0);
                 } catch (const std::exception& error) {
-                    std::println(stderr, "FAIL: {}", error.what());
+                    DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                     Finish(1);
                 }
             });
@@ -141,20 +214,62 @@ private:
         TestFiles::WriteBytes(pending, std::to_string(sequence) + "\nmenu\n" + std::to_string(wxID_SELECTALL) + "\n");
         std::filesystem::rename(pending, directory_.Path() / "command");
     }
-    void Check() {
+    void CheckEditorState() const {
         using enum Scintilla::Message;
         auto* editor = frame_->Editor();
-        Await([this] { return frame_->IsActive() == active_ && frame_->GetSize() == size_; },
-              "native remapping restores the unchanged active frame geometry");
         Require(editor->Send(GetLength) == 0 && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
                     editor->Send(GetCurrentPos) == 0 && editor->Send(GetAnchor) == 0 &&
                     editor->SelectionRevision() == selection_ && !editor->Send(GetReadOnly),
                 "Select All on an empty document preserves every tracked editor state");
+    }
+    void CheckFailureRecovery() {
+        const auto& root = directory_.Path();
+        const auto previousState = TestFiles::Bytes(root / "state");
+        const auto blockedPublication = root / "state.tmp";
+        Require(std::filesystem::create_directory(blockedPublication), "block the next observation's temporary file");
+        Command(3);
+        Await([&root] { return !std::filesystem::exists(root / "command"); },
+              "observer consumes the command while publication is blocked");
+        Require(TestFiles::Bytes(root / "state") == previousState && Sequence("sequence\t2\n"),
+                "failed temporary-file publication preserves the entire previous acknowledgement");
+        Require(std::filesystem::remove(blockedPublication), "remove the owned publication obstruction");
+        Await([this] { return Sequence("sequence\t3\n"); },
+              "observer automatically retries the same acknowledgement after publication becomes writable");
+        Require(TestFiles::Bytes(root / "state").find("result\tok\n") != std::string::npos,
+                "publication recovery retains the successful native command result");
+
+        const auto diagnostic = root / "command-failure.log";
+        CapturedStderr capture(diagnostic);
+        const auto malformedCommand = root / "command";
+        TestFiles::WriteBytes(malformedCommand, "4\n");
+        Await(
+            [&diagnostic] {
+                return TestFiles::Bytes(diagnostic)
+                           .find("Observation command failed: stage=packet error=0 last_ack=3 ") != std::string::npos;
+            },
+            "observer diagnoses the actual malformed command packet");
+        Require(TestFiles::Bytes(malformedCommand) == "4\n" && Sequence("sequence\t3\n"),
+                "malformed command remains pending without replacing the last acknowledgement");
+        Require(std::filesystem::remove(malformedCommand), "remove the observed malformed command");
+        Command(4);
+        Await([this] { return Sequence("sequence\t4\n"); },
+              "observer accepts a valid native command after the malformed packet is removed");
+        Require(TestFiles::Bytes(root / "state").find("result\tok\n") != std::string::npos,
+                "command recovery publishes the successful native command result");
+        Require(capture.Restore(), "restore stderr after observing command failure and recovery");
+        CheckEditorState();
+        std::puts("PASS: observer recovers from failed publication and malformed command packets");
+    }
+    void Check() {
+        Await([this] { return frame_->IsActive() == active_ && frame_->GetSize() == size_; },
+              "native remapping restores the unchanged active frame geometry");
+        CheckEditorState();
         Await([this] { return Sequence("sequence\t2\n"); },
               "deferred unchanged-state command acknowledgement is retried after native presentation");
         Require(TestFiles::Bytes(directory_.Path() / "state").find("result\tok\n") != std::string::npos,
                 "actual native command succeeds without editing the document");
         std::puts("PASS: native unchanged-state observer acknowledgement");
+        CheckFailureRecovery();
     }
     TestFiles::TemporaryRoot directory_;
     SettingsStore settings_{TestFiles::Filename(directory_.Path() / "settings.ini")};

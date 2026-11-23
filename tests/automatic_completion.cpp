@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include <print>
 #include "native_completion_helpers.h"
@@ -305,7 +306,7 @@ public:
                 Behavior(frame);
                 SupplementaryLatex(frame);
             } catch (const std::exception& e) {
-                std::println(stderr, "FAIL: {}", e.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", e.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

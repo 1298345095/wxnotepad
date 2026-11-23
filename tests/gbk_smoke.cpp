@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include <array>
@@ -195,7 +196,7 @@ public:
                 LossySaveAs(settings_.get(), directory, source, original);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

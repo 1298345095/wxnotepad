@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "tab_settings_helpers.h"
 #include <print>
 #include "file_helpers.h"
@@ -208,7 +209,7 @@ public:
                 Check(editor, 9, 5, false);
                 std::puts("PASS: Tab, Shift+Tab, Backspace, block indent, independent widths, selection and Undo/Redo");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

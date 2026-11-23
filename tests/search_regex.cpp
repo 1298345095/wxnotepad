@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include <array>
@@ -312,7 +313,7 @@ public:
                     "PASS: document anchors, final newline, edit/undo invalidation, invalid-pattern history and New");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
@@ -100,7 +101,7 @@ public:
                 Require(editor->AutoIndentEnabled(), "Auto Indent menu enables the original option");
                 std::puts("PASS: JSON defaults, CRLF/LF/CR, independent widths and enabled/disabled options");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

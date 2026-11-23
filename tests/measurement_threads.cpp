@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/platform/core_headers.h"
 #include "measurement_workers.h"
 #include <wx/wx.h>
@@ -197,7 +198,7 @@ public:
                     std::puts("PASS: concurrent native text metrics preserve fonts, DPI, Unicode and byte positions");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

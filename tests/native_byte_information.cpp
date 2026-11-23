@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_completion_helpers.h"
 #include "file_helpers.h"
 #include <wx/clipbrd.h>
@@ -119,7 +120,7 @@ public:
                 CheckInvalidByte(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

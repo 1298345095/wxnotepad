@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include <wx/wx.h>
@@ -53,7 +54,7 @@ private:
 
     bool Painted(const char* operation) {
         if (paints_ <= before_) {
-            std::println(stderr, "FAIL: no native paint after {}", operation);
+            DiagnosticPrint::Print(stderr, "FAIL: no native paint after {}\n", operation);
             frame_->Destroy();
             ExitMainLoop();
             return false;

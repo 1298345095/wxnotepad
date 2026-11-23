@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include <wx/wx.h>
@@ -199,7 +200,7 @@ public:
                 std::puts("PASS: current search options combine with both navigation directions and wrapping");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

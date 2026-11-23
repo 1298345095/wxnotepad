@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
@@ -289,7 +290,7 @@ public:
                 NativeStylesAndFoldSearch(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::print(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

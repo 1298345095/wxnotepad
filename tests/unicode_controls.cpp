@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include "settings/settings_store.h"
@@ -288,7 +289,7 @@ public:
                 Geometry(frame, id);
                 Lifecycle(frame, id);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

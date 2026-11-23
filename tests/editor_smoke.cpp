@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "native_key_helpers.h"
@@ -229,7 +230,7 @@ public:
                 ScrollingAndCaret(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

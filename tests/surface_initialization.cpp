@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_core.h"
 #include "editor/platform/text_measurement.h"
 #include "completion_allocation_fault.h"
@@ -581,7 +582,7 @@ public:
                 CheckSurfaces(frame, presented);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

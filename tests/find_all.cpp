@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "document/document_session.h"
@@ -232,7 +233,7 @@ public:
                 std::puts("PASS: folded content, disk bytes, replacement invalidation and empty query");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

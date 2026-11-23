@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/completion_candidates.h"
 #include "completion_allocation_fault.h"
 #include <array>
@@ -228,6 +229,6 @@ int main() try {
     std::puts("PASS: completion candidates preserve ordering, prefix retries and allocation-failure recovery");
     return 0;
 } catch (const std::exception& failure) {
-    std::println(stderr, "FAIL: {}", failure.what());
+    DiagnosticPrint::Print(stderr, "FAIL: {}\n", failure.what());
     return 1;
 }

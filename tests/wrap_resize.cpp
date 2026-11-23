@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include <print>
 #include "editor_test_helpers.h"
@@ -161,7 +162,7 @@ public:
                 std::puts("PASS: styled multi-line and long-line wrapped resize, metrics, history and disk bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -118,8 +119,8 @@ public:
         : expected_(std::move(expected)), chosen_(std::move(chosen)), action_(action), deadline_(this) {
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
             failure = "Column Wrap native modal deadline expired";
-            std::println(stderr, "FAIL: {} action={:d}", failure.c_str(),
-                         static_cast<int>(std::to_underlying(action_)));
+            DiagnosticPrint::Print(stderr, "FAIL: {} action={:d}\n", failure.c_str(),
+                                   static_cast<int>(std::to_underlying(action_)));
             if (active_) NativeSearch::Click(active_, wxID_CANCEL);
         });
         Register();
@@ -594,7 +595,7 @@ public:
                 }
                 std::puts("PASS: original Split Lines");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

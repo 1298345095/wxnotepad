@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "document/document_session.h"
 #include "document_load.h"
 #include "editor/editor_control.h"
@@ -382,7 +383,7 @@ public:
                 CheckDocumentLoadIntents(*editor);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

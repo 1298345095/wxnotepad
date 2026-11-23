@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/filename.h>
@@ -458,7 +459,7 @@ class ContinuationApp final : public wxApp {
                 CallAfter([this] { Next(); });
             } catch (const std::exception& error) {
                 std::println(stderr, "Search continuation scenario: {:d}/{:d}", next_, scenarios.size());
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 if (!frame->IsBeingDeleted()) frame->Destroy();
                 ExitMainLoop();
             }

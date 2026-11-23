@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include "diagnostics/print.h"
 #include "native_completion_helpers.h"
 #include "native_paint_helpers.h"
 #include "native_search_helpers.h"
@@ -39,8 +40,8 @@ void ObservePopupPointerAncestry(gpointer owner) {
     if (!owner) return;
     if (!GTK_IS_WIDGET(owner)) return;
     for (auto* widget = GTK_WIDGET(owner); widget; widget = gtk_widget_get_parent(widget))
-        std::println(stderr, "CallTip GTK pointer ancestry widget={:p} class={} name={}", static_cast<void*>(widget),
-                     G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
+        DiagnosticPrint::Print(stderr, "CallTip GTK pointer ancestry widget={:p} class={} name={}\n",
+                               static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
 }
 
 void ObservePopupWindow(GtkWidget* widget, GtkWidget* frameWidget, GtkWidget* tipWidget) {
@@ -65,16 +66,17 @@ void ObservePopupWindow(GtkWidget* widget, GtkWidget* frameWidget, GtkWidget* ti
                 surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
         }
     }
-    std::println(stderr,
-                 "CallTip GTK window widget={:p} class={} name={} type={:d} hint={:d} is_frame={:d} is_tip={:d} "
-                 "is_tooltip={:d} visible={:d} realized={:d} mapped={:d} transient={:p} gdk={:p} native_parent={:p} "
-                 "native_toplevel={:p} gdk_type={:d} gdk_visible={:d} gdk_viewable={:d} destroyed={:d} surface={:d}",
-                 static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
-                 static_cast<int>(gtk_window_get_window_type(GTK_WINDOW(widget))), static_cast<int>(hint),
-                 widget == frameWidget, widget == tipWidget, hint == GDK_WINDOW_TYPE_HINT_TOOLTIP,
-                 gtk_widget_get_visible(widget), gtk_widget_get_realized(widget), gtk_widget_get_mapped(widget),
-                 static_cast<void*>(transient), static_cast<void*>(window), static_cast<void*>(parent),
-                 static_cast<void*>(toplevel), type, visible, viewable, destroyed, surfaceId);
+    DiagnosticPrint::Print(
+        stderr,
+        "CallTip GTK window widget={:p} class={} name={} type={:d} hint={:d} is_frame={:d} is_tip={:d} "
+        "is_tooltip={:d} visible={:d} realized={:d} mapped={:d} transient={:p} gdk={:p} native_parent={:p} "
+        "native_toplevel={:p} gdk_type={:d} gdk_visible={:d} gdk_viewable={:d} destroyed={:d} surface={:d}\n",
+        static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
+        static_cast<int>(gtk_window_get_window_type(GTK_WINDOW(widget))), static_cast<int>(hint), widget == frameWidget,
+        widget == tipWidget, hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget),
+        gtk_widget_get_realized(widget), gtk_widget_get_mapped(widget), static_cast<void*>(transient),
+        static_cast<void*>(window), static_cast<void*>(parent), static_cast<void*>(toplevel), type, visible, viewable,
+        destroyed, surfaceId);
 }
 
 void ObservePopupState(const char* phase, EditorFrame* frame) {
@@ -88,9 +90,10 @@ void ObservePopupState(const char* phase, EditorFrame* frame) {
     auto* pointerWindow = pointer ? gdk_device_get_window_at_position(pointer, &pointerX, &pointerY) : nullptr;
     gpointer pointerOwner = nullptr;
     if (pointerWindow) gdk_window_get_user_data(pointerWindow, &pointerOwner);
-    std::println(stderr, "CallTip GTK observation phase={} frame={:p} tip={:p} pointer_window={:p} pointer={:d},{:d}",
-                 phase, static_cast<void*>(frameWidget), static_cast<void*>(tipWidget),
-                 static_cast<void*>(pointerWindow), pointerX, pointerY);
+    DiagnosticPrint::Print(
+        stderr, "CallTip GTK observation phase={} frame={:p} tip={:p} pointer_window={:p} pointer={:d},{:d}\n", phase,
+        static_cast<void*>(frameWidget), static_cast<void*>(tipWidget), static_cast<void*>(pointerWindow), pointerX,
+        pointerY);
     ObservePopupPointerAncestry(pointerOwner);
     auto* windows = gtk_window_list_toplevels();
     for (auto* item = windows; item; item = item->next)
@@ -895,7 +898,7 @@ public:
                 CheckTokenBounds(frame);
                 CheckPersistence(frame, path_);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             if (!frame->IsBeingDeleted()) frame->Destroy();

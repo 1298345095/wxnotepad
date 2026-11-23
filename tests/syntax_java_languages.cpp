@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "syntax_language_test_helpers.h"
 #include <print>
 #include "native_paint_helpers.h"
@@ -286,7 +287,7 @@ public:
                 }
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

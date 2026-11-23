@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -94,7 +95,8 @@ gboolean ObserveSourceAction(gpointer value) {
         const auto status = source.identity + wxString::Format(":target:%u", action);
         if (action != 0 && target == status) {
             PublishDragState(source.control + ".drag-action", status);
-            std::println(stderr, "Native drag gesture={} observed=source-selected-action", status.utf8_str().data());
+            DiagnosticPrint::Print(stderr, "Native drag gesture={} observed=source-selected-action\n",
+                                   status.utf8_str().data());
             return G_SOURCE_REMOVE;
         }
     }
@@ -126,7 +128,8 @@ void ObserveNativeDrags(wxString* control) {
                 if (observation.target)
                     state += wxString::Format(":%u", gdk_drag_context_get_selected_action(observation.target));
                 PublishDragState(observation.path, state);
-                std::println(stderr, "Native drag gesture={} observed={}", state.utf8_str().data(), observation.event);
+                DiagnosticPrint::Print(stderr, "Native drag gesture={} observed={}\n", state.utf8_str().data(),
+                                       observation.event);
                 return G_SOURCE_REMOVE;
             },
             pending.release(),
@@ -144,8 +147,8 @@ void ObserveNativeDrags(wxString* control) {
             const auto phase = ReadDragState(control + ".drag-phase");
             const auto* event = static_cast<GdkEventButton*>(g_value_get_boxed(arguments + 1));
             if (phase.EndsWith(":start") && event->button == 1) {
-                std::println(stderr, "Native drag gesture={} press-type={:d} at={:.0f},{:.0f}", phase.utf8_str().data(),
-                             static_cast<int>(event->type), event->x, event->y);
+                DiagnosticPrint::Print(stderr, "Native drag gesture={} press-type={:d} at={:.0f},{:.0f}\n",
+                                       phase.utf8_str().data(), static_cast<int>(event->type), event->x, event->y);
                 queue({control + ".drag-pressed", phase, nullptr, "button-press-processed"});
             }
             return TRUE;
@@ -184,8 +187,8 @@ void ObserveNativeDrags(wxString* control) {
         g_signal_lookup("drag-failed", GTK_TYPE_WIDGET), 0,
         +[](GSignalInvocationHint*, guint, const GValue* arguments, gpointer value) -> gboolean {
             const auto phase = ReadDragState(*static_cast<wxString*>(value) + ".drag-phase");
-            std::println(stderr, "Native drag gesture={} result={:d}", phase.utf8_str().data(),
-                         g_value_get_enum(arguments + 2));
+            DiagnosticPrint::Print(stderr, "Native drag gesture={} result={:d}\n", phase.utf8_str().data(),
+                                   g_value_get_enum(arguments + 2));
             return TRUE;
         },
         control, nullptr);
@@ -1087,7 +1090,7 @@ private:
             try {
                 NativeFileDrop(frame, peerDelay);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();
@@ -1112,7 +1115,7 @@ private:
                 DragScrollCancellation(frame, editor);
                 IndependentProcessDrags(frame, editor);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();
@@ -1173,7 +1176,7 @@ private:
                         "driver acknowledgement must preserve an already opened request snapshot");
                 std::puts("PASS: native input acknowledgement preserves an open request snapshot");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();
@@ -1235,7 +1238,7 @@ private:
                 WaylandOrigins(editor, peer.directory);
                 std::puts("PASS: native peer geometry waits for delayed coordinate publication");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

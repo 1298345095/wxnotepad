@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/file_change_monitor.h"
 #include "file_helpers.h"
 #include "steady_stopwatch.h"
@@ -82,7 +83,7 @@ public:
                 CheckMonitorLifetime(*owner);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             owner->Destroy();
             ExitMainLoop();

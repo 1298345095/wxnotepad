@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <print>
 #include "native_paint_helpers.h"
@@ -209,7 +210,7 @@ public:
                 std::puts("PASS: native combined mode transitions, transformed Unicode operations and NUL truncation");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

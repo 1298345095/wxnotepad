@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -113,7 +114,7 @@ public:
                 std::puts("PASS: cancellation/read/strict UTF-8 failures retain document and history");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

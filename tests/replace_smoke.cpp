@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
 #include "app/editor_frame.h"
@@ -166,7 +167,7 @@ public:
                 std::puts("PASS: replacement advancement uses the shared current wrap policy");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

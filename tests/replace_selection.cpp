@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -249,7 +250,7 @@ public:
                 std::puts("PASS: native enablement and independent saved UTF-8/BOM/mixed-EOL bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

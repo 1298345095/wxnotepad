@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "file_helpers.h"
 #include <print>
 #include "native_key_helpers.h"
@@ -187,7 +188,7 @@ public:
                 Replay(frame, true);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <print>
 #include "encoded_file_helpers.h"
@@ -374,7 +375,7 @@ public:
                 NativeAnsi(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include <array>
 #include "app/editor_frame.h"
@@ -397,7 +398,7 @@ public:
                 SavedDocument(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

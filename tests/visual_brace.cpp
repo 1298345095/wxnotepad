@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "brace_observation.h"
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
@@ -287,7 +288,7 @@ public:
                 SavedState(frame, toggle);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

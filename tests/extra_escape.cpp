@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "settings/settings_store.h"
@@ -526,7 +527,7 @@ public:
                 CloseCase(frame, 0);
                 return;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
         });
@@ -637,7 +638,7 @@ private:
                 CloseCase(sentinel, scenario + 1);
                 return;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL close case {:d}: {}", scenario, error.what());
+                DiagnosticPrint::Print(stderr, "FAIL close case {:d}: {}\n", scenario, error.what());
                 if (retained)
                     std::println(stderr, "candidate size={:d}x{:d} client={:d}x{:d} active={:d} editorFocus={:d}",
                                  retained->GetSize().x, retained->GetSize().y, retained->GetClientSize().x,

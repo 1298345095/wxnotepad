@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include "native_completion_helpers.h"
 #include "native_paint_helpers.h"
@@ -331,7 +332,7 @@ public:
                 }
                 CheckCycle(frame);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
 #ifdef __WXGTK__
                 ReportGtkGeometry(frame, "at failure");
 #endif
@@ -367,7 +368,7 @@ private:
                       "Escape exits startup fullscreen to the restored normal size");
                 std::puts("PASS: native Full Screen Mode checks, save now, close, reload and Escape");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 status_ = 1;
             }
             frame->Destroy();

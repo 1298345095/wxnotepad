@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "diagnostics/print.h"
 #include <print>
 #include "app/localization.h"
 #include "editor/editor_control.h"
@@ -297,11 +298,7 @@ public:
         try {
             CleanupInvocationKey();
         } catch (const std::exception& error) {
-            try {
-                std::println(stderr, "Owned popup key release failed: {}", error.what());
-            } catch (const std::exception&) {
-                // Continue unbinding native callbacks if diagnostic output fails.
-            }
+            DiagnosticPrint::Print(stderr, "Owned popup key release failed: {}\n", error.what());
         }
         frame_->Editor()->Unbind(wxEVT_KEY_UP, &Popup::EditorKeyReleased, this);
 #endif
@@ -561,13 +558,10 @@ private:
     std::chrono::steady_clock::time_point invocationDeadline_;
     void CleanupInvocationKey() {
         if (heldInvocationKey_.empty()) return;
-        try {
-            std::println(stderr, "Held popup-key cleanup: keys={} remaining={:d} opened=[{}] drive=[{}] key=[{}]",
-                         heldInvocationKey_.utf8_string().c_str(), invocationReleases_.size(), openedState_.c_str(),
-                         drivenState_.c_str(), keyState_.c_str());
-        } catch (const std::exception&) {
-            // Diagnostic output must not prevent releasing the held native key.
-        }
+        DiagnosticPrint::Print(stderr,
+                               "Held popup-key cleanup: keys={} remaining={:d} opened=[{}] drive=[{}] key=[{}]\n",
+                               heldInvocationKey_.utf8_string().c_str(), invocationReleases_.size(),
+                               openedState_.c_str(), drivenState_.c_str(), keyState_.c_str());
         ReleaseInvocationKey();
         while (!invocationReleases_.empty() && std::chrono::steady_clock::now() < invocationDeadline_) {
             wxYield();
@@ -1008,7 +1002,7 @@ public:
                                                  "localized native popup preserves directed selection");
                 }
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

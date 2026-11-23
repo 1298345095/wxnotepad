@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
@@ -124,7 +125,7 @@ public:
                 Case({}, {"All Files", "Python", "Plain Text"}, {"Python", "Plain Text", "All Files"});
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             lifetime->Destroy();
             ExitMainLoop();

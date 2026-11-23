@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <print>
 #include "encoded_file_helpers.h"
@@ -459,7 +460,7 @@ public:
                 SavedBytes(frame);
                 std::puts("PASS: original enclosure commands");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

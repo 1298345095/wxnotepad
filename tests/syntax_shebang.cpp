@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "syntax_test_helpers.h"
@@ -214,7 +215,7 @@ public:
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
                 std::filesystem::remove_all(folder);
                 frame->Destroy();

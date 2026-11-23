@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include <print>
 #include "native_key_helpers.h"
@@ -202,7 +203,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original native menu controls, check states and client-area layout");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             if (frame) frame->Destroy();
             ExitMainLoop();

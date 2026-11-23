@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor_test_helpers.h"
 #include <print>
 #include "native_key_helpers.h"
@@ -313,7 +314,7 @@ public:
                 }
                 std::puts("PASS: native original window title modes");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 status_ = 1;
             }
             frame_.release()->Destroy();

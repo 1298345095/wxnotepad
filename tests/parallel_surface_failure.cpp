@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/platform/parallel_tasks.h"
 #include "editor/platform/native_drawing_error.h"
 #include <array>
@@ -195,6 +196,6 @@ int main() try {
     std::puts("PASS: production parallel tasks join before propagating resource failures and permit retry");
     return 0;
 } catch (const std::exception& failure) {
-    std::println(stderr, "FAIL: {}", failure.what());
+    DiagnosticPrint::Print(stderr, "FAIL: {}\n", failure.what());
     return 1;
 }

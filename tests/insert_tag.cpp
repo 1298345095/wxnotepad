@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include <print>
 #include "encoded_file_helpers.h"
@@ -466,7 +467,7 @@ public:
                 EmbeddedLineEndings(frame);
                 SavedBytes(frame, tags[1]);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);

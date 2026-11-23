@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "tab_settings_helpers.h"
 #include <print>
 #include "file_helpers.h"
@@ -139,7 +140,7 @@ public:
                 std::puts("PASS: variable grammar, clamping, beginning/end gates, partial precedence, ties, sampling "
                           "and transitions");
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

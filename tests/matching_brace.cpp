@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include <cstdio>
@@ -248,7 +249,7 @@ public:
                 CollapsedBraceTargets(frame, find, select);
                 WrappedBraceTargets(frame, find, select);
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

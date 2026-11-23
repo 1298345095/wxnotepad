@@ -1,21 +1,16 @@
 #pragma once
 
+#include "diagnostics/print.h"
 #include <wx/init.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <exception>
-#include <print>
 #include <cstdlib>
 #include <string_view>
 
 namespace Fuzz {
 [[noreturn]] inline void Fail(const char* requirement) {
-    try {
-        std::println(stderr, "Fuzz invariant failed: {}", requirement);
-    } catch (const std::exception&) {
-        // An output failure must preserve the fuzzer's invariant-failure abort.
-    }
+    DiagnosticPrint::Print(stderr, "Fuzz invariant failed: {}\n", requirement);
     std::abort();
 }
 inline void Check(bool condition, const char* requirement) {

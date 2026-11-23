@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "search/search_session.h"
 #include "document/document_session.h"
@@ -230,7 +231,7 @@ public:
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
                 frame->Destroy();
                 ExitMainLoop();

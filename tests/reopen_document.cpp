@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "document/document_session.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
@@ -229,7 +230,7 @@ public:
                 std::puts("PASS: frame reopen uses new file tab width for the saved-column fallback");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::println(stderr, "FAIL: {}", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             wxRemoveFile(path);
             wxRemoveFile(path.BeforeLast('.'));
