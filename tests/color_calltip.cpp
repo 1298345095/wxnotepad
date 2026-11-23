@@ -5,11 +5,15 @@
 #include "native_renderer_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
+#ifdef __WXMSW__
+#include "native_tree_input.h"
+#endif
 #include <array>
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
+#include <SciLexer.h>
 #include <wx/dcmemory.h>
 #include <wx/filename.h>
 #include <wx/imagpng.h>
@@ -92,6 +96,11 @@ HoverObservation Hover(EditorControl* editor, intptr_t position) {
     gtk_widget_event(widget, event);
     gdk_event_free(event);
 #else
+#ifdef __WXMSW__
+    // The next genuine mouse message must agree with this fixture's hover.
+    // Retain wx motion delivery: wxMSW filters repeated native coordinates.
+    NativeTreeInput::Move(static_cast<HWND>(editor->GetHandle()), editor->ClientToScreen({x, y}));
+#endif
     wxMouseEvent event(wxEVT_MOTION);
     event.SetPosition(wxPoint(x, y));
     event.SetEventObject(editor);
@@ -401,6 +410,15 @@ void CheckColorEdit(EditorFrame* frame, size_t caseIndex, const ColorEditCase& e
     editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
     DwellEvents events(editor);
+#ifdef __WXMSW__
+    if (caseIndex == 3 && editor->Send(GetLexer) == SCLEX_NULL && wxGetenv("WXNOTEPAD_CALLTIP_REPLAY_NATIVE_MOTION")) {
+        // CI captured a genuine motion here after the synthetic token hover.
+        // Leave this native move queued until Hover's normal event-loop wait.
+        const wxPoint capturedNativeMotion{414, 409};
+        Require(editor->GetClientRect().Contains(capturedNativeMotion), "captured native motion stays in the editor");
+        NativeTreeInput::Move(static_cast<HWND>(editor->GetHandle()), editor->ClientToScreen(capturedNativeMotion));
+    }
+#endif
     const auto hover = Hover(editor, edit.hover);
     const auto point = hover.point;
     const bool preview = WaitFor([editor] { return VisibleCallTip(editor); });
