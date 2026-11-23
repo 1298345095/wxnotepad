@@ -58,3 +58,13 @@ Default `size:+1.5`, the original observes:
 The dirty Dark switch writes Dark's `UseDefaultCodeStyle=0` and the old main
 `StyleTheme=1` before loading Default. Every in-process snapshot retains the
 same document bytes, reversed selection, clean save point and available Redo.
+
+`tests/style_theme_process.py` exercises the actual bundled executable through
+the existing process observer. It covers unconfigured startup, all three UI
+languages, a missing user Dark file, repeated selection, independent restarts,
+custom fractional font profiles, the actual inheritance menu, save-before-switch,
+Save Settings On Exit, untouched settings and exact saved UTF-8 BOM/CRLF bytes.
+The installed case runs the copied package under a genuinely read-only owned
+`/opt` prefix with relocated `share/locale` and isolated writable XDG settings.
+Its CTest registrations are `packaged_style_theme_lifecycle` and the Linux
+`packaged_style_theme_installed`; both retain a 180-second guard.
