@@ -101,12 +101,13 @@ void OriginalOperations(EditorFrame* frame) {
     size_t count = 0;
     for (std::string line; std::getline(input, line);) {
         if (line.empty() || line.front() == '#') continue;
-        std::array<std::string, 10> fields;
+        std::array<std::string, 12> fields;
         std::istringstream row(line);
         for (auto& field : fields)
             std::getline(row, field, '\t');
         auto* editor = frame->Editor();
         OpenBytes(frame, fields[0], Unhex(fields[2]));
+        editor->Send(Message::SetEOLMode, std::stoul(fields[11]));
         const auto position = std::stoul(fields[3]);
         editor->Send(Message::SetSel, fields[1] == "comment" ? 0 : position, position);
         if (fields[1] == "comment") {
@@ -119,6 +120,12 @@ void OriginalOperations(EditorFrame* frame) {
             event.SetEventObject(editor);
             editor->GetEventHandler()->ProcessEvent(event);
         }
+        std::vector<std::string> expectedCandidates;
+        std::istringstream words(fields[10]);
+        for (std::string word; words >> word;)
+            expectedCandidates.push_back(word);
+        Require(NativeCompletion::Candidates(editor) == expectedCandidates,
+                "typed automatic completion candidates match the independent original");
         editor->Send(Message::AutoCCancel);
         if (TestEditor::Text(editor) != Unhex(fields[5]))
             DiagnosticPrint::Print(stderr, "operation={} action={} expected=[{}] actual=[{}]\n", fields[0], fields[4],
@@ -132,7 +139,7 @@ void OriginalOperations(EditorFrame* frame) {
         SavedOperation(frame, Unhex(fields[5]));
         ++count;
     }
-    Require(count == 16, "all original comment/indent/pairing operations execute");
+    Require(count == 19, "all original comment/indent/pairing operations execute");
 }
 void OriginalCompletions(EditorFrame* frame) {
     std::ifstream input(std::filesystem::path(BUILD_PATCH_COMPLETIONS_REFERENCE));
@@ -263,6 +270,7 @@ public:
         wxApp::OnRun();
         return result_;
     }
+    int OnExit() override { return result_; }
 
 private:
     std::unique_ptr<SettingsStore> settings_;

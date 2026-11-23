@@ -100,16 +100,23 @@ try:
                 continue
             contexts = ([(b'key = ', 40), (b'; comment', 34), (b'  key=value', 13)] if filename == 'case.ini'
                         else [(b'all:', 13), (b'\tcommand', 13), (b'if', 13), (b'define run', 13),
-                              (b'for item', 13), (b'ifeq (a,b)', 13), (b'$(value', 40), (b'# comment', 34)]
+                              (b'for item', 13), (b'ifeq (a,b)', 13), (b'$(value', 40), (b'# comment', 34),
+                              (b'$(fil', ord('t'))]
                         if filename == 'Makefile' else [(b'+line', 40), (b' context', 13), (b'--- file', 34)])
-            for before, action in contexts:
+            if filename == 'Makefile':
+                contexts += [(b'define run\n\tbody\nendef\n', 13, 10), (b'define run\n', 13, 10)]
+            for context in contexts:
+                before, action = context[:2]
+                caret = context[2] if len(context) == 3 else len(before)
                 app.send(2101)
-                app.reset(before, len(before), len(before))
+                app.reset(before, caret, caret)
                 app.send(4003, 0, -1)
-                user.SendMessageW(app.editor, 0x102, action, 0)
+                eol = app.send(2030)
+                user.SendMessageW(app.editor, 0x100 if action == 13 else 0x102, action, 0)
+                items = candidates(app)
                 app.send(2101)
-                row = dict(name=filename, kind='character', before=before.hex(), position=len(before), action=action,
-                           after=app.text().hex(), anchor=app.send(2009), caret=app.send(2008))
+                row = dict(name=filename, kind='character', before=before.hex(), position=caret, action=action,
+                           after=app.text().hex(), anchor=app.send(2009), caret=app.send(2008), items=items, eol=eol)
                 row['undo'] = history(app, 2174, 2176)
                 row['redo'] = history(app, 2016, 2011)
                 operations.append(row)
@@ -118,12 +125,12 @@ try:
                 app.reset(before, 0, len(before))
                 app.command(40354)  # IDM_EDIT_LINECOMMENT, pinned resource.h
                 row = dict(name=filename, kind='comment', before=before.hex(), position=len(before), action=0,
-                           after=app.text().hex(), anchor=app.send(2009), caret=app.send(2008))
+                           after=app.text().hex(), anchor=app.send(2009), caret=app.send(2008), items=[], eol=app.send(2030))
                 row['undo'] = history(app, 2174, 2176)
                 row['redo'] = history(app, 2016, 2011)
                 operations.append(row)
-            prefixes = ([b'SHELL := bash\nSHE', b'!INCL', b'$(sub'] if filename == 'Makefile'
-                        else [b'alpha=one\nalp'] if filename == 'case.ini' else [b'+alpha\n+alp'])
+            prefixes = ([b'SHELL := bash\nSHE', b'!INCL', b'$(fi'] if filename == 'Makefile'
+                        else [b'alpha=one\nalpine=two\nalp'] if filename == 'case.ini' else [b'+alpha\n+alpine\n+alp'])
             for before in prefixes:
                 app.send(2101)
                 app.reset(before, len(before), len(before))
@@ -155,7 +162,7 @@ for row in states:
 (root / 'build_patch_reference.tsv').write_text('\n'.join(lines) + '\n', encoding='utf-8', newline='\n')
 for filename, data, fields in [
     ('build_patch_operations_reference.tsv', operations,
-     ['name', 'kind', 'before', 'position', 'action', 'after', 'anchor', 'caret', 'undo', 'redo']),
+     ['name', 'kind', 'before', 'position', 'action', 'after', 'anchor', 'caret', 'undo', 'redo', 'items', 'eol']),
     ('build_patch_completions_reference.tsv', completions,
      ['name', 'before', 'after', 'confirmed', 'anchor', 'caret', 'undo', 'redo', 'items']),
 ]:
