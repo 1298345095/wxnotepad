@@ -11,7 +11,8 @@ SCHEMES = {'Rust': 'Rust', 'Go': 'Go', 'Lua': 'Lua', 'CPP': 'CPP',
            'Python': 'Python', 'Bash': 'Bash', 'JavaScript': 'JS', 'TypeScript': 'TS',
            'JSON': 'JSON', 'HTML': 'HTML', 'XML': 'XML', 'CSS': 'CSS', 'VBS': 'VBS', 'PHP': 'PHP',
            'TOML': 'TOML', 'YAML': 'YAML', 'CMake': 'CMake', 'Markdown': 'Markdown', 'SQL': 'SQL',
-           'Java': 'Java', 'CSharp': 'CSharp', 'Kotlin': 'Kotlin'}
+           'Java': 'Java', 'CSharp': 'CSharp', 'Kotlin': 'Kotlin',
+           'Batch': 'Batch', 'PowerShell': 'PS1', 'AutoHotkey': 'AHK'}
 
 
 def main(schemes=None):

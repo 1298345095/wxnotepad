@@ -18,6 +18,12 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
                              0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
     // Original pinned generated cache cases. Keep masks independent of display styles.
     switch (definition.language) {
+    case PowerShell:
+        for (const auto ch : {'$', '-', ':', '?', '@'})
+            result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
+        for (const auto style : {SCE_POWERSHELL_STRING_SQ, SCE_POWERSHELL_HERE_STRING_SQ})
+            result.rawStrings[style >> 5] |= 1U << (style & 31);
+        break;
     case Css:
     case Scss:
     case Less:
@@ -97,6 +103,7 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.genericTypes[SCE_RUST_ENUMERATION >> 5] |= (1U << (SCE_RUST_ENUMERATION & 31));
         result.genericTypes[SCE_RUST_UNION >> 5] |= (1U << (SCE_RUST_UNION & 31));
         break;
+    case Batch:
     case PlainText:
 
         result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));

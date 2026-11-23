@@ -389,7 +389,7 @@ void KeyboardChooser() {
             "favorite-mode keyboard confirmation preserves current scheme");
     frame->Destroy();
 }
-using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 21>;
+using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 24>;
 
 void CheckLocalizedCaptions(wxTreeCtrl& tree, const LocalizedSchemeCaptions& captions, size_t column) {
     for (const auto& caption : captions) {
@@ -502,6 +502,9 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
         {"CMake Script", "CMake 脚本", "CMake 指令碼"},
         {"CSS Style Sheet", "CSS 样式表", "CSS 樣式表"},
         {"SQL Query", "SQL 查询", "SQL 查詢"},
+        {"Batch File", "批处理文件", "批次檔案"},
+        {"PowerShell Script", "PowerShell 脚本", "PowerShell 指令碼"},
+        {"AutoHotkey Script", "AutoHotkey 脚本", "AutoHotkey 指令碼"},
     }};
     constexpr int SimplifiedChineseLanguage = 2052;
     constexpr int TraditionalChineseLanguage = 1028;
