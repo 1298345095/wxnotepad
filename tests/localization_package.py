@@ -165,9 +165,9 @@ class Child:
         return self.returncode
 
     def terminate(self):
-        if self.poll() is not None:
-            return
         if sys.platform == 'win32':
+            if self.poll() is not None:
+                return
             if not self._kernel.TerminateProcess(self._handle, 1):
                 error = ctypes.get_last_error()
                 # As with Popen, termination may race a child already exiting.
