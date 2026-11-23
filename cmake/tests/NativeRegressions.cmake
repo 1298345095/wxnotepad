@@ -400,3 +400,16 @@ add_test(NAME original_batch_powershell_autohotkey_process COMMAND "${Python3_EX
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/script_languages_process.py" "$<TARGET_FILE:wxnotepad>"
     --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/script-languages-process")
 set_tests_properties(original_batch_powershell_autohotkey_process PROPERTIES TIMEOUT 180)
+
+add_test(NAME packaged_style_theme_lifecycle COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/style_theme_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/style-theme-portable"
+    --scenario portable)
+set_tests_properties(packaged_style_theme_lifecycle PROPERTIES TIMEOUT 180)
+if(UNIX AND NOT APPLE)
+    add_test(NAME packaged_style_theme_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/style_theme_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/style-theme-installed"
+        --scenario installed)
+    set_tests_properties(packaged_style_theme_installed PROPERTIES TIMEOUT 180)
+endif()
