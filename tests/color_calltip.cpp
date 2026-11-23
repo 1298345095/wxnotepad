@@ -34,6 +34,48 @@ void Require(bool condition, const char* reason) {
 }
 
 #ifdef __WXGTK__
+void ObservePopupPointerAncestry(gpointer owner) {
+    if (!owner) return;
+    if (!GTK_IS_WIDGET(owner)) return;
+    for (auto* widget = GTK_WIDGET(owner); widget; widget = gtk_widget_get_parent(widget))
+        std::fprintf(stderr, "CallTip GTK pointer ancestry widget=%p class=%s name=%s\n", static_cast<void*>(widget),
+                     G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
+}
+
+void ObservePopupWindow(GtkWidget* widget, GtkWidget* frameWidget, GtkWidget* tipWidget) {
+    auto* window = gtk_widget_get_window(widget);
+    auto* transient = gtk_window_get_transient_for(GTK_WINDOW(widget));
+    const auto hint = gtk_window_get_type_hint(GTK_WINDOW(widget));
+    GdkWindow* parent = nullptr;
+    GdkWindow* toplevel = nullptr;
+    int type = -1;
+    bool visible = false, viewable = false, destroyed = false;
+    unsigned surfaceId = 0;
+    if (window) {
+        parent = gdk_window_get_parent(window);
+        toplevel = gdk_window_get_effective_toplevel(window);
+        type = gdk_window_get_window_type(window);
+        visible = gdk_window_is_visible(window);
+        viewable = gdk_window_is_viewable(window);
+        destroyed = gdk_window_is_destroyed(window);
+        auto* display = gdk_window_get_display(window);
+        if (GDK_IS_WAYLAND_DISPLAY(display)) {
+            if (auto* surface = gdk_wayland_window_get_wl_surface(window))
+                surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+        }
+    }
+    std::fprintf(stderr,
+                 "CallTip GTK window widget=%p class=%s name=%s type=%d hint=%d is_frame=%d is_tip=%d "
+                 "is_tooltip=%d visible=%d realized=%d mapped=%d transient=%p gdk=%p native_parent=%p "
+                 "native_toplevel=%p gdk_type=%d gdk_visible=%d gdk_viewable=%d destroyed=%d surface=%u\n",
+                 static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
+                 gtk_window_get_window_type(GTK_WINDOW(widget)), hint, widget == frameWidget, widget == tipWidget,
+                 hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget), gtk_widget_get_realized(widget),
+                 gtk_widget_get_mapped(widget), static_cast<void*>(transient), static_cast<void*>(window),
+                 static_cast<void*>(parent), static_cast<void*>(toplevel), type, visible, viewable, destroyed,
+                 surfaceId);
+}
+
 void ObservePopupState(const char* phase, EditorFrame* frame) {
     auto* tip = frame ? wxWindow::FindWindowByName("Color CallTip", frame->Editor()) : nullptr;
     auto* tipWidget = tip ? GTK_WIDGET(tip->GetHandle()) : nullptr;
@@ -48,35 +90,10 @@ void ObservePopupState(const char* phase, EditorFrame* frame) {
     std::fprintf(stderr, "CallTip GTK observation phase=%s frame=%p tip=%p pointer_window=%p pointer=%d,%d\n", phase,
                  static_cast<void*>(frameWidget), static_cast<void*>(tipWidget), static_cast<void*>(pointerWindow),
                  pointerX, pointerY);
-    if (pointerOwner && GTK_IS_WIDGET(pointerOwner)) {
-        for (auto* widget = GTK_WIDGET(pointerOwner); widget; widget = gtk_widget_get_parent(widget))
-            std::fprintf(stderr, "CallTip GTK pointer ancestry widget=%p class=%s name=%s\n",
-                         static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
-    }
+    ObservePopupPointerAncestry(pointerOwner);
     auto* windows = gtk_window_list_toplevels();
-    for (auto* item = windows; item; item = item->next) {
-        auto* widget = GTK_WIDGET(item->data);
-        auto* window = gtk_widget_get_window(widget);
-        auto* transient = gtk_window_get_transient_for(GTK_WINDOW(widget));
-        const auto hint = gtk_window_get_type_hint(GTK_WINDOW(widget));
-        unsigned surfaceId = 0;
-        if (window && GDK_IS_WAYLAND_DISPLAY(gdk_window_get_display(window))) {
-            if (auto* surface = gdk_wayland_window_get_wl_surface(window))
-                surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
-        }
-        std::fprintf(stderr,
-                     "CallTip GTK window widget=%p class=%s name=%s type=%d hint=%d is_frame=%d is_tip=%d "
-                     "is_tooltip=%d visible=%d realized=%d mapped=%d transient=%p gdk=%p native_parent=%p "
-                     "native_toplevel=%p gdk_type=%d gdk_visible=%d gdk_viewable=%d destroyed=%d surface=%u\n",
-                     static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
-                     gtk_window_get_window_type(GTK_WINDOW(widget)), hint, widget == frameWidget, widget == tipWidget,
-                     hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget),
-                     gtk_widget_get_realized(widget), gtk_widget_get_mapped(widget), static_cast<void*>(transient),
-                     static_cast<void*>(window), static_cast<void*>(window ? gdk_window_get_parent(window) : nullptr),
-                     static_cast<void*>(window ? gdk_window_get_effective_toplevel(window) : nullptr),
-                     window ? gdk_window_get_window_type(window) : -1, window && gdk_window_is_visible(window),
-                     window && gdk_window_is_viewable(window), window && gdk_window_is_destroyed(window), surfaceId);
-    }
+    for (auto* item = windows; item; item = item->next)
+        ObservePopupWindow(GTK_WIDGET(item->data), frameWidget, tipWidget);
     g_list_free(windows);
 }
 
@@ -86,6 +103,10 @@ public:
         handler_ = g_log_set_handler(
             "Gdk", GLogLevelFlags(G_LOG_LEVEL_WARNING | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION), Warning, this);
     }
+    PopupWarnings(const PopupWarnings&) = delete;
+    PopupWarnings& operator=(const PopupWarnings&) = delete;
+    PopupWarnings(PopupWarnings&&) = delete;
+    PopupWarnings& operator=(PopupWarnings&&) = delete;
     ~PopupWarnings() { g_log_remove_handler("Gdk", handler_); }
 
 private:
@@ -183,6 +204,13 @@ void ReplayNativeTooltip(EditorFrame* frame) {
     }
     Require(visible(), "actual native toolbar tooltip is visible before the captured hover mismatch");
     ObservePopupState("tooltip-replay", frame);
+}
+
+void ReplayNativeTooltipIfRequested(EditorFrame* frame, bool typingInteraction) {
+    if (!typingInteraction) return;
+    if (!wxGetenv("WXNOTEPAD_CALLTIP_REPLAY_GTK_TOOLTIP")) return;
+    auto* display = gtk_widget_get_display(frame->Editor()->GetConnectWidget());
+    if (GDK_IS_WAYLAND_DISPLAY(display)) ReplayNativeTooltip(frame);
 }
 #endif
 
@@ -405,9 +433,7 @@ void CheckPreview(EditorFrame* frame, bool typingInteraction = true) {
     editor->Send(SetSel, 0, 0);
     NativePaint::Complete(editor);
 #ifdef __WXGTK__
-    if (typingInteraction && wxGetenv("WXNOTEPAD_CALLTIP_REPLAY_GTK_TOOLTIP") &&
-        GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(editor->GetConnectWidget())))
-        ReplayNativeTooltip(frame);
+    ReplayNativeTooltipIfRequested(frame, typingInteraction);
 #endif
     Hover(editor, 5);
     Require(WaitFor([editor] { return VisibleCallTip(editor); }), "dwell shows a native preview of the original color");
