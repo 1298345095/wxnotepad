@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include <vector>
 #include <wx/dcmemory.h>
 #include <wx/filename.h>
 #include <wx/imagpng.h>
@@ -70,7 +71,13 @@ bool WaitFor(Check check, std::chrono::milliseconds timeout = std::chrono::milli
     return false;
 }
 
-void Hover(EditorControl* editor, intptr_t position) {
+struct HoverObservation {
+    wxPoint point;
+    wxPoint previous;
+};
+
+HoverObservation Hover(EditorControl* editor, intptr_t position) {
+    static wxPoint previous{-1, -1};
     const int x = static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)) + 1;
     const int y = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
                                    editor->Send(Message::TextHeight, 0) / 2);
@@ -90,7 +97,56 @@ void Hover(EditorControl* editor, intptr_t position) {
     event.SetEventObject(editor);
     editor->GetEventHandler()->ProcessEvent(event);
 #endif
+    const HoverObservation observed{{x, y}, previous};
+    previous = observed.point;
+    return observed;
 }
+
+class DwellEvents final : public wxEvtHandler {
+public:
+    explicit DwellEvents(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
+    ~DwellEvents() override { editor_->PopEventHandler(false); }
+    bool ProcessEvent(wxEvent& event) override {
+        const auto type = event.GetEventType();
+        const char* kind = type == wxEVT_MOTION         ? "motion"
+                           : type == wxEVT_LEAVE_WINDOW ? "leave"
+                           : type == wxEVT_KEY_DOWN     ? "key"
+                           : type == wxEVT_TIMER        ? "timer"
+                                                        : nullptr;
+        if (kind) {
+            const auto elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started_)
+                    .count();
+            const auto point = type == wxEVT_MOTION || type == wxEVT_LEAVE_WINDOW
+                                   ? static_cast<wxMouseEvent&>(event).GetPosition()
+                                   : wxPoint{-1, -1};
+            const auto interval = type == wxEVT_TIMER ? static_cast<wxTimerEvent&>(event).GetInterval() : 0;
+            events_.push_back({kind, elapsed, event.GetId(), event.GetTimestamp(), point, interval});
+        }
+        return wxEvtHandler::ProcessEvent(event);
+    }
+    void Report() const {
+        for (const auto& event : events_)
+            std::fprintf(stderr,
+                         "color preview event: kind=%s elapsed_ms=%lld id=%d timestamp=%ld point=%d,%d "
+                         "timer_interval_ms=%d\n",
+                         event.kind, event.elapsed, event.id, event.timestamp, event.point.x, event.point.y,
+                         event.interval);
+    }
+
+private:
+    struct Event {
+        const char* kind;
+        long long elapsed;
+        int id;
+        long timestamp;
+        wxPoint point;
+        int interval;
+    };
+    EditorControl* editor_;
+    const std::chrono::steady_clock::time_point started_ = std::chrono::steady_clock::now();
+    std::vector<Event> events_;
+};
 
 wxWindow* VisibleCallTip(EditorControl* editor) {
     auto* popup = wxWindow::FindWindowByName("Color CallTip", editor);
@@ -335,7 +391,7 @@ struct ColorEditCase {
     ColorChoice choice = ColorChoice::Accept;
 };
 
-void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
+void CheckColorEdit(EditorFrame* frame, size_t caseIndex, const ColorEditCase& edit) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     NativeSearch::Command(frame, CallTipMenu(frame)->FindItem(edit.mode));
@@ -344,8 +400,25 @@ void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
     editor->Send(EmptyUndoBuffer);
     editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
-    Hover(editor, edit.hover);
-    Require(WaitFor([editor] { return VisibleCallTip(editor); }), "original color previews before edit");
+    DwellEvents events(editor);
+    const auto hover = Hover(editor, edit.hover);
+    const auto point = hover.point;
+    const bool preview = WaitFor([editor] { return VisibleCallTip(editor); });
+    if (!preview) {
+        const auto mouse = editor->ScreenToClient(wxGetMousePosition());
+        const auto client = editor->GetClientSize();
+        std::fprintf(stderr,
+                     "color preview failed: case=%zu lexer=%zd style=%zd mode=%s source=[%s] hover=%td "
+                     "point=%d,%d previous=%d,%d hit=%zd "
+                     "client=%dx%d dpi=%dx%d calltip=%zd completion=%zd frameActive=%d editorFocus=%d mouse=%d,%d\n",
+                     caseIndex, editor->Send(GetLexer), editor->Send(GetStyleIndexAt, edit.hover), edit.mode,
+                     edit.source, edit.hover, point.x, point.y, hover.previous.x, hover.previous.y,
+                     editor->Send(PositionFromPointClose, point.x, point.y), client.x, client.y, editor->GetDPI().x,
+                     editor->GetDPI().y, editor->Send(CallTipActive), editor->Send(AutoCActive), frame->IsActive(),
+                     editor->HasFocus(), mouse.x, mouse.y);
+        events.Report();
+    }
+    Require(preview, "original color previews before edit");
     const bool changed = std::string_view(edit.expected) != edit.source;
     const bool cancel = edit.choice == ColorChoice::Cancel;
     ChooseColor chooser(edit.initial, cancel, changed || cancel ? wxColour(205, 171, 239) : edit.initial,
@@ -373,15 +446,16 @@ void CheckColorEdit(EditorFrame* frame, const ColorEditCase& edit) {
 }
 
 void CheckEdits(EditorFrame* frame) {
-    CheckColorEdit(frame, {"ARGB", "pre #1Bd4 and", 5, {187, 221, 68}, "pre #11cdabef and", 5, 9, 13});
-    CheckColorEdit(frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0, ColorChoice::Cancel});
-    CheckColorEdit(frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and"});
-    CheckColorEdit(frame, {"RGBA", "pre #0BD0 and", 6, {0, 187, 221}, "pre #cdabef and", 5, 9, 11});
-    CheckColorEdit(frame, {"BGRA", "pre #00a5ef00 and", 7, {239, 165, 0}, "pre #efabcd and", 5, 13, 11});
-    CheckColorEdit(frame, {"ABGR", "pre 0X12a5EF74 and", 6, {116, 239, 165}, "pre 0X12efabcdand", 6, 15, 14});
+    CheckColorEdit(frame, 1, {"ARGB", "pre #1Bd4 and", 5, {187, 221, 68}, "pre #11cdabef and", 5, 9, 13});
+    CheckColorEdit(frame, 2, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and", 0, 0, 0, ColorChoice::Cancel});
+    CheckColorEdit(frame, 3, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #aB3 and"});
+    CheckColorEdit(frame, 4, {"RGBA", "pre #0BD0 and", 6, {0, 187, 221}, "pre #cdabef and", 5, 9, 11});
+    CheckColorEdit(frame, 5, {"BGRA", "pre #00a5ef00 and", 7, {239, 165, 0}, "pre #efabcd and", 5, 13, 11});
+    CheckColorEdit(frame, 6, {"ABGR", "pre 0X12a5EF74 and", 6, {116, 239, 165}, "pre 0X12efabcdand", 6, 15, 14});
 #ifdef __WXMSW__
     CheckColorEdit(
-        frame, {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #CDABEF and", 5, 8, 11, ColorChoice::AcceptUppercase});
+        frame, 7,
+        {"RGBA", "pre #aB3 and", 5, {170, 187, 51}, "pre #CDABEF and", 5, 8, 11, ColorChoice::AcceptUppercase});
 #endif
     std::puts("PASS: native chooser RGB, cancel/same, all modes, alpha, 0X range and exact Undo/Redo");
 }
@@ -514,12 +588,22 @@ void CheckPersistence(EditorFrame* frame, const wxString& path) {
 class ColorCallTipApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        if (wxGetenv("WXNOTEPAD_CALLTIP_DPI96"))
+            Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,
+                    "create the complementary owned 96-DPI CallTip window");
+#endif
         const auto file = TestFiles::TemporaryDirectory() / "color-calltip.ini";
         TestFiles::WriteBytes(file, "[Settings]\nSaveSettings=0\n");
         path_ = TestFiles::Filename(file);
         settings_ = std::make_unique<SettingsStore>(path_);
         auto* frame = new EditorFrame(settings_.get());
         TestRenderer::Select(frame->Editor());
+        std::printf("Native CallTip DPI: %d x %d\n", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
+#ifdef __WXMSW__
+        if (wxGetenv("WXNOTEPAD_CALLTIP_DPI96"))
+            Require(frame->Editor()->GetDPI().y == 96, "the complementary native CallTip fixture uses 96 DPI");
+#endif
 #ifdef __WXMSW__
         frame->ShowWithoutActivating();
 #else
