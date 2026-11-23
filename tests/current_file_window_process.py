@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
+import time
 
 from localization_process import Acceptance, PREFERENCE, TEXT
 from localization_package import menu_id, menus, wait_child
@@ -128,11 +129,44 @@ def choose_save(fixture, app, window, destination):
             raise AssertionError('Owned Save As chooser has no filename edit')
         fixture.dialogs.user.PostMessageW(window, 0x111, 1, 0)
     else:
-        names = fixture.dialogs.accessible_names(window)
-        filename = [name for name in names if plain(name).rstrip(':') == 'Name']
-        assert len(filename) == 1, ('Native Save filename entry', names)
-        fixture.dialogs.set_input(window, filename[0], str(destination))
-        fixture.dialogs.click(window, 'Save')
+        # GTK exposes the filename label through LABELLED_BY, while the entry's
+        # own accessible name is empty. Hidden folder-creation fields also have
+        # a Name label, so only the displayed editable entry is the save target.
+        atspi = fixture.dialogs.atspi
+        filename = []
+        for entry in fixture.dialogs.children(window):
+            if entry.get_role() not in (atspi.Role.TEXT, atspi.Role.ENTRY):
+                continue
+            state = entry.get_state_set()
+            if not state.contains(atspi.StateType.SHOWING) or not state.contains(atspi.StateType.EDITABLE):
+                continue
+            labels = [relation.get_target(index).get_name()
+                      for relation in entry.get_relation_set()
+                      if relation.get_relation_type() == atspi.RelationType.LABELLED_BY
+                      for index in range(relation.get_n_targets())]
+            if any(plain(label).rstrip(':') == 'Name' for label in labels):
+                filename.append(entry)
+        assert len(filename) == 1, ('Native Save filename entry', len(filename))
+        assert filename[0].get_editable_text_iface().set_text_contents(str(destination))
+        # Editing the filename briefly disables Save during GTK's validation.
+        # An AT-SPI action on that disabled button succeeds without saving.
+        deadline = time.monotonic() + 10
+
+        def ready_save():
+            window.clear_cache()
+            return [child for child in fixture.dialogs.children(window)
+                    if child.get_role() == atspi.Role.PUSH_BUTTON and plain(child.get_name()) == 'Save'
+                    and child.get_state_set().contains(atspi.StateType.SHOWING)
+                    and child.get_state_set().contains(atspi.StateType.SENSITIVE)]
+
+        while time.monotonic() < deadline:
+            buttons = fixture.dialogs.chooser_lookup(ready_save, deadline, 'Save')
+            if buttons:
+                assert len(buttons) == 1
+                assert buttons[0].get_action_iface().do_action(0)
+                return
+            time.sleep(.03)
+        raise AssertionError('Native Save button did not become sensitive')
 
 
 def policy(fixture):
