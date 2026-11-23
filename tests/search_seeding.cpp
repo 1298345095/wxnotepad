@@ -11,6 +11,7 @@
 #include <wx/log.h>
 #include <wx/ffile.h>
 #include <cstdio>
+#include <format>
 #include <utility>
 #include <stdexcept>
 #include <memory>
@@ -21,6 +22,11 @@
 #endif
 
 namespace {
+void ReportStage(const char* stage) {
+    static const TestClock::StopWatch elapsed;
+    std::fputs(std::format("Search seeding elapsed_ms={} stage={}\n", elapsed.Time(), stage).c_str(), stderr);
+    std::fflush(stderr);
+}
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -100,9 +106,13 @@ void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* quer
             "selection punctuation and a plain backslash must remain unchanged");
     NativeSearch::Click(dialog, wxID_CANCEL);
     const std::string boundary = std::string(1024 * 1024 - 3, 'x') + "中";
+    ReportStage("boundary SetText begin");
     editor->Send(SetText, 0, reinterpret_cast<intptr_t>(boundary.c_str()));
+    ReportStage("boundary SetText complete; SetSel begin");
     editor->Send(SetSel, 0, boundary.size());
+    ReportStage("boundary SetSel complete; Replace begin");
     NativeSearch::Command(frame, wxID_REPLACE);
+    ReportStage("boundary Replace complete; query validation begin");
     const auto boundaryQuery = query->GetValue();
     const auto boundaryUtf8 = boundaryQuery.utf8_str();
     const std::string queryBytes(boundaryUtf8.data(), boundaryUtf8.length());
@@ -116,26 +126,41 @@ void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* quer
                  firstDifference, utf8Suffix, regex->GetValue(), transform->GetValue(), selectionOnly_);
     Require(queryBytes.size() == 1024 * 1024 && utf8Suffix && queryBytes == boundary,
             "selection limit must include exactly one MiB of UTF-8 bytes");
+    ReportStage("boundary query validated; Cancel begin");
     NativeSearch::Click(dialog, wxID_CANCEL);
+    ReportStage("boundary Cancel complete");
     const std::string tooLong = boundary + "!";
+    ReportStage("over-limit SetText begin");
     editor->Send(SetText, 0, reinterpret_cast<intptr_t>(tooLong.c_str()));
+    ReportStage("over-limit SetText complete; SetSel begin");
     editor->Send(SetSel, 0, tooLong.size());
+    ReportStage("over-limit SetSel complete");
     if (!selectionOnly_) {
+        ReportStage("fallback clipboard gesture begin");
         ClipboardGesture(editor);
+        ReportStage("fallback clipboard gesture complete; Open begin");
         Require(wxTheClipboard->Open(), "test must publish selection-limit fallback");
+        ReportStage("fallback clipboard Open complete; SetData begin");
         wxTheClipboard->SetData(new wxTextDataObject("clipboard fallback"));
+        ReportStage("fallback clipboard SetData complete; Close begin");
         wxTheClipboard->Close();
+        ReportStage("fallback clipboard Close complete");
     }
+    ReportStage("over-limit Replace begin");
     NativeSearch::Command(frame, wxID_REPLACE);
+    ReportStage("over-limit Replace complete; query and focus validation begin");
     Require(query->GetValue() == (selectionOnly_ ? "stored" : "clipboard fallback") && Focused(query),
             "over-limit selection must use the enabled original fallback and focus query");
+    ReportStage("over-limit query and focus validated; document validation begin");
     Require(NativeSearch::Text(editor) == tooLong, "limit checks must retain original editor bytes");
+    ReportStage("over-limit document validated");
     std::puts("PASS: literal punctuation/backslash and exact UTF-8 selection-length boundary");
 }
 
 class SeedingApp final : public wxApp {
 public:
     bool OnInit() override {
+        ReportStage("OnInit begin");
         std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
         previousLog.reset();
 #ifdef __WXMSW__
@@ -245,18 +270,25 @@ public:
                         "regex seeding must retain regex punctuation and escaping without enabling transform");
                 std::puts("PASS: clipboard, existing-dialog reopen, Ctrl+H switch and regex seeding rules");
                 NativeSearch::Click(dialog, wxID_CANCEL);
+                ReportStage("selection limits begin");
                 SelectionLimits(frame, editor, query, dialog, regex, transform, selectionOnly_);
+                ReportStage("selection limits complete");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
+            ReportStage("frame Destroy begin");
             frame->Destroy();
+            ReportStage("frame Destroy returned; ExitMainLoop begin");
             ExitMainLoop();
+            ReportStage("ExitMainLoop returned");
         });
         return true;
     }
     int OnRun() override {
+        ReportStage("OnRun begin");
         wxApp::OnRun();
+        ReportStage("OnRun returned");
         return result_;
     }
 

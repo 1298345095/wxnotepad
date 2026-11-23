@@ -1,5 +1,6 @@
 #include <wx/wx.h>
 #include <wx/bmpbndl.h>
+#include <wx/iconbndl.h>
 #include <wx/imagpng.h>
 #include <wx/listctrl.h>
 #include <wx/mstream.h>
@@ -17,6 +18,8 @@
 #include <string_view>
 
 static_assert(wxUSE_PRINTING_ARCHITECTURE && wxUSE_ZLIB && wxUSE_LIBPNG && wxUSE_NANOSVG);
+static_assert(wxUSE_IMAGE && wxUSE_ICO_CUR && wxUSE_XPM);
+static_assert(wxUSE_CLIPBOARD && wxUSE_DRAG_AND_DROP && wxUSE_FSWATCHER);
 static_assert(wxUSE_LISTCTRL && wxUSE_TREECTRL && wxUSE_NOTEBOOK && wxUSE_SPINCTRL);
 #if WXNOTEPAD_VERIFY_TRIMMED_SDK
 static_assert(!wxUSE_STC, "The application uses the separately pinned original core");
@@ -24,6 +27,12 @@ static_assert(!wxUSE_STC, "The application uses the separately pinned original c
 static_assert(!wxUSE_GRID && !wxUSE_DATAVIEWCTRL && !wxUSE_TREELISTCTRL);
 static_assert(!wxUSE_DOC_VIEW_ARCHITECTURE && !wxUSE_MDI && !wxUSE_MDI_ARCHITECTURE);
 static_assert(!wxUSE_REGEX && !wxUSE_LIBJPEG && !wxUSE_LIBTIFF && !wxUSE_LIBWEBP);
+static_assert(!wxUSE_GIF && !wxUSE_PCX && !wxUSE_TGA && !wxUSE_IFF && !wxUSE_PNM);
+static_assert(!wxUSE_ANIMATIONCTRL && !wxUSE_CALENDARCTRL && !wxUSE_DATEPICKCTRL && !wxUSE_TIMEPICKCTRL);
+static_assert(!wxUSE_FINDREPLDLG && !wxUSE_WIZARDDLG && !wxUSE_SPLASH);
+static_assert(!wxUSE_ACTIVEX && !wxUSE_JOYSTICK && !wxUSE_SEARCHCTRL && !wxUSE_RICHTOOLTIP);
+static_assert(!wxUSE_SVG && !wxUSE_POSTSCRIPT && !wxUSE_AFM_FOR_POSTSCRIPT && !wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW);
+static_assert(!wxUSE_ZIPSTREAM && !wxUSE_TARSTREAM && !wxUSE_ARCHIVE_STREAMS && !wxUSE_FS_ARCHIVE && !wxUSE_FS_ZIP);
 #endif
 #endif
 #ifdef __WXMSW__
@@ -98,6 +107,14 @@ void CheckCapabilities() {
                                              "<rect width='8' height='8' fill='red'/></svg>",
                                              wxSize(iconPixels, iconPixels));
     Require(svg.IsOk() && svg.GetBitmap(wxSize(iconPixels, iconPixels)).IsOk(), "SVG art must still rasterize");
+    constexpr std::array xpmData{"2 2 2 1", "r c #ff0000", "g c #00ff00", "rg", "gr"};
+    const wxImage xpm(xpmData.data());
+    Require(xpm.IsOk() && xpm.GetSize() == wxSize(2, 2) && xpm.GetRed(0, 0) == 255 && xpm.GetGreen(1, 0) == 255,
+            "XPM artwork must retain its pixels");
+#ifdef __WXMSW__
+    const wxIconBundle icons("APP_ICON", nullptr);
+    Require(!icons.IsEmpty() && icons.GetIcon().IsOk(), "the application icon resource must load through the SDK");
+#endif
 }
 class ProbeApp final : public wxApp {
 public:
@@ -108,7 +125,7 @@ public:
         int result = 0;
         try {
             CheckCapabilities();
-            std::puts("PASS: retained SDK capabilities (native controls, printing, zlib, PNG and SVG)");
+            std::puts("PASS: retained SDK capabilities (native controls, printing, zlib, PNG/SVG/XPM and icons)");
         } catch (const std::exception& error) {
             std::cerr << "FAIL: " << error.what() << '\n';
             result = 1;

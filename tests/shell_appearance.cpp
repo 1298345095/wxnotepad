@@ -21,6 +21,14 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+void CheckApplicationIcons(const EditorFrame* frame) {
+    const auto& icons = frame->GetIcons();
+    for (const int size : {16, 20, 24, 32, 40, 48, 64, 256}) {
+        const auto icon = icons.GetIconOfExactSize(size);
+        Require(icon.IsOk() && icon.GetSize() == wxSize(size, size),
+                "application icon retains every original size without fallback scaling");
+    }
+}
 void OriginalToolbarAlpha(wxToolBar* toolbar) {
     using namespace ToolbarArtReference;
     const auto icon = toolbar->FindById(wxID_NEW)
@@ -464,6 +472,7 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
             try {
                 Require(ready, "main window is natively presented");
+                CheckApplicationIcons(frame);
                 Require(frame->GetToolBar() && frame->GetToolBar()->IsShown(),
                         "default toolbar is present and visible");
                 Require(frame->GetToolBar()->FindById(wxID_NEW)->GetNormalBitmap().IsOk(),

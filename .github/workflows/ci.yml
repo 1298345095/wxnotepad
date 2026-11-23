@@ -89,6 +89,10 @@ jobs:
         id: build
         shell: bash
         run: python -X utf8 .github/scripts/ci.py build
+      - name: Record application compile and link commands
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: ninja -C .ci/build/cmake -t commands wxnotepad > .ci/reports/application-build-commands.txt
       - name: Verify pinned scheme importer CLIs
         shell: bash
         run: |
@@ -249,6 +253,10 @@ jobs:
         if: ${{ !cancelled() && steps.bundle.outcome == 'success' }}
         shell: bash
         run: python -X utf8 .github/scripts/check_sdk.py --cmake-dir .ci/build/cmake --artifact-dir .ci/artifact --output .ci/reports/sdk-contract.json
+      - name: Record binary size and verify complete artwork
+        if: ${{ !cancelled() && steps.bundle.outcome == 'success' }}
+        shell: bash
+        run: python -X utf8 .github/scripts/binary_size.py --artifact-dir .ci/artifact --source-root . --output .ci/reports/binary-size.json
       - name: Upload build output
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

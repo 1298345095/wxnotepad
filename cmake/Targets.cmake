@@ -155,7 +155,9 @@ add_library(app_shell STATIC
     src/app/dialogs/toolbar_customization_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)
-string(REGEX REPLACE "(..)" "0x\\1," WXNOTEPAD_ICON_DATA "${WXNOTEPAD_ICON_HEX}")
-configure_file(src/app/app_icon_data.h.in generated/app_icon_data.h @ONLY)
-target_include_directories(app_shell PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+if(NOT WIN32)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)
+    string(REGEX REPLACE "(..)" "0x\\1," WXNOTEPAD_ICON_DATA "${WXNOTEPAD_ICON_HEX}")
+    configure_file(src/app/app_icon_data.h.in generated/app_icon_data.h @ONLY)
+    target_include_directories(app_shell PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+endif()
