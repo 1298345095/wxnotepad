@@ -181,7 +181,9 @@ try:
                 user.SendMessageW(app.editor, 0x102, character, 0)
             else:
                 identifier = {'completion': 40373, 'Toggle Line Comment': 40354, 'Toggle Block Comment': 40355}[kind]
-                enabled = not (user.GetMenuState(user.GetMenu(app.hwnd), identifier, 0) & 3)
+                menu = user.GetMenu(app.hwnd)
+                user.SendMessageW(app.hwnd, 0x116, menu, 0)  # WM_INITMENU updates the original command state.
+                enabled = not (user.GetMenuState(menu, identifier, 0) & 3)
                 if enabled:
                     notices = command(app, identifier, bool(mode))
             changed = app.state()
