@@ -24,9 +24,19 @@ public:
         ++shown;
         try {
             Require(types.size() == expected.size(), "native filter count matches independent original capture");
-            for (size_t index = 0; index < types.size(); ++index)
+            for (size_t index = 0; index < types.size(); ++index) {
                 Require(types[index].BeforeFirst('(').Trim() == expected[index],
                         "native current/text/favorite filters match independent original order without duplicates");
+                if (expected[index] == "All Files") {
+#ifdef __WXMSW__
+                    Require(types[index] == "All Files (*.*)", "native All Files caption exactly matches the original "
+                                                               "Windows wildcard without duplicate suffixes");
+#else
+                    Require(types[index] == "All Files (*)",
+                            "native All Files caption retains the Unix all-file wildcard without duplicate suffixes");
+#endif
+                }
+            }
             Require(current == types.front(), "original Open/Save selects its first native filter");
         } catch (const std::exception& failure) {
             error = failure.what();

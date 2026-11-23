@@ -931,10 +931,12 @@ msgstr "行對齊(&N)...\tAlt+J"
 msgid "Align Lines"
 msgstr "行對齊"
 
-# Original Notepad4 zh-Hant: IDS_FILTER_ALL (platform wildcard adapted); adapted where needed.
+#. TRANSLATORS: Original IDS_FILTER_ALL caption; %s is the platform all-file wildcard (*.* on Windows, * on
+#. Unix).
 #: src/app/dialogs/document_dialogs.cpp
-msgid "All Files (*)"
-msgstr "所有檔案 (*)"
+#, c-format
+msgid "All Files (%s)"
+msgstr "所有檔案 (%s)"
 
 #. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
 #: src/app/run_command.cpp
@@ -3750,6 +3752,10 @@ msgstr "m4"
 # Original Notepad4 zh-Hant: IDM_VIEW_FOLD_ALL (expand action); adapted where needed.
 #~ msgid "&Expand All"
 #~ msgstr "全部展開(&E)"
+
+# Original Notepad4 zh-Hant: IDS_FILTER_ALL (platform wildcard adapted); adapted where needed.
+#~ msgid "All Files (*)"
+#~ msgstr "所有檔案 (*)"
 
 # Original Notepad4 zh-Hant: IDS_FILTER_ALL; adapted where needed.
 #~ msgid "All files (*.*)"
