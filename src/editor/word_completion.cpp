@@ -519,6 +519,13 @@ class Collector final {
             return AddCSharpSpecialWord(words, currentStyle, ch, previous);
         case SCLEX_KOTLIN:
             return AddKotlinSpecialWord(words, currentStyle, ch);
+        case SCLEX_POWERSHELL:
+            if (ch == '$' || ch == '@') {
+                constexpr size_t PowerShellPredefinedVariable = 4;
+                AddList(words, definition_, PowerShellPredefinedVariable);
+                return AddWordResult_IgnoreLexer;
+            }
+            break;
         case SCLEX_BASH:
             if (ch == '$') {
                 AddList(words, definition_, 2);
