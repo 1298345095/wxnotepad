@@ -24,7 +24,10 @@ struct SchemeFilters {
 SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, const wxString& favorites, bool open) {
     SchemeFilters result;
     const auto all = [&] {
-        result.wildcard += _("All Files (*)") + "|*|";
+        const wxString pattern = wxASCII_STR(wxFileSelectorDefaultWildcardStr);
+        // TRANSLATORS: Original IDS_FILTER_ALL caption; %s is the platform all-file wildcard (*.* on Windows, * on
+        // Unix).
+        result.wildcard += wxString::Format(_("All Files (%s)"), pattern) + "|" + pattern + "|";
         result.types.emplace_back(SaveType::AllFiles);
     };
     if (open) all();
