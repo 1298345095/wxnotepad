@@ -150,8 +150,13 @@ void Operations(EditorFrame* frame) {
         const auto before = TestLanguages::Unhex(fields[2]);
         const auto caret = std::stol(fields[InitialCaretColumn]);
         editor->Send(SetReadOnly, 0);
+        // Each original operation has a fresh editor. Match EditNewText's reset,
+        // including selection snapshots retained separately from the byte history.
+        const auto history = editor->Send(GetUndoSelectionHistory);
+        editor->Send(SetUndoSelectionHistory, 0);
         TestEditor::ResetStream(editor, before.c_str(), std::stol(fields[InitialAnchorColumn]), caret,
                                 Scintilla::EndOfLine::CrLf);
+        editor->Send(SetUndoSelectionHistory, static_cast<uintptr_t>(history));
         editor->Send(SetSelectionMode, std::stoul(fields[SelectionModeColumn]));
         if (fields[SelectionModeColumn] == "1") {
             editor->Send(SetRectangularSelectionAnchor, std::stoul(fields[InitialAnchorColumn]));
