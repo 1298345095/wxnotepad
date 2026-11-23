@@ -117,6 +117,10 @@ release commit with its own libxdo embedded. Ubuntu's older xdotool misreads
 xkeyboard-config 2.46 function-key levels and injects an extra Alt modifier
 ([upstream #491](https://github.com/jordansissel/xdotool/issues/491)). The original
 key names, XTEST delivery, behavior assertions and deadlines are retained.
+The regional-language fixture reads glibc's `%x` in an independent Python process
+under its private `LOCPATH`. Ubuntu 26.04's uutils `date` ignores that locale for
+this format ([upstream #10284](https://github.com/uutils/coreutils/issues/10284)).
+The existing before/after time boundary and exact output comparisons remain.
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
 - actionlint 1.7.12 predates the official `ubuntu-26.04` runner label. Its

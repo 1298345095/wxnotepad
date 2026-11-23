@@ -493,6 +493,10 @@ class Acceptance:
                         str(locale_root / 'de_DE.UTF-8')], check=True)
         regional = dict(os.environ, LOCPATH=str(locale_root), LC_ALL='de_DE.UTF-8')
         assert subprocess.check_output(['locale', 'decimal_point'], env=regional, text=True).strip() == ','
+        # Ubuntu 26.04's uutils date ignores the private locale for %x. Read the
+        # native libc format in an independent process, preserving LOCPATH.
+        regional_date = [sys.executable, '-c',
+                         'import locale, time; locale.setlocale(locale.LC_TIME, ""); print(time.strftime("%x"))']
         date_command = next(identity for identity, item in self.reference.items()
                             if item['label'] == 'Time/Date (&Short Form)\tCtrl+F5')
         save_settings = next(identity for identity, item in self.reference.items()
@@ -506,9 +510,9 @@ class Acceptance:
             try:
                 assert app.state['menu_top.0.label'] == TEXT[code]['file']
                 assert app.state['tab_width'] == '7' and app.state['zoom'] == '115', app.state
-                before = subprocess.check_output(['date', '+%x'], env=regional).strip()
+                before = subprocess.check_output(regional_date, env=regional).strip()
                 app.choose(date_command)
-                after = subprocess.check_output(['date', '+%x'], env=regional).strip()
+                after = subprocess.check_output(regional_date, env=regional).strip()
                 destination = self.directory / f'regional-{code}.txt'
                 app.send('save', str(destination))
                 assert destination.read_bytes() in (before, after), destination.read_bytes()
