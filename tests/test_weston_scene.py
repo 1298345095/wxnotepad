@@ -4,7 +4,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from weston_scene import mapped_toplevel
+from weston_scene import mapped_toplevel, mapped_toplevel_position
 
 
 def view(pid=42, surface=7, title="Save changes?", role="xdg_toplevel", marker=""):
@@ -14,6 +14,16 @@ def view(pid=42, surface=7, title="Save changes?", role="xdg_toplevel", marker="
 
 
 class WestonScene(unittest.TestCase):
+    def test_pointer_origin_requires_exact_owned_mapped_toplevel(self):
+        scene = ("Layer 0x1 (pos 0):\n" + view(surface=7, marker="[view is not mapped!]") +
+                 view(surface=8).replace("position: (0, 0)", "position: (-24, 138)") + view(pid=43))
+        self.assertEqual(mapped_toplevel_position(scene, 42, 8), (-24, 138))
+        self.assertIsNone(mapped_toplevel_position(scene, 42, 7))
+        self.assertIsNone(mapped_toplevel_position(scene, 42, 9))
+        self.assertIsNone(mapped_toplevel_position("Layer 0x1 (pos 0):\n" + view(role="xdg_popup"), 42, 7))
+        bounded = "Layer 0x1 (pos 0):\n" + view().replace("position: (0, 0)", "position: (183, 262) -> (1083, 862)")
+        self.assertEqual(mapped_toplevel_position(bounded, 42, 7), (183, 262))
+
     def test_both_identity_forms_match_owned_mapped_view(self):
         title = "Save [draft]'s changes?"
         scene = "Layer 0x1 (pos 0):\n" + view(title=title)
