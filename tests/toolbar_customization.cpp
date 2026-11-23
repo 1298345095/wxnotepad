@@ -152,7 +152,7 @@ void SizeCycle(EditorFrame* frame, const wxString& settingsPath) {
                                     : std::array{16, 24, 32};
     const int automatic = AppearanceCommand(frame, "&Auto Scale Toolbar");
     const int large = AppearanceCommand(frame, "Use Lar&ge Toolbar");
-    const auto check = [&](int scale, int pixels) {
+    const auto check = [frame, automatic, large, &settingsPath](int scale, int pixels) {
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         auto* toolbar = frame->GetToolBar();
         const auto bitmap = toolbar->FindById(wxID_NEW)->GetNormalBitmapBundle().GetBitmapFor(toolbar);
@@ -295,7 +295,7 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
     const auto eol = editor->Send(GetEOLMode);
     const auto history = editor->Send(GetUndoActions);
     const auto historyPosition = editor->Send(GetUndoCurrent);
-    const auto unchanged = [&] {
+    const auto unchanged = [frame, editor, text, encoding, bom, eol, history, historyPosition] {
         Require(NativeSearch::Text(editor) == text && frame->DocumentEncoding() == encoding &&
                     frame->DocumentHasBom() == bom && editor->Send(GetEOLMode) == eol &&
                     editor->Send(GetSelectionStart) == 2 && editor->Send(GetSelectionEnd) == 7 &&
@@ -309,7 +309,7 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
         NativeSearch::Command(frame, AppearanceCommand(frame, "Use Lar&ge Toolbar"));
         unchanged();
     }
-    ToolbarDialogDriver driver([&](wxDialog* dialog) {
+    ToolbarDialogDriver driver([frame, &settingsPath, &unchanged](wxDialog* dialog) {
         const auto area = wxDisplay(wxDisplay::GetFromWindow(dialog)).GetClientArea();
         Require(area.Contains(dialog->GetScreenRect()), "localized customization dialog fits the native work area");
         for (auto* child : dialog->GetChildren())
@@ -325,7 +325,7 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
         auto* available = wxDynamicCast(wxWindow::FindWindowByName("Available toolbar buttons", dialog), wxListBox);
         auto* current = wxDynamicCast(wxWindow::FindWindowByName("Current toolbar buttons", dialog), wxListBox);
         Require(available && current, "customization lists remain accessible");
-        const auto click = [&](const char* name) {
+        const auto click = [dialog, &unchanged](const char* name) {
             auto* control = wxWindow::FindWindowByName(name, dialog);
             Require(control, "native toolbar customization action exists");
             NativeSearch::Click(dialog, control->GetId());
@@ -396,41 +396,62 @@ const auto ConfigurationCases = std::to_array<ConfigurationCase>(
       "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 1 1"},
      {"numeric", "1 0 5", "1 0 5", 120},
      {"negative", "1 0 5", "1 0 5", -7}});
-void ConfigurationLifecycle(EditorFrame* frame, const wxString& settingsPath, const ConfigurationCase& fixture) {
-    using enum Scintilla::Message;
-    auto* toolbar = frame->GetToolBar();
-    if (fixture.scale != 96) {
+void ImportedSizeCycle(EditorFrame* frame, const wxString& settingsPath, int importedScale) {
+    if (importedScale == 96) return;
+    NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
+    Require(SettingsStore(settingsPath).values.autoScaleToolbar == importedScale,
+            "INI loading and saving retains nonstandard numeric toolbar preferences");
+    Require(frame->GetMenuBar()->IsChecked(AppearanceCommand(frame, "&Auto Scale Toolbar")) &&
+                frame->GetMenuBar()->IsChecked(AppearanceCommand(frame, "Use Lar&ge Toolbar")) == (importedScale > 96),
+            "toolbar menu checks use the full numeric contract");
+    const auto expected = importedScale == 120 ? std::vector{168, 216, 96} : std::vector{96, 144, 192, 96};
+    for (const int scale : expected) {
+        NativeSearch::Command(frame, AppearanceCommand(frame, "Use Lar&ge Toolbar"));
         NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
-        Require(SettingsStore(settingsPath).values.autoScaleToolbar == fixture.scale,
-                "INI loading and saving retains nonstandard numeric toolbar preferences");
-        Require(frame->GetMenuBar()->IsChecked(AppearanceCommand(frame, "&Auto Scale Toolbar")) &&
-                    frame->GetMenuBar()->IsChecked(AppearanceCommand(frame, "Use Lar&ge Toolbar")) ==
-                        (fixture.scale > 96),
-                "toolbar menu checks use the full numeric contract");
-        const auto expected = fixture.scale == 120 ? std::vector{168, 216, 96} : std::vector{96, 144, 192, 96};
-        for (const int scale : expected) {
-            NativeSearch::Command(frame, AppearanceCommand(frame, "Use Lar&ge Toolbar"));
-            NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
-            Require(SettingsStore(settingsPath).values.autoScaleToolbar == scale,
-                    "repeated Large operations retain the original arithmetic cycle for every imported numeric mode");
-        }
+        Require(SettingsStore(settingsPath).values.autoScaleToolbar == scale,
+                "repeated Large operations retain the original arithmetic cycle for every imported numeric mode");
     }
-    if (wxString(fixture.name) == "duplicate") {
-        frame->Editor()->Send(SetSel, 0, 0);
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(toolbar->GetToolsCount() == 4 && toolbar->GetToolByPos(0)->GetId() == wxID_COPY &&
-                    toolbar->GetToolByPos(1)->GetId() == wxID_COPY && !toolbar->GetToolByPos(0)->IsEnabled() &&
-                    !toolbar->GetToolByPos(1)->IsEnabled(),
-                "repeated original identities preserve native command availability for every configured button");
-        const int large = AppearanceCommand(frame, "Use Lar&ge Toolbar");
-        NativeSearch::Command(frame, large);
-        const int dpi = frame->GetDPI().x;
-        const int pixels = dpi == 192 ? 40 : dpi == 144 ? 32 : dpi == 120 ? 28 : 24;
-        for (int index : {0, 1})
-            Require(toolbar->GetToolByPos(index)->GetNormalBitmapBundle().GetBitmapFor(toolbar).GetSize() ==
-                        wxSize(pixels, pixels),
-                    "every repeated button uses the requested original size");
+}
+void DuplicateToolbarCommands(EditorFrame* frame) {
+    auto* toolbar = frame->GetToolBar();
+    frame->Editor()->Send(Scintilla::Message::SetSel, 0, 0);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(toolbar->GetToolsCount() == 4 && toolbar->GetToolByPos(0)->GetId() == wxID_COPY &&
+                toolbar->GetToolByPos(1)->GetId() == wxID_COPY && !toolbar->GetToolByPos(0)->IsEnabled() &&
+                !toolbar->GetToolByPos(1)->IsEnabled(),
+            "repeated original identities preserve native command availability for every configured button");
+    const int large = AppearanceCommand(frame, "Use Lar&ge Toolbar");
+    NativeSearch::Command(frame, large);
+    const int dpi = frame->GetDPI().x;
+    const int pixels = dpi == 192 ? 40 : dpi == 144 ? 32 : dpi == 120 ? 28 : 24;
+    for (int index : {0, 1})
+        Require(toolbar->GetToolByPos(index)->GetNormalBitmapBundle().GetBitmapFor(toolbar).GetSize() ==
+                    wxSize(pixels, pixels),
+                "every repeated button uses the requested original size");
+}
+void VerifyRestoredLayout(EditorFrame* frame, SettingsStore& saved, const ConfigurationCase& fixture) {
+    auto* toolbar = frame->GetToolBar();
+    // This hidden synchronous fixture never enters an event loop. Destroy it
+    // before its local settings, including when an assertion throws.
+    EditorFrame restored(&saved);
+    if (wxString(fixture.name) == "bounded")
+        Require(toolbar->GetToolsCount() == 54 && restored.GetToolBar()->GetToolsCount() == 53,
+                "original bounded save retains its 53-button prefix without changing the 54 live buttons");
+    else
+        Require(restored.GetToolBar()->GetToolsCount() == toolbar->GetToolsCount(),
+                "settings reload restores the complete toolbar layout");
+    for (size_t index = 0; index < restored.GetToolBar()->GetToolsCount(); ++index) {
+        const auto* first = toolbar->GetToolByPos(static_cast<int>(index));
+        const auto* second = restored.GetToolBar()->GetToolByPos(static_cast<int>(index));
+        Require(first->IsSeparator() == second->IsSeparator() &&
+                    (first->IsSeparator() || frame->GetMenuBar()->FindItem(first->GetId())->GetItemLabel() ==
+                                                 restored.GetMenuBar()->FindItem(second->GetId())->GetItemLabel()),
+                "restored native toolbar preserves original command order and separators across generated menu IDs");
     }
+}
+void ConfigurationLifecycle(EditorFrame* frame, const wxString& settingsPath, const ConfigurationCase& fixture) {
+    ImportedSizeCycle(frame, settingsPath, fixture.scale);
+    if (wxString(fixture.name) == "duplicate") DuplicateToolbarCommands(frame);
     NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
     SettingsStore saved(settingsPath);
     Require(saved.values.toolbarButtons == fixture.saved,
@@ -440,27 +461,13 @@ void ConfigurationLifecycle(EditorFrame* frame, const wxString& settingsPath, co
     Require(file.IsOpened() && file.ReadAll(&contents, wxMBConvUTF16LE()), "saved toolbar INI is readable");
     Require(contents.Contains("Unrelated=value") && contents.Contains("[Private section]"),
             "toolbar changes retain unrelated INI settings and sections");
-    auto* restored = new EditorFrame(&saved);
-    if (wxString(fixture.name) == "bounded")
-        Require(toolbar->GetToolsCount() == 54 && restored->GetToolBar()->GetToolsCount() == 53,
-                "original bounded save retains its 53-button prefix without changing the 54 live buttons");
-    else
-        Require(restored->GetToolBar()->GetToolsCount() == toolbar->GetToolsCount(),
-                "settings reload restores the complete toolbar layout");
-    for (size_t index = 0; index < restored->GetToolBar()->GetToolsCount(); ++index) {
-        const auto* first = toolbar->GetToolByPos(static_cast<int>(index));
-        const auto* second = restored->GetToolBar()->GetToolByPos(static_cast<int>(index));
-        Require(first->IsSeparator() == second->IsSeparator() &&
-                    (first->IsSeparator() || frame->GetMenuBar()->FindItem(first->GetId())->GetItemLabel() ==
-                                                 restored->GetMenuBar()->FindItem(second->GetId())->GetItemLabel()),
-                "restored native toolbar preserves original command order and separators across generated menu IDs");
-    }
-    restored->Destroy();
+    VerifyRestoredLayout(frame, saved, fixture);
 }
 class ToolbarApp final : public wxApp {
 public:
     bool OnInit() override {
-        wxLog::SetActiveTarget(new wxLogStderr);
+        // wx owns the replacement; SetActiveTarget returns the old target to us.
+        delete wxLog::SetActiveTarget(new wxLogStderr);
         if (argc > 1) {
             long language = 0;
             Require(wxString(argv[1]).ToLong(&language), "toolbar fixture language is numeric");

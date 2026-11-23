@@ -329,9 +329,12 @@ void EditorFrame::RebuildToolbar() {
             auto* menu = entry->menu;
             const auto source = ToolbarArt::Icon(identity - 1);
             const auto disabled = DisabledArtwork(source, wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
-            toolbar->AddTool(menu->GetId(), menu->GetItemLabelText(),
-                             wxBitmapBundle::FromImpl(new SizedToolbarArtwork(source, pixels, contentScale)),
-                             wxBitmapBundle::FromImpl(new SizedToolbarArtwork(disabled, pixels, contentScale)),
+            // FromImpl adopts each implementation into wx's reference-counted
+            // bundle. AddTool copies these bundles into the owned native tool.
+            const auto normalBundle = wxBitmapBundle::FromImpl(new SizedToolbarArtwork(source, pixels, contentScale));
+            const auto disabledBundle =
+                wxBitmapBundle::FromImpl(new SizedToolbarArtwork(disabled, pixels, contentScale));
+            toolbar->AddTool(menu->GetId(), menu->GetItemLabelText(), normalBundle, disabledBundle,
                              menu->IsCheckable() ? wxITEM_CHECK : wxITEM_NORMAL,
                              wxStripMenuCodes(menu->GetItemLabel(), wxStrip_Mnemonics), menu->GetHelp());
             toolbar->EnableTool(menu->GetId(), menu->IsEnabled());
