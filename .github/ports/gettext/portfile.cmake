@@ -194,8 +194,8 @@ endif()
 file(INSTALL
     "${SOURCE_PATH}/gettext-runtime/m4/build-to-host.m4"
     "${SOURCE_PATH}/gettext-runtime/m4/gettext.m4"
-    "${SOURCE_PATH}/gettext-runtime/m4/iconv.m4"
-    "${SOURCE_PATH}/gettext-runtime/m4/intlmacosx.m4"
+    "${SOURCE_PATH}/gettext-runtime/gnulib-m4/iconv.m4"
+    "${SOURCE_PATH}/gettext-runtime/gnulib-m4/intlmacosx.m4"
     "${SOURCE_PATH}/gettext-runtime/m4/nls.m4"
     "${SOURCE_PATH}/gettext-runtime/m4/po.m4"
     "${SOURCE_PATH}/gettext-runtime/m4/progtest.m4"

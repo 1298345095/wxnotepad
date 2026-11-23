@@ -11,6 +11,7 @@ are already present in 0.23.2 and are omitted. The remaining baseline patches
 retain their original purpose.
 The auxiliary programs retain the baseline's `lib/gettext` layout through an
 explicit `libexecdir`, so the existing `user-email` relocation remains valid.
+The Autotools data copies follow `iconv.m4` and `intlmacosx.m4` into `gnulib-m4`.
 
 This port supplies build tools and Autotools data, not the application runtime
 translation library. The separate `gettext-libintl` dependency retains its
