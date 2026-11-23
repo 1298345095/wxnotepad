@@ -122,6 +122,10 @@ public:
                      {"Python", "Plain Text", "C/C++", "Rust", "All Files"});
                 Case("67 1", {"All Files", "Python", "Plain Text", "Rust", "C/C++"},
                      {"Python", "Plain Text", "Rust", "C/C++", "All Files"});
+                // Independent #268 original-filters-01 capture, excluding the
+                // undelivered original 2nd Text File as in the cases above.
+                Case("50 48 45", {"All Files", "Python", "Plain Text", "Diff File", "Ini Config File", "Makefile"},
+                     {"Python", "Plain Text", "Diff File", "Ini Config File", "Makefile", "All Files"});
                 Case({}, {"All Files", "Python", "Plain Text"}, {"Python", "Plain Text", "All Files"});
                 result_ = 0;
             } catch (const std::exception& error) {

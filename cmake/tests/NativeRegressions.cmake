@@ -328,11 +328,23 @@ add_test(NAME original_scheme_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
 set_tests_properties(original_scheme_settings_lifecycle PROPERTIES TIMEOUT 90)
 
 add_editor_test(syntax_css_sql original_css_sql_schemes 90)
+add_test(NAME original_ini_content_detection COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_detection_process.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_ini_content_detection PROPERTIES TIMEOUT 90)
 target_compile_definitions(syntax_css_sql PRIVATE
     "CSS_SQL_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_reference.tsv\""
     "CSS_SQL_COMPLETION_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_completion_reference.tsv\""
     "CSS_SQL_TYPING_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_typing_reference.tsv\"")
 foreach(language IN ITEMS en zh_CN zh_TW)
+    add_test(NAME original_build_patch_process_${language} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
+    set_tests_properties(original_build_patch_process_${language} PROPERTIES TIMEOUT 120)
+    if(WIN32)
+        add_test(NAME original_build_patch_process_gdi_${language} COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>"
+            --language "${language}" --gdi)
+        set_tests_properties(original_build_patch_process_gdi_${language} PROPERTIES TIMEOUT 120)
+    endif()
     add_test(NAME original_css_sql_process_${language} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
     set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)

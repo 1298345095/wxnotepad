@@ -9,6 +9,7 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
     result.xml = SyntaxSettingsLanguage(definition.language) == Xml;
     result.operatorStyle = original.operatorStyle;
     result.operatorStyle2 = original.operatorStyle2;
+    result.autoIndentWordStyle = original.autoIndentWordStyle;
     result.escapeCharacterStart = original.escapeCharacterStart;
     result.escapeCharacterStyle = original.escapeCharacterStyle;
     result.characterLiteralStyle = original.characterLiteralStyle;
@@ -18,6 +19,10 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
                              0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
     // Original pinned generated cache cases. Keep masks independent of display styles.
     switch (definition.language) {
+    case Makefile:
+        for (const auto ch : {'!', '$', '-'})
+            result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
+        break;
     case PowerShell:
         for (const auto ch : {'$', '-', ':', '?', '@'})
             result.wordCharacters[ch >> 5] |= 1U << (ch & 31);

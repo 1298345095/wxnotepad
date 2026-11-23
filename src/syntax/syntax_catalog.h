@@ -54,6 +54,9 @@ enum class SyntaxLanguage : uint8_t {
     Batch,
     PowerShell,
     AutoHotkey,
+    Ini,
+    Makefile,
+    Diff,
     Count
 };
 namespace SyntaxDetectionLimits {

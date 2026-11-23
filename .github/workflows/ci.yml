@@ -103,6 +103,8 @@ jobs:
             2>&1 | tee .ci/reports/scheme-import-java-csharp-kotlin.log
           python -X utf8 tests/script_scheme_import_cli.py --source .ci/build/upstream \
             2>&1 | tee .ci/reports/scheme-import-batch-powershell-autohotkey.log
+          python -X utf8 tests/build_patch_scheme_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/scheme-import-ini-make-diff.log
           python -X utf8 tests/config_scheme_import_cli.py --source .ci/build/upstream \
             2>&1 | tee .ci/reports/scheme-import-config.log
           python -X utf8 tests/markdown_import_cli.py --source .ci/build/upstream \
@@ -368,6 +370,8 @@ jobs:
             2>&1 | tee .ci/reports/coverage/scheme-import-java-csharp-kotlin.log
           .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/script_scheme_import_cli.py --source .ci/build/upstream \
             2>&1 | tee .ci/reports/coverage/scheme-import-batch-powershell-autohotkey.log
+          .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/build_patch_scheme_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/coverage/scheme-import-ini-make-diff.log
           .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/config_scheme_import_cli.py --source .ci/build/upstream \
             2>&1 | tee .ci/reports/coverage/scheme-import-config.log
           .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/markdown_import_cli.py --source .ci/build/upstream \
