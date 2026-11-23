@@ -9,6 +9,7 @@
 #include <wx/treectrl.h>
 #include <wx/translation.h>
 #include <algorithm>
+#include <memory>
 #include <vector>
 #include <utility>
 
@@ -23,10 +24,10 @@ std::optional<SyntaxLanguage> Selected(wxTreeCtrl& tree) {
     const auto* data = item.IsOk() ? static_cast<SchemeData*>(tree.GetItemData(item)) : nullptr;
     return data ? std::optional(data->language) : std::nullopt;
 }
-void AddCheckStates(wxTreeCtrl& tree) {
+std::unique_ptr<wxImageList> MakeCheckStateImages(wxTreeCtrl& tree) {
     auto& renderer = wxRendererNative::Get();
     const auto size = renderer.GetCheckBoxSize(&tree);
-    auto* images = new wxImageList(size.x, size.y, true);
+    auto images = std::make_unique<wxImageList>(size.x, size.y, true);
     for (const bool checked : {false, true}) {
         wxBitmap bitmap(size);
         wxMemoryDC dc(bitmap);
@@ -36,7 +37,7 @@ void AddCheckStates(wxTreeCtrl& tree) {
         dc.SelectObject(wxNullBitmap);
         images->Add(bitmap);
     }
-    tree.AssignStateImageList(images);
+    return images;
 }
 std::optional<wxString> FavoriteConfiguration(const wxString& original, const std::vector<SyntaxLanguage>& favorites) {
     if (FavoriteSyntaxSchemes(original) == favorites) return original;
@@ -71,19 +72,19 @@ public:
           settings_(settings), favoriteMode_(favorite), favorites_(FavoriteSyntaxSchemes(settings.favoriteSchemes)),
           temporaryDefault_(SyntaxFromOriginalSchemeId(settings.defaultScheme) ? settings.defaultScheme : 0) {
         // Adapted from pinned Styles.cpp::Style_AddAllLexerToTreeView and IDD_STYLESELECT.
-        auto* contents = new wxBoxSizer(wxVERTICAL);
+        auto contents = std::make_unique<wxBoxSizer>(wxVERTICAL);
         tree_ = new wxTreeCtrl(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(300, 300)),
                                wxTR_HIDE_ROOT | wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_SINGLE);
         tree_->SetName("Syntax schemes");
         AppLocalization::SetAccessibleName(*tree_, _("Syntax schemes"));
-        if (favoriteMode_) AddCheckStates(*tree_);
+        if (favoriteMode_) tree_->AssignStateImageList(MakeCheckStateImages(*tree_).release());
         PopulateTree(current);
         contents->Add(tree_, 1, wxEXPAND | wxALL, FromDIP(DialogLayout::MarginDip));
         AddOptions(*contents, current);
         contents->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM,
                       FromDIP(DialogLayout::MarginDip));
         BindTreeEvents();
-        DialogLayout::Fit(*this, contents, DialogLayout::Resize::Both);
+        DialogLayout::Fit(*this, std::move(contents), DialogLayout::Resize::Both);
         CentreOnParent();
         tree_->SetFocus();
     }
