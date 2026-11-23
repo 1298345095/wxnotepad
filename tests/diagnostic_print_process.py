@@ -19,6 +19,8 @@ def main():
             if result.returncode != 0:
                 raise RuntimeError(f'{scenario}: exit {result.returncode}: {result.stderr!r}')
             expected = 'print 42 002a 1\n中文\n'.encode() if scenario == 'success' else b'recovered\n'
+            if scenario == 'allocation-failure':
+                expected = b'x' * 8192 + b'\nrecovered\n'
             if (root / 'output.txt').read_bytes() != expected:
                 raise RuntimeError(f'{scenario}: diagnostic output bytes changed')
             if (root / 'input.txt').read_bytes() != original:

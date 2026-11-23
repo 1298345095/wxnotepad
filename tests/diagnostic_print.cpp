@@ -2,10 +2,26 @@
 #include "completion_allocation_fault.h"
 #include <cstdio>
 #include <filesystem>
+#include <format>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+
+namespace {
+struct AllocatingText {
+    std::string_view value;
+};
+} // namespace
+
+template <> struct std::formatter<AllocatingText> : std::formatter<std::string_view> {
+    template <typename FormatContext> auto format(const AllocatingText& text, FormatContext& context) const {
+        // Exercise a real allocation during formatting even when the standard
+        // library streams its own output directly to FILE without a buffer.
+        const std::string copy(text.value);
+        return std::formatter<std::string_view>::format(copy, context);
+    }
+};
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -38,17 +54,20 @@ void WriteFailure(const std::filesystem::path& directory, FILE* recovered) {
 }
 
 void AllocationFailure(FILE* file) {
-    // Build the payload before arming the existing allocation-failure injector.
-    // Its size forces the standard formatter beyond its inline output buffer.
+    // Build the input before arming the injector; the formatter owns the copy
+    // whose allocation must fail inside the production diagnostic boundary.
     const std::string payload(8192, 'x');
+    const AllocatingText text{payload};
     bool printed = true;
     bool injected = false;
     {
         const CompletionAllocationFault::ScopedFailure failure;
-        printed = DiagnosticPrint::Print(file, "{}\n", payload);
+        printed = DiagnosticPrint::Print(file, "{}\n", text);
         injected = failure.Injected();
     }
     Require(injected && !printed, "a real formatting allocation failure reaches the diagnostic boundary");
+    Require(DiagnosticPrint::Print(file, "{}\n", text),
+            "the same formatter and payload recover after allocation failure");
     Require(DiagnosticPrint::Print(file, "recovered\n"), "diagnostics recover after the failed allocation");
 }
 } // namespace
