@@ -9,6 +9,7 @@
 #include <wx/app.h>
 #include <wx/modalhook.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <filesystem>
 #include <memory>
@@ -40,8 +41,8 @@ template <typename Fixture> void ConversionCase(EditorFrame* frame, const Fixtur
     Reset(editor, fixture.before, reverse ? before : 0, reverse ? 0 : before);
     Menu(frame, fixture.command);
     if (TestEditor::Text(editor) != fixture.after)
-        std::fprintf(stderr, "%s: expected <%.*s>, got <%s>\n", fixture.command, static_cast<int>(fixture.after.size()),
-                     fixture.after.data(), TestEditor::Text(editor).c_str());
+        std::println(stderr, "{}: expected <{}>, got <{}>", fixture.command,
+                     fixture.after.substr(0, fixture.after.find('\0')), TestEditor::Text(editor).c_str());
     Require(TestEditor::Text(editor) == fixture.after, "conversion matches captured original bytes");
     TestEditor::RequireSelection(editor, reverse ? after : 0, reverse ? 0 : after,
                                  "converted endpoints match original direction");
@@ -218,7 +219,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

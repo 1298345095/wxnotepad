@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <future>
 #include <latch>
 #include <new>
@@ -194,6 +195,6 @@ int main() try {
     std::puts("PASS: production parallel tasks join before propagating resource failures and permit retry");
     return 0;
 } catch (const std::exception& failure) {
-    std::fprintf(stderr, "FAIL: %s\n", failure.what());
+    std::println(stderr, "FAIL: {}", failure.what());
     return 1;
 }

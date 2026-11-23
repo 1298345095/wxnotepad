@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <print>
 #include "editor/editor_control.h"
 #include "SciLexer.h"
 #include "editor_test_helpers.h"
@@ -69,7 +70,7 @@ void FileTarget(EditorFrame* frame) {
     const int command = frame->GetMenuBar()->FindMenuItem("Tools", "Open File, Folder, Link, etc.");
     const auto run = [&](const wxString& input, intptr_t anchor, intptr_t caret, const std::string& filename,
                          int expectedPosition, bool hotspot = false) {
-        std::printf("BEGIN: native file target %s\n", input.utf8_str().data());
+        std::println("BEGIN: native file target {}", input.utf8_str().data());
         std::filesystem::remove(folder / "child-received");
         const auto source = input.utf8_string();
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
@@ -103,7 +104,7 @@ void FileTarget(EditorFrame* frame) {
         editor->Send(Message::Redo);
         Require(TestEditor::Text(frame) == retained + "?", "launch preserves usable source undo/redo history");
         if (hotspot) editor->Send(Message::StyleSetHotSpot, 0, false);
-        std::printf("PASS: file target %s -> %s position %d\n", source.c_str(), filename.c_str(), expectedPosition);
+        std::println("PASS: file target {} -> {} position {:d}", source.c_str(), filename.c_str(), expectedPosition);
     };
     run("target.txt:2:4", 0, 14, "target.txt", 9);
     run("target.txt(2,4)", 0, 15, "target.txt", 9);
@@ -177,14 +178,13 @@ void DesktopTargetCase(EditorFrame* frame, const std::string& input, const std::
     }
     Require(std::filesystem::exists(marker), "desktop association must receive the target through a real child");
     if (TestFiles::Bytes(marker) != expected + "\n")
-        std::fprintf(stderr, "desktop received [%s] expected [%s]\n", TestFiles::Bytes(marker).c_str(),
-                     expected.c_str());
+        std::println(stderr, "desktop received [{}] expected [{}]", TestFiles::Bytes(marker).c_str(), expected.c_str());
     Require(TestFiles::Bytes(marker) == expected + "\n",
             "desktop association receives exact independently specified target");
     Require(TestEditor::Text(frame) == input, "desktop action preserves source bytes");
     TestEditor::RequireSelection(editor, caret < 0 ? 0 : caret, caret < 0 ? static_cast<intptr_t>(input.size()) : caret,
                                  "desktop action preserves source selection");
-    std::printf("PASS: desktop input %s -> %s\n", input.c_str(), expected.c_str());
+    std::println("PASS: desktop input {} -> {}", input.c_str(), expected.c_str());
 }
 void MailTargets(EditorFrame* frame) {
     DesktopTargetCase(frame, "reader@example.invalid", "mailto:reader@example.invalid");
@@ -509,7 +509,7 @@ public:
         _wfreopen((log.wstring() + L".stderr.log").c_str(), L"wb", stderr);
 #endif
         std::setvbuf(stdout, nullptr, _IONBF, 0);
-        std::printf("BEGIN process %lu argc=%d\n", wxGetProcessId(), argc);
+        std::println("BEGIN process {:d} argc={:d}", wxGetProcessId(), argc);
 #ifdef __WXGTK__
         if (argc == 2 && wxString(argv[1]) == "--file-manager") {
             RunOwnedFileManager(Directory());
@@ -589,7 +589,7 @@ public:
                 }
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

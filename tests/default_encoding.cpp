@@ -9,6 +9,7 @@
 #include <wx/treectrl.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <utility>
 
@@ -147,7 +148,7 @@ void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
                 !frame->DocumentHasBom() && TestEditor::Text(frame) == "plain",
             "ASCII Open retains original non-Unicode fallback decision order");
     frame->Destroy();
-    std::printf("PASS: native nested=%d outer=%d commit matrix and live state\n", nested, outer);
+    std::println("PASS: native nested={:d} outer={:d} commit matrix and live state", nested, outer);
 }
 void Run(SettingsStore& settings) {
     for (const bool nested : {false, true})
@@ -294,7 +295,7 @@ public:
                     Transitions(settings_);
                 }
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             for (auto* window : wxTopLevelWindows)

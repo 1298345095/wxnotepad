@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include <array>
 #include "native_fold_helpers.h"
 #include "native_paint_helpers.h"
@@ -58,8 +59,8 @@ void FoldGeometryAndMarkers(EditorFrame* frame, intptr_t width) {
         const auto red = [](const auto& pixels) {
             return std::count(pixels.begin(), pixels.end(), wxColour(255, 0, 0));
         };
-        std::printf("caret line %d: outer red=%lld nested red=%lld\n", line, static_cast<long long>(red(outerMarker)),
-                    static_cast<long long>(red(nestedMarker)));
+        std::println("caret line {:d}: outer red={:d} nested red={:d}", line, static_cast<long long>(red(outerMarker)),
+                     static_cast<long long>(red(nestedMarker)));
         Require(line == 2   ? red(nestedMarker) > 0 && red(outerMarker) == 0
                 : line == 5 ? red(nestedMarker) == 0 && red(outerMarker) == 0
                             : red(outerMarker) > 0 && red(nestedMarker) > 0,
@@ -116,9 +117,9 @@ void ReadOnlyLanguageFolds(EditorFrame* frame, int show) {
             Require(editor->Send(GetLineVisible, line),
                     "hidden folding must reveal all supported and header-free content");
         NativeSearch::Command(frame, show);
-        std::printf(
-            "%s selection=%lld/%lld->%lld/%lld undo=%lld->%lld redo=%lld->%lld dirty=%lld "
-            "readonly=%lld revision=%llu/%llu bytes=%d\n",
+        std::println(
+            "{} selection={:d}/{:d}->{:d}/{:d} undo={:d}->{:d} redo={:d}->{:d} dirty={:d} readonly={:d} "
+            "revision={:d}/{:d} bytes={:d}",
             fixture.language, static_cast<long long>(caret), static_cast<long long>(anchor),
             static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(editor->Send(GetAnchor)),
             static_cast<long long>(undo), static_cast<long long>(editor->Send(CanUndo)), static_cast<long long>(redo),
@@ -219,13 +220,13 @@ public:
                         "native Ctrl+Shift+Alt+F must restore folding geometry");
                 FoldGeometryAndMarkers(frame, width);
                 ReadOnlyLanguageFolds(frame, show);
-                std::printf("fold geometry: dpi=%d zoom=%lld width=%lld\n", editor->GetDPI().y,
-                            static_cast<long long>(editor->Send(GetZoom)),
-                            static_cast<long long>(editor->Send(GetMarginWidthN, 2)));
+                std::println("fold geometry: dpi={:d} zoom={:d} width={:d}", editor->GetDPI().y,
+                             static_cast<long long>(editor->Send(GetZoom)),
+                             static_cast<long long>(editor->Send(GetMarginWidthN, 2)));
                 std::puts("PASS: native folding toggles preserve document and expand hidden content");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

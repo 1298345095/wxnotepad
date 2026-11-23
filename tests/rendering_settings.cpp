@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 #include <SciLexer.h>
 #include <wx/vlbox.h>
@@ -194,7 +195,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: application renderer default and original menu choices");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

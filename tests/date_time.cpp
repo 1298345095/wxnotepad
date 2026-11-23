@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include <array>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
@@ -199,7 +200,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

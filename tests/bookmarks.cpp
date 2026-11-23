@@ -7,6 +7,7 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -274,7 +275,7 @@ public:
                 RunBookmarkCases(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

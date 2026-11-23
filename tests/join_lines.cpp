@@ -9,6 +9,7 @@
 #include "steady_stopwatch.h"
 #include <wx/modalhook.h>
 #include <cstdio>
+#include <print>
 #include <memory>
 #include <fstream>
 #include <stdexcept>
@@ -82,7 +83,7 @@ void Fixtures(EditorFrame* frame) {
             Join(frame, fixture.paragraphs);
         }
         if (TestEditor::Text(editor) != fixture.after)
-            std::fprintf(stderr, "join paragraphs=%d before=<%s> actual=<%s> expected=<%s>\n", fixture.paragraphs,
+            std::println(stderr, "join paragraphs={:d} before=<{}> actual=<{}> expected=<{}>", fixture.paragraphs,
                          fixture.before, TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after, "original literal join bytes");
         Range(editor, fixture.afterAnchor, fixture.afterCaret);
@@ -307,7 +308,7 @@ public:
                 Protection(frame);
                 SavedBytes(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(SetSavePoint);

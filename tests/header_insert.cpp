@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <fstream>
@@ -137,9 +138,9 @@ void OpenReferenceEncoding(EditorFrame* frame, const std::filesystem::path& dire
 #ifdef __WXMSW__
         std::fprintf(stderr, "Header host ACP=%u OEM=%u\n", GetACP(), GetOEMCP());
 #else
-        std::fprintf(stderr, "Header host locale=%s\n", wxLocale::GetSystemEncodingName().utf8_string().c_str());
+        std::println(stderr, "Header host locale={}", wxLocale::GetSystemEncodingName().utf8_string().c_str());
 #endif
-        std::fprintf(stderr, "Header Open: %s/%s/%s/%s/%s status=%d error=%s\n", fields[0].c_str(), encoding.c_str(),
+        std::println(stderr, "Header Open: {}/{}/{}/{}/{} status={:d} error={}", fields[0].c_str(), encoding.c_str(),
                      fields[2].c_str(), fields[3].c_str(), fields[4].c_str(), std::to_underlying(opened.status),
                      opened.error.utf8_string().c_str());
     }
@@ -180,7 +181,7 @@ void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fiel
         editor->Send(Redo);
         State(editor, expected, 22);
     } catch (...) {
-        std::fprintf(stderr, "Header reference: %s/%s/%s/%s/%s\n", fields[0].c_str(), fields[1].c_str(),
+        std::println(stderr, "Header reference: {}/{}/{}/{}/{}", fields[0].c_str(), fields[1].c_str(),
                      fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
         throw;
     }
@@ -235,7 +236,7 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
             try {
                 RejectedAnsiOpen(frame, directory / "unmigrated-ansi.txt", fields, nativePage);
             } catch (...) {
-                std::fprintf(stderr, "Header refused Open: %s/%s/%s/%s/%s ACP=%u\n", fields[0].c_str(),
+                std::println(stderr, "Header refused Open: {}/{}/{}/{}/{} ACP={:d}", fields[0].c_str(),
                              encoding.c_str(), fields[2].c_str(), fields[3].c_str(), fields[4].c_str(), nativePage);
                 throw;
             }
@@ -257,8 +258,8 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
     Require(count + rejected == 1248 && rejected == (unmigratedNativeAnsi ? 216U : 0U),
             "all original records run in their supported insertion or explicit native-codec refusal context");
     frame->Editor()->Send(Message::SetReadOnly, 0);
-    std::printf("PASS: %zu native original header reference cases; %zu native ANSI Open refusal records (ACP=%u)\n",
-                count, rejected, nativePage);
+    std::println("PASS: {:d} native original header reference cases; {:d} native ANSI Open refusal records (ACP={:d})",
+                 count, rejected, nativePage);
 }
 void KeyCases(EditorFrame* frame) {
     using enum Scintilla::Message;
@@ -327,7 +328,7 @@ public:
                 LossDecision(frame, TestFiles::TemporaryDirectory("headers"));
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

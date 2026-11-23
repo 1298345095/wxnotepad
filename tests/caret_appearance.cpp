@@ -8,6 +8,7 @@
 #include <wx/menu.h>
 #include <wx/dcclient.h>
 #include <cstdio>
+#include <print>
 #include <chrono>
 #include <fstream>
 #include <stdexcept>
@@ -141,7 +142,7 @@ std::pair<int, int> Span(EditorControl* editor, PaintRows& paint, int y) {
             last = static_cast<int>(x) + 1;
         }
     }
-    std::printf("caret native span y=%d [%d,%d) style=%lld\n", y, first, last, static_cast<long long>(style));
+    std::println("caret native span y={:d} [{:d},{:d}) style={:d}", y, first, last, static_cast<long long>(style));
     return {first, last};
 }
 
@@ -249,9 +250,9 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
         // One observed pixel keeps native DPI virtualization/readback latency
         // below the blink period. Full-row reads can alias whole blink cycles.
         const bool visible = paint.Pixel(static_cast<int>(pixel), 2) != background[pixel];
-        std::printf("native blink sample=%u visible=%d focus=%lld period=%lld\n", sample, visible,
-                    static_cast<long long>(editor->Send(Message::GetFocus)),
-                    static_cast<long long>(editor->Send(Message::GetCaretPeriod)));
+        std::println("native blink sample={:d} visible={:d} focus={:d} period={:d}", sample, visible,
+                     static_cast<long long>(editor->Send(Message::GetFocus)),
+                     static_cast<long long>(editor->Send(Message::GetCaretPeriod)));
         sawOn |= visible;
         sawOff |= !visible;
         wxMilliSleep(13 * (1 + sample++ % 5));
@@ -324,8 +325,8 @@ void ZoomAndDpi(EditorFrame* frame) {
             const int expected = systemWidth > mode ? systemWidth
                                  : mode == 1        ? (dpi == 96 ? widths96[i] : widths144[i])
                                                     : mode;
-            std::printf("caret width mode=%d zoom=%d dpi=%d queried=%lld expected=%d\n", mode, zooms[i], dpi,
-                        static_cast<long long>(editor->Send(GetCaretWidth)), expected);
+            std::println("caret width mode={:d} zoom={:d} dpi={:d} queried={:d} expected={:d}", mode, zooms[i], dpi,
+                         static_cast<long long>(editor->Send(GetCaretWidth)), expected);
             Require(editor->Send(GetCaretWidth) == std::min(expected, 20),
                     "default width scales with original DPI/zoom while explicit/accessibility widths remain pixels");
         }
@@ -396,7 +397,7 @@ public:
                 SavedDocument(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

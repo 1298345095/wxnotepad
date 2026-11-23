@@ -8,6 +8,7 @@
 #include <wx/stdpaths.h>
 #include <filesystem>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 
@@ -164,7 +165,7 @@ public:
                 std::puts("PASS: dropped document receives independent external changes through file watching");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             std::filesystem::remove_all(directory);

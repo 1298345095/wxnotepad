@@ -1,4 +1,5 @@
 #include "editor_test_helpers.h"
+#include <print>
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "character_hex_fixtures.h"
@@ -39,7 +40,7 @@ void ReferenceFixtures(EditorFrame* frame) {
         Require(id != wxNOT_FOUND, "Convert exposes original hex conversion command");
         NativeSearch::Command(frame, id);
         if (TestEditor::Text(editor) != fixture.after) {
-            std::fprintf(stderr, "Original fixture mismatch: %s\n", fixture.name);
+            std::println(stderr, "Original fixture mismatch: {}", fixture.name);
             throw TestEditor::Failure("hex conversion matches independent original bytes");
         }
         const bool changed = fixture.before != fixture.after;
@@ -261,7 +262,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

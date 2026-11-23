@@ -4,6 +4,7 @@
 #include "native_completion_helpers.h"
 #include <array>
 #include <cstdio>
+#include <print>
 #include <exception>
 #include <format>
 #include <iterator>
@@ -104,7 +105,7 @@ void NativeAllocationFailure(const EditorFrame* frame, const FailurePoint& point
     editor->Send(Message::AutoCCancel);
     Require(TestEditor::Text(editor) == after && editor->Send(Message::CanUndo),
             "retrying and canceling completion retain the document and its Undo step");
-    std::printf("PASS: native completion recovers from %s allocation failure\n", point.name);
+    std::println("PASS: native completion recovers from {} allocation failure", point.name);
 }
 
 void CheckAllocationFailures(EditorFrame* frame, bool presented) {
@@ -135,7 +136,7 @@ public:
                 CheckAllocationFailures(frame, presented);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

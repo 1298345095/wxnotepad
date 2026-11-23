@@ -12,6 +12,7 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -186,7 +187,7 @@ public:
                     "PASS: Replace All follows native case/whole-word options independently of wrap and selection");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

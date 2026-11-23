@@ -8,7 +8,8 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [PR #247 native workflows](#pr-247-native-workflows).
+Latest review: [PR #262 GCC 15 formatted output](#pr-262-gcc-15-formatted-output).
+Previous review: [PR #247 native workflows](#pr-247-native-workflows).
 Earlier review: [PR #225 analysis follow-up](#pr-225-analysis-follow-up), following
 [Array and raw-literal cleanup](#array-and-raw-literal-cleanup),
 on [`codex/sonar-arrays-raw-literals`](https://github.com/1298345095/wxnotepad/tree/codex/sonar-arrays-raw-literals).
@@ -1976,3 +1977,48 @@ identities, while the exact visible selection was absent. Independent original
 and current native controls retain both results without changing that required
 selection assertion. Native and hosted results for the final source are recorded
 in the PR description.
+
+## PR #262 GCC 15 formatted output
+
+PR #262 raises the supported Linux baseline to GCC 15 and retains an SDK test
+that compiles, links and executes C++23 `std::print` and `std::println`. The
+earlier GCC 13 `<print>` limitation described above no longer applies to this
+branch.
+
+The current-project main review on November 23 found 357 FALSE_POSITIVE S6494
+printing recommendations in 149 files, plus 138 OPEN printing recommendations.
+All 495 reported `printf`/`fprintf` calls in 187 files now use `std::print` or
+`std::println` with direct `<print>` includes. The historical ledgers retain the
+compiler baseline and disposition that were valid at their recorded revisions.
+Other ignored rules were checked for compiler or standard-library limitations;
+none depended on the missing GCC 13 print facility.
+
+The conversion keeps each output stream, line ending, explicit flush, numeric
+base, width and precision. Integer presentation remains explicit where printf
+previously promoted booleans and characters; GTK enums are converted to their
+integer values. The two bounded string-view diagnostics still stop at the first
+NUL byte. Pointer-only diagnostics use the standard pointer representation;
+their consumers correlate addresses rather than requiring a CRT-specific
+spelling. Existing assertions, fixture data, timeouts and GUI actions are
+unchanged.
+
+`std::print` can throw on output or allocation failure. The process observer
+contains these diagnostic failures so publication and command retries continue.
+The platform assertion and fuzz invariant helpers retain their unconditional
+`abort()` even if printing fails. The separate variadic debug and tracing
+interfaces keep their existing printf-format protocol.
+
+Fixture destructors likewise contain failures from their own diagnostics, and
+popup-key cleanup still releases the native key before its existing deadline
+when diagnostic output fails. Directory cleanup and callback unbinding retain
+their original order.
+
+Local GCC 14.2/libstdc++ 14 verification compares each migrated format against
+the original `fprintf` output: 495 formats with 12 input sets, plus 12 typed
+boolean, character and bounded-string checks, pass all 5,952 byte comparisons.
+The existing `bit_intrinsics`, `measurement_worker_start` and
+`parallel_surface_failure` native tests compile and pass through `ci.py probe`.
+The exact assertion and fuzz-failure functions also retain `SIGABRT` with normal
+stderr and with an unbuffered `/dev/full` sink. Canonical clang-format 23.1.2
+passes all 503 tracked C++ files. Hosted GCC 15/MSVC and GUI results belong to
+the PR's analysis of the submitted revision.

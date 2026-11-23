@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <print>
 #include <optional>
 #include <stdexcept>
 
@@ -381,7 +382,7 @@ public:
                 CheckDocumentLoadIntents(*editor);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

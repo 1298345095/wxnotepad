@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <print>
 #include <array>
 #include "editor/editor_control.h"
 #include "file_helpers.h"
@@ -148,7 +149,7 @@ void CountAndDefault(const std::filesystem::path& directory, SettingsStore& sett
                 "New must restore the configured insertion default");
         frame->Destroy();
         wxYield();
-        std::printf("PASS: configured default %d, all count/tie/uniform fixtures and saved bytes\n", configured);
+        std::println("PASS: configured default {:d}, all count/tie/uniform fixtures and saved bytes", configured);
     }
 }
 void WarningChoices(const std::filesystem::path& directory, SettingsStore& settings) {
@@ -225,7 +226,7 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
                 "unchecking Always show must suppress subsequent warnings and preserve the loaded save point");
         frame->Destroy();
         wxYield();
-        std::printf("PASS: warning choices %d, No/Yes, checkbox, Undo/Redo and independent saved bytes\n", selected);
+        std::println("PASS: warning choices {:d}, No/Yes, checkbox, Undo/Redo and independent saved bytes", selected);
     }
 }
 void UnknownFileDefaults(const std::filesystem::path& directory, SettingsStore& settings) {
@@ -293,7 +294,7 @@ public:
                 WarningChoices(directory, settings);
                 UnknownFileDefaults(directory, settings);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

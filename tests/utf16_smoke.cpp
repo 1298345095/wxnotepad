@@ -9,6 +9,7 @@
 #include "settings/settings_store.h"
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -107,7 +108,7 @@ public:
                     "PASS: explicit no-BOM/empty/NUL roundtrips, edited Save As, failure/history and New metadata");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

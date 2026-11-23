@@ -1,4 +1,5 @@
 #include "native_renderer_helpers.h"
+#include <print>
 #include "native_completion_helpers.h"
 #include "automatic_completion_reference.h"
 #include <wx/vlbox.h>
@@ -80,8 +81,8 @@ void Frozen(EditorFrame* frame) {
                 Type(editor, ch);
         }
         if (TestEditor::Text(editor) != ref.after)
-            std::fprintf(stderr, "before=[%s] expected=[%s] actual=[%s]", ref.before, ref.after,
-                         TestEditor::Text(editor).c_str());
+            std::print(stderr, "before=[{}] expected=[{}] actual=[{}]", ref.before, ref.after,
+                       TestEditor::Text(editor).c_str());
         Require(TestEditor::Text(editor) == ref.after, "frozen original typing/confirmation bytes");
         TestEditor::RequireSelection(editor, ref.caret, ref.caret, "frozen original typing caret");
         Require(static_cast<bool>(editor->Send(AutoCActive)) == ref.active, "frozen original popup visibility");
@@ -92,8 +93,8 @@ void Frozen(EditorFrame* frame) {
         TestEditor::RequireSelection(editor, ref.undoAnchor, ref.undoCaret, "frozen original Undo selection");
         editor->Send(Redo);
         if (TestEditor::Text(editor) != ref.after)
-            std::fprintf(stderr, "before=[%s] expected=[%s] actual=[%s]", ref.before, ref.after,
-                         TestEditor::Text(editor).c_str());
+            std::print(stderr, "before=[{}] expected=[{}] actual=[{}]", ref.before, ref.after,
+                       TestEditor::Text(editor).c_str());
         Require(TestEditor::Text(editor) == ref.after, "redo restores frozen completion bytes");
     }
     std::puts("PASS: frozen original automatic candidates, Enter/Tab/Space, suffix caret, Undo/Redo and deletion");
@@ -244,8 +245,8 @@ void Behavior(EditorFrame* frame) {
     Type(editor, 'l');
     const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
     Require(editor->Send(Message::AutoCActive), "long document scan retains candidates before timeout");
-    std::printf(
-        "PASS: 12 MB document scan with original 50 ms scan timeout; observed %.3f ms including native typing and UI\n",
+    std::println(
+        "PASS: 12 MB document scan with original 50 ms scan timeout; observed {:.3f} ms including native typing and UI",
         elapsed);
     std::puts("PASS: original minimum lengths, scopes, scan filtering, language/document changes, Escape, read-only "
               "and multiple selections");
@@ -304,7 +305,7 @@ public:
                 Behavior(frame);
                 SupplementaryLatex(frame);
             } catch (const std::exception& e) {
-                std::fprintf(stderr, "FAIL: %s\n", e.what());
+                std::println(stderr, "FAIL: {}", e.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

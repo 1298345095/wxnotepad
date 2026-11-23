@@ -5,6 +5,7 @@
 #include <wx/textctrl.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -19,7 +20,7 @@ void RequireSelection(EditorControl* editor, intptr_t anchor, intptr_t caret, co
     const auto actualAnchor = editor->Send(GetAnchor);
     const auto actualCaret = editor->Send(GetCurrentPos);
     if (actualAnchor != anchor || actualCaret != caret) {
-        std::fprintf(stderr, "Anchor/caret: %lld/%lld, expected %lld/%lld\n", static_cast<long long>(actualAnchor),
+        std::println(stderr, "Anchor/caret: {:d}/{:d}, expected {:d}/{:d}", static_cast<long long>(actualAnchor),
                      static_cast<long long>(actualCaret), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
         throw std::runtime_error(message);
@@ -456,8 +457,8 @@ class ContinuationApp final : public wxApp {
                 }
                 CallAfter([this] { Next(); });
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "Search continuation scenario: %zu/%zu\n", next_, scenarios.size());
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "Search continuation scenario: {:d}/{:d}", next_, scenarios.size());
+                std::println(stderr, "FAIL: {}", error.what());
                 if (!frame->IsBeingDeleted()) frame->Destroy();
                 ExitMainLoop();
             }

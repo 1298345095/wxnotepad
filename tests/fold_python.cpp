@@ -8,6 +8,7 @@
 #include <ScintillaTypes.h>
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -208,7 +209,7 @@ public:
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
                 frame->Destroy();
                 ExitMainLoop();

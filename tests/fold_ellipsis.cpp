@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include "native_fold_helpers.h"
 #include "native_selection_helpers.h"
 #include "file_helpers.h"
@@ -177,9 +178,9 @@ wxRect Box(EditorControl* editor, int line, bool visible) {
         if (ink && !previous) ++groups;
         previous = ink;
     }
-    std::printf("box: line=%d bounds=%d,%d..%d,%d glyphs=%d dpi=%d zoom=%lld renderer=%lld\n", line, x + left, y + top,
-                x + right, y + bottom, groups, editor->GetDPI().y, static_cast<long long>(editor->Send(GetZoom)),
-                static_cast<long long>(editor->Send(GetTechnology)));
+    std::println("box: line={:d} bounds={:d},{:d}..{:d},{:d} glyphs={:d} dpi={:d} zoom={:d} renderer={:d}", line,
+                 x + left, y + top, x + right, y + bottom, groups, editor->GetDPI().y,
+                 static_cast<long long>(editor->Send(GetZoom)), static_cast<long long>(editor->Send(GetTechnology)));
     Require(groups == 3, "the actual box must contain three separate middle-dot glyphs");
     return {x + static_cast<int>(left / pixels.scaleX), y + static_cast<int>(top / pixels.scaleY),
             static_cast<int>((right - left + 1) / pixels.scaleX), static_cast<int>((bottom - top + 1) / pixels.scaleY)};
@@ -369,7 +370,7 @@ public:
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

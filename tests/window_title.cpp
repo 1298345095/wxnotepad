@@ -1,4 +1,5 @@
 #include "editor_test_helpers.h"
+#include <print>
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
 #include "file_command_driver.h"
@@ -136,7 +137,7 @@ void Excerpts(EditorFrame* frame) {
         Menu(frame, "Text Excerpt");
         const auto expected = wxString::FromUTF8(Unhex(columns[5])) + " - wxnotepad";
         if (NativeTitle(frame) != expected)
-            std::fprintf(stderr, "excerpt row %zu: title mismatch (actual length=%zu, expected length=%zu)\n",
+            std::println(stderr, "excerpt row {:d}: title mismatch (actual length={:d}, expected length={:d})",
                          fixtureIndex, NativeTitle(frame).length(), expected.length());
         Require(NativeTitle(frame) == expected, "actual title equals independent original excerpt");
         Require(State(frame) == before, "title command preserves exact text, directed selections and undo/redo");
@@ -229,9 +230,9 @@ void Localized(EditorFrame* frame, bool traditional) {
     for (auto* item : frame->GetMenuBar()->GetMenu(5)->GetMenuItems())
         if (item->GetItemLabel() == caption) title = item->GetSubMenu();
     if (!title) {
-        std::fprintf(stderr, "expected title menu '%s'\n", caption.utf8_str().data());
+        std::println(stderr, "expected title menu '{}'", caption.utf8_str().data());
         for (auto* item : frame->GetMenuBar()->GetMenu(5)->GetMenuItems())
-            std::fprintf(stderr, "observed '%s'\n", item->GetItemLabel().utf8_str().data());
+            std::println(stderr, "observed '{}'", item->GetItemLabel().utf8_str().data());
     }
     Require(title && title->GetMenuItemCount() == 4, "localized native title submenu matches pinned resources");
     for (size_t index = 0; index < captions.size(); ++index) {
@@ -312,7 +313,7 @@ public:
                 }
                 std::puts("PASS: native original window title modes");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 status_ = 1;
             }
             frame_.release()->Destroy();

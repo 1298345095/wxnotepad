@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include "editor_test_helpers.h"
@@ -126,7 +127,7 @@ void CheckComposition(EditorFrame* frame) {
 #endif
     }
     driver.Stop();
-    std::fprintf(stderr, "composition result prompts=%d shown=%d text='%s' anchor=%lld caret=%lld undo=%lld\n",
+    std::println(stderr, "composition result prompts={:d} shown={:d} text='{}' anchor={:d} caret={:d} undo={:d}",
                  driver.prompts, frame->IsShown(), TestEditor::Text(editor).c_str(),
                  static_cast<long long>(editor->Send(GetAnchor)), static_cast<long long>(editor->Send(GetCurrentPos)),
                  static_cast<long long>(editor->Send(CanUndo)));
@@ -367,7 +368,7 @@ void ProbeWidgetFocus(EditorFrame* frame, bool compositionReplay = false) {
         wxYield();
         wxMilliSleep(10);
     }
-    std::fprintf(stderr, "WIDGET outcome dialogShown=%d mainShown=%d mainDeleting=%d\n", dialog->IsShown(),
+    std::println(stderr, "WIDGET outcome dialogShown={:d} mainShown={:d} mainDeleting={:d}", dialog->IsShown(),
                  frame->IsShown(), frame->IsBeingDeleted());
     if (dialog->IsShown()) NativeSearch::Click(dialog, wxID_CANCEL);
 }
@@ -525,7 +526,7 @@ public:
                 CloseCase(frame, 0);
                 return;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
         });
@@ -636,9 +637,9 @@ private:
                 CloseCase(sentinel, scenario + 1);
                 return;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL close case %d: %s\n", scenario, error.what());
+                std::println(stderr, "FAIL close case {:d}: {}", scenario, error.what());
                 if (retained)
-                    std::fprintf(stderr, "candidate size=%dx%d client=%dx%d active=%d editorFocus=%d\n",
+                    std::println(stderr, "candidate size={:d}x{:d} client={:d}x{:d} active={:d} editorFocus={:d}",
                                  retained->GetSize().x, retained->GetSize().y, retained->GetClientSize().x,
                                  retained->GetClientSize().y, retained->IsActive(), retained->Editor()->HasFocus());
             }

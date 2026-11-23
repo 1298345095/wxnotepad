@@ -5,6 +5,7 @@
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -220,7 +221,7 @@ public:
                     std::puts(save ? "PASS: native Save accepted" : "PASS: native Save cancelled");
                     result_ = 0;
                 } catch (const std::exception& error) {
-                    std::fprintf(stderr, "FAIL: %s\n", error.what());
+                    std::println(stderr, "FAIL: {}", error.what());
                 }
                 frame->Destroy();
                 ExitMainLoop();
@@ -236,7 +237,7 @@ public:
                 SaveFailures(directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

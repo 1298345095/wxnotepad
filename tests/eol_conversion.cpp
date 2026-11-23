@@ -1,4 +1,5 @@
 #include "status_helpers.h"
+#include <print>
 #include "native_search_helpers.h"
 #include <array>
 #include "native_fold_helpers.h"
@@ -113,9 +114,9 @@ void FoldedSelection(EditorFrame* frame) {
     std::puts("PASS: reversed Unicode selection and caret visibility through wrapped folded conversion");
 }
 void RecordBytes(const char* sample, const char* action, const std::filesystem::path& path) {
-    std::printf("BYTES %s %s:", sample, action);
+    std::print("BYTES {} {}:", sample, action);
     for (unsigned char byte : Bytes(path))
-        std::printf(" %02x", byte);
+        std::print(" {:02x}", byte);
     std::puts("");
 }
 void Files(EditorFrame* frame, const std::filesystem::path& directory) {
@@ -174,7 +175,7 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
         Require(editor->Send(GetModify), "Undo away from converted save point must dirty text");
         NativeSearch::Command(frame, wxID_REDO);
         Require(!editor->Send(GetModify), "Redo to converted save point must restore clean state");
-        std::printf("PASS: %s Save/Save As independent bytes, conversion/Undo/Redo save points\n", sample.name);
+        std::println("PASS: {} Save/Save As independent bytes, conversion/Undo/Redo save points", sample.name);
     }
     Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                 frame->Open(Filename(directory / "absent.txt")).status == OpenStatus::Failed &&
@@ -242,8 +243,7 @@ public:
                     Require(id != wxNOT_FOUND, "Edit must offer CRLF, LF and CR conversion commands");
                     NativeSearch::Command(frame, id);
                     if (NativeSearch::Text(editor) != mode.expected)
-                        std::fprintf(stderr, "Mode %s actual text: %s\n", mode.label,
-                                     NativeSearch::Text(editor).c_str());
+                        std::println(stderr, "Mode {} actual text: {}", mode.label, NativeSearch::Text(editor).c_str());
                     Require(NativeSearch::Text(editor) == mode.expected,
                             "native conversion must normalize mixed endings without adding a final newline");
                     Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode.mode)),
@@ -265,14 +265,14 @@ public:
                                                                                  : "\n";
                     Require(NativeSearch::Text(editor) == std::string(mode.expected) + ending,
                             "native Enter must insert each chosen line ending");
-                    std::printf("PASS: native %s conversion, insertion mode and status\n", mode.label);
+                    std::println("PASS: native {} conversion, insertion mode and status", mode.label);
                 }
                 History(frame);
                 FoldedSelection(frame);
                 Files(frame, directory);
                 SearchRevalidation(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

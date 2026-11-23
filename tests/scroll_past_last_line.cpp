@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
 #include <array>
@@ -68,13 +69,13 @@ void Limits(EditorFrame* frame, const std::array<intptr_t, 5>& expected) {
         Bottom(editor);
         const auto actual = editor->Send(GetFirstVisibleLine);
         if (actual != expected[mode]) {
-            std::fprintf(stderr, "mode=%d before=%lld actual=%lld expected=%lld rows=%lld lines=%lld dpi=%d\n", mode,
+            std::println(stderr, "mode={:d} before={:d} actual={:d} expected={:d} rows={:d} lines={:d} dpi={:d}", mode,
                          static_cast<long long>(beforeScroll), static_cast<long long>(actual),
                          static_cast<long long>(expected[mode]), static_cast<long long>(editor->Send(LinesOnScreen)),
                          static_cast<long long>(editor->Send(GetLineCount)), editor->GetDPI().y);
 #ifdef __WXGTK__
             auto* adjustment = gtk_range_get_adjustment(editor->m_scrollBar[wxWindow::ScrollDir_Vert]);
-            std::fprintf(stderr, "native value=%g upper=%g page=%g\n", gtk_adjustment_get_value(adjustment),
+            std::println(stderr, "native value={:.6g} upper={:.6g} page={:.6g}", gtk_adjustment_get_value(adjustment),
                          gtk_adjustment_get_upper(adjustment), gtk_adjustment_get_page_size(adjustment));
 #endif
         }
@@ -201,7 +202,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original five native scroll modes");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -10,6 +10,7 @@
 #include "native_dialog_helpers.h"
 #include <algorithm>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -260,7 +261,7 @@ public:
                 std::puts("PASS: successful New/Open reset override; failed/cancelled operations retain it");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

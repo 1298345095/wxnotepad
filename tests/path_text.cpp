@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include <array>
 #include <utility>
 #include "encoded_file_helpers.h"
@@ -162,7 +163,7 @@ void IdentityCases(EditorFrame* frame, const std::filesystem::path& directory) {
     CheckInsertion(frame, "Full Path Name", TestFiles::Filename(renamed).utf8_string());
     for (const bool shift : {false, true}) {
         TestEditor::ResetStream(frame->Editor(), "AoldZ", 1, 4);
-        std::printf("Checking native Ctrl+%sF9 insertion\n", shift ? "Shift+" : "");
+        std::println("Checking native Ctrl+{}F9 insertion", shift ? "Shift+" : "");
         NativeKeys::Shortcut(frame, WXK_F9, true, false, shift);
         Require(TestEditor::Text(frame) ==
                     "A" + (shift ? TestFiles::Filename(renamed).utf8_string() : "renamed.txt") + "Z",
@@ -265,7 +266,7 @@ public:
                 DefaultEncodingCase(directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);
             frame->Destroy();

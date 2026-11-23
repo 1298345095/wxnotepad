@@ -13,6 +13,8 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <exception>
+#include <print>
 #include <functional>
 #include <algorithm>
 #include <vector>
@@ -430,8 +432,13 @@ public:
     ~BackupDirectoryWriteBlock() {
         std::error_code error;
         fs::permissions(directory_, original_, error);
-        if (error)
-            std::fprintf(stderr, "FAIL: restore private backup directory permissions: %s\n", error.message().c_str());
+        if (error) {
+            try {
+                std::println(stderr, "FAIL: restore private backup directory permissions: {}", error.message().c_str());
+            } catch (const std::exception&) {
+                // Preserve teardown when its diagnostic cannot be written.
+            }
+        }
     }
     BackupDirectoryWriteBlock(const BackupDirectoryWriteBlock&) = delete;
     BackupDirectoryWriteBlock& operator=(const BackupDirectoryWriteBlock&) = delete;
@@ -529,7 +536,7 @@ public:
 #endif
                 std::puts("PASS: native periodic backup settings");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

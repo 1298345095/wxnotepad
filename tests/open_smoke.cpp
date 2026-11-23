@@ -4,6 +4,7 @@
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include "settings/settings_store.h"
@@ -112,7 +113,7 @@ public:
                 std::puts("PASS: cancellation/read/strict UTF-8 failures retain document and history");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

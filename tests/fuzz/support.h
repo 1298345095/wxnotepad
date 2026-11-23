@@ -4,12 +4,18 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <exception>
+#include <print>
 #include <cstdlib>
 #include <string_view>
 
 namespace Fuzz {
 [[noreturn]] inline void Fail(const char* requirement) {
-    std::fprintf(stderr, "Fuzz invariant failed: %s\n", requirement);
+    try {
+        std::println(stderr, "Fuzz invariant failed: {}", requirement);
+    } catch (const std::exception&) {
+        // An output failure must preserve the fuzzer's invariant-failure abort.
+    }
     std::abort();
 }
 inline void Check(bool condition, const char* requirement) {

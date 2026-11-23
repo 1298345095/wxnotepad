@@ -1,6 +1,7 @@
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #ifdef __WXMSW__
 #include <windows.h>
 #else
@@ -33,7 +34,7 @@ public:
         if (chmod(path.c_str(), S_IRUSR | S_IWUSR) != 0) return 2;
 #endif
         if (saved || explicitSaved || suppressed || schemeSaved) {
-            std::fprintf(stderr, "FAIL: unreadable existing configuration must reject every write\n");
+            std::println(stderr, "FAIL: unreadable existing configuration must reject every write");
             return 1;
         }
         std::puts("PASS: all settings write operations reject an unreadable existing INI");

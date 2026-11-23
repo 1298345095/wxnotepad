@@ -7,6 +7,7 @@
 #include <wx/timer.h>
 #include "file_command_driver.h"
 #include <cstdio>
+#include <print>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -19,8 +20,8 @@ void TracePrefix(const char* transition) {
     static unsigned sequence = 0;
     const auto elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
-    std::fprintf(stderr, "CLOSE-LIFECYCLE %u +%lldms %s", ++sequence, static_cast<long long>(elapsed.count()),
-                 transition);
+    std::print(stderr, "CLOSE-LIFECYCLE {:d} +{:d}ms {}", ++sequence, static_cast<long long>(elapsed.count()),
+               transition);
 }
 void Trace(const char* transition) {
     TracePrefix(transition);
@@ -29,7 +30,7 @@ void Trace(const char* transition) {
 }
 void TraceFrame(const char* transition, const EditorFrame* frame) {
     TracePrefix(transition);
-    std::fprintf(stderr, " frame=%p\n", static_cast<const void*>(frame));
+    std::println(stderr, " frame={:p}", static_cast<const void*>(frame));
     std::fflush(stderr);
 }
 class FrameLifecycle {
@@ -144,7 +145,7 @@ void CheckWhitespacePrompts(FrameLifecycle& frames, const std::filesystem::path&
         for (const auto* action : {"New", "Open", "Close"}) {
             CheckWhitespaceTransition(frames, directory, source, sample, action);
         }
-        std::printf("PASS: New/Open/Close whitespace rule: %s\n", sample.name);
+        std::println("PASS: New/Open/Close whitespace rule: {}", sample.name);
     }
 
     auto* explicitSave = frames.NewFrame();
@@ -289,7 +290,7 @@ public:
                 std::puts("PASS: failed close Save retains document, identity and history");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             if (!frame->IsBeingDeleted()) frames_.DestroyFrame(frame);
             Trace("ExitMainLoop requested");

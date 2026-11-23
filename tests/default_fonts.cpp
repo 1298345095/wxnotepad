@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 #include "font_dialog_helpers.h"
 #include <wx/filename.h>
@@ -93,12 +94,12 @@ public:
                         "text fold ellipsis is two points below its original global text base");
                 const auto textFace = FontFace(editor);
                 NativeSearch::Command(frame, bar->FindMenuItem("Scheme", "C/C++"));
-                std::printf("C++ face=%s textFace=%s size=%lld weight=%lld italic=%lld strike=%lld\n",
-                            FontFace(editor).c_str(), textFace.c_str(),
-                            static_cast<long long>(editor->Send(Message::StyleGetSizeFractional, DefaultStyle)),
-                            static_cast<long long>(editor->Send(Message::StyleGetWeight, DefaultStyle)),
-                            static_cast<long long>(editor->Send(Message::StyleGetItalic, DefaultStyle)),
-                            static_cast<long long>(editor->Send(Message::StyleGetStrike, DefaultStyle)));
+                std::println("C++ face={} textFace={} size={:d} weight={:d} italic={:d} strike={:d}",
+                             FontFace(editor).c_str(), textFace.c_str(),
+                             static_cast<long long>(editor->Send(Message::StyleGetSizeFractional, DefaultStyle)),
+                             static_cast<long long>(editor->Send(Message::StyleGetWeight, DefaultStyle)),
+                             static_cast<long long>(editor->Send(Message::StyleGetItalic, DefaultStyle)),
+                             static_cast<long long>(editor->Send(Message::StyleGetStrike, DefaultStyle)));
                 Require(editor->Send(Message::StyleGetSizeFractional, DefaultStyle) == 1600 &&
                             editor->Send(Message::StyleGetWeight, DefaultStyle) == 600 &&
                             editor->Send(Message::StyleGetItalic, DefaultStyle) &&
@@ -223,7 +224,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original default font import and scheme inheritance");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

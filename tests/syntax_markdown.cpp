@@ -14,6 +14,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <sstream>
 #include <fstream>
@@ -195,11 +196,12 @@ void NativeStylesAndFoldSearch(EditorFrame* frame) {
     Require(overlined != plain, "original superscript overline must draw on the actual native editor surface");
     editor->Send(StyleSetOverline, SCE_MARKDOWN_SUPERSCRIPT, true);
     NativePaint::Complete(editor);
-    std::printf("Native Markdown dpi=%d scale=%.2f default-point-size=%zd text-height=%zd overline-pixels-observed=1\n",
-                editor->GetDPI().y, editor->GetContentScaleFactor(),
-                editor->Send(StyleGetSizeFractional,
-                             static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))),
-                editor->Send(TextHeight, 1));
+    std::println(
+        "Native Markdown dpi={:d} scale={:.2f} default-point-size={:d} text-height={:d} overline-pixels-observed=1",
+        editor->GetDPI().y, editor->GetContentScaleFactor(),
+        editor->Send(StyleGetSizeFractional,
+                     static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))),
+        editor->Send(TextHeight, 1));
     wxString samplePath;
     if (wxGetEnv("WXNOTEPAD_MARKDOWN_SAMPLE", &samplePath) && !samplePath.empty()) {
         const wxRect sampleArea(0, 0, std::min(editor->GetClientSize().x, 700),
@@ -287,7 +289,7 @@ public:
                 NativeStylesAndFoldSearch(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s", error.what());
+                std::print(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

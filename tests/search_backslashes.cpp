@@ -8,6 +8,7 @@
 #include <wx/textctrl.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -181,7 +182,7 @@ public:
                 replacement->SetValue("\\t$1");
                 NativeSearch::Click(dialog, wxID_REPLACE_ALL);
                 if (Text(*editor) != "\\n\t$1")
-                    std::fprintf(stderr, "Native bytes [%s]; transform=%d regex=%d replacement=[%s]\n",
+                    std::println(stderr, "Native bytes [{}]; transform={:d} regex={:d} replacement=[{}]",
                                  Text(*editor).c_str(), nativeSearch.Request().options.transformBackslashes,
                                  nativeSearch.Request().options.regularExpression,
                                  nativeSearch.Request().replacement.utf8_str().data());
@@ -229,7 +230,7 @@ public:
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
                 frame->Destroy();
                 ExitMainLoop();

@@ -7,6 +7,7 @@
 #include <SciLexer.h>
 #include <algorithm>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -141,7 +142,7 @@ public:
                 fresh->Destroy();
                 std::puts("PASS: whitespace menu toggles original core markers without changing document or geometry");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

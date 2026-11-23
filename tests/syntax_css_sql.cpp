@@ -8,6 +8,7 @@
 #include <wx/wx.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <memory>
 #include <exception>
 #include <utility>
@@ -295,7 +296,7 @@ void OriginalTyping(EditorFrame* frame) {
         editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
         NativePaint::Complete(editor);
         const int character = std::stoi(characterText);
-        std::fprintf(stderr, "typing fixture=%s character=%d\n", name.c_str(), character);
+        std::println(stderr, "typing fixture={} character={:d}", name.c_str(), character);
 #ifdef __WXMSW__
         // wxMSW suppresses WM_CHAR after a handled keydown (for example the
         // preceding completion Enter). Deliver the complete next native key.
@@ -316,12 +317,12 @@ void OriginalTyping(EditorFrame* frame) {
         const auto expected = ExpectedCandidates(words);
         const auto actual = NativeCompletion::Candidates(editor);
         if (TestEditor::Text(editor) != TestLanguages::Unhex(afterHex) || actual != expected) {
-            std::fprintf(stderr, "native typing expected=[%s] actual=[%s] candidates=%zu/%zu\n",
+            std::println(stderr, "native typing expected=[{}] actual=[{}] candidates={:d}/{:d}",
                          TestLanguages::Unhex(afterHex).c_str(), TestEditor::Text(editor).c_str(), actual.size(),
                          expected.size());
             for (const auto& candidate : actual)
-                std::fprintf(stderr, "[%s] ", candidate.c_str());
-            std::fprintf(stderr, "\n");
+                std::print(stderr, "[{}] ", candidate.c_str());
+            std::println(stderr, "");
         }
         Require(TestEditor::Text(editor) == TestLanguages::Unhex(afterHex) && actual == expected,
                 "native automatic completion and paired characters match independent original bytes and lists");
@@ -366,7 +367,7 @@ public:
                 MandatorySqlCommentSpace(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

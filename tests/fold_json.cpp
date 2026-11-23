@@ -7,6 +7,7 @@
 #include <ScintillaTypes.h>
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -145,7 +146,7 @@ public:
                 std::puts("PASS: JSON language/reset transitions preserve editor history and saved bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

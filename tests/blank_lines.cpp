@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include <array>
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -56,7 +57,7 @@ void Fixtures(EditorFrame* frame) {
         const auto eol = editor->Send(GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         Menu(frame, fixture.merge);
-        if (TestEditor::Text(editor) != fixture.after) std::fprintf(stderr, "Fixture: %s\n", fixture.name);
+        if (TestEditor::Text(editor) != fixture.after) std::println(stderr, "Fixture: {}", fixture.name);
         Require(TestEditor::Text(editor) == fixture.after, fixture.name);
         Range(editor, fixture.resultAnchor, fixture.resultCaret);
         Require(editor->Send(CanUndo) && editor->Send(GetModify),
@@ -69,7 +70,7 @@ void Fixtures(EditorFrame* frame) {
         editor->Send(Redo);
         Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores the complete blank-line operation");
-        std::printf("PASS: %s, selection, one-step Undo/Redo and save point\n", fixture.name);
+        std::println("PASS: {}, selection, one-step Undo/Redo and save point", fixture.name);
     }
 }
 void NoChange(EditorFrame* frame) {
@@ -268,7 +269,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

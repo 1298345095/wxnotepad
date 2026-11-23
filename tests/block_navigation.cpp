@@ -4,6 +4,7 @@
 #include "block_navigation_fixtures.h"
 #include "file_helpers.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <span>
 #include <memory>
@@ -23,10 +24,10 @@ void Position(EditorControl* editor, const BlockReference::Fixture& row) {
         editor->Send(GetSelectionMode) != row.selectionMode || editor->Send(GetSelections) != row.selections ||
         editor->Send(GetRectangularSelectionAnchorVirtualSpace) != row.anchorVirtual ||
         editor->Send(GetRectangularSelectionCaretVirtualSpace) != row.caretVirtual) {
-        std::fprintf(
+        std::println(
             stderr,
-            "case doc=%d command=%d mode=%d setup=%d input=%ld/%ld actual=%lld/%lld mode=%lld selections=%lld "
-            "expected=%ld/%ld mode=%d selections=%d\n",
+            "case doc={:d} command={:d} mode={:d} setup={:d} input={:d}/{:d} actual={:d}/{:d} mode={:d} "
+            "selections={:d} expected={:d}/{:d} mode={:d} selections={:d}",
             row.document, row.command, row.mode, row.setup, row.anchor, row.caret,
             static_cast<long long>(editor->Send(GetAnchor)), static_cast<long long>(editor->Send(GetCurrentPos)),
             static_cast<long long>(editor->Send(GetSelectionMode)), static_cast<long long>(editor->Send(GetSelections)),
@@ -75,7 +76,7 @@ void ReferenceCase(EditorFrame* frame, const int* commands, const int* modeIds, 
             "block commands preserve bytes, encoding, save point and undo/redo availability");
     for (intptr_t line = 0; line < editor->Send(GetLineCount); ++line) {
         if (editor->Send(GetLineVisible, line) != row.visible[line] - '0') {
-            std::fprintf(stderr, "visibility doc=%d command=%d setup=%d line=%lld\n", row.document, row.command,
+            std::println(stderr, "visibility doc={:d} command={:d} setup={:d} line={:d}", row.document, row.command,
                          row.setup, static_cast<long long>(line));
             throw std::runtime_error("block command must reproduce original folded-line visibility");
         }
@@ -274,7 +275,7 @@ public:
                 FilePolicyCases(frame, commands.data());
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

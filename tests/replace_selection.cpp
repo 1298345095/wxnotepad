@@ -6,6 +6,7 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <filesystem>
 #include <fstream>
@@ -75,7 +76,7 @@ void SelectionExamples(EditorFrame* frame, EditorControl* editor, wxTextCtrl* qu
         NativeSearch::Click(dialog, button->GetId());
         const auto expectedCount = wxString::Format(count == 1 ? "%zu replacement" : "%zu replacements", count);
         if (NativeSearch::Text(editor) != expected || result->GetLabel() != expectedCount)
-            std::fprintf(stderr, "Pattern %s: [%s] / %s; expected [%s] / %zu\n", pattern,
+            std::println(stderr, "Pattern {}: [{}] / {}; expected [{}] / {:d}", pattern,
                          NativeSearch::Text(editor).c_str(), result->GetLabel().utf8_str().data(), expected, count);
         Require(NativeSearch::Text(editor) == expected && result->GetLabel() == expectedCount,
                 "selection replacement produces the pinned bytes and count");
@@ -248,7 +249,7 @@ public:
                 std::puts("PASS: native enablement and independent saved UTF-8/BOM/mixed-EOL bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

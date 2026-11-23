@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 #include <memory>
 #include <utility>
@@ -52,10 +53,10 @@ void NativeMarginColours(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto foreground = ColourValue(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT));
     const auto background = ColourValue(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
-    std::printf("Default native margin: expected=%06llx/%06llx actual=%06llx/%06llx\n",
-                static_cast<long long>(foreground), static_cast<long long>(background),
-                static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
-                static_cast<long long>(editor->Send(StyleGetBack, numberStyle)));
+    std::println("Default native margin: expected={:06x}/{:06x} actual={:06x}/{:06x}",
+                 static_cast<long long>(foreground), static_cast<long long>(background),
+                 static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
+                 static_cast<long long>(editor->Send(StyleGetBack, numberStyle)));
     Require(editor->Send(StyleGetFore, numberStyle) == foreground &&
                 editor->Send(StyleGetBack, numberStyle) == background,
             "default line numbers use a coherent native foreground/background pair");
@@ -68,10 +69,10 @@ void NativeMarginColours(EditorFrame* frame) {
     editor->SetFontSettings(fonts);
     for (const auto language : {SyntaxLanguage::PlainText, SyntaxLanguage::Cpp, SyntaxLanguage::Python}) {
         ApplySyntaxLanguage(*editor, language);
-        std::printf("Native margin colors: fore=%06llx back=%06llx; actual=%06llx/%06llx\n",
-                    static_cast<long long>(foreground), static_cast<long long>(background),
-                    static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
-                    static_cast<long long>(editor->Send(StyleGetBack, numberStyle)));
+        std::println("Native margin colors: fore={:06x} back={:06x}; actual={:06x}/{:06x}",
+                     static_cast<long long>(foreground), static_cast<long long>(background),
+                     static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
+                     static_cast<long long>(editor->Send(StyleGetBack, numberStyle)));
         Require(editor->Send(StyleGetFore, numberStyle) == foreground &&
                     editor->Send(StyleGetBack, numberStyle) == background,
                 "line numbers retain the native foreground/background pair independently of document colors");
@@ -136,8 +137,8 @@ void MarginGeometry(EditorFrame* frame) {
         editor->Send(Redo);
         Require(editor->Send(GetMarginWidthN, 0) == after,
                 "Redo across a digit boundary must restore sufficient margin width");
-        std::printf("PASS: %d/%d line margin transition: %lld -> %lld pixels\n", boundary, boundary + 1,
-                    static_cast<long long>(before), static_cast<long long>(after));
+        std::println("PASS: {:d}/{:d} line margin transition: {:d} -> {:d} pixels", boundary, boundary + 1,
+                     static_cast<long long>(before), static_cast<long long>(after));
     }
     const auto normalWidth = editor->Send(GetMarginWidthN, 0);
     const auto numberStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::LineNumber));
@@ -154,7 +155,8 @@ void MarginGeometry(EditorFrame* frame) {
     editor->Send(StyleSetSize, linkStyle, linkSize);
     Require(editor->Send(GetMarginWidthN, 0) == normalWidth,
             "restoring the number font must restore the measured width");
-    std::printf("PASS: font-dependent geometry at DPI %d, scale %g\n", editor->GetDPI().y, editor->GetDPIScaleFactor());
+    std::println("PASS: font-dependent geometry at DPI {:d}, scale {:.6g}", editor->GetDPI().y,
+                 editor->GetDPIScaleFactor());
 }
 void FoldedCaretAndHistory(EditorFrame* frame) {
     using enum Scintilla::Message;
@@ -299,7 +301,7 @@ public:
                 FileTransitions(frame, settings_.get());
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

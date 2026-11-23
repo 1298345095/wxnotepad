@@ -18,6 +18,7 @@
 #include <wx/stdpaths.h>
 #include "steady_stopwatch.h"
 #include <cstdio>
+#include <print>
 #include <chrono>
 #include <exception>
 #include <stdexcept>
@@ -88,7 +89,11 @@ public:
         try {
             Request("quit");
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "Clipboard peer shutdown failed: %s\n", error.what());
+            try {
+                std::println(stderr, "Clipboard peer shutdown failed: {}", error.what());
+            } catch (const std::exception&) {
+                // Continue removing the owned directory if diagnostic output fails.
+            }
         } catch (...) {
             std::fputs("Clipboard peer shutdown failed: unknown exception\n", stderr);
         }
@@ -110,14 +115,15 @@ public:
             wxString stage;
             wxFFile file(directory_ + "/peer-stage", "rb");
             if (file.IsOpened()) file.ReadAll(&stage, wxConvUTF8);
-            std::fprintf(stderr, "Peer timeout: alive=%d request=%d response.tmp=%d stage=%s\n",
+            std::println(stderr, "Peer timeout: alive={:d} request={:d} response.tmp={:d} stage={}",
                          wxProcess::Exists(static_cast<int>(process_)), wxFileExists(directory_ + "/request"),
                          wxFileExists(directory_ + "/response.tmp"), stage.utf8_string().c_str());
             const auto bounds = frame_->GetScreenRect();
             const auto dpi = frame_->GetDPI();
-            std::fprintf(stderr, "Editor at timeout: shown=%d active=%d focus=%d bounds=%d,%d,%d,%d dpi=%d,%d\n",
-                         frame_->IsShown(), frame_->IsActive(), editor_->HasFocus(), bounds.x, bounds.y, bounds.width,
-                         bounds.height, dpi.x, dpi.y);
+            std::println(
+                stderr, "Editor at timeout: shown={:d} active={:d} focus={:d} bounds={:d},{:d},{:d},{:d} dpi={:d},{:d}",
+                frame_->IsShown(), frame_->IsActive(), editor_->HasFocus(), bounds.x, bounds.y, bounds.width,
+                bounds.height, dpi.x, dpi.y);
             throw std::runtime_error("independent peer response timeout: " + command.ToStdString());
         }
         wxString response;
@@ -235,7 +241,7 @@ void NonTextOffer(EditorControl* editor) {
     } while (watch.Time() < 2000);
     const bool nativeText = gtk_clipboard_wait_is_text_available(clipboard);
     const bool editorText = editor->Send(Scintilla::Message::CanPaste);
-    std::fprintf(stderr, "Owned offer targets: %s; GTK text=%d; editor CanPaste=%d\n", formats.c_str(), nativeText,
+    std::println(stderr, "Owned offer targets: {}; GTK text={:d}; editor CanPaste={:d}", formats.c_str(), nativeText,
                  editorText);
     Require(formats.find("application/x-wxnotepad-test") != std::string::npos,
             "owned non-text MIME offer has not arrived at the focused editor");
@@ -256,7 +262,7 @@ void TextOffer(EditorControl* editor) {
         wxMilliSleep(20);
     } while (watch.Time() < 2000);
     const bool editorText = editor->Send(Scintilla::Message::CanPaste);
-    std::fprintf(stderr, "New text offer: GTK text=%d; editor CanPaste=%d\n", nativeText, editorText);
+    std::println(stderr, "New text offer: GTK text={:d}; editor CanPaste={:d}", nativeText, editorText);
     Require(nativeText, "new stock text MIME offer has not arrived at the focused editor");
     Require(editorText == nativeText, "editor CanPaste must agree with the new native text offer");
 #endif
@@ -830,7 +836,7 @@ void LineCommands(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     TestEditor::ResetStream(editor, "first\nmiddle\nlast", 8, 8);
     NativeLineShortcut(editor, 'D', false);
     if (Text(editor) != "first\nmiddle\nmiddle\nlast")
-        std::fprintf(stderr, "Native Ctrl+D actual=<%s>\n", Text(editor).c_str());
+        std::println(stderr, "Native Ctrl+D actual=<{}>", Text(editor).c_str());
     Require(Text(editor) == "first\nmiddle\nmiddle\nlast", "ordinary Ctrl+D retains Line Duplicate");
     TestEditor::ResetStream(editor, "first\nmiddle\nlast", 1, 4);
     NativeLineShortcut(editor, 'C', false);
@@ -1366,7 +1372,7 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         const auto encoding = frame->DocumentEncoding();
         const bool bom = frame->DocumentHasBom();
         if (shortcut) {
-            std::printf("Checking native %sShift+F9 publication\n", shortcut == 2 ? "Alt+" : "");
+            std::println("Checking native {}Shift+F9 publication", shortcut == 2 ? "Alt+" : "");
             const auto title = frame->GetTitle();
             const auto focusName = wxString::Format("wxnotepad path copy target %lu", wxGetProcessId());
             frame->SetTitle(focusName);
@@ -2138,7 +2144,7 @@ void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     auto copiedText = copied.GetText();
     copiedText.Replace("\r\n", "\n");
     if (copiedText != wxString::FromUTF8("中文\nline B"))
-        std::fprintf(stderr, "Copy diagnostic: seed remains=%d, returned characters=%zu, selection=%ld..%ld\n",
+        std::println(stderr, "Copy diagnostic: seed remains={:d}, returned characters={:d}, selection={:d}..{:d}",
                      copiedText == "owned seed", copiedText.length(),
                      static_cast<long>(editor->Send(GetSelectionStart)),
                      static_cast<long>(editor->Send(GetSelectionEnd)));
@@ -2304,7 +2310,7 @@ void RequireNativeRtf(Peer& peer, std::string_view fixture, unsigned codePage) {
         peer.PreserveSavedText("rtf-peer-mismatch.rtf");
         throw std::runtime_error("native RTF differs from pinned original capture: " + std::string(fixture));
     }
-    std::printf("PASS: peer read %s matching %zu original RTF bytes\n", std::string(fixture).c_str(), actual.size());
+    std::println("PASS: peer read {} matching {:d} original RTF bytes", std::string(fixture).c_str(), actual.size());
 }
 
 void RichTextCopy(EditorFrame* frame, EditorControl* editor, Peer& peer) {
@@ -2509,7 +2515,7 @@ public:
                 RunClipboardScenario(frame, editor, peer);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

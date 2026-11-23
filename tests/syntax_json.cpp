@@ -11,6 +11,7 @@
 #include <wx/timer.h>
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <filesystem>
 #include <fstream>
@@ -115,7 +116,7 @@ void Style(EditorFrame* frame, const std::string& text, const char* token, int s
     Require(position != std::string::npos, "fixture token must exist");
     const auto actual = frame->Editor()->Send(Message::GetStyleIndexAt, position);
     if (actual != style) {
-        std::fprintf(stderr, "token=%s position=%zu expected=%d actual=%zd\n", token, position, style, actual);
+        std::println(stderr, "token={} position={:d} expected={:d} actual={:d}", token, position, style, actual);
         throw std::runtime_error("JSON token must have the pinned lexer style");
     }
 }
@@ -242,7 +243,7 @@ public:
                 std::puts("PASS: native JSON choice, Save As rules, scheme reset, escape/quote edits and Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

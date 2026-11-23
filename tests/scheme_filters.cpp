@@ -6,6 +6,7 @@
 #include "file_helpers.h"
 #include <wx/timer.h>
 #include <cstdio>
+#include <print>
 #include <functional>
 #include <vector>
 
@@ -41,7 +42,7 @@ public:
         } catch (const std::exception& failure) {
             error = failure.what();
             for (const auto& type : types)
-                std::fprintf(stderr, "native filter: %s\n", type.utf8_str().data());
+                std::println(stderr, "native filter: {}", type.utf8_str().data());
         }
     }
     void Notify() override {
@@ -123,7 +124,7 @@ public:
                 Case({}, {"All Files", "Python", "Plain Text"}, {"Python", "Plain Text", "All Files"});
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             lifetime->Destroy();
             ExitMainLoop();

@@ -6,6 +6,7 @@
 #include "file_command_driver.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <fstream>
 #include <sstream>
@@ -68,7 +69,7 @@ void History(EditorFrame* frame) {
             markers << (editor->Send(Message::MarkerGet, line) & 0x1E00001);
         }
         if (markers.str() != expected[7])
-            std::fprintf(stderr, "%s marker got %s expected %s\n", name, markers.str().c_str(), expected[7].c_str());
+            std::println(stderr, "{} marker got {} expected {}", name, markers.str().c_str(), expected[7].c_str());
         Require(markers.str() == expected[7], "history marker positions agree with native original");
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("View", "Change History Marker")) ==
@@ -323,7 +324,7 @@ public:
             try {
                 Require(ready, "native view is presented");
                 auto* editor = frame->Editor();
-                std::printf("native bookmark/history dpi=%d\n", editor->GetDPI().y);
+                std::println("native bookmark/history dpi={:d}", editor->GetDPI().y);
                 Require(editor->Send(GetMarginWidthN, 1) == 0 && editor->Send(GetChangeHistory) == 0,
                         "original defaults hide bookmark margin and disable change history");
                 Menu(frame, "Bookmark Margin");
@@ -342,7 +343,7 @@ public:
                 FileLifecycle(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Editor()->Send(SetSavePoint);
             frame->Destroy();

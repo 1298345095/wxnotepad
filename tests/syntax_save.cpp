@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -163,8 +164,8 @@ void Selected(EditorFrame* frame, const char* language, int lexer) {
     const auto status = StatusMetadata(frame);
     const auto actualLexer = frame->Editor()->Send(Message::GetLexer);
     if (!checked || !status.Contains(wxString(language) + " (override)") || actualLexer != lexer)
-        std::fprintf(stderr, "SELECTED: language=%s checked=%d status=%s expectedLexer=%d actualLexer=%zd\n", language,
-                     checked, status.utf8_str().data(), lexer, actualLexer);
+        std::println(stderr, "SELECTED: language={} checked={:d} status={} expectedLexer={:d} actualLexer={:d}",
+                     language, checked, status.utf8_str().data(), lexer, actualLexer);
     Require(checked && status.Contains(wxString(language) + " (override)") && actualLexer == lexer,
             "specific save type must install its language and reflect the explicit choice in menu and status");
 }
@@ -178,7 +179,7 @@ void CurrentFilterReachability(EditorFrame* frame, const std::filesystem::path& 
     for (const auto& definition : SyntaxCatalog()) {
         if (SyntaxSettingsLanguage(definition.language) != definition.language) continue;
         const auto label = LanguageName(definition.language).utf8_string();
-        std::printf("REACHABILITY: %s\n", label.c_str());
+        std::println("REACHABILITY: {}", label.c_str());
         Choose(frame, label.c_str());
         const auto path = directory / ("reachable-" + std::to_string(definition.original.schemeId) + "." +
                                        definition.extensions.front());
@@ -428,7 +429,7 @@ private:
             std::puts("PASS: actual native JavaScript/JSX/TypeScript/TSX filter selection");
             result_ = 0;
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            std::println(stderr, "FAIL: {}", error.what());
         }
         std::filesystem::remove_all(directory);
         frame->Destroy();

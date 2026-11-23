@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <print>
 #include "app/localization.h"
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
@@ -15,6 +16,7 @@
 #include <wx/display.h>
 #include <fstream>
 #include <chrono>
+#include <exception>
 #include <functional>
 #include <set>
 #ifdef __WXMSW__
@@ -240,7 +242,7 @@ public:
             wxString stage;
             wxFFile stageFile(directory_ + "/peer-stage", "rb");
             if (stageFile.IsOpened()) stageFile.ReadAll(&stage, wxConvUTF8);
-            std::fprintf(stderr, "Peer request=%s response=%s stage=%s requestPending=%d\n",
+            std::println(stderr, "Peer request={} response={} stage={} requestPending={:d}",
                          command.utf8_string().c_str(), response.utf8_string().c_str(), stage.utf8_string().c_str(),
                          wxFileExists(directory_ + "/request"));
 #ifdef __WXMSW__
@@ -295,7 +297,11 @@ public:
         try {
             CleanupInvocationKey();
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "Owned popup key release failed: %s\n", error.what());
+            try {
+                std::println(stderr, "Owned popup key release failed: {}", error.what());
+            } catch (const std::exception&) {
+                // Continue unbinding native callbacks if diagnostic output fails.
+            }
         }
         frame_->Editor()->Unbind(wxEVT_KEY_UP, &Popup::EditorKeyReleased, this);
 #endif
@@ -308,7 +314,7 @@ public:
 #ifdef __WXMSW__
         mouseReceipts_.Begin(++invocation_, screen);
 #endif
-        std::printf("BEGIN: popup key=%d point=%d,%d action=%d\n", key, screen.x, screen.y, action);
+        std::println("BEGIN: popup key={:d} point={:d},{:d} action={:d}", key, screen.x, screen.y, action);
         std::fflush(stdout);
         observed_ = 0;
         dispatches_ = 0;
@@ -351,17 +357,18 @@ public:
 #endif
         if (failure_) std::rethrow_exception(failure_);
         if (observed_ != 1)
-            std::fprintf(stderr, "Observed native popup count: %d; right double-clicks: %d\n", observed_, rightDouble_);
+            std::println(stderr, "Observed native popup count: {:d}; right double-clicks: {:d}", observed_,
+                         rightDouble_);
         if (observed_ != 1 || (action != wxID_NONE && dispatches_ != 1)) {
 #ifdef __WXGTK__
-            std::fprintf(stderr, "Native popup observations: opened=[%s] drive=[%s] key=[%s]\n", openedState_.c_str(),
+            std::println(stderr, "Native popup observations: opened=[{}] drive=[{}] key=[{}]", openedState_.c_str(),
                          drivenState_.c_str(), keyState_.c_str());
-            std::fprintf(stderr, "Native popup lifecycle: %s\n", lifecycle_.c_str());
+            std::println(stderr, "Native popup lifecycle: {}", lifecycle_.c_str());
 #endif
         }
         Require(observed_ == 1, "one native editor popup opens for each invocation");
         if (action != wxID_NONE && dispatches_ != 1)
-            std::fprintf(stderr, "Native command id=%d dispatch count=%d\n", action, dispatches_);
+            std::println(stderr, "Native command id={:d} dispatch count={:d}", action, dispatches_);
         Require(action == wxID_NONE || dispatches_ == 1, "native popup dispatches selected command exactly once");
 #ifdef __WXGTK__
         CleanupInvocationKey();
@@ -554,9 +561,13 @@ private:
     std::chrono::steady_clock::time_point invocationDeadline_;
     void CleanupInvocationKey() {
         if (heldInvocationKey_.empty()) return;
-        std::fprintf(stderr, "Held popup-key cleanup: keys=%s remaining=%zu opened=[%s] drive=[%s] key=[%s]\n",
-                     heldInvocationKey_.utf8_string().c_str(), invocationReleases_.size(), openedState_.c_str(),
-                     drivenState_.c_str(), keyState_.c_str());
+        try {
+            std::println(stderr, "Held popup-key cleanup: keys={} remaining={:d} opened=[{}] drive=[{}] key=[{}]",
+                         heldInvocationKey_.utf8_string().c_str(), invocationReleases_.size(), openedState_.c_str(),
+                         drivenState_.c_str(), keyState_.c_str());
+        } catch (const std::exception&) {
+            // Diagnostic output must not prevent releasing the held native key.
+        }
         ReleaseInvocationKey();
         while (!invocationReleases_.empty() && std::chrono::steady_clock::now() < invocationDeadline_) {
             wxYield();
@@ -626,8 +637,8 @@ private:
                 const auto bounds = nativeBounds_.value_or(
                     wxRect(nativeBounds.x, nativeBounds.y, nativeBounds.width, nativeBounds.height));
 #endif
-                std::printf("Native popup bounds: %d,%d %dx%d; caret: %d,%d\n", bounds.x, bounds.y, bounds.width,
-                            bounds.height, anchor->x, anchor->y);
+                std::println("Native popup bounds: {:d},{:d} {:d}x{:d}; caret: {:d},{:d}", bounds.x, bounds.y,
+                             bounds.width, bounds.height, anchor->x, anchor->y);
                 const auto display = wxDisplay::GetFromWindow(frame_);
                 Require(display != wxNOT_FOUND &&
                             wxDisplay(static_cast<unsigned>(display)).GetClientArea().Contains(bounds),
@@ -997,7 +1008,7 @@ public:
                                                  "localized native popup preserves directed selection");
                 }
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

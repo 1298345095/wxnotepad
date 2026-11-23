@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include <wx/menu.h>
 #include <utility>
@@ -108,7 +109,7 @@ void LanguageFoldCommands(EditorFrame* frame, int allLevels) {
         Require(frame->GetMenuBar()->IsEnabled(allLevels) == capable,
                 "fold command enablement must follow the selected language's folding capability");
         if (!capable) {
-            std::printf("SKIP: %s folding is not enabled in this integration revision\n", language.name);
+            std::println("SKIP: {} folding is not enabled in this integration revision", language.name);
             continue;
         }
         editor->Send(GotoPos, 0);
@@ -134,7 +135,7 @@ void LanguageFoldCommands(EditorFrame* frame, int allLevels) {
                         editor->Send(GetCurrentPos) == 0,
                     "empty and header-free fold commands must be safe view-only no-ops");
         }
-        std::printf("PASS: %s nested, empty and header-free documents use native fold commands\n", language.name);
+        std::println("PASS: {} nested, empty and header-free documents use native fold commands", language.name);
     }
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -183,7 +184,7 @@ public:
                 LanguageFoldCommands(frame, allLevels);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

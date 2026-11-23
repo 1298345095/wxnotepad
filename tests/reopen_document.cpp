@@ -8,6 +8,7 @@
 #include <wx/filename.h>
 #include <wx/file.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <stdexcept>
 
@@ -228,7 +229,7 @@ public:
                 std::puts("PASS: frame reopen uses new file tab width for the saved-column fallback");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             wxRemoveFile(path);
             wxRemoveFile(path.BeforeLast('.'));

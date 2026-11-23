@@ -1,4 +1,5 @@
 #include "tab_settings_helpers.h"
+#include <print>
 #include "file_helpers.h"
 #include <filesystem>
 
@@ -10,7 +11,7 @@ void Require(bool value, const char* message) {
 void Check(EditorControl* editor, int tab, int indent, bool spaces) {
     using enum Scintilla::Message;
     if (editor->Send(GetTabWidth) != tab || editor->Send(GetIndent) != indent || editor->Send(GetUseTabs) != !spaces)
-        std::fprintf(stderr, "Policy actual=%lld/%lld/%lld expected=%d/%d/%d\n",
+        std::println(stderr, "Policy actual={:d}/{:d}/{:d} expected={:d}/{:d}/{:d}",
                      static_cast<long long>(editor->Send(GetTabWidth)), static_cast<long long>(editor->Send(GetIndent)),
                      static_cast<long long>(editor->Send(GetUseTabs)), tab, indent, !spaces);
     Require(editor->Send(GetTabWidth) == tab && editor->Send(GetIndent) == indent &&
@@ -30,7 +31,7 @@ void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t ca
 void History(EditorControl* editor, const std::string& edited, const std::string& original) {
     using enum Scintilla::Message;
     if (NativeSearch::Text(editor) != edited)
-        std::fprintf(stderr, "Actual='%s', expected='%s'\n", NativeSearch::Text(editor).c_str(), edited.c_str());
+        std::println(stderr, "Actual='{}', expected='{}'", NativeSearch::Text(editor).c_str(), edited.c_str());
     Require(NativeSearch::Text(editor) == edited, "indent command must produce exact expected bytes");
     editor->Send(Undo);
     Require(NativeSearch::Text(editor) == original && !editor->Send(GetModify),
@@ -207,7 +208,7 @@ public:
                 Check(editor, 9, 5, false);
                 std::puts("PASS: Tab, Shift+Tab, Backspace, block indent, independent widths, selection and Undo/Redo");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

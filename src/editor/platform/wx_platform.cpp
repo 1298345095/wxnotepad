@@ -26,6 +26,8 @@
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
+#include <exception>
+#include <print>
 #include <new>
 #include <stdexcept>
 
@@ -643,7 +645,11 @@ bool ShowAssertionPopUps(bool value) noexcept {
     return value;
 }
 [[noreturn]] void Assert(const char* c, const char* file, int line) noexcept {
-    std::fprintf(stderr, "%s:%d: %s\n", file, line, c);
+    try {
+        std::println(stderr, "{}:{:d}: {}", file, line, c);
+    } catch (const std::exception&) {
+        // Diagnostic output failure must still reach the assertion's abort.
+    }
     std::abort();
 }
 } // namespace Platform

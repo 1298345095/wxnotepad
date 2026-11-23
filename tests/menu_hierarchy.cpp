@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include <array>
 #include "settings/settings_store.h"
 #include <wx/menu.h>
@@ -18,7 +19,7 @@ void Order(wxMenu* menu, std::initializer_list<const char*> names) {
     for (auto* item : menu->GetMenuItems()) {
         if (item->IsSeparator()) continue;
         if (expected == names.end() || item->GetItemLabelText() != *expected) {
-            std::fprintf(stderr, "menu item '%s', expected '%s'\n", item->GetItemLabelText().utf8_str().data(),
+            std::println(stderr, "menu item '{}', expected '{}'", item->GetItemLabelText().utf8_str().data(),
                          expected == names.end() ? "<end>" : *expected);
             throw std::runtime_error("delivered commands retain original within-group order");
         }
@@ -312,7 +313,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original delivered menu hierarchy");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -8,6 +8,7 @@
 #include <wx/menu.h>
 #include "steady_stopwatch.h"
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -35,7 +36,7 @@ void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t ca
 void Selection(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
     using enum Scintilla::Message;
     if (editor->Send(GetAnchor) != anchor || editor->Send(GetCurrentPos) != caret)
-        std::fprintf(stderr, "Selection: %lld/%lld; expected %lld/%lld\n",
+        std::println(stderr, "Selection: {:d}/{:d}; expected {:d}/{:d}",
                      static_cast<long long>(editor->Send(GetAnchor)),
                      static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
@@ -84,7 +85,7 @@ void StreamFixtures(EditorFrame* frame) {
         Selection(editor, fixture.resultAnchor, fixture.resultCaret, fixture.name);
         Require(editor->Send(Message::GetEOLMode) == mode, "padding preserves EOL mode");
         History(editor, fixture.before, fixture.after, fixture.anchor, fixture.caret);
-        std::printf("PASS: %s, literal selection and single Undo/Redo\n", fixture.name);
+        std::println("PASS: {}, literal selection and single Undo/Redo", fixture.name);
     }
     Reset(editor, "\tX\n123456\nq", 0, 0);
     editor->SetIndentationWidths(8, 8);
@@ -304,8 +305,7 @@ void SavedBytes(EditorFrame* frame) {
         editor->Send(Message::Redo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "single Redo and Save restore independently read padded bytes");
-        std::printf("PASS: %s independent saved bytes, encoding/BOM/EOL preservation and one Undo/Redo\n",
-                    fixture.name);
+        std::println("PASS: {} independent saved bytes, encoding/BOM/EOL preservation and one Undo/Redo", fixture.name);
     }
     std::filesystem::remove_all(directory);
 }
@@ -339,7 +339,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

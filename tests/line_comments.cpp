@@ -11,6 +11,7 @@
 #include <chrono>
 #include <wx/modalhook.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -234,7 +235,7 @@ public:
                                                      : (spaced ? "  // value\nnext" : "  //value\nnext");
                     const auto actual = TestEditor::Text(editor);
                     if (actual != expected)
-                        std::fprintf(stderr, "Ctrl+/ language=%s status=%s expected=<%s> actual=<%s> focusEditor=%d\n",
+                        std::println(stderr, "Ctrl+/ language={} status={} expected=<{}> actual=<{}> focusEditor={:d}",
                                      language, StatusMetadata(frame).utf8_str().data(), expected.c_str(),
                                      actual.c_str(), wxWindow::FindFocus() == editor);
                     Require(actual == expected, "actual Ctrl+/ uses scheme prefix and settings spacing");
@@ -251,7 +252,7 @@ public:
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

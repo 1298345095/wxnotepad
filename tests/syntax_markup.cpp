@@ -17,6 +17,7 @@
 #include <wx/statusbr.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -59,7 +60,7 @@ void Detection(EditorFrame* frame) {
         Require(document.Load(DocumentLoad::Open{TestFiles::Filename(path)}).status == OpenStatus::Opened,
                 "prefix fixture Open must succeed");
         if (document.EffectiveLanguage() != fixture.language) {
-            std::fprintf(stderr, "fixture=%s expected=%s actual=%s\n", fixture.name, SyntaxFor(fixture.language).name,
+            std::println(stderr, "fixture={} expected={} actual={}", fixture.name, SyntaxFor(fixture.language).name,
                          SyntaxFor(document.EffectiveLanguage()).name);
             throw std::runtime_error("original filename and prefix precedence must select the effective dialect");
         }
@@ -126,7 +127,7 @@ void ManualMarkupFamilies(EditorFrame* frame) {
         if (std::string(property.data()) != fixture.options ||
             !StatusMetadata(frame).Contains(wxString(fixture.dialect) + " (override)") ||
             editor->Send(Message::GetTabWidth) != fixture.tabWidth)
-            std::fprintf(stderr, "Markup family: file=%s choice=%s property=%02x%02x tabs=%zd status='%s'\n",
+            std::println(stderr, "Markup family: file={} choice={} property={:02x}{:02x} tabs={:d} status='{}'",
                          fixture.name, fixture.choice, static_cast<unsigned char>(property[0]),
                          static_cast<unsigned char>(property[1]), editor->Send(Message::GetTabWidth),
                          StatusMetadata(frame).utf8_str().data());
@@ -147,7 +148,7 @@ void ManualMarkupFamilies(EditorFrame* frame) {
         TestSyntax::Command(frame, wxID_SAVEAS);
         save.Stop();
         if (!std::filesystem::is_regular_file(saved))
-            std::fprintf(stderr, "Markup save: requested='%s' actual='%s' initial_type='%s'\n",
+            std::println(stderr, "Markup save: requested='{}' actual='{}' initial_type='{}'",
                          TestFiles::Filename(saved).utf8_str().data(), frame->DocumentPath().utf8_str().data(),
                          save.initialType.utf8_str().data());
         Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.choice) + " (") &&
@@ -211,7 +212,7 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
                      reinterpret_cast<intptr_t>(property.data()));
         if (std::string(property.data()) != fixture.options || editor->Send(Message::GetTabWidth) != fixture.tabWidth)
-            std::fprintf(stderr, "Automatic markup: file=%s property=%02x%02x tabs=%zd status='%s'\n", fixture.name,
+            std::println(stderr, "Automatic markup: file={} property={:02x}{:02x} tabs={:d} status='{}'", fixture.name,
                          static_cast<unsigned char>(property[0]), static_cast<unsigned char>(property[1]),
                          editor->Send(Message::GetTabWidth), StatusMetadata(frame).utf8_str().data());
         Require(std::string(property.data()) == fixture.options &&
@@ -234,7 +235,7 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
         TestSyntax::Command(frame, wxID_SAVEAS);
         save.Stop();
         if (!std::filesystem::is_regular_file(saved))
-            std::fprintf(stderr, "Automatic markup save: requested='%s' actual='%s' initial_type='%s'\n",
+            std::println(stderr, "Automatic markup save: requested='{}' actual='{}' initial_type='{}'",
                          TestFiles::Filename(saved).utf8_str().data(), frame->DocumentPath().utf8_str().data(),
                          save.initialType.utf8_str().data());
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
@@ -292,7 +293,7 @@ void OriginalOracle(EditorFrame* frame) {
         Require(styles.size() == text.size(), "original styles must cover every UTF-8 byte");
         for (size_t position = 0; position < styles.size(); ++position) {
             if (editor->Send(Message::GetStyleIndexAt, position) != static_cast<unsigned char>(styles[position])) {
-                std::fprintf(stderr, "fixture=%s state=%s position=%zu expected=%u actual=%zd\n", name.c_str(),
+                std::println(stderr, "fixture={} state={} position={:d} expected={:d} actual={:d}", name.c_str(),
                              state.c_str(), position, static_cast<unsigned char>(styles[position]),
                              editor->Send(Message::GetStyleIndexAt, position));
                 throw std::runtime_error("markup styles must match independent original observations");
@@ -302,7 +303,7 @@ void OriginalOracle(EditorFrame* frame) {
         size_t foldLine = 0;
         while (std::getline(folds, line, ',')) {
             if ((editor->Send(Message::GetFoldLevel, foldLine) & 0xffff) != std::stoi(line)) {
-                std::fprintf(stderr, "fixture=%s state=%s line=%zu expected=%d actual=%zd\n", name.c_str(),
+                std::println(stderr, "fixture={} state={} line={:d} expected={:d} actual={:d}", name.c_str(),
                              state.c_str(), foldLine, std::stoi(line), editor->Send(Message::GetFoldLevel, foldLine));
                 throw std::runtime_error("markup folds must match independent original observations");
             }
@@ -613,7 +614,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original markup document association");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

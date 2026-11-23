@@ -6,6 +6,7 @@
 #include <wx/app.h>
 #include <wx/menu.h>
 #include <cstdio>
+#include <print>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -93,7 +94,7 @@ void StreamFixtures(EditorFrame* frame) {
         Reset(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
         Command(frame, fixture.merge);
         if (TestEditor::Text(editor) != fixture.after)
-            std::fprintf(stderr, "merge=%d before=<%s> actual=<%s> expected=<%s>\n", fixture.merge, fixture.before,
+            std::println(stderr, "merge={:d} before=<{}> actual=<{}> expected=<{}>", fixture.merge, fixture.before,
                          TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after, "literal original stream duplicate-line result");
         Range(editor, fixture.resultAnchor, fixture.resultCaret);
@@ -255,8 +256,8 @@ void SavedBytes(EditorFrame* frame) {
             editor->Send(Redo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "one Redo and Save restores independent transformed disk bytes");
-            std::printf("PASS: %s %s independent saved bytes, encoding/BOM/EOL and Undo/Redo\n", fixture.name,
-                        merge ? "merge" : "remove");
+            std::println("PASS: {} {} independent saved bytes, encoding/BOM/EOL and Undo/Redo", fixture.name,
+                         merge ? "merge" : "remove");
         }
     }
     std::filesystem::remove_all(directory);
@@ -281,7 +282,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -11,6 +11,7 @@
 #include <chrono>
 #include <utility>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -76,7 +77,7 @@ void CheckConversion(EditorFrame* frame, const ConversionFixture& fixture, bool 
     editor->Send(SetTabWidth, fixture.width);
     Menu(frame, fixture.command);
     if (TestEditor::Text(editor) != fixture.after)
-        std::fprintf(stderr, "%s width %d: expected <%s>, got <%s>\n", fixture.command, fixture.width, fixture.after,
+        std::println(stderr, "{} width {:d}: expected <{}>, got <{}>", fixture.command, fixture.width, fixture.after,
                      TestEditor::Text(editor).c_str());
     Require(TestEditor::Text(editor) == fixture.after, "conversion matches literal original output");
     Range(editor, backwards ? afterLength : 0, backwards ? 0 : afterLength);
@@ -309,7 +310,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

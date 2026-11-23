@@ -11,6 +11,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <sstream>
 #include <fstream>
@@ -125,7 +126,7 @@ public:
                 std::puts("PASS: native Open and Save As for Rust, Go and Lua");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s", error.what());
+                std::print(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

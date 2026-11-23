@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <print>
 #include <wx/log.h>
 #include <thread>
 
@@ -96,7 +97,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: early focus acknowledgement survives a busy GUI; expired requests stay rejected");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

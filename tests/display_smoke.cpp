@@ -3,6 +3,7 @@
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include <cstdio>
+#include <print>
 
 // A separate process exercises real native expose/resize events. Pixel appearance
 // is checked separately using native window captures, not inferred from events.
@@ -52,12 +53,12 @@ private:
 
     bool Painted(const char* operation) {
         if (paints_ <= before_) {
-            std::fprintf(stderr, "FAIL: no native paint after %s\n", operation);
+            std::println(stderr, "FAIL: no native paint after {}", operation);
             frame_->Destroy();
             ExitMainLoop();
             return false;
         }
-        std::printf("PASS: native paint after %s\n", operation);
+        std::println("PASS: native paint after {}", operation);
         before_ = paints_;
         return true;
     }

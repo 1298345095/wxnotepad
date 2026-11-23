@@ -12,6 +12,7 @@
 #include <wx/ffile.h>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <utility>
 
@@ -21,7 +22,7 @@ void Require(bool value, const char* message) {
 }
 void Text(EditorControl* editor, const char* expected, const char* message) {
     const auto actual = TestEditor::Text(editor);
-    if (actual != expected) std::fprintf(stderr, "expected=<%s> actual=<%s>\n", expected, actual.c_str());
+    if (actual != expected) std::println(stderr, "expected=<{}> actual=<{}>", expected, actual.c_str());
     Require(actual == expected, message);
 }
 void Choose(EditorFrame* frame, const char* language) {
@@ -327,7 +328,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

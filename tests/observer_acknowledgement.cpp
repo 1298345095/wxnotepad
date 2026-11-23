@@ -7,6 +7,7 @@
 #include <wx/log.h>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <memory>
 #include <stdexcept>
 #ifdef __WXGTK__
@@ -43,12 +44,12 @@ public:
                 try {
                     Run();
                 } catch (const std::exception& error) {
-                    std::fprintf(stderr, "FAIL: %s\n", error.what());
+                    std::println(stderr, "FAIL: {}", error.what());
                     Finish(1);
                 }
             } else if (std::chrono::steady_clock::now() >= initialDeadline_) {
                 waitingForInitialState_ = false;
-                std::fprintf(stderr, "FAIL: initial native observation is published\n");
+                std::println(stderr, "FAIL: initial native observation is published");
                 Finish(1);
             } else {
                 event.RequestMore();
@@ -62,7 +63,7 @@ public:
                 initialDeadline_ = std::chrono::steady_clock::now() + std::chrono::seconds(15);
                 waitingForInitialState_ = true;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 Finish(1);
             }
         });
@@ -125,7 +126,7 @@ private:
                     Check();
                     Finish(0);
                 } catch (const std::exception& error) {
-                    std::fprintf(stderr, "FAIL: %s\n", error.what());
+                    std::println(stderr, "FAIL: {}", error.what());
                     Finish(1);
                 }
             });

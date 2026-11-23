@@ -8,6 +8,7 @@
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <memory>
 
@@ -165,7 +166,7 @@ public:
                 std::puts("PASS: replacement advancement uses the shared current wrap policy");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

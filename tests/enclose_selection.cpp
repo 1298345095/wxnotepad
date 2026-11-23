@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <print>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/textctrl.h>
@@ -96,8 +97,8 @@ void NativeKey(EditorFrame* frame, int key, bool control, bool alt = false, bool
         wxMilliSleep(10);
     }
     if (!received)
-        std::fprintf(stderr, "Missing native key: %c ctrl=%d alt=%d shift=%d; text=%s\n", key, control, alt, shift,
-                     TestEditor::Text(editor).c_str());
+        std::println(stderr, "Missing native key: {:c} ctrl={:d} alt={:d} shift={:d}; text={}", key, control, alt,
+                     shift, TestEditor::Text(editor).c_str());
     Require(received, "native private-display enclosure key release reaches owned editor or dialog");
 #endif
     wxYield();
@@ -458,7 +459,7 @@ public:
                 SavedBytes(frame);
                 std::puts("PASS: original enclosure commands");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

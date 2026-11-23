@@ -1,5 +1,6 @@
 // Independent stock-widget application: it does not link the editor or core.
 #include <wx/wx.h>
+#include <print>
 #include <wx/ffile.h>
 #include <wx/filename.h>
 #include <wx/timer.h>
@@ -341,7 +342,7 @@ private:
         }
         int length = gtk_selection_data_get_length(data);
         const auto* bytes = reinterpret_cast<const char*>(gtk_selection_data_get_data(data));
-        std::fprintf(stderr, "Native peer UTF8_STRING length=%d tail=%d,%d\n", length,
+        std::println(stderr, "Native peer UTF8_STRING length={:d} tail={:d},{:d}", length,
                      length >= 2 ? bytes[length - 2] : -1, length >= 1 ? bytes[length - 1] : -1);
         if (length >= 2 && bytes[length - 1] == '\0' && bytes[length - 2] == '\n') {
             shape = "rectangle";

@@ -1,4 +1,5 @@
 #include "editor_test_helpers.h"
+#include <print>
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "custom_case_fixtures.h"
@@ -21,7 +22,7 @@ void ReferenceFixtures(EditorFrame* frame) {
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", fixture.command);
         NativeSearch::Command(frame, id);
         if (TestEditor::Text(editor) != fixture.after) {
-            std::fprintf(stderr, "%s: before=%s actual=%s expected=%s\n", fixture.command, fixture.before,
+            std::println(stderr, "{}: before={} actual={} expected={}", fixture.command, fixture.before,
                          TestEditor::Text(editor).c_str(), fixture.after);
             throw TestEditor::Failure("custom case matches original Windows fixture");
         }
@@ -121,7 +122,7 @@ void Shortcuts(EditorFrame* frame) {
         TestEditor::ResetStream(editor, "aB", 0, 2);
         NativeKeys::Shortcut(frame, key, true, true);
         if (TestEditor::Text(editor) != expected)
-            std::fprintf(stderr, "native Ctrl+Alt+%c: actual=%s expected=%s\n", key, TestEditor::Text(editor).c_str(),
+            std::println(stderr, "native Ctrl+Alt+{:c}: actual={} expected={}", key, TestEditor::Text(editor).c_str(),
                          expected);
         Require(TestEditor::Text(editor) == expected, "exact native custom-case shortcut invokes conversion");
         TestEditor::ResetStream(editor, "aB", 0, 2);
@@ -349,7 +350,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

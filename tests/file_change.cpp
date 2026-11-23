@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <print>
 #include <array>
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
@@ -620,7 +621,7 @@ public:
                 CheckFileChangeScenarios(frame, directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             if (frame) {
                 frame->SetFileWatchingOptions({FileWatchingMode::None});

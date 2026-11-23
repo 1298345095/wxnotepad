@@ -11,6 +11,7 @@
 #include <wx/textctrl.h>
 #include "native_search_helpers.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 #include <filesystem>
@@ -84,7 +85,7 @@ public:
                     replacement->SetValue(wxString::FromUTF8(with));
                     Click(dialog, wxID_REPLACE_ALL);
                     if (Text(editor) != expected || result->GetLabel() != count)
-                        std::fprintf(stderr, "Pattern %s: actual [%s] / %s; expected [%s] / %s\n", pattern,
+                        std::println(stderr, "Pattern {}: actual [{}] / {}; expected [{}] / {}", pattern,
                                      Text(editor).c_str(), result->GetLabel().utf8_str().data(), expected, count);
                     Require(Text(editor) == expected && result->GetLabel() == count,
                             "Replace All must produce the explicit regex bytes and count");
@@ -234,7 +235,7 @@ public:
                 std::puts("PASS: growing/shrinking Save and reopen preserve exact BOM, mixed EOL and savepoints");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

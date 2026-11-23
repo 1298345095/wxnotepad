@@ -9,6 +9,7 @@
 #include <wx/statusbr.h>
 #include <algorithm>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -144,7 +145,7 @@ public:
                     Language(frame, fixture.language);
                     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(candidate) == content,
                             "Automatic selection and Save must preserve all fixture bytes");
-                    std::printf("PASS: %s\n", fixture.name);
+                    std::println("PASS: {}", fixture.name);
                 }
                 const auto bomPath = folder / "bom-script";
                 const std::string bomBytes = "\x{ef}\x{bb}\x{bf}#!/bin/python\r\nreturn 42\n";
@@ -213,7 +214,7 @@ public:
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
                 std::filesystem::remove_all(folder);
                 frame->Destroy();

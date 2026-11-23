@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <memory>
 
@@ -142,7 +143,7 @@ public:
                 std::puts("PASS: five empty/BOM/no-BOM/Unicode/EOL Save As byte roundtrips");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

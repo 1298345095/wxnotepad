@@ -12,6 +12,7 @@
 #include <wx/listctrl.h>
 #include <wx/weakref.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -198,15 +199,15 @@ private:
             snapshot.Stop();
             if (snapshot.paths != expected) {
                 for (const auto& path : snapshot.paths)
-                    std::fprintf(stderr, "observed history: %s\n", path.utf8_str().data());
+                    std::println(stderr, "observed history: {}", path.utf8_str().data());
                 for (const auto& path : expected)
-                    std::fprintf(stderr, "expected history: %s\n", path.utf8_str().data());
+                    std::println(stderr, "expected history: {}", path.utf8_str().data());
             }
             Require(snapshot.paths == expected && snapshot.visited == !expected.empty(),
                     "restart chooser history order");
             result_ = 0;
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            std::println(stderr, "FAIL: {}", error.what());
         }
         frame->Destroy();
         ExitMainLoop();
@@ -350,7 +351,7 @@ private:
             std::puts("PASS: Recent command tracks available file history");
             result_ = 0;
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            std::println(stderr, "FAIL: {}", error.what());
         }
         // Destroy is deferred: release the native watcher before removing its directory.
         wxWeakRef<EditorFrame> closing = frame;

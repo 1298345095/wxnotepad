@@ -7,6 +7,7 @@
 #include <wx/filename.h>
 #include <wx/ffile.h>
 #include <cstdio>
+#include <print>
 #ifdef __WXGTK__
 #include <gdk/gdkx.h>
 #undef None
@@ -39,8 +40,8 @@ void ReportGtkGeometry(EditorFrame* frame, const char* phase) {
     gint left = 0, top = 0;
     gdk_window_get_origin(native, &left, &top);
     const auto rect = frame->GetScreenRect();
-    std::fprintf(stderr, "%s: wx=%d,%d %dx%d native=%d,%d %dx%d state=%u\n", phase, rect.x, rect.y, rect.width,
-                 rect.height, left, top, gdk_window_get_width(native), gdk_window_get_height(native),
+    std::println(stderr, "{}: wx={:d},{:d} {:d}x{:d} native={:d},{:d} {:d}x{:d} state={:d}", phase, rect.x, rect.y,
+                 rect.width, rect.height, left, top, gdk_window_get_width(native), gdk_window_get_height(native),
                  static_cast<unsigned>(gdk_window_get_state(native)));
 }
 
@@ -330,7 +331,7 @@ public:
                 }
                 CheckCycle(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
 #ifdef __WXGTK__
                 ReportGtkGeometry(frame, "at failure");
 #endif
@@ -366,7 +367,7 @@ private:
                       "Escape exits startup fullscreen to the restored normal size");
                 std::puts("PASS: native Full Screen Mode checks, save now, close, reload and Escape");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 status_ = 1;
             }
             frame->Destroy();

@@ -9,6 +9,7 @@
 #include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <filesystem>
 #include <fstream>
@@ -359,7 +360,7 @@ public:
                 std::puts("PASS: structural replacement leaves reachable text, valid caret and exact saved bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

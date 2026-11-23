@@ -12,6 +12,7 @@
 #include <wx/textctrl.h>
 #include <wx/timer.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <chrono>
 #include <functional>
@@ -51,9 +52,9 @@ void SplitFixture(EditorFrame* frame) {
     Split(frame);
     const auto splitText = TestEditor::Text(editor);
     if (splitText != "one two \nthree")
-        std::fprintf(stderr,
-                     "Split fixture: requested_width=%lld actual_width=%d frame_width=%d wrap_flags=%lld "
-                     "wrap_location=%lld zoom=%lld text='%s'\n",
+        std::println(stderr,
+                     "Split fixture: requested_width={:d} actual_width={:d} frame_width={:d} wrap_flags={:d} "
+                     "wrap_location={:d} zoom={:d} text='{}'",
                      static_cast<long long>(width), editor->GetClientSize().x, frame->GetClientSize().x,
                      static_cast<long long>(editor->Send(GetWrapVisualFlags)),
                      static_cast<long long>(editor->Send(GetWrapVisualFlagsLocation)),
@@ -117,7 +118,7 @@ public:
         : expected_(std::move(expected)), chosen_(std::move(chosen)), action_(action), deadline_(this) {
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
             failure = "Column Wrap native modal deadline expired";
-            std::fprintf(stderr, "FAIL: %s action=%d\n", failure.c_str(),
+            std::println(stderr, "FAIL: {} action={:d}", failure.c_str(),
                          static_cast<int>(std::to_underlying(action_)));
             if (active_) NativeSearch::Click(active_, wxID_CANCEL);
         });
@@ -252,7 +253,7 @@ void ColumnCases(EditorControl* editor) {
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
         Require(editor->WrapToColumn(fixture.column), "stream column wrap succeeds");
         if (TestEditor::Text(editor) != fixture.after)
-            std::fprintf(stderr, "column=%d before=<%s> expected=<%s> actual=<%s>\n", fixture.column, fixture.before,
+            std::println(stderr, "column={:d} before=<{}> expected=<{}> actual=<{}>", fixture.column, fixture.before,
                          fixture.after, TestEditor::Text(editor).c_str());
         Require(TestEditor::Text(editor) == fixture.after, "original literal column-wrap bytes");
         TestEditor::RequireSelection(editor, fixture.newAnchor, fixture.newCaret, "original wrap endpoints");
@@ -593,7 +594,7 @@ public:
                 }
                 std::puts("PASS: original Split Lines");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

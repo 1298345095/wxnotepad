@@ -1,6 +1,7 @@
 #pragma once
 
 #include "native_search_helpers.h"
+#include <print>
 #include "native_focus_helpers.h"
 #include "native_trace_helpers.h"
 #include <wx/eventfilter.h>
@@ -251,7 +252,7 @@ inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& fo
         static_cast<long long>(g_get_monotonic_time()), lastEvent.phase, lastEvent.key, lastEvent.modifiers,
         static_cast<void*>(lastEvent.target), static_cast<void*>(wxWindow::FindFocus()),
         static_cast<void*>(frame->Editor()), frame->IsActive(), frame->Editor()->HasFocus());
-    std::fprintf(stderr, "Native shortcut release failure: %s", snapshot.utf8_str().data());
+    std::print(stderr, "Native shortcut release failure: {}", snapshot.utf8_str().data());
     std::fflush(stderr);
     bool written = false;
     {
@@ -271,9 +272,9 @@ inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxS
         auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
         if (surface) surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
     }
-    std::fprintf(stderr,
-                 "Native activation failure: request=%s acknowledged=%d frameActive=%d "
-                 "editorFocus=%d ownedPid=%lu ownedSurface=%u\n",
+    std::println(stderr,
+                 "Native activation failure: request={} acknowledged={:d} frameActive={:d} editorFocus={:d} "
+                 "ownedPid={:d} ownedSurface={:d}",
                  intent.BeforeFirst(':').utf8_str().data(), acknowledged, frame->IsActive(), editor->HasFocus(),
                  wxGetProcessId(), surfaceId);
     std::fflush(stderr);

@@ -1,4 +1,5 @@
 #include "file_helpers.h"
+#include <print>
 #include "native_key_helpers.h"
 #include "native_fold_helpers.h"
 #include <charconv>
@@ -169,8 +170,8 @@ void Replay(EditorFrame* frame, bool shortcuts) {
         CompareState(*editor, expected, name + " " + action + " #" + std::to_string(++transitions));
     }
     Require(fixtures == 7 && transitions == 78, "complete captured fold fixtures were replayed");
-    std::printf("PASS: %d original fold transitions through native %s\n", transitions,
-                shortcuts ? "shortcuts" : "menus");
+    std::println("PASS: {:d} original fold transitions through native {}", transitions,
+                 shortcuts ? "shortcuts" : "menus");
 }
 
 class FoldCommandsApp final : public wxApp {
@@ -186,7 +187,7 @@ public:
                 Replay(frame, true);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

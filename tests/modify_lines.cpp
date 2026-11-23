@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
@@ -554,7 +555,7 @@ public:
                 SavedBytes(frame);
                 std::puts("PASS: original Modify Lines");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

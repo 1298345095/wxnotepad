@@ -10,6 +10,7 @@
 #include <wx/textctrl.h>
 #include "native_search_helpers.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 
@@ -147,8 +148,8 @@ public:
                     Require(Text(editor) == example.text && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
                                 editor->Send(CanRedo),
                             "regex navigation must preserve exact text, savepoint and redo history");
-                    std::printf("PASS: frozen %s ranges in both directions and unchanged editing history\n",
-                                example.name);
+                    std::println("PASS: frozen {} ranges in both directions and unchanged editing history",
+                                 example.name);
                 }
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>("a.b aXb Axb cat scatter"));
                 editor->Send(GotoPos, 0);
@@ -311,7 +312,7 @@ public:
                     "PASS: document anchors, final newline, edit/undo invalidation, invalid-pattern history and New");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -11,6 +11,7 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -598,7 +599,7 @@ public:
                 std::puts("PASS: native Save Backup bytes, naming, collision policy and document state");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

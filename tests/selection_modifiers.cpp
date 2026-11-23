@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <stdexcept>
 #ifdef __WXGTK__
@@ -75,7 +76,7 @@ void Key(EditorControl* editor, int key, bool shift = false, bool alt = false) {
     editor->GetEventHandler()->ProcessEvent(event);
 }
 void Undo(EditorControl* editor, const char* before, const char* after) {
-    if (Text(editor) != after) std::fprintf(stderr, "Expected <%s>, actual <%s>\n", after, Text(editor).c_str());
+    if (Text(editor) != after) std::println(stderr, "Expected <{}>, actual <{}>", after, Text(editor).c_str());
     Require(Text(editor) == after, "edit produces original-core bytes");
     editor->Send(Message::Undo);
     Require(Text(editor) == before && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
@@ -260,7 +261,7 @@ public:
                 std::puts("PASS: Alt+Shift keyboard rectangle, all-range replacement and grouped Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

@@ -10,6 +10,7 @@
 #include "settings/settings_store.h"
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -194,7 +195,7 @@ public:
                 LossySaveAs(settings_.get(), directory, source, original);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

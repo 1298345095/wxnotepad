@@ -4,6 +4,7 @@
 #include "editor/font_settings.h"
 #include "app/editor_frame.h"
 #include <cstdio>
+#include <print>
 #include <optional>
 #include <string>
 #include <stdexcept>
@@ -72,7 +73,7 @@ void RequireVirtualRectangleUnchanged(EditorControl* editor, Command command, co
 inline void RequireSelection(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
     using enum Scintilla::Message;
     if (editor->Send(GetAnchor) != anchor || editor->Send(GetCurrentPos) != caret) {
-        std::fprintf(stderr, "Selection anchor/caret: %lld/%lld; expected %lld/%lld\n",
+        std::println(stderr, "Selection anchor/caret: {:d}/{:d}; expected {:d}/{:d}",
                      static_cast<long long>(editor->Send(GetAnchor)),
                      static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));

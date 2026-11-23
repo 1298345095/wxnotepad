@@ -14,6 +14,7 @@
 #include "settings/settings_store.h"
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 #include <memory>
@@ -622,7 +623,7 @@ public:
                 }
                 std::puts("PASS: quick ANSI, OEM and configured default reload commands match original load decisions");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

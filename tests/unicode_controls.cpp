@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -54,7 +55,7 @@ void Table(EditorFrame* frame, int command) {
     const auto before = DocumentState(frame);
     for (const auto& entry : OriginalRepresentations) {
         if (DisplayName(editor, entry.utf8) != entry.name) {
-            std::fprintf(stderr, "Representation %s: '%s'\n", entry.name, DisplayName(editor, entry.utf8).c_str());
+            std::println(stderr, "Representation {}: '{}'", entry.name, DisplayName(editor, entry.utf8).c_str());
             Require(false, "display uses every exact original table name and retains the four core representations");
         }
     }
@@ -67,7 +68,7 @@ void Table(EditorFrame* frame, int command) {
         Require(DisplayName(editor, entry.utf8) == (entry.builtIn ? entry.name : ""),
                 "hiding clears original overrides while retaining RS/US/LS/PS core representations");
     const auto hiddenWidth = editor->Send(PointXFromPosition, 0, 4) - editor->Send(PointXFromPosition, 0, 1);
-    std::fprintf(stderr, "Extent: visible=%lld hidden=%lld; state_equal=%d\n", static_cast<long long>(visibleWidth),
+    std::println(stderr, "Extent: visible={:d} hidden={:d}; state_equal={:d}", static_cast<long long>(visibleWidth),
                  static_cast<long long>(hiddenWidth), DocumentState(frame) == before);
     Require(visibleWidth > hiddenWidth && DocumentState(frame) == before,
             "show/hide changes painted representation extent while preserving text, selection, save point and Redo");
@@ -263,7 +264,8 @@ public:
         auto* frame = new EditorFrame(&settings_);
         TestEditor::UseFixedWidthFont(frame->Editor());
         TestRenderer::Select(frame->Editor());
-        std::printf("Native representation DPI: %d x %d\n", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
+        std::println("Native representation DPI: {:d} x {:d}", frame->Editor()->GetDPI().x,
+                     frame->Editor()->GetDPI().y);
 #ifdef __WXMSW__
         if (wxGetenv("WXNOTEPAD_UNICODE_DPI96"))
             Require(frame->Editor()->GetDPI().y == 96, "the complementary native representation fixture uses 96 DPI");
@@ -286,7 +288,7 @@ public:
                 Geometry(frame, id);
                 Lifecycle(frame, id);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

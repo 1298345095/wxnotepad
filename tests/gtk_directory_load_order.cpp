@@ -1,4 +1,5 @@
 #include "gtk_directory_load_order.h"
+#include <print>
 #include "native_dialog_helpers.h"
 #include <wx/stdpaths.h>
 #include <wx/utils.h>
@@ -98,10 +99,11 @@ DirectoryLoadOrder::DirectoryLoadOrder() : state_(std::make_shared<State>()) {
 }
 bool DirectoryLoadOrder::Completed() const {
     const auto& state = *state_;
-    std::fprintf(stderr, "directory load-order initial queries: %u/%u\n", state.initialQueriesQueued,
+    std::println(stderr, "directory load-order initial queries: {:d}/{:d}", state.initialQueriesQueued,
                  state.initialQueriesDelivered);
-    std::fprintf(stderr, "directory load-order gates: enumeration=%d/%d/%d parent=%d/%d\n", state.enumerationQueued,
-                 state.enumerationDelivered, state.enumerationFinished, state.parentQueued, state.parentDelivered);
+    std::println(stderr, "directory load-order gates: enumeration={:d}/{:d}/{:d} parent={:d}/{:d}",
+                 state.enumerationQueued, state.enumerationDelivered, state.enumerationFinished, state.parentQueued,
+                 state.parentDelivered);
     return state.initialQueriesQueued && state.initialQueriesQueued == state.initialQueriesDelivered &&
            state.enumerationQueued && state.enumerationDelivered && state.enumerationFinished && state.parentQueued &&
            state.parentDelivered;

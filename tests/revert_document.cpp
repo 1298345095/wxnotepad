@@ -8,6 +8,7 @@
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <stdexcept>
 
@@ -199,7 +200,7 @@ public:
                 FailedRevert(frame, revert, path);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

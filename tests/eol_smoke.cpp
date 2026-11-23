@@ -3,6 +3,7 @@
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include "settings/settings_store.h"
@@ -76,15 +77,15 @@ public:
                     Key(editor, 'Y', true);
                     Require(frame->Save().status == SaveStatus::Saved, "edited EOL sample must save");
                     if (Bytes(path) != sample.expected) {
-                        std::fprintf(stderr, "Sample: %s\n", sample.name);
-                        std::fprintf(stderr, "Saved bytes:");
+                        std::println(stderr, "Sample: {}", sample.name);
+                        std::print(stderr, "Saved bytes:");
                         for (unsigned char byte : Bytes(path))
-                            std::fprintf(stderr, " %02x", byte);
-                        std::fprintf(stderr, "\n");
+                            std::print(stderr, " {:02x}", byte);
+                        std::println(stderr, "");
                         Require(false,
                                 "Enter must follow loaded EOL policy and preserve original encoding, BOM and bytes");
                     }
-                    std::printf("PASS: %s, actual Enter/Undo/Redo and saved bytes\n", sample.name);
+                    std::println("PASS: {}, actual Enter/Undo/Redo and saved bytes", sample.name);
                 }
                 Require(frame->NewDocument(), "New must replace a saved LF document");
                 Key(frame->Editor(), WXK_RETURN);
@@ -94,7 +95,7 @@ public:
                 std::puts("PASS: New restores default CRLF after loaded LF");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

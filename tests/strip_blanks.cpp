@@ -9,6 +9,7 @@
 #include "steady_stopwatch.h"
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <fstream>
 #include <memory>
@@ -59,7 +60,7 @@ void Selections(EditorFrame* frame) {
         Set(editor, fixture.before, fixture.anchor, fixture.caret);
         NativeSearch::Command(frame, Command(frame, fixture.leading));
         if (TestEditor::Text(editor) != fixture.after)
-            std::fprintf(stderr, "selection leading=%d: <%s>; expected <%s>\n", fixture.leading,
+            std::println(stderr, "selection leading={:d}: <{}>; expected <{}>", fixture.leading,
                          TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after,
                 "selected regex retains real line anchors and complete matches");
@@ -251,7 +252,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

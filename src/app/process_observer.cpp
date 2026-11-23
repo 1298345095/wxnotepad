@@ -12,6 +12,8 @@
 #include <wx/toolbar.h>
 #include <wx/log.h>
 #include <cstdio>
+#include <exception>
+#include <print>
 #include <limits>
 #include <utility>
 #ifdef __WXMSW__
@@ -257,11 +259,14 @@ void ProcessObserver::Publish() {
     if (!published && !publishPending_) {
         const unsigned long error = wxSysErrorCode();
         const char* stage = !written ? "write" : !closed ? "close" : "rename";
-        std::fprintf(stderr,
-                     "Observation publication failed: stage=%s error=%lu sequence=%s result=%s directory=%s; retry "
-                     "pending\n",
-                     stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(),
-                     observation_.utf8_str().data());
+        try {
+            std::println(
+                stderr,
+                "Observation publication failed: stage={} error={:d} sequence={} result={} directory={}; retry pending",
+                stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(), observation_.utf8_str().data());
+        } catch (const std::exception&) {
+            // A failed diagnostic must still allow the pending publication to retry.
+        }
         std::fflush(stderr);
     }
     publishPending_ = !published;
@@ -269,8 +274,13 @@ void ProcessObserver::Publish() {
 
 void ProcessObserver::CommandFailure(const char* stage, unsigned long error) {
     if (!commandPending_) {
-        std::fprintf(stderr, "Observation command failed: stage=%s error=%lu last_ack=%s directory=%s; retry pending\n",
-                     stage, error, sequence_.utf8_str().data(), observation_.utf8_str().data());
+        try {
+            std::println(stderr,
+                         "Observation command failed: stage={} error={:d} last_ack={} directory={}; retry pending",
+                         stage, error, sequence_.utf8_str().data(), observation_.utf8_str().data());
+        } catch (const std::exception&) {
+            // A failed diagnostic must still allow the pending command to retry.
+        }
         std::fflush(stderr);
     }
     commandPending_ = true;

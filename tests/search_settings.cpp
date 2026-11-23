@@ -6,6 +6,7 @@
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <memory>
 
@@ -84,7 +85,7 @@ public:
                 frame->Close();
             } catch (const std::exception& error) {
                 result_ = 1;
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 frame->Destroy();
             }
             ExitMainLoop();

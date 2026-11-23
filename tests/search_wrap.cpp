@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -318,7 +319,7 @@ public:
                 std::puts("PASS: Replace candidate selection, replacement and no-match caret retention");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

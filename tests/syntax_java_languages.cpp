@@ -1,4 +1,5 @@
 #include "syntax_language_test_helpers.h"
+#include <print>
 #include "native_paint_helpers.h"
 #include "native_completion_helpers.h"
 #include "native_renderer_helpers.h"
@@ -58,7 +59,7 @@ void Operations(EditorFrame* frame) {
         std::array<std::string, InitialCaretColumn + 1> fields;
         for (auto& field : fields)
             std::getline(row, field, '\t');
-        std::fprintf(stderr, "original operation %s %s %s\n", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
+        std::println(stderr, "original operation {} {} {}", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
         editor->Send(AutoCCancel);
         Choose(frame, (fields[0] + " Source").c_str());
         const auto before = TestLanguages::Unhex(fields[2]);
@@ -89,7 +90,7 @@ void Operations(EditorFrame* frame) {
         const auto actual = NativeCompletion::Candidates(editor);
         if (actual != expected) {
             for (const auto& candidate : actual)
-                std::fprintf(stderr, "actual candidate [%s]\n", candidate.c_str());
+                std::println(stderr, "actual candidate [{}]", candidate.c_str());
         }
         Require(actual == expected, "manual/automatic native completion order matches independent original");
         if (!expected.empty() && fields[1] == "completion") {
@@ -285,7 +286,7 @@ public:
                 }
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

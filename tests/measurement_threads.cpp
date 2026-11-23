@@ -5,6 +5,7 @@
 #include <wx/dcmemory.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <exception>
 #include <memory>
 #include <stdexcept>
@@ -64,10 +65,10 @@ void Equal(const Measurement& actual, const Measurement& expected, const Surface
                actual.positions[byte] == expected.positions[byte])
             ++byte;
         const bool positionMismatch = byte < actual.positions.size() || byte < expected.positions.size();
-        std::fprintf(stderr,
-                     "context=%d utf8=%d worker=%d font=%zu sample=%zu iteration=%d actual-width=%.17g "
-                     "expected-width=%.17g first-byte=%td actual-position=%.17g expected-position=%.17g "
-                     "actual-bytes=%zu expected-bytes=%zu\n",
+        std::println(stderr,
+                     "context={:d} utf8={:d} worker={:d} font={:d} sample={:d} iteration={:d} actual-width={:.17g} "
+                     "expected-width={:.17g} first-byte={:d} actual-position={:.17g} expected-position={:.17g} "
+                     "actual-bytes={:d} expected-bytes={:d}",
                      test.context, test.utf8, worker, font, sample, iteration, actual.width, expected.width,
                      positionMismatch ? static_cast<std::ptrdiff_t>(byte) : -1,
                      byte < actual.positions.size() ? actual.positions[byte] : -1,
@@ -83,8 +84,8 @@ void NativeReference(wxDC& dc, std::string_view text, bool utf8, size_t sample, 
         utf8 ? wxString::FromUTF8(text.data(), text.size()) : wxString::From8BitData(text.data(), text.size());
     const auto expectedWidth = dc.GetTextExtent(characters).x;
     if (actual.width != expectedWidth)
-        std::fprintf(stderr, "sample=%zu utf8=%d native-width=%d measured-width=%g\n", sample, utf8, expectedWidth,
-                     actual.width);
+        std::println(stderr, "sample={:d} utf8={:d} native-width={:d} measured-width={:.6g}", sample, utf8,
+                     expectedWidth, actual.width);
     Require(actual.width == expectedWidth, "text width must match the native drawing DC");
     // These independent scalar cases have known byte-to-native-unit offsets.
     // Complex shaping retains the pre-change serial numeric oracle instead.
@@ -114,10 +115,10 @@ std::unique_ptr<wxDC> DrawingContext(wxFrame& frame, int context, wxBitmap& bitm
 }
 
 void PrintMeasurement(const SurfaceCase& test, size_t font, size_t sample, const Measurement& measured) {
-    std::printf("context=%d utf8=%d font=%zu sample=%zu width=%g positions=", test.context, test.utf8, font, sample,
-                measured.width);
+    std::print("context={:d} utf8={:d} font={:d} sample={:d} width={:.6g} positions=", test.context, test.utf8, font,
+               sample, measured.width);
     for (const auto position : measured.positions)
-        std::printf("%g,", position);
+        std::print("{:.6g},", position);
     std::putchar('\n');
 }
 
@@ -196,7 +197,7 @@ public:
                     std::puts("PASS: concurrent native text metrics preserve fonts, DPI, Unicode and byte positions");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

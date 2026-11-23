@@ -19,6 +19,7 @@
 #include <vector>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -422,7 +423,7 @@ public:
                 }
                 std::puts("PASS: original indentation guide commands");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

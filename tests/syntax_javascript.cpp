@@ -12,6 +12,7 @@
 #include <SciLexer.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <stdexcept>
 #include <filesystem>
@@ -40,7 +41,7 @@ void Compare(EditorFrame* frame, std::span<const int> styles, std::span<const in
     for (size_t line = 0; line < folds.size(); ++line) {
         const auto actual = editor->Send(GetFoldLevel, line);
         if (actual != folds[line])
-            std::fprintf(stderr, "line=%zu expected_fold=%d actual_fold=%zd\n", line, folds[line], actual);
+            std::println(stderr, "line={:d} expected_fold={:d} actual_fold={:d}", line, folds[line], actual);
         Require(actual == folds[line], "every fold level must match original full application");
     }
 }
@@ -270,8 +271,8 @@ public:
                     Require(editor->Send(CanRedo), "non-editing scheme changes preserve redo");
                     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
                             "Save preserves independent disk bytes");
-                    std::printf("PASS: original %s styles/folds, edit/Undo/Redo, folding, switching and Save\n",
-                                fixture.name);
+                    std::println("PASS: original {} styles/folds, edit/Undo/Redo, folding, switching and Save",
+                                 fixture.name);
                 }
                 Workflows(frame, directory);
                 SharedCommands(frame);
@@ -279,7 +280,7 @@ public:
                 TabPrecedence(frame, *settings_, directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -11,6 +11,7 @@
 #include <wx/textctrl.h>
 #include "native_search_helpers.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 #include <filesystem>
@@ -90,7 +91,7 @@ public:
                     Click(dialog, wxID_FORWARD);
                     Click(dialog, wxID_REPLACE);
                     if (Text(editor) != expected)
-                        std::fprintf(stderr, "Expansion actual: %s; expected: %s\n", Text(editor).c_str(), expected);
+                        std::println(stderr, "Expansion actual: {}; expected: {}", Text(editor).c_str(), expected);
                     Require(Text(editor) == expected, "replacement must follow the explicit original-format example");
                     Command(frame, wxID_UNDO);
                     Require(Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo),
@@ -282,7 +283,7 @@ public:
                 std::puts("PASS: empty New reads fresh regex context without separate confirmation state");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
                 result_ = 1;
             }
             frame->Destroy();

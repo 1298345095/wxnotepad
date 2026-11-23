@@ -3,6 +3,7 @@
 #include <wx/wx.h>
 #include <wx/ffile.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -108,7 +109,7 @@ public:
             std::puts("PASS: settings field parsing and history replacement preserve original INI semantics");
             return 0;
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            std::println(stderr, "FAIL: {}", error.what());
             return 1;
         }
     }

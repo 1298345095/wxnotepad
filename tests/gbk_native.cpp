@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -205,10 +206,10 @@ public:
                     Text(frame) == rich && frame->GetMenuBar()->IsChecked(python) &&
                     StatusMetadata(frame).Contains("Python (override)");
                 if (!lossCancelled) {
-                    std::fprintf(
+                    std::println(
                         stderr,
-                        "GBK loss cancellation: choosers=%d losses=%d errors=%d exists=%d pathEqual=%d "
-                        "encoding=%d diskEqual=%d textEqual=%d pythonChecked=%d status='%s'\n",
+                        "GBK loss cancellation: choosers={:d} losses={:d} errors={:d} exists={:d} pathEqual={:d} "
+                        "encoding={:d} diskEqual={:d} textEqual={:d} pythonChecked={:d} status='{}'",
                         cancelLoss.choosers, cancelLoss.losses, cancelLoss.errors, std::filesystem::exists(cancelled),
                         NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)),
                         static_cast<int>(frame->DocumentEncoding()), Bytes(source) == original, Text(frame) == rich,
@@ -291,7 +292,7 @@ public:
                 std::puts("PASS: native accepted-loss Save write failure preserves disk and session");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::permissions(directory, std::filesystem::perms::owner_all);
             std::filesystem::remove_all(directory);

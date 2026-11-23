@@ -10,6 +10,7 @@
 #include <wx/timer.h>
 #include "native_dialog_helpers.h"
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -239,7 +240,7 @@ public:
                     NativeDriver untouched;
                     Shortcut(frame, WXK_F6, (modifiers & 1) != 0, (modifiers & 2) != 0, (modifiers & 4) != 0);
                     untouched.Stop();
-                    if (untouched.choosers != 0) std::fprintf(stderr, "Unexpected Save As modifiers: %d\n", modifiers);
+                    if (untouched.choosers != 0) std::println(stderr, "Unexpected Save As modifiers: {:d}", modifiers);
                     Require(untouched.choosers == 0, "modified F6 must not invoke Save As");
                     Require(untouched.copyChoosers == (modifiers == 1 ? 1 : 0),
                             "exact Ctrl+F6 must invoke Save Copy and other modified F6 must not");
@@ -356,7 +357,7 @@ public:
                 std::puts("PASS: native Save failure error and retained disk/session/history");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             std::filesystem::permissions(directory, std::filesystem::perms::owner_all);
             std::filesystem::remove_all(directory);

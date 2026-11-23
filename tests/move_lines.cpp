@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include "file_helpers.h"
 #include <wx/ffile.h>
@@ -115,7 +116,7 @@ void Fixtures(EditorFrame* frame) {
         Menu(frame, "Redo");
         Require(NativeSearch::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores moved bytes");
-        std::printf("PASS: %s, anchor/caret, one-step Undo/Redo, mode preservation\n", fixture.name);
+        std::println("PASS: {}, anchor/caret, one-step Undo/Redo, mode preservation", fixture.name);
     }
 }
 void NoOps(EditorFrame* frame) {
@@ -191,7 +192,7 @@ void SavedBytes(EditorFrame* frame) {
         Menu(frame, "Redo");
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "Redo and Save restore independently read moved bytes");
-        std::printf("PASS: %s independent saved bytes and encoding/BOM preservation\n", fixture.name);
+        std::println("PASS: {} independent saved bytes and encoding/BOM preservation", fixture.name);
     }
     std::filesystem::remove_all(directory);
 }
@@ -280,7 +281,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

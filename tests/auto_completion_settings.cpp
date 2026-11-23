@@ -10,6 +10,7 @@
 #include <wx/wx.h>
 #include <bit>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 namespace {
 using Scintilla::Message;
@@ -60,9 +61,9 @@ public:
                     try {
                         Require(presented, "owned settings dialog is presented");
                         const auto area = wxDisplay(wxDisplay::GetFromWindow(dialog)).GetClientArea();
-                        std::printf("Dialog %dx%d; work area %dx%d; DPI %dx%d", dialog->GetSize().x,
-                                    dialog->GetSize().y, area.width, area.height, dialog->GetDPI().x,
-                                    dialog->GetDPI().y);
+                        std::print("Dialog {:d}x{:d}; work area {:d}x{:d}; DPI {:d}x{:d}", dialog->GetSize().x,
+                                   dialog->GetSize().y, area.width, area.height, dialog->GetDPI().x,
+                                   dialog->GetDPI().y);
                         Require(area.Contains(dialog->GetScreenRect()),
                                 "completion settings dialog fits native work area at active font/DPI");
                         for (auto* child : dialog->GetChildren())
@@ -283,7 +284,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: native insertion controls, Cancel/OK, live typing and settings persistence");
             } catch (const std::exception& e) {
-                std::fprintf(stderr, "FAIL: %s\n", e.what());
+                std::println(stderr, "FAIL: {}", e.what());
             }
             frame->Destroy();
             ExitMainLoop();

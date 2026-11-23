@@ -1,4 +1,5 @@
 #include "editor_test_helpers.h"
+#include <print>
 #include "native_key_helpers.h"
 #include "escape_text_fixtures.h"
 #include "encoded_file_helpers.h"
@@ -42,7 +43,7 @@ void ReferenceFixtures(EditorFrame* frame) {
         const auto eol = editor->Send(GetEOLMode);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", fixture.label));
         if (TestEditor::Text(editor) != fixture.after)
-            std::fprintf(stderr, "Original escape fixture mapping=%d before length=%zu\n", fixture.mapping,
+            std::println(stderr, "Original escape fixture mapping={:d} before length={:d}", fixture.mapping,
                          fixture.before.size());
         Require(TestEditor::Text(editor) == fixture.after, "escape output matches literal original Windows bytes");
         TestEditor::RequireSelection(editor, 0, fixture.after.size(), "escape selection follows original byte length");
@@ -97,13 +98,13 @@ template <typename Fixture> void PrepareSelectionState(EditorControl* editor, co
 template <typename Fixture> void DiagnoseSelectionState(EditorControl* editor, const Fixture& fixture) {
     if (TestEditor::Text(editor) != fixture.after || editor->Send(Message::GetAnchor) != fixture.anchor ||
         editor->Send(Message::GetCurrentPos) != fixture.caret) {
-        std::fprintf(stderr, "Original escape state mapping=%d kind=%s\n", fixture.mapping, fixture.kind);
+        std::println(stderr, "Original escape state mapping={:d} kind={}", fixture.mapping, fixture.kind);
         for (const unsigned char byte : TestEditor::Text(editor))
-            std::fprintf(stderr, "%02x", byte);
-        std::fprintf(stderr, " actual; expected ");
+            std::print(stderr, "{:02x}", byte);
+        std::print(stderr, " actual; expected ");
         for (const unsigned char byte : fixture.after)
-            std::fprintf(stderr, "%02x", byte);
-        std::fprintf(stderr, "\n");
+            std::print(stderr, "{:02x}", byte);
+        std::println(stderr, "");
     }
 }
 void SelectionStates(EditorFrame* frame) {
@@ -266,7 +267,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                std::println(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();
