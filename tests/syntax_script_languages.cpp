@@ -216,7 +216,7 @@ void Operations(EditorFrame* frame) {
         editor->Send(SetSavePoint);
         ++rows;
     }
-    Require(rows == 45, "all independent script completion, insertion, comment and protection operations run");
+    Require(rows == 47, "all independent script completion, insertion, comment and protection operations run");
 }
 void Workflows(EditorFrame* frame) {
     using enum Scintilla::Message;

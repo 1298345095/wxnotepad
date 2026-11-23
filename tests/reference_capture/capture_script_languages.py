@@ -50,6 +50,7 @@ completions = [
     ('PowerShell Script', 'ps1', '@PSS', 0), ('PowerShell Script', 'ps1', 'Write-H', ord('o')),
     ('AutoHotkey Script', 'ahk', 'MsgBo', 0), ('AutoHotkey Script', 'ahk', '#Req', 0),
     ('AutoHotkey Script', 'ahk', '; @Ahk2Exe-Se| ', 0), ('AutoHotkey Script', 'ahk', 'MsgB', ord('o')),
+    ('AutoHotkey Script', 'ahk', '#Req| ', 0), ('AutoHotkey Script', 'ahk', '; @Ahk| ', 0),
 ]
 characters = [
     ('Batch File', 'bat', 'if exist file ', ord('(')),
