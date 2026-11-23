@@ -346,6 +346,7 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                        '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
                        '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
+                       f'-DPython3_EXECUTABLE={sys.executable}',
                        *compiler_launcher_arguments(compiler_cache)]), 'diagnostic-configure.log')
     targets = ['wxnotepad', 'editing_keys', 'close_smoke']
     if WINDOWS:
