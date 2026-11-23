@@ -59,6 +59,8 @@ if(subdirs)
     endif()
 
     set(OPTIONS
+        # Keep auxiliary programs beside the baseline's relocated user-email script.
+        "--libexecdir=\\\${prefix}/lib"
         --enable-relocatable #symbol duplication with glib-init.c?
         --enable-c++
         --disable-acl

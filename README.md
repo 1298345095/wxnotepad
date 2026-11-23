@@ -407,5 +407,4 @@ See the [search validation record](docs/observations/search-README.md) for final
 regression, review and static-analysis results.
 
 Format tracked C++ files under `src/` and `tests/` with clang-format **23.1.2**
-and the repository's `.clang-format`. The configuration also parses with the
-installed Linux clang-format 18.1.3; version 23.1.2 is the canonical formatter.
+and the repository's `.clang-format`.

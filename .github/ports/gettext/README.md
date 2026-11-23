@@ -9,6 +9,8 @@ and its MIT-licensed helper files from baseline
 Makefiles. The old directory-reading MSVC patch and gnulib `localtime.c` patch
 are already present in 0.23.2 and are omitted. The remaining baseline patches
 retain their original purpose.
+The auxiliary programs retain the baseline's `lib/gettext` layout through an
+explicit `libexecdir`, so the existing `user-email` relocation remains valid.
 
 This port supplies build tools and Autotools data, not the application runtime
 translation library. The separate `gettext-libintl` dependency retains its
