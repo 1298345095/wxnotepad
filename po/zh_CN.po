@@ -234,6 +234,10 @@ msgstr "当前工具栏按钮(&C)："
 msgid "&Decode"
 msgstr "解码(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default"
+msgstr "默认(&D)"
+
 #. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
@@ -1476,6 +1480,10 @@ msgstr "删除行(&E)\tCtrl+Shift+D"
 #: src/syntax/syntax_catalog.cpp
 msgid "DTD"
 msgstr "DTD"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Dar&k"
+msgstr "深色(&K)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Decode as &Hex"
@@ -2997,6 +3005,10 @@ msgstr "特殊(&I)"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Square brackets []"
 msgstr "方括号 []"
+
+#: src/app/editor_frame_commands.cpp
+msgid "St&yle Theme"
+msgstr "样式主题(&Y)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Standard &Encode"

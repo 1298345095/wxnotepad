@@ -161,6 +161,7 @@ public:
     void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
+    void ApplyStylePixelSettings();
     const CaretAppearance& GetCaretAppearance() const { return caretAppearance_; }
     void SetCaretAppearance(CaretAppearance appearance);
     OccurrenceMarking& Occurrences() { return *occurrences_; }
