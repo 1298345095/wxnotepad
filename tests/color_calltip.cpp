@@ -21,6 +21,9 @@
 #include <wx/display.h>
 #include <wx/colordlg.h>
 #include <wx/modalhook.h>
+#ifdef __WXGTK__
+#include <wx/weakref.h>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -28,6 +31,65 @@ using Scintilla::Message;
 void Require(bool condition, const char* reason) {
     if (!condition) throw std::runtime_error(reason);
 }
+
+#ifdef __WXGTK__
+void ObservePopupState(const char* phase, EditorFrame* frame) {
+    auto* tip = frame ? wxWindow::FindWindowByName("Color CallTip", frame->Editor()) : nullptr;
+    auto* tipWidget = tip ? GTK_WIDGET(tip->GetHandle()) : nullptr;
+    auto* frameWidget = frame ? GTK_WIDGET(frame->GetHandle()) : nullptr;
+    auto* display = gdk_display_get_default();
+    auto* seat = display ? gdk_display_get_default_seat(display) : nullptr;
+    auto* pointer = seat ? gdk_seat_get_pointer(seat) : nullptr;
+    int pointerX = 0, pointerY = 0;
+    auto* pointerWindow = pointer ? gdk_device_get_window_at_position(pointer, &pointerX, &pointerY) : nullptr;
+    std::fprintf(stderr, "CallTip GTK observation phase=%s frame=%p tip=%p pointer_window=%p pointer=%d,%d\n", phase,
+                 static_cast<void*>(frameWidget), static_cast<void*>(tipWidget), static_cast<void*>(pointerWindow),
+                 pointerX, pointerY);
+    auto* windows = gtk_window_list_toplevels();
+    for (auto* item = windows; item; item = item->next) {
+        auto* widget = GTK_WIDGET(item->data);
+        auto* window = gtk_widget_get_window(widget);
+        auto* transient = gtk_window_get_transient_for(GTK_WINDOW(widget));
+        const auto hint = gtk_window_get_type_hint(GTK_WINDOW(widget));
+        unsigned surfaceId = 0;
+        if (window && GDK_IS_WAYLAND_DISPLAY(gdk_window_get_display(window))) {
+            if (auto* surface = gdk_wayland_window_get_wl_surface(window))
+                surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+        }
+        std::fprintf(stderr,
+                     "CallTip GTK window widget=%p class=%s name=%s type=%d hint=%d is_frame=%d is_tip=%d "
+                     "is_tooltip=%d visible=%d realized=%d mapped=%d transient=%p gdk=%p native_parent=%p "
+                     "native_toplevel=%p gdk_type=%d gdk_visible=%d gdk_viewable=%d destroyed=%d surface=%u\n",
+                     static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
+                     gtk_window_get_window_type(GTK_WINDOW(widget)), hint, widget == frameWidget, widget == tipWidget,
+                     hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget),
+                     gtk_widget_get_realized(widget), gtk_widget_get_mapped(widget), static_cast<void*>(transient),
+                     static_cast<void*>(window), static_cast<void*>(window ? gdk_window_get_parent(window) : nullptr),
+                     static_cast<void*>(window ? gdk_window_get_effective_toplevel(window) : nullptr),
+                     window ? gdk_window_get_window_type(window) : -1, window && gdk_window_is_visible(window),
+                     window && gdk_window_is_viewable(window), window && gdk_window_is_destroyed(window), surfaceId);
+    }
+    g_list_free(windows);
+}
+
+class PopupWarnings final {
+public:
+    explicit PopupWarnings(EditorFrame* frame) : frame_(frame) {
+        handler_ = g_log_set_handler(
+            "Gdk", GLogLevelFlags(G_LOG_LEVEL_WARNING | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION), Warning, this);
+    }
+    ~PopupWarnings() { g_log_remove_handler("Gdk", handler_); }
+
+private:
+    static void Warning(const gchar* domain, GLogLevelFlags level, const gchar* message, gpointer data) {
+        g_log_default_handler(domain, level, message, nullptr);
+        if (g_strcmp0(message, "Tried to map a popup with a non-top most parent") == 0)
+            ObservePopupState("Gdk-warning", static_cast<PopupWarnings*>(data)->frame_.get());
+    }
+    wxWeakRef<EditorFrame> frame_;
+    guint handler_ = 0;
+};
+#endif
 
 wxMenu* CallTipMenu(EditorFrame* frame) {
     auto* bar = frame->GetMenuBar();
@@ -229,7 +291,15 @@ void CheckPreview(EditorFrame* frame, bool typingInteraction = true) {
     auto* popup = VisibleCallTip(editor);
     Require(editor->Send(CallTipActive) && wxWindow::FindFocus() == focus,
             "the mapped popup keeps the actual calltip active without taking keyboard focus");
-    const auto sample = NativePaint::Read(popup, wxRect(3, 3, 2, 2));
+    std::vector<wxColour> sample;
+    try {
+        sample = NativePaint::Read(popup, wxRect(3, 3, 2, 2));
+    } catch (...) {
+#ifdef __WXGTK__
+        ObservePopupState("paint-failure", frame);
+#endif
+        throw;
+    }
     Require(std::ranges::all_of(sample, [](const wxColour& color) { return color == wxColour(170, 187, 51); }),
             "the native popup paints the RGB independently observed in the original chooser");
     const auto display = wxDisplay::GetFromWindow(frame);
@@ -616,6 +686,9 @@ public:
         path_ = TestFiles::Filename(file);
         settings_ = std::make_unique<SettingsStore>(path_);
         auto* frame = new EditorFrame(settings_.get());
+#ifdef __WXGTK__
+        popupWarnings_ = std::make_unique<PopupWarnings>(frame);
+#endif
         TestRenderer::Select(frame->Editor());
         std::printf("Native CallTip DPI: %d x %d\n", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
 #ifdef __WXMSW__
@@ -663,6 +736,9 @@ public:
 private:
     wxString path_;
     std::unique_ptr<SettingsStore> settings_;
+#ifdef __WXGTK__
+    std::unique_ptr<PopupWarnings> popupWarnings_;
+#endif
     int result_ = 0;
 };
 } // namespace
