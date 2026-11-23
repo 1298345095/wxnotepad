@@ -17,7 +17,7 @@ import tempfile
 import time
 import threading
 from collections import deque
-from weston_scene import mapped_toplevel
+from weston_scene import mapped_toplevel, mapped_toplevel_position
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
@@ -226,7 +226,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:", "pointer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -302,6 +302,27 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         time.sleep(min(.03, max(0, deadline - time.monotonic())))
                     if kind == "activate" and not acknowledged:
                         retain_activation_failure(process, surface, expiry, last_scene, matched, queries, timed_out)
+                elif request.startswith("pointer:"):
+                    _, process, surface, x, y, expiry = request.split(":")
+                    assert backend == "wayland", "Owned surface pointer input requires the private Wayland driver"
+                    remaining = int(expiry) / 1_000_000 - time.monotonic()
+                    if remaining <= 0:
+                        acknowledge(focus, int(expiry))
+                        continue
+                    scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
+                                           capture_output=True, text=True, timeout=min(2, remaining), check=True).stdout
+                    origin = mapped_toplevel_position(scene, int(process), int(surface))
+                    if origin is None and os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR"):
+                        observation = Path(os.environ["WXNOTEPAD_DISPLAY_LOG_DIR"]) / "pointer-unmapped.scene.txt"
+                        observation.parent.mkdir(parents=True, exist_ok=True)
+                        observation.write_text(request + "\n" + scene, encoding="utf-8")
+                    assert origin is not None, "Pointer target must be the exact owned mapped surface"
+                    geometry = xdo("getwindowgeometry", "--shell", weston_window)
+                    values = dict(line.split("=", 1) for line in geometry.splitlines())
+                    if not acknowledge(focus, int(expiry)):
+                        continue
+                    xdo("mousemove", str(origin[0] + int(x) + int(values["X"])),
+                        str(origin[1] + int(y) + int(values["Y"])))
                 elif request.startswith("front:"):
                     front(request[6:])
                     acknowledge(focus)
