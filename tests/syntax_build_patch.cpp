@@ -200,6 +200,24 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         Require(frame->Revert().status == OpenStatus::Opened, "Revert retains original automatic scheme");
         NativePaint::Complete(editor);
         TestLanguages::FoldCommands(frame);
+        // Independent pinned stlDefault/stlMake and doc/Notepad4 DarkTheme.ini
+        // token records, expressed as Scintilla's public BGR colour values.
+        const auto colourQuery = make ? Message::StyleGetFore : Message::StyleGetBack;
+        const int tokenStyle = make                                ? SCE_MAKE_VARIABLE3
+                               : fixture.lexer == SCLEX_PROPERTIES ? SCE_PROPS_SECTION
+                                                                   : SCE_DIFF_ADDED;
+        const intptr_t lightColour = make ? 0xE63C00 : fixture.lexer == SCLEX_PROPERTIES ? 0x40C0FF : 0x80FF80;
+        const intptr_t darkColour = make ? 0xFF8000 : fixture.lexer == SCLEX_PROPERTIES ? 0x304040 : 0x205808;
+        const auto anchor = editor->Send(Message::GetAnchor);
+        const auto caret = editor->Send(Message::GetCurrentPos);
+        for (const auto& [theme, colour] : {std::pair{"Dark", darkColour}, std::pair{"Default", lightColour}}) {
+            TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", theme));
+            Require(editor->Send(colourQuery, tokenStyle) == colour,
+                    "original INI/Make/Diff token groups participate in the common Default/Dark style path");
+            Require(TestEditor::Text(editor) == fixture.text && !editor->Send(Message::CanUndo) &&
+                        editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
+                    "theme changes preserve exact recipe/patch bytes, selection and history");
+        }
         TabDialog::Show(frame, [make](wxDialog* dialog) {
             Require(TabDialog::Option(dialog, "Use Global Tab Settings")->GetValue() == !make,
                     "native Tab Settings exposes the original inheritance policy");
