@@ -20,6 +20,11 @@ vcpkg_download_distfile(ARCHIVE
     SHA512 ce1cd8c060c02b5b45b12e217db70d13139b0ccdf676991868a21f42ae6ae521120cab77267011a903be26b0321e49c729d523217949d0514a091b55f06df5af
 )
 
+set(platform_patches)
+if(VCPKG_TARGET_IS_WINDOWS AND NOT VCPKG_TARGET_IS_MINGW AND VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
+    list(APPEND platform_patches msvc-libxml-exports.patch)
+endif()
+
 vcpkg_extract_source_archive(SOURCE_PATH
     ARCHIVE "${ARCHIVE}"
     PATCHES
@@ -29,6 +34,7 @@ vcpkg_extract_source_archive(SOURCE_PATH
         subdirs.patch
         parallel-gettext-tools.patch
         config-step-order.patch
+        ${platform_patches}
 )
 
 set(subdirs "")

@@ -1,0 +1,14 @@
+diff --git a/gettext-tools/gnulib-lib/Makefile.in b/gettext-tools/gnulib-lib/Makefile.in
+--- a/gettext-tools/gnulib-lib/Makefile.in
++++ b/gettext-tools/gnulib-lib/Makefile.in
+@@ -290,7 +290,7 @@
+ # Parametrization of the 'libxml' module:
+-# When building a shared library, don't export the variables
+-# xmlMalloc, xmlMallocAtomic, xmlRealloc, xmlFree, xmlMemStrdup.
+-@INCLUDED_LIBXML_TRUE@am__append_1 = -DLIBXML_STATIC
++# Export the included XML API from the MSVC gettextlib DLL. XML implementation
++# sources define IN_LIBXML; consumers retain their ordinary DLL imports.
++@INCLUDED_LIBXML_TRUE@am__append_1 =
+ @GL_COND_OBJ_ACCESS_TRUE@am__append_2 = access.c
+ @GL_COND_OBJ_ALPHASORT_TRUE@am__append_3 = alphasort.c
+ @GL_COND_OBJ_ATEXIT_TRUE@am__append_4 = atexit.c

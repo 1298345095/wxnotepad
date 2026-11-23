@@ -12,6 +12,9 @@ retain their original purpose.
 The auxiliary programs retain the baseline's `lib/gettext` layout through an
 explicit `libexecdir`, so the existing `user-email` relocation remains valid.
 The Autotools data copies follow `iconv.m4` and `intlmacosx.m4` into `gnulib-m4`.
+On MSVC shared builds, `msvc-libxml-exports.patch` enables the included XML API's
+native DLL exports from gettextlib, including the data import used by gettextsrc.
+Linux, static builds and libtextstyle's private XML copy retain their settings.
 
 This port supplies build tools and Autotools data, not the application runtime
 translation library. The separate `gettext-libintl` dependency retains its

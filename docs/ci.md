@@ -112,6 +112,11 @@ compiled GI bindings; after a system Python upgrade, use a fresh CMake build and
 any virtual environment rather than reusing cached interpreter paths.
 GUI tests use Ubuntu 26.04's Weston 14 and Openbox packages. No separately built
 Weston or older distribution runtime libraries are selected.
+The native input driver uses upstream xdotool 4.20260303.1, built from a fixed
+release commit with its own libxdo embedded. Ubuntu's older xdotool misreads
+xkeyboard-config 2.46 function-key levels and injects an extra Alt modifier
+([upstream #491](https://github.com/jordansissel/xdotool/issues/491)). The original
+key names, XTEST delivery, behavior assertions and deadlines are retained.
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
 - actionlint 1.7.12 predates the official `ubuntu-26.04` runner label. Its
