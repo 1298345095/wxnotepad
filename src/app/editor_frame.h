@@ -57,6 +57,7 @@ public:
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
     bool NewWindow();
+    bool OpenInNewWindow();
     bool OpenSelection(bool containingFolder = false);
     bool OpenContainingFolder();
     void AppendOpenTargetCommands(wxMenu* menu);

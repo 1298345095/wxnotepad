@@ -366,3 +366,11 @@ target_link_libraries(diagnostic_assert PRIVATE editor_runtime)
 add_test(NAME native_assert_output_failure COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostic_assert_process.py" "$<TARGET_FILE:diagnostic_assert>")
 set_tests_properties(native_assert_output_failure PROPERTIES TIMEOUT 30)
+
+add_editor_test(style_themes original_style_themes 60)
+add_test(NAME original_style_theme_profiles COMMAND style_themes profiles)
+set_tests_properties(original_style_theme_profiles PROPERTIES TIMEOUT 60)
+if(WIN32)
+    add_test(NAME original_style_themes_gdi COMMAND style_themes)
+    set_tests_properties(original_style_themes_gdi PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_THEME_GDI=1")
+endif()
