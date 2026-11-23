@@ -39,8 +39,8 @@ application wording takes precedence for shared message keys.
 
 ## Host tools
 
-The manifest requests host-only `gettext[tools]` without default features, under
-the existing vcpkg baseline (GNU gettext 0.22.5). CI supplies an explicit host
+The manifest requests host-only `gettext[tools]` without default features. The
+repository overlay selects GNU gettext 0.23.2, matching Ubuntu 26.04. CI supplies an explicit host
 triplet, verifies the actual tool versions and checks catalogs after dependency
 installation. Tools reside under the host installation's
 `tools/gettext/bin`; they are neither copied beside the application nor linked

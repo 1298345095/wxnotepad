@@ -116,8 +116,8 @@ def dependencies():
     for name in ('xgettext', 'msgmerge', 'msgfmt', 'msgcmp', 'msgattrib'):
         tool = gettext / (name + ('.exe' if WINDOWS else ''))
         version = subprocess.check_output([tool, '--version'], text=True, encoding='utf-8').splitlines()[0]
-        if not version.endswith(' 0.22.5'):
-            raise SystemExit('Expected pinned GNU gettext 0.22.5: ' + version)
+        if not version.endswith(' 0.23.2'):
+            raise SystemExit('Expected pinned GNU gettext 0.23.2: ' + version)
         print(version, flush=True)
     if 'GITHUB_ENV' in os.environ:
         with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:

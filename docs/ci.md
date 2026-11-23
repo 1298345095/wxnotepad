@@ -107,9 +107,11 @@ C++23 `std::print`/`std::println`, checking exact formatted UTF-8 bytes.
 Native analysis and fuzzing use Clang 21 against the same Linux environment.
 The runtime baseline increase from Ubuntu 24.04 was explicitly approved; existing
 test registration order, assertions, timeouts, parallelism and quality gates stay
-in force. CI keeps its pinned Python 3.12 interpreter, while development supports
-Python 3.12+; after a system Python upgrade, use a fresh CMake build and recreate
+in force. CI and native GTK drivers use Python 3.14, matching Ubuntu 26.04's
+compiled GI bindings; after a system Python upgrade, use a fresh CMake build and recreate
 any virtual environment rather than reusing cached interpreter paths.
+GUI tests use Ubuntu 26.04's Weston 14 and Openbox packages. No separately built
+Weston or older distribution runtime libraries are selected.
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
 - actionlint 1.7.12 predates the official `ubuntu-26.04` runner label. Its
@@ -167,7 +169,7 @@ any virtual environment rather than reusing cached interpreter paths.
   installation selects this overlay; its files participate in the existing cache
   key, and vcpkg's package ABI validates restored binaries. Local dependency builds
   can select the same overlay with `--overlay-ports=<repository>/.github/ports`.
-- Host-only GNU gettext 0.22.5 tools are pinned by the manifest baseline. CI
+- Host-only GNU gettext 0.23.2 tools are pinned by the repository overlay, matching Ubuntu 26.04. CI
   verifies their versions and extraction/format/release coverage before application
   builds; generated app and locked wxWidgets catalogs accompany every artifact.
   See [localization.md](localization.md) for maintenance and resource layout.
@@ -269,7 +271,7 @@ branch's results to PR analysis. The first filesystem-cache run populates a new
 cache. Source, dependency, compiler and rule changes remain subject to CFamily's
 cache validation. Python and other analyzers retain their server-managed caches.
 
-Python analysis targets the workflow's Python 3.12. Python files under `tests/`
+Python analysis targets the workflow's Python 3.14. Python files under `tests/`
 are classified as tests; their inclusion pattern also excludes them from the main
 source scope. C++ fixtures remain in `sonar.sources` because CFamily does not
 analyze files classified through `sonar.tests`. Generated language-scheme tables

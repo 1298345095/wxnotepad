@@ -1,5 +1,5 @@
 # The release-language list is shared with runtime selection and packaging.
-find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 3.14 REQUIRED COMPONENTS Interpreter)
 set(localization_generated "${CMAKE_CURRENT_BINARY_DIR}/generated")
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/localization.py"
     header --output "${localization_generated}/ui_language_data.h"

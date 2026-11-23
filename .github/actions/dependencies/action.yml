@@ -59,7 +59,7 @@ runs:
         )
         case "$DEPENDENCY_PROFILE" in
           build) ;;
-          gui) linux_packages+=(gdb xvfb xauth x11-utils dbus-x11 xdotool openbox fonts-dejavu-core fonts-noto-cjk
+          gui) linux_packages+=(gdb xvfb xauth x11-utils dbus-x11 xdotool openbox weston fonts-dejavu-core fonts-noto-cjk
                                 python3-gi gir1.2-atspi-2.0 at-spi2-core locales
                                 meson libinput-dev libdrm-dev libx11-xcb-dev libxcb-xkb-dev wayland-protocols) ;;
           tidy) linux_packages+=(clang-tidy-21) ;;
@@ -87,43 +87,13 @@ runs:
       with:
         path: .ci/apt-archives/*.deb
         key: ${{ steps.apt-cache.outputs.cache-primary-key }}
-    - name: Restore pinned private compositor
-      if: runner.os == 'Linux' && inputs.profile == 'gui'
-      id: weston-cache
-      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
-      with:
-        path: .ci/weston
-        key: weston-13.0.4-${{ runner.os }}-${{ runner.arch }}-${{ steps.metadata.outputs.image }}-${{ hashFiles('.github/scripts/build-weston.sh', '.github/actions/dependencies/action.yml') }}
-    - name: Checkout Weston 13.0.4
-      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.weston-cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      with:
-        repository: wayland-mirror/weston
-        ref: d522890e23290addf4dd8b88762e65f7455c235d # 13.0.4, includes desktop-shell fix 042d02f
-        path: .ci/weston-source
-        persist-credentials: false
-    - name: Build pinned private compositor
-      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.weston-cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p .ci/reports
-        bash .github/scripts/build-weston.sh .ci/weston-source .ci/weston \
-          2>&1 | tee .ci/reports/weston-build.log
-    - name: Select pinned private compositor
+    - name: Verify native Ubuntu GUI tools
       if: runner.os == 'Linux' && inputs.profile == 'gui'
       shell: bash
       run: |
         set -euo pipefail
-        prefix="$GITHUB_WORKSPACE/.ci/weston"
-        test "$("$prefix/bin/weston" --version)" = 'weston 13.0.4'
-        printf '%s\n' "$prefix/bin" >> "$GITHUB_PATH"
-    - name: Save pinned private compositor before tests
-      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.weston-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
-      with:
-        path: .ci/weston
-        key: ${{ steps.weston-cache.outputs.cache-primary-key }}
+        weston --version
+        python -c 'import sys; sys.path.append("/usr/lib/python3/dist-packages"); import gi; gi.require_version("Atspi", "2.0"); from gi.repository import Atspi; print("Native GTK bindings:", sys.version.split()[0])'
     - name: Bootstrap vcpkg on Windows
       if: runner.os == 'Windows' && steps.vcpkg-tool-cache.outputs.cache-hit != 'true'
       shell: pwsh
