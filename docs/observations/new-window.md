@@ -42,3 +42,33 @@ executable rename failure case.
 The process runner also accepts `--scenario normal|maximized|all` and
 `--installed-directory <owned-directory>` for user-configuration discovery tests.
 The installation test creates its own private Unicode `XDG_CONFIG_HOME`.
+
+Tools → Open in New Window (Alt+0) uses the same current-file relaunch path as
+Restart, while keeping the parent open. It follows Restart in the original Tools
+menu. Save Before Running Tools asks Save/Discard/Cancel for a modified document;
+Save uses the ordinary Save As flow for an untitled document. Cancel or failed
+Save stops the launch. Discard and disabled saving keep the parent buffer and
+history, and the child reads the disk file. A pathless parent opens a blank child.
+
+Current-file launches transfer the encoding identity, explicit scheme/dialect,
+read-only editing mode, and 1-based visual caret line/column. Original Unicode
+and ANSI switches select the current encoding after automatic source decoding;
+legacy switches select source decoding. Both UTF-16 variants select the matching
+BOM format on relaunch, including a parent using UTF-16 without a BOM. Settings
+and UI language follow ordinary startup discovery. Placement and the original
+startup working directory use the existing New Window launch path above.
+
+The pinned original reference is Notepad4
+`89b8b36e0ee2c23f73be922315f17261ccfbbe1a`, the shared
+`IDM_FILE_NEWWINDOW` / `IDM_FILE_NEWWINDOW2` / `IDM_FILE_RESTART` branch and
+`GetRelaunchParameters`. Native packaged tests observe both independent
+processes through the existing shown-application seam and read actual saved
+bytes; original observations are retained under
+`F:/wxnotepad-evidence/style-workflows-implementation-2026-11-23/266/`.
+
+One explicit dialect difference is retained by the approved behavior: the pinned
+original serializes the Shell Script family name for an explicit C Shell parent,
+and its child reports Shell Script. wxnotepad's existing Restart relaunch path
+transfers the effective C Shell dialect; Open in New Window reuses that behavior.
+The packaged current-file tests require C Shell in the child. This is not claimed
+as exact original parity for that dialect.
