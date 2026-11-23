@@ -28,9 +28,12 @@ gates: a newline inside an existing `define` body indents, while the captured
 incomplete `define` at EOF does not gain an invented closing directive.
 
 Makefile retains independent 4/4 literal-tab settings; INI and Diff inherit
-global tabs by default. Changing schemes does not rewrite existing whitespace.
-Original file-variable settings and explicit document overrides retain their
-precedence. No `GNUmakefile` alias is added. Case-insensitive `Makefile*` and
+global tabs by default. INI/Makefile retain original file-variable precedence.
+On Diff load, the original clears detected and file-variable widths/spaces,
+while retaining the independent Tab Indents variable. Explicit document
+overrides and manual scheme changes preserve their existing precedence and
+whitespace bytes. Mixed-EOL patch warnings default to No, preserving the input
+when that button is accepted. No `GNUmakefile` alias is added. Case-insensitive `Makefile*` and
 `Kbuild*` matches follow associated extensions. CMake's two `.txt` exceptions
 retain priority; MySQL `my*.ini`/`my*.cnf` retain their original generic-config
 sniffing behavior instead of becoming INI.
@@ -53,6 +56,14 @@ every Undo/Redo step. Regenerate with:
 ```text
 python -X utf8 tests/reference_capture/capture_build_patch_schemes.py --exe <owned-original.exe> --output <new-evidence-directory>
 ```
+
+`capture_build_patch_policies.py` independently records Diff's tab policy and
+native mixed-EOL default buttons, with INI/Makefile controls. The native fixture
+checks the resulting widths, spaces, Tab Indents, default button, saved bytes
+and history. INI's content guess has eighteen independently captured startup
+outcomes covering associations, dotfiles, competing content and the original
+prefix limit. Default/Dark theme commands also verify original token colors
+and grouped styles for every new scheme without editing the document.
 
 `syntax_build_patch` replays these records through the native application and
 checks exact saved bytes, original detection precedence, fonts/highlighting,
