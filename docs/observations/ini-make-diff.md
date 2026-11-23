@@ -34,6 +34,10 @@ precedence. No `GNUmakefile` alias is added. Case-insensitive `Makefile*` and
 `Kbuild*` matches follow associated extensions. CMake's two `.txt` exceptions
 retain priority; MySQL `my*.ini`/`my*.cnf` retain their original generic-config
 sniffing behavior instead of becoming INI.
+For unassociated filenames, the original bounded content guess can select INI
+from a section at column zero. Its original C++/sharp-comment/JSON/YAML priority
+checks and dotfile distinction are retained. This adds only the original INI
+outcome to the shared fallback; existing explicit file associations still win.
 
 The approved native evidence seams are real editor/application commands,
 independently read document/settings bytes and history, and shown independent

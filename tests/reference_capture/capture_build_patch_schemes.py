@@ -45,6 +45,7 @@ fixtures = [
 states = []
 operations = []
 completions = []
+detections = []
 
 
 def history(app, available, command):
@@ -149,10 +150,33 @@ try:
                 completions.append(row)
         finally:
             app.close()
+    section = '[section]\nkey=value\n'
+    for filename, text in [
+        ('guess.unknown', section), ('guess', section), ('.private-settings', section),
+        ('guess.txt', section), ('guess.cfg', section), ('my.cnf', section), ('guess.toml', section),
+        ('guess-hash.unknown', section + '# comment\n'),
+        ('guess-cpp.unknown', section + '// comment\n'),
+        ('.guess-cpp', section + '#define VALUE 1\n'),
+        ('guess-json.unknown', '[section]\n{ "value": 1 }\n'),
+        ('guess-json-values.unknown', section + '{ "value": 1 }\n'),
+        ('guess-yaml.unknown', section + '---\n'), ('guess-indent.unknown', ' ' + section),
+        ('guess-prefix.unknown', 'x' * 4000 + '\n' + section),
+        ('guess-leading.unknown', '\n' + section),
+        ('guess-xml.unknown', '<?xml version="1.0"?>\n' + section),
+        ('guess-shebang.unknown', '#!/not-known\n' + section),
+    ]:
+        path = portable / filename
+        raw = text.encode('utf-8')
+        path.write_bytes(raw)
+        app = host.Original(path, exe, desktop, name)
+        try:
+            detections.append(dict(name=filename, text=raw.hex(), lexer=app.send(4002)))
+        finally:
+            app.close()
 finally:
     user.CloseDesktop(desktop)
 for filename, data in [('original.json', states), ('original-operations.json', operations),
-                       ('original-completions.json', completions)]:
+                       ('original-completions.json', completions), ('original-detections.json', detections)]:
     (root / filename).write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8', newline='\n')
 lines = ['# Independent pinned Notepad4 89b8b36; capture_build_patch_schemes.py on an owned desktop.']
 for row in states:
@@ -171,9 +195,13 @@ for filename, data, fields in [
         values = [(' '.join(row[field]) if field == 'items' else str(row[field])) for field in fields]
         lines.append('\t'.join(values))
     (root / filename).write_text('\n'.join(lines) + '\n', encoding='utf-8', newline='\n')
+lines = ['# Independent original INI content-detection outcomes; capture_build_patch_schemes.py.']
+for row in detections:
+    lines.append('\t'.join([row['name'], row['text'], str(row['lexer'])]))
+(root / 'build_patch_detection_reference.tsv').write_text('\n'.join(lines) + '\n', encoding='utf-8', newline='\n')
 (root / 'provenance.json').write_text(json.dumps(dict(
     revision='89b8b36e0ee2c23f73be922315f17261ccfbbe1a',
     executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
     capture_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()), indent=2) + '\n', encoding='utf-8')
 print('PASS: captured', len(states) * 4, 'original style/fold states,', len(operations), 'editing operations and',
-      len(completions), 'completion cases')
+      len(completions), 'completion cases and', len(detections), 'INI detection cases')

@@ -1023,6 +1023,69 @@ FilenameMatch OriginalFilenameMatch(const wxString& path) {
     return Unknown;
 }
 
+bool OriginalCppPreprocessor(std::string_view text) {
+    if (text.empty() || text.front() < 'a' || text.front() > 'z') return false;
+    const auto length = text.find_first_not_of("abcdefghijklmnopqrstuvwxyz_");
+    if (length < text.size()) {
+        const auto next = text[length];
+        if ((next >= 'A' && next <= 'Z') || (next >= '0' && next <= '9')) return false;
+    }
+    std::string keyword = " ";
+    keyword.append(text.substr(0, length));
+    keyword += ' ';
+    constexpr size_t CppPreprocessorKeywordGroup = 2;
+    return std::string_view(cppKeywords[CppPreprocessorKeywordGroup]).find(keyword) != std::string_view::npos;
+}
+
+// The INI outcome of pinned Styles.cpp::Style_AutoDetect. Preserve its column-0
+// brackets and C++/sharp-comment/JSON/YAML priorities without adding guesses for
+// those other schemes to the existing detector.
+bool SniffIniContent(std::string_view text, bool dotFile) {
+    text = text.substr(0, SyntaxDetectionLimits::DocTypeBytes);
+    const bool shebang = text.starts_with("#!");
+    bool maybeIni = false;
+    bool maybeJson = false;
+    bool notJson = false;
+    const auto character = [text](size_t position) { return position < text.size() ? text[position] : '\0'; };
+    size_t position = 0;
+    while (position < text.size()) {
+        if (text[position] == '[') {
+            maybeIni = true;
+        } else if (text.substr(position).starts_with("---") && Space(character(position + 3))) {
+            position += 3;
+            while (character(position) == ' ' || character(position) == '\t')
+                ++position;
+            const auto next = character(position);
+            if (Space(next) || next == '#' || next == '%') return false;
+        } else {
+            while (character(position) == ' ' || character(position) == '\t')
+                ++position;
+            const auto next = character(position);
+            if (next == '#') {
+                if (!(position == 0 && shebang)) {
+                    ++position;
+                    while (character(position) == ' ' || character(position) == '\t')
+                        ++position;
+                    if (!(shebang || dotFile) || !OriginalCppPreprocessor(text.substr(position))) return false;
+                }
+            } else if (next == '/') {
+                if (character(position + 1) == '/' || character(position + 1) == '*') return false;
+            } else if (next == '{' || next == '}' || next == '[') {
+                maybeJson = true;
+            } else if (next == '"') {
+                maybeJson |= maybeIni;
+            } else {
+                notJson |= next != '\0';
+            }
+        }
+        position = text.find_first_of("\r\n", position);
+        if (position == std::string_view::npos) break;
+        while (character(position) == '\r' || character(position) == '\n')
+            ++position;
+    }
+    return maybeIni && !(maybeJson && !notJson);
+}
+
 bool MarkupNameStart(unsigned char ch) {
     return ch >= 128 || ch == '!' || ch == '?' || ch == '/' || ch == ':' || ch == '_' || ch == '-' || ch == '.' ||
            (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
@@ -1261,6 +1324,8 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
         return DetectedSyntax{*markup, dialect};
     }
     if (interpreter) return DetectedSyntax{*interpreter};
+    if (match == FilenameMatch::Unknown && SniffIniContent(prefix, wxFileName(path).GetFullName().StartsWith(".")))
+        return DetectedSyntax{Ini};
     return match == FilenameMatch::Config ? std::optional{DetectedSyntax{PlainText}} : std::nullopt;
 }
 
