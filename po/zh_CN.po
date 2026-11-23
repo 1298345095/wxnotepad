@@ -3602,3 +3602,15 @@ msgstr "m4"
 
 #~ msgid "← &Remove"
 #~ msgstr "← 移除(&R)"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
+msgstr "批处理文件"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
+msgstr "PowerShell 脚本"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr "AutoHotkey 脚本"
