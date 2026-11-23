@@ -175,8 +175,8 @@ void CheckMenu(EditorFrame* frame) {
            "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
-    Order(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Open Document With...",
-                            "Run Command...", "Action on Selection", "Base64"});
+    Order(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Open in New Window", "Execute Document",
+                            "Open Document With...", "Run Command...", "Action on Selection", "Base64"});
     Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
     auto* schemes = bar->GetMenu(4);
     Order(schemes, {"Syntax Scheme...",

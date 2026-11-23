@@ -41,6 +41,16 @@ bool EditorFrame::NewWindow() {
     return LaunchWindow(false);
 }
 
+bool EditorFrame::OpenInNewWindow() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before running tools?")))
+        return false;
+    if (LaunchWindow(true)) return true;
+    wxMessageBox(_("Could not open the document in a new window."), _("Open in New Window failed"), wxOK | wxICON_ERROR,
+                 this);
+    return false;
+}
+
 bool EditorFrame::Restart() {
     const auto& preferences = settings_ ? settings_->values : defaults_;
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before restarting?")))

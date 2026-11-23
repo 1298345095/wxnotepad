@@ -234,6 +234,10 @@ msgstr "当前工具栏按钮(&C)："
 msgid "&Decode"
 msgstr "解码(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default"
+msgstr "默认(&D)"
+
 #. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
@@ -1340,6 +1344,10 @@ msgstr "无法打开所在文件夹。"
 msgid "Could not open the destination for writing."
 msgstr "无法打开目标文件以写入。"
 
+#: src/app/new_window.cpp
+msgid "Could not open the document in a new window."
+msgstr "无法在新窗口中打开文档。"
+
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr "无法打开文件以读取。"
@@ -1472,6 +1480,10 @@ msgstr "删除行(&E)\tCtrl+Shift+D"
 #: src/syntax/syntax_catalog.cpp
 msgid "DTD"
 msgstr "DTD"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Dar&k"
+msgstr "深色(&K)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Decode as &Hex"
@@ -2275,6 +2287,11 @@ msgstr "以指定编码打开(&A)"
 msgid "Open &Folder"
 msgstr "打开文件夹(&F)"
 
+#. TRANSLATORS: IDM_FILE_NEWWINDOW2 opens the current disk document in another process.
+#: src/app/document_tools.cpp
+msgid "Open &in New Window\tAlt+0"
+msgstr "在新窗口中打开(&I)\tAlt+0"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
 msgstr "以 UTF-8 模式打开 7 位 ASCII 文件(&A)。"
@@ -2318,6 +2335,10 @@ msgstr "打开文档方式"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
 msgstr "打开文件"
+
+#: src/app/new_window.cpp
+msgid "Open in New Window failed"
+msgstr "在新窗口中打开失败"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Other Sett&ings"
@@ -2709,7 +2730,7 @@ msgstr "重新启动前保存对 %s 的修改？"
 #. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
 #. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
 #. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
-#: src/app/document_tools.cpp src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/new_window.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr "运行工具前保存对 %s 的更改吗？"
@@ -2984,6 +3005,10 @@ msgstr "特殊(&I)"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Square brackets []"
 msgstr "方括号 []"
+
+#: src/app/editor_frame_commands.cpp
+msgid "St&yle Theme"
+msgstr "样式主题(&Y)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Standard &Encode"
