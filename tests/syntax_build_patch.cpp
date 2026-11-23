@@ -7,6 +7,7 @@
 #include "native_paint_helpers.h"
 #include "tab_settings_helpers.h"
 #include <wx/wx.h>
+#include <wx/timer.h>
 #include <array>
 #include <cstdio>
 #include <fstream>
@@ -18,6 +19,78 @@ using Scintilla::Message;
 using TestLanguages::Choose;
 using TestLanguages::Require;
 using TestLanguages::Unhex;
+class PolicyWarning final : public wxTimer {
+public:
+    bool shown = false;
+    bool defaultNo = false;
+    std::string error;
+    void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsShown() || dialog->GetTitle() != "Inconsistent Line Endings") continue;
+            Stop();
+            shown = true;
+            if (!dialog->GetDefaultItem() || dialog->GetDefaultItem()->GetId() != (defaultNo ? wxID_CANCEL : wxID_OK))
+                error = "mixed-EOL warning must retain the independently captured original default button";
+            NativeSearch::Click(dialog, wxID_CANCEL);
+            break;
+        }
+    }
+};
+void OriginalLoadPolicies() {
+    std::ifstream input(std::filesystem::path(BUILD_PATCH_POLICIES_REFERENCE));
+    Require(input.is_open(), "independent original Diff load policy fixture opens");
+    SettingsStore settings(TestFiles::Filename(TestFiles::TemporaryDirectory("policy-settings.ini")));
+    size_t count = 0;
+    for (std::string line; std::getline(input, line);) {
+        if (line.empty() || line.front() == '#') continue;
+        std::array<std::string, 9> fields;
+        std::istringstream row(line);
+        for (auto& field : fields)
+            std::getline(row, field, '\t');
+        const bool warning = fields[0] == "warning";
+        settings.values = OriginalSettings{};
+        settings.values.globalTabs = {7, 3, true};
+        settings.values.detectIndentation = true;
+        settings.values.warnLineEndings = warning;
+        auto* frame = new EditorFrame(&settings);
+        frame->Show();
+        PolicyWarning driver;
+        constexpr unsigned OriginalNoButton = 2;
+        driver.defaultNo = std::stoul(fields[7]) == OriginalNoButton;
+        constexpr int WarningPollMilliseconds = 20;
+        driver.Start(WarningPollMilliseconds);
+        try {
+            const auto path = TestFiles::TemporaryDirectory(fields[1]);
+            TestFiles::WriteBytes(path, Unhex(fields[2]));
+            Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "policy fixture opens");
+            driver.Stop();
+            Require(driver.error.empty(), driver.error.c_str());
+            Require(driver.shown == warning, "only original mixed-EOL inputs show the native warning");
+            auto* editor = frame->Editor();
+            if (editor->Send(Message::GetTabWidth) != std::stoll(fields[3]))
+                DiagnosticPrint::Print(stderr, "policy={} expected tabs={} actual={}\n", fields[1], fields[3],
+                                       editor->Send(Message::GetTabWidth));
+            Require(editor->Send(Message::GetTabWidth) == std::stoll(fields[3]) &&
+                        editor->Send(Message::GetIndent) == std::stoll(fields[4]) &&
+                        editor->Send(Message::GetUseTabs) == std::stoll(fields[5]) &&
+                        editor->Send(Message::GetTabIndents) == std::stoll(fields[6]),
+                    "Diff load restores original scheme tabs while retaining Tab Indents; INI/Make retain variables");
+            Require(TestEditor::Text(editor) == Unhex(fields[8]) && !editor->Send(Message::CanUndo) &&
+                        frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == Unhex(fields[8]),
+                    "Diff tab/warning policies preserve exact loaded/saved bytes and clean history");
+        } catch (...) {
+            driver.Stop();
+            frame->Destroy();
+            wxYield();
+            throw;
+        }
+        frame->Destroy();
+        wxYield();
+        ++count;
+    }
+    Require(count == 6, "all independent original load/tab/warning policy observations execute");
+}
 auto Schemes() {
     // The public path detector supplies identities so this test also builds
     // against the pre-registration application for its native RED run.
@@ -271,6 +344,9 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "native compositor presents INI/Make/Diff test editor");
+                OriginalLoadPolicies();
+                frame->Raise();
+                frame->Editor()->SetFocus();
 #ifdef __WXMSW__
                 const bool gdi = wxGetEnv("WXNOTEPAD_BUILD_PATCH_GDI", nullptr);
                 TestSyntax::Command(frame,

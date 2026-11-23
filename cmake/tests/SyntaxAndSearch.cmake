@@ -3,6 +3,7 @@ add_editor_test(syntax_build_patch original_ini_make_diff_schemes 90)
 target_compile_definitions(syntax_build_patch PRIVATE
     "BUILD_PATCH_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_reference.tsv\""
     "BUILD_PATCH_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_operations_reference.tsv\""
+    "BUILD_PATCH_POLICIES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_policies_reference.tsv\""
     "BUILD_PATCH_COMPLETIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_completions_reference.tsv\"")
 if(WIN32)
     add_test(NAME original_ini_make_diff_schemes_gdi COMMAND syntax_build_patch)
