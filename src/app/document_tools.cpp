@@ -230,6 +230,10 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
     const int restart = wxWindow::NewControlId();
     tools->Append(restart, _("&Restart"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Restart(); }, restart);
+    const int openInNewWindow = wxWindow::NewControlId();
+    // TRANSLATORS: IDM_FILE_NEWWINDOW2 opens the current disk document in another process.
+    tools->Append(openInNewWindow, _("Open &in New Window\tAlt+0"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenInNewWindow(); }, openInNewWindow);
     tools->AppendSeparator();
     const int execute = wxWindow::NewControlId();
     // TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
