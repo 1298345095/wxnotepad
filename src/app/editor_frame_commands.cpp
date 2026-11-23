@@ -2380,7 +2380,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
                 document_.ConfigureAutoSave(preferences.autoSave);
         },
         autoSave);
-    auto* escape = new wxMenu;
+    auto escape = std::make_unique<wxMenu>();
     // Notepad4 89b8b36 IDM_VIEW_NOESCFUNC..IDM_VIEW_ESCEXIT, after AutoSave.
     for (const auto& [label, action] : {std::pair{wxTRANSLATE("&None"), EscapeFunction::None},
                                         std::pair{wxTRANSLATE("&Minimize wxnotepad"), EscapeFunction::Minimize},
@@ -2401,7 +2401,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             },
             id);
     }
-    view->AppendSubMenu(escape, _("Extra Esc &Key Function"));
+    const wxString escapeLabel = _("Extra Esc &Key Function");
+    // Hand submenu ownership to wx only after all caller-side setup is complete.
+    view->AppendSubMenu(escape.release(), escapeLabel);
     if (settings_) {
         auto* other = new wxMenu;
         const int saveRecent = wxWindow::NewControlId();
