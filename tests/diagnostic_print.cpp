@@ -24,8 +24,13 @@ template <> struct std::formatter<AllocatingText> : std::formatter<std::string_v
 };
 
 namespace {
+class DiagnosticFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
 void Require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition) throw DiagnosticFailure(message);
 }
 
 struct CloseFile {
@@ -84,7 +89,7 @@ int main(int argc, char** argv) try {
     else if (scenario == "allocation-failure")
         AllocationFailure(output.get());
     else
-        throw std::runtime_error("unknown diagnostic-print scenario");
+        throw DiagnosticFailure("unknown diagnostic-print scenario");
     return 0;
 } catch (const std::exception& error) {
     DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());

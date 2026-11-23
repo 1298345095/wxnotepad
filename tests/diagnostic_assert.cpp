@@ -11,8 +11,7 @@ int main() noexcept {
     // This owned abort fixture must not display CRT or crash-reporting dialogs.
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #else
-    const rlimit limit{0, 0};
-    if (setrlimit(RLIMIT_CORE, &limit) != 0) return 84;
+    if (const rlimit limit{0, 0}; setrlimit(RLIMIT_CORE, &limit) != 0) return 84;
 #endif
     // A diagnostic exception escaping Assert's noexcept boundary is distinct
     // from its required abort, on both MSVC and POSIX.

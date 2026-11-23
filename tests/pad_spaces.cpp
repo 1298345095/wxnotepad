@@ -273,6 +273,7 @@ void Shortcuts(EditorFrame* frame) {
     std::puts("PASS: actual native Alt+P, extra Ctrl/Shift exclusions and read-only routing");
 }
 void SavedBytes(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-pad-spaces");
     std::filesystem::create_directory(directory);
@@ -287,10 +288,10 @@ void SavedBytes(EditorFrame* frame) {
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "saved-byte fixture opens through application");
-        editor->Send(Message::SetSel, 0, 0);
+        editor->Send(SetSel, 0, 0);
         Menu(frame);
         Require(frame->DocumentEncoding() == fixture.encoding && frame->Save().status == SaveStatus::Saved &&
                     TestFiles::Bytes(path) == fixture.after,
@@ -300,10 +301,10 @@ void SavedBytes(EditorFrame* frame) {
             std::filesystem::copy_file(
                 path, std::filesystem::path(evidence.ToStdString()) / (std::string(fixture.name) + ".saved"),
                 std::filesystem::copy_options::overwrite_existing);
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "single Undo and Save restore independently read original bytes");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "single Redo and Save restore independently read padded bytes");
         std::println("PASS: {} independent saved bytes, encoding/BOM/EOL preservation and one Undo/Redo", fixture.name);

@@ -10,6 +10,7 @@
 #include <wx/toolbar.h>
 #include <wx/statusbr.h>
 #include <memory>
+#include <utility>
 #include <wx/log.h>
 #include <wx/dialog.h>
 #include <wx/clipbrd.h>
@@ -78,7 +79,7 @@ void NativeSelectionColours(EditorControl* editor) {
         const auto colour =
             static_cast<uint32_t>(editor->Send(Scintilla::Message::GetElementColour, static_cast<uintptr_t>(element)));
         const uint32_t native = 0xFF000000U | expected.Red() | (expected.Green() << 8U) | (expected.Blue() << 16U);
-        std::println("Selection element {:d}: expected={:08x} actual={:08x}", static_cast<int>(element), native,
+        std::println("Selection element {:d}: expected={:08x} actual={:08x}", std::to_underlying(element), native,
                      colour);
         Require(colour == native, "default selected text uses the native highlight foreground/background pair");
     }

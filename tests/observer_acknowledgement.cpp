@@ -22,8 +22,13 @@
 #endif
 
 namespace {
+class ObservationFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
 void Require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition) throw ObservationFailure(message);
 }
 template <typename Predicate> void Await(Predicate ready, const char* message) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
@@ -46,7 +51,7 @@ public:
         if (!Redirect(Descriptor(output_.fp()), descriptor_)) {
             Close(saved_);
             saved_ = -1;
-            throw std::runtime_error("redirect stderr to the observer's private diagnostic capture");
+            throw ObservationFailure("redirect stderr to the observer's private diagnostic capture");
         }
     }
     ~CapturedStderr() {
@@ -235,7 +240,7 @@ private:
         Require(std::filesystem::remove(blockedPublication), "remove the owned publication obstruction");
         Await([this] { return Sequence("sequence\t3\n"); },
               "observer automatically retries the same acknowledgement after publication becomes writable");
-        Require(TestFiles::Bytes(root / "state").find("result\tok\n") != std::string::npos,
+        Require(TestFiles::Bytes(root / "state").contains("result\tok\n"),
                 "publication recovery retains the successful native command result");
 
         const auto diagnostic = root / "command-failure.log";
@@ -245,7 +250,7 @@ private:
         Await(
             [&diagnostic] {
                 return TestFiles::Bytes(diagnostic)
-                           .find("Observation command failed: stage=packet error=0 last_ack=3 ") != std::string::npos;
+                    .contains("Observation command failed: stage=packet error=0 last_ack=3 ");
             },
             "observer diagnoses the actual malformed command packet");
         Require(TestFiles::Bytes(malformedCommand) == "4\n" && Sequence("sequence\t3\n"),
@@ -254,7 +259,7 @@ private:
         Command(4);
         Await([this] { return Sequence("sequence\t4\n"); },
               "observer accepts a valid native command after the malformed packet is removed");
-        Require(TestFiles::Bytes(root / "state").find("result\tok\n") != std::string::npos,
+        Require(TestFiles::Bytes(root / "state").contains("result\tok\n"),
                 "command recovery publishes the successful native command result");
         Require(capture.Restore(), "restore stderr after observing command failure and recovery");
         CheckEditorState();

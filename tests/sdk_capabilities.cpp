@@ -60,7 +60,7 @@ void CheckCapabilities() {
     wxFFile output;
     const auto printPath = wxFileName::CreateTempFileName("wxnotepad-standard-print-", &output);
     Require(output.IsOpened(), "standard print probe must create its output in the user temporary directory");
-    wxScopeGuard removePrintFile = wxMakeGuard([&] {
+    [[maybe_unused]] wxScopeGuard removePrintFile = wxMakeGuard([&output, &printPath] {
         output.Close();
         wxRemoveFile(printPath);
     });
