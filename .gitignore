@@ -30,6 +30,7 @@ CMakeUserPresets.json
 *.user
 
 # Python experiment launcher cache
+/.venv/
 __pycache__/
 *.pyc
 

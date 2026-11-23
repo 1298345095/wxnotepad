@@ -321,9 +321,11 @@ For opt-in native input, clipboard and shutdown tracing, see
 [native diagnostics](docs/diagnostics.md). Ordinary builds exclude tracing.
 
 Prerequisites: Git, Python 3.12+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
-**3.3.3#1** from vcpkg. Tested compilers are MSVC 14.51 and GCC 13.3. On Linux use
+**3.3.3#6** from vcpkg. CI uses MSVC and GCC 15. On Linux use Ubuntu 26.04+ and
 GTK3 with `gtk+-3.0`, `wayland-egl` and `wayland-cursor` development packages,
 Ninja, and a working desktop. Keep WSL sources and builds on its Linux filesystem.
+The SDK capability test compiles and runs C++23 `std::print` and `std::println`,
+including exact formatted UTF-8 output. GCC coverage uses the matching `gcov-15`.
 
 `vcpkg.json` fixes the registry baseline and wxWidgets port revision. To provision
 dependencies on another machine, use the manifest with the corresponding triplet:

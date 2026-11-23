@@ -8,8 +8,8 @@ and retain shareable results; they do not replace local verification.
 
 | Workflow | Trigger | Work |
 | --- | --- | --- |
-| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output, parallel Linux coverage backends and one merged SonarCloud analysis |
-| Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
+| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 26.04/GCC 15 builds, all registered CTest tests, development build output, parallel Linux coverage backends and one merged SonarCloud analysis |
+| Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 21 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
 Builds and native clang-tidy use the runner's available CPU count instead of a
@@ -100,6 +100,16 @@ the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.
 
 ## Dependencies and reproducibility
+
+Linux CI and packaged binaries target Ubuntu 26.04+ with GCC 15 and its matching
+`gcov-15`. The retained SDK capability test also compiles, links and executes
+C++23 `std::print`/`std::println`, checking exact formatted UTF-8 bytes.
+Native analysis and fuzzing use Clang 21 against the same Linux environment.
+The runtime baseline increase from Ubuntu 24.04 was explicitly approved; existing
+test registration order, assertions, timeouts, parallelism and quality gates stay
+in force. CI keeps its pinned Python 3.12 interpreter, while development supports
+Python 3.12+; after a system Python upgrade, use a fresh CMake build and recreate
+any virtual environment rather than reusing cached interpreter paths.
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
 - Linux provisioning has three profiles: `build` for CodeQL, `tidy` for native
@@ -279,7 +289,7 @@ and 60 seconds in ordinary builds. The instrumented scenario completed all check
 in 88.50 seconds under controlled CPU contention. Supported Linux CMake versions
 use SIGQUIT on timeout so the existing crash collector can preserve a core/stack.
 
-`collect_coverage.py` runs GCC 13's `gcov` separately for every notes file, including
+`collect_coverage.py` runs GCC 15's `gcov` separately for every notes file, including
 translation units without counters. It preserves unmodified maintained `src/`
 reports, zero-hit records and per-translation-unit header branches. GCC's filename
 option avoids filesystem name-length limits; source identity comes from each
@@ -361,7 +371,7 @@ Release and MinSizeRel enable `WXNOTEPAD_ENABLE_SIZE_OPTIMIZATIONS` by default.
 MSVC packages global data with `/Gw` and uses `/OPT:REF,ICF /INCREMENTAL:NO`.
 Linux GCC/Clang compile project libraries into function/data sections, then use
 `--gc-sections` and `-z pack-relative-relocs` when the actual linker supports
-them. The Linux runtime baseline is Ubuntu 24.04+, with DT_RELR-capable glibc.
+them. The Linux runtime baseline is Ubuntu 26.04+, with DT_RELR-capable glibc.
 Application and native-regression links use the same settings. Debug, coverage
 and fuzz-only builds retain their existing options; the compiler's speed
 optimization level and exception/unwind support remain in place.
@@ -446,7 +456,7 @@ a failed job retains earlier evidence rather than overwriting it.
 The artifacts are development builds rather than the planned Windows ZIP release
 or Ubuntu installer. Windows DLLs are included beside the executable. Linux
 output includes non-system vcpkg shared libraries and a README describing its
-Ubuntu 24.04 desktop/runtime requirement. Distribution packaging remains a
+Ubuntu 26.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
 
 Linux packaging also copies the selected SDK's `libexec/gio-launch-desktop`,
@@ -505,7 +515,7 @@ python3 .github/scripts/checks.py tidy --build-dir /path/to/native/cmake-build
 ```
 
 The formatter command requires clang-format 23.1.2 on PATH. The analyzer defaults
-to clang-tidy-18; use `--executable` for another installed native analyzer. Keep
+to clang-tidy-21; use `--executable` for another installed native analyzer. Keep
 source and compilation-database paths consistent. A local MSVC analysis needs its
 normal Visual Studio developer environment.
 

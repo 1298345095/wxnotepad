@@ -21,8 +21,8 @@ concurrency:
 
 jobs:
   fuzz:
-    name: Linux Clang 18 / libFuzzer + ASan + UBSan
-    runs-on: ubuntu-24.04
+    name: Linux Clang 21 / libFuzzer + ASan + UBSan
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     env:
       PYTHONUTF8: '1'
@@ -45,7 +45,7 @@ jobs:
       - name: Configure instrumented headless targets
         run: >-
           cmake -S . -B .ci/build/fuzz -G Ninja
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-18
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-21
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DWXNOTEPAD_FUZZ_ONLY=ON
           -DNOTEPAD4_SOURCE="${{ github.workspace }}/.ci/build/original-core"
           -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/.ci/vcpkg/scripts/buildsystems/vcpkg.cmake"

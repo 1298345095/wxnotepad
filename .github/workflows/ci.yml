@@ -25,8 +25,8 @@ jobs:
           - os: windows-2025
             name: Windows MSVC
             artifact: windows-x64
-          - os: ubuntu-24.04
-            name: Linux GCC 13 / X11 + Wayland
+          - os: ubuntu-26.04
+            name: Linux GCC 15 / X11 + Wayland
             artifact: linux-x64
     env:
       PYTHONUTF8: '1'
@@ -307,7 +307,7 @@ jobs:
 
   coverage-tests:
     name: Linux coverage / ${{ matrix.backend }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -422,7 +422,7 @@ jobs:
     name: Linux coverage / SonarCloud
     needs: coverage-tests
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     env:
       PYTHONUTF8: '1'

@@ -66,7 +66,7 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('format').add_argument('--executable', default='clang-format')
     tidy = commands.add_parser('tidy')
-    tidy.add_argument('--executable', default='clang-tidy-18')
+    tidy.add_argument('--executable', default='clang-tidy-21')
     tidy.add_argument('--build-dir', type=Path, default=ROOT / '.ci/build/cmake')
     tidy.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     arguments = parser.parse_args()

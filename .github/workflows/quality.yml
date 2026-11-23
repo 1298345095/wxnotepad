@@ -16,7 +16,7 @@ concurrency:
 jobs:
   format-workflows:
     name: Format and workflow syntax
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     env:
       ACTIONLINT_VERSION: '1.7.12'
@@ -71,7 +71,7 @@ jobs:
   clang-tidy:
     name: Native clang-tidy
     needs: format-workflows
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     steps:
       - name: Checkout
@@ -89,7 +89,7 @@ jobs:
       - name: Configure compilation database
         run: python -X utf8 .github/scripts/ci.py configure
       - name: Analyze maintained C++ translation units
-        run: python -X utf8 .github/scripts/checks.py tidy --executable clang-tidy-18
+        run: python -X utf8 .github/scripts/checks.py tidy --executable clang-tidy-21
       - name: Preserve analyzer and provisioning evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

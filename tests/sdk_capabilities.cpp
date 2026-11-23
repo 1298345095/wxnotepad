@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <iostream>
 #include <memory>
+#include <print>
 #include <stdexcept>
 #include <string_view>
 
@@ -53,6 +54,20 @@ public:
     bool OnPrintPage(int) override { return true; }
 };
 void CheckCapabilities() {
+    const std::unique_ptr<FILE, decltype(&std::fclose)> output(std::tmpfile(), &std::fclose);
+    Require(output != nullptr, "standard print probe must create its output file");
+    std::print(output.get(), "{} {}", "print", 42);
+    std::println(output.get(), " {}", "ok");
+    std::println(output.get(), "{:04x}", 42);
+    std::println(output.get(), "{}", "中文");
+    Require(std::fflush(output.get()) == 0 && std::fseek(output.get(), 0, SEEK_SET) == 0,
+            "standard print output must be readable");
+    constexpr std::string_view expectedPrint = "print 42 ok\n002a\n中文\n";
+    std::array<char, expectedPrint.size() + 1> printed{};
+    const auto printedSize = std::fread(printed.data(), 1, printed.size(), output.get());
+    Require(std::string_view(printed.data(), printedSize) == expectedPrint,
+            "std::print and std::println must retain formatted UTF-8 output bytes");
+
     wxFrame frame(nullptr, wxID_ANY, "Hidden SDK capability probe");
     auto grid = std::make_unique<wxGridSizer>(2);
     wxListCtrl list(&frame);
