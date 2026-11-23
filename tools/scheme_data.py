@@ -67,6 +67,11 @@ def original_lexer(data, symbol):
     for block in re.findall(r'EDITLEXER\s+\w+\s*=\s*\{(.*?)\n\};', text, re.S):
         if re.search(r'\bStyles_' + re.escape(symbol) + r'\b', block):
             return block
+    # The shared helper also accepts a single declaration fragment (the original
+    # importer test seam); there is no other EDITLEXER to scope in that input.
+    if not re.search(r'EDITLEXER\s+\w+', text) and re.search(
+            r'EDITLEXER_HOLE\([^\n]*\bStyles_' + re.escape(symbol) + r'\b', text):
+        return text
     raise ValueError(f'{symbol}: original EDITLEXER not found')
 
 
