@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('executable', type=Path)
     parser.add_argument('--language', choices=LANGUAGES, default='en')
+    parser.add_argument('--gdi', action='store_true')
     args = parser.parse_args()
     source = args.executable.resolve()
     language, automatic, titles = LANGUAGES[args.language]
@@ -35,6 +36,7 @@ def main():
                  '--- a/界\r\n+++ b/界\n@@ -1 +1 @@\n-old\n+new\n']):
             config.write_text('[Settings]\nSaveSettings=0\nWordWrap=0\nDetectIndentation=0\nWarnLineEndings=0\n'
                               'TabWidth=7\nIndentWidth=3\nTabsAsSpaces=1\n'
+                              f'RenderingTechnology={0 if args.gdi else 1}\n'
                               f'[Settings2]\nUILanguage={language}\n[Styles]\nDefaultScheme={identity}\n'
                               'FavoriteSchemes=50 48 45\nAutoSelect=1\n[Unrelated]\nRetained=保留\n', encoding='utf-16')
             path = folder / ('case.' + extension)
@@ -44,6 +46,8 @@ def main():
                 app = Process(executable, folder / f'{extension}-{restart}', environment, path)
                 try:
                     assert int(app.state['length']) == len(original) + restart, app.state
+                    if os.name == 'nt':
+                        assert menus(app.state)[menu_id(app.state, 'Direct2D')]['checked'] == str(int(not args.gdi))
                     assert (app.state['tab_width'], app.state['use_tabs']) == (
                         ('4', '1') if extension == 'mak' else ('7', '0')), app.state
                     identity_menu = menu_id(app.state, title)

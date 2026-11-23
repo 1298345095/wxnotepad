@@ -336,6 +336,12 @@ foreach(language IN ITEMS en zh_CN zh_TW)
     add_test(NAME original_build_patch_process_${language} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
     set_tests_properties(original_build_patch_process_${language} PROPERTIES TIMEOUT 120)
+    if(WIN32)
+        add_test(NAME original_build_patch_process_gdi_${language} COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>"
+            --language "${language}" --gdi)
+        set_tests_properties(original_build_patch_process_gdi_${language} PROPERTIES TIMEOUT 120)
+    endif()
     add_test(NAME original_css_sql_process_${language} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
     set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)

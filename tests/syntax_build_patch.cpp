@@ -253,6 +253,15 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "native compositor presents INI/Make/Diff test editor");
+#ifdef __WXMSW__
+                const bool gdi = wxGetEnv("WXNOTEPAD_BUILD_PATCH_GDI", nullptr);
+                TestSyntax::Command(frame,
+                                    frame->GetMenuBar()->FindMenuItem("Settings", gdi ? "Legacy GDI" : "Direct2D"));
+                Require(
+                    frame->Editor()->Send(Message::GetTechnology) ==
+                        std::to_underlying(gdi ? Scintilla::Technology::Default : Scintilla::Technology::DirectWrite),
+                    "native Settings selects the requested GDI/Direct2D renderer");
+#endif
                 Recognition(frame);
                 OriginalOracle(frame);
                 OriginalOperations(frame);
