@@ -138,7 +138,11 @@ void Operations(EditorFrame* frame) {
         constexpr size_t SelectionModeColumn = 16;
         constexpr size_t NoticeColumn = 17;
         constexpr size_t EnabledColumn = 18;
-        std::array<std::string, EnabledColumn + 1> fields;
+        constexpr size_t UndoAnchorColumn = 19;
+        constexpr size_t UndoCaretColumn = 20;
+        constexpr size_t RedoAnchorColumn = 21;
+        constexpr size_t RedoCaretColumn = 22;
+        std::array<std::string, RedoCaretColumn + 1> fields;
         for (auto& field : fields)
             std::getline(row, field, '\t');
         std::println(stderr, "script operation {} {} {}", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
@@ -202,8 +206,12 @@ void Operations(EditorFrame* frame) {
         editor->Send(AutoCCancel);
         TestSyntax::Command(frame, wxID_UNDO);
         Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[11]), "original single-step Undo bytes");
+        TestEditor::RequireSelection(editor, std::stol(fields[UndoAnchorColumn]), std::stol(fields[UndoCaretColumn]),
+                                     "original Undo caret/anchor");
         TestSyntax::Command(frame, wxID_REDO);
         Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[12]), "original Redo bytes");
+        TestEditor::RequireSelection(editor, std::stol(fields[RedoAnchorColumn]), std::stol(fields[RedoCaretColumn]),
+                                     "original Redo caret/anchor");
         editor->Send(SetReadOnly, 0);
         editor->Send(SetSelectionMode, 0);
         editor->Send(SetSavePoint);

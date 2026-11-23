@@ -201,7 +201,8 @@ try:
                                str(changed['anchor']), str(changed['caret']), ','.join(item.hex() for item in items),
                                confirmed['hex'], str(confirmed['anchor']), str(confirmed['caret']),
                                undo['hex'], redo['hex'], str(caret), str(anchor), str(int(readonly)), str(mode),
-                               str(notices), str(int(enabled))])
+                               str(notices), str(int(enabled)), str(undo['anchor']), str(undo['caret']),
+                               str(redo['anchor']), str(redo['caret'])])
             print(scheme, kind, repr(before), character, [item.decode() for item in items], flush=True)
         finally:
             app.close()
