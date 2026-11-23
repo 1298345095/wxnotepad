@@ -112,6 +112,9 @@ Python 3.12+; after a system Python upgrade, use a fresh CMake build and recreat
 any virtual environment rather than reusing cached interpreter paths.
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
+- actionlint 1.7.12 predates the official `ubuntu-26.04` runner label. Its
+  configuration lists that exact additional label; runner-label checking remains
+  enabled for all workflows and all other labels.
 - Linux provisioning has three profiles: `build` for CodeQL, `tidy` for native
   clang-tidy, and `gui` for the build/test matrix. GUI display tools and fonts
   are installed by the `gui` profile, also used by coverage; the analyzer is installed by `tidy`.

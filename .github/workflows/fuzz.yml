@@ -47,6 +47,7 @@ jobs:
           cmake -S . -B .ci/build/fuzz -G Ninja
           -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-21
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DWXNOTEPAD_FUZZ_ONLY=ON
+          -DPython3_EXECUTABLE="$(command -v python)"
           -DNOTEPAD4_SOURCE="${{ github.workspace }}/.ci/build/original-core"
           -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/.ci/vcpkg/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_INSTALLED_DIR="${{ github.workspace }}/.ci/vcpkg/installed"

@@ -1,5 +1,7 @@
 #include <wx/wx.h>
 #include <wx/bmpbndl.h>
+#include <wx/ffile.h>
+#include <wx/filename.h>
 #include <wx/iconbndl.h>
 #include <wx/imagpng.h>
 #include <wx/listctrl.h>
@@ -7,6 +9,7 @@
 #include <wx/notebook.h>
 #include <wx/print.h>
 #include <wx/printdlg.h>
+#include <wx/scopeguard.h>
 #include <wx/spinctrl.h>
 #include <wx/treectrl.h>
 #include <wx/zstream.h>
@@ -54,17 +57,22 @@ public:
     bool OnPrintPage(int) override { return true; }
 };
 void CheckCapabilities() {
-    const std::unique_ptr<FILE, decltype(&std::fclose)> output(std::tmpfile(), &std::fclose);
-    Require(output != nullptr, "standard print probe must create its output file");
-    std::print(output.get(), "{} {}", "print", 42);
-    std::println(output.get(), " {}", "ok");
-    std::println(output.get(), "{:04x}", 42);
-    std::println(output.get(), "{}", "中文");
-    Require(std::fflush(output.get()) == 0 && std::fseek(output.get(), 0, SEEK_SET) == 0,
+    wxFFile output;
+    const auto printPath = wxFileName::CreateTempFileName("wxnotepad-standard-print-", &output);
+    Require(output.IsOpened(), "standard print probe must create its output in the user temporary directory");
+    wxScopeGuard removePrintFile = wxMakeGuard([&] {
+        output.Close();
+        wxRemoveFile(printPath);
+    });
+    std::print(output.fp(), "{} {}", "print", 42);
+    std::println(output.fp(), " {}", "ok");
+    std::println(output.fp(), "{:04x}", 42);
+    std::println(output.fp(), "{}", "中文");
+    Require(std::fflush(output.fp()) == 0 && std::fseek(output.fp(), 0, SEEK_SET) == 0,
             "standard print output must be readable");
     constexpr std::string_view expectedPrint = "print 42 ok\n002a\n中文\n";
     std::array<char, expectedPrint.size() + 1> printed{};
-    const auto printedSize = std::fread(printed.data(), 1, printed.size(), output.get());
+    const auto printedSize = std::fread(printed.data(), 1, printed.size(), output.fp());
     Require(std::string_view(printed.data(), printedSize) == expectedPrint,
             "std::print and std::println must retain formatted UTF-8 output bytes");
 

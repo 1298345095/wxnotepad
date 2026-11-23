@@ -166,10 +166,9 @@ def configure(app_only, *, coverage=False, compiler_cache=False):
                '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
                '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
                '-DWXNOTEPAD_ENABLE_COVERAGE=' + ('ON' if coverage else 'OFF'),
+               f'-DPython3_EXECUTABLE={sys.executable}',
                '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON'),
                *compiler_launcher_arguments(compiler_cache and not coverage)])
-    if coverage:
-        command.append(f'-DPython3_EXECUTABLE={sys.executable}')
     run(command, prefix + 'configure.log')
 
 
