@@ -1,5 +1,7 @@
 """Real artifact bundling and the existing independent shown-app observer seam."""
 import configparser
+import ctypes
+from ctypes import wintypes
 import importlib.util
 import os
 from pathlib import Path
@@ -112,27 +114,49 @@ class Child:
     def __init__(self, pid):
         self.pid = pid
         self.returncode = None
+        self._handle = None
+        if sys.platform == 'win32':
+            self._kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+            self._kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            self._kernel.OpenProcess.restype = wintypes.HANDLE
+            self._kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+            self._kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+            self._kernel.WaitForSingleObject.restype = wintypes.DWORD
+            self._kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+            self._kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+            process_query_limited_information = 0x1000
+            process_synchronize = 0x100000
+            process_terminate = 0x0001
+            self._handle = self._kernel.OpenProcess(
+                process_query_limited_information | process_synchronize | process_terminate, False, pid)
+            if not self._handle:
+                raise ctypes.WinError(ctypes.get_last_error())
+
+    def _close_handle(self):
+        if self._handle:
+            self._kernel.CloseHandle(self._handle)
+            self._handle = None
+
+    def __del__(self):
+        self._close_handle()
 
     def poll(self):
         if self.returncode is not None:
             return self.returncode
         if sys.platform == 'win32':
-            import ctypes
-            from ctypes import wintypes
-            kernel = ctypes.WinDLL('kernel32', use_last_error=True)
-            kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-            kernel.OpenProcess.restype = wintypes.HANDLE
-            kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
-            kernel.CloseHandle.argtypes = [wintypes.HANDLE]
-            handle = kernel.OpenProcess(0x1000, False, self.pid)
-            if not handle:
-                self.returncode = 0
-            else:
-                code = wintypes.DWORD()
-                assert kernel.GetExitCodeProcess(handle, ctypes.byref(code))
-                kernel.CloseHandle(handle)
-                if code.value != 259:
-                    self.returncode = code.value
+            wait_object_0 = 0
+            wait_timeout = 258
+            state = self._kernel.WaitForSingleObject(self._handle, 0)
+            if state == wait_timeout:
+                return None
+            if state != wait_object_0:
+                raise ctypes.WinError(ctypes.get_last_error())
+            # Windows can publish the exit code before DLL teardown finishes.
+            # Match Popen: cache a result only after this process is signaled.
+            code = wintypes.DWORD()
+            assert self._kernel.GetExitCodeProcess(self._handle, ctypes.byref(code))
+            self.returncode = code.value
+            self._close_handle()
         else:
             try:
                 os.kill(self.pid, 0)
@@ -141,6 +165,17 @@ class Child:
         return self.returncode
 
     def terminate(self):
+        if sys.platform == 'win32':
+            if self.poll() is not None:
+                return
+            if not self._kernel.TerminateProcess(self._handle, 1):
+                error = ctypes.get_last_error()
+                # As with Popen, termination may race a child already exiting.
+                code = wintypes.DWORD()
+                still_active = 259
+                if not self._kernel.GetExitCodeProcess(self._handle, ctypes.byref(code)) or code.value == still_active:
+                    raise ctypes.WinError(error)
+            return
         os.kill(self.pid, signal.SIGTERM)
 
     def wait(self, timeout):

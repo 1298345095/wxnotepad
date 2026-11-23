@@ -14,6 +14,8 @@
 #include <string_view>
 
 namespace {
+unsigned scheduledDestructions = 0;
+unsigned completedDestructions = 0;
 void TracePrefix(const char* transition) {
     static const auto start = std::chrono::steady_clock::now();
     static unsigned sequence = 0;
@@ -33,11 +35,20 @@ void TraceFrame(const char* transition, const EditorFrame* frame) {
     std::fflush(stderr);
 }
 EditorFrame* NewFrame() {
+    // Each caller has finished its assertions and stopped its dialog driver.
+    // Process deferred destruction before the next independent scenario; the
+    // original Cancel scenario's still-live frame remains available.
+    wxYield();
+    if (completedDestructions != scheduledDestructions)
+        throw std::runtime_error("completed scenarios must destroy their deferred frames before the next one");
     auto* frame = new EditorFrame;
     frame->SetFileWatchingOptions({.mode = FileWatchingMode::None});
     TraceFrame("created", frame);
     frame->Bind(wxEVT_DESTROY, [frame](wxWindowDestroyEvent& event) {
-        if (event.GetEventObject() == frame) TraceFrame("destroy event", frame);
+        if (event.GetEventObject() == frame) {
+            ++completedDestructions;
+            TraceFrame("destroy event", frame);
+        }
         event.Skip();
     });
     return frame;
@@ -45,11 +56,13 @@ EditorFrame* NewFrame() {
 bool CloseFrame(EditorFrame* frame) {
     TraceFrame("close begin", frame);
     const bool closed = frame->Close();
+    if (closed) ++scheduledDestructions;
     TraceFrame(closed ? "close returned true" : "close returned false", frame);
     return closed;
 }
 void DestroyFrame(EditorFrame* frame) {
     TraceFrame("destroy requested", frame);
+    ++scheduledDestructions;
     frame->Destroy();
 }
 void Require(bool condition, const char* message) {
