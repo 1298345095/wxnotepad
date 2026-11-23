@@ -27,8 +27,8 @@ inline void Present(wxDialog& dialog) {
     else
         dialog.SetSize(0, 0, 1400, 900);
     bool presented = false;
-    NativeKeys::AfterPresentation(&dialog, [&](bool ready) { presented = ready; });
-    Wait([&] { return presented; }, "native tree dialog must be presented before pointer input");
+    NativeKeys::AfterPresentation(&dialog, [&presented](bool ready) { presented = ready; });
+    Wait([&presented] { return presented; }, "native tree dialog must be presented before pointer input");
 #else
     NativeFocus::Activate(static_cast<HWND>(dialog.GetHandle()), static_cast<HWND>(dialog.GetHandle()));
 #endif
@@ -58,7 +58,7 @@ inline void Request(const wxString& command) {
     }
     if (!wxRenameFile(path + ".tmp", path, true)) throw std::runtime_error("publish native tree gesture");
     Wait(
-        [&] {
+        [&path] {
             wxString pending;
             wxFFile input(path, "rb");
             return input.IsOpened() && input.ReadAll(&pending) && pending.empty();
@@ -101,7 +101,7 @@ inline void Click(wxTreeCtrl& tree, wxTreeItemId item) {
 #else
     static std::chrono::steady_clock::time_point previousClick;
     const auto singleClickInterval = std::chrono::milliseconds(GetDoubleClickTime());
-    Wait([&] { return std::chrono::steady_clock::now() - previousClick > singleClickInterval; },
+    Wait([singleClickInterval] { return std::chrono::steady_clock::now() - previousClick > singleClickInterval; },
          "separate intended native single clicks beyond the system double-click interval");
     SendGesture(tree, [point](HWND target) {
         Move(target, point);
@@ -141,7 +141,7 @@ inline void Enter(wxDialog& dialog) {
 #endif
     // MSW retains its modal-loop data until this driver callback returns.
     // EndModal's visible outcome and explicit return code prove acceptance now.
-    Wait([&] { return !dialog.IsShown() && dialog.GetReturnCode() == wxID_OK; },
+    Wait([&dialog] { return !dialog.IsShown() && dialog.GetReturnCode() == wxID_OK; },
          "native Enter accepts the owned scheme dialog");
 }
 } // namespace NativeTreeInput

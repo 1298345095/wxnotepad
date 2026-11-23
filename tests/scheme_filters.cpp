@@ -55,7 +55,9 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (auto* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            const bool visible = gtk_widget_get_visible(widget);
+            const bool fileChooser = GTK_IS_FILE_CHOOSER(widget);
+            if (!visible || !fileChooser) continue;
             const auto types = NativeDialogs::FileTypes(widget);
             if (types.empty()) continue;
             Check(types, NativeDialogs::CurrentFileType(widget));
