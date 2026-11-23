@@ -54,7 +54,7 @@ public:
 };
 void Choose(EditorFrame* frame, const wxString& label, bool cancel = false) {
     Picker picker;
-    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    picker.action = [label, cancel](wxDialog& dialog, wxTreeCtrl& tree) {
         Require(tree.GetItemText(tree.GetSelection()) == "Text File", "current base scheme initially selected");
         wxTreeItemIdValue cookie;
         auto item = tree.GetFirstChild(tree.GetRootItem(), cookie);
@@ -79,7 +79,7 @@ void DefaultScheme() {
     Require(StatusMetadata(frame).Contains("Python") && !StatusMetadata(frame).Contains("override"),
             "original DefaultScheme=32 starts a new document in Python without an explicit override");
     Picker picker;
-    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    picker.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         auto* defaultScheme = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", &dialog), wxCheckBox);
         auto* automatic = wxDynamicCast(wxWindow::FindWindowByName("AutoSelect", &dialog), wxCheckBox);
         Require(defaultScheme && automatic, "original default and automatic-selection checkboxes exist");
@@ -122,7 +122,7 @@ void DefaultScheme() {
     Require(StatusMetadata(frame).Contains("Plain Text"),
             "unavailable original Resource Script cannot alias an internal language ordinal");
     Picker fallback;
-    fallback.action = [&](wxDialog& dialog, wxTreeCtrl&) {
+    fallback.action = [](wxDialog& dialog, wxTreeCtrl&) {
         auto* control = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", &dialog), wxCheckBox);
         Require(control && control->GetValue(), "chooser displays the supported runtime fallback as default");
         NativeSearch::Click(&dialog, wxID_OK);
@@ -149,7 +149,7 @@ void Favorites() {
     frame->Show();
     Picker picker;
     picker.title = "Favorite Schemes";
-    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    picker.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         Require(NativeDialogs::SelectTreeLabel(tree, "Favorite Schemes"), "native favorites group exists");
         wxTreeItemIdValue cookie;
         auto item = tree.GetFirstChild(tree.GetSelection(), cookie);
@@ -162,7 +162,7 @@ void Favorites() {
         Require(NativeDialogs::SelectTreeLabel(tree, "Text File") &&
                     tree.GetItemState(tree.GetSelection()) == wxTREE_ITEMSTATE_NONE,
                 "fixed Text File has no favorite checkbox");
-        const auto toggle = [&](const wxString& label) {
+        const auto toggle = [&tree](const wxString& label) {
             Require(NativeDialogs::SelectTreeLabel(tree, label), "favorite checkbox target exists");
             wxTreeEvent click(wxEVT_TREE_STATE_IMAGE_CLICK, &tree, tree.GetSelection());
             Require(tree.GetEventHandler()->ProcessEvent(click), "native tree handles its state-image click");
@@ -217,25 +217,25 @@ void PointerFavorites() {
     frame->Show();
     Picker picker;
     picker.title = "Favorite Schemes";
-    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    picker.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         NativeTreeInput::Present(dialog);
         Require(NativeDialogs::SelectTreeLabel(tree, "Favorite Schemes"), "native pointer favorites group exists");
         const auto favorites = tree.GetSelection();
         wxTreeItemIdValue cookie;
         auto item = tree.GetFirstChild(favorites, cookie);
         NativeTreeInput::Click(tree, item);
-        NativeTreeInput::Wait([&] { return tree.GetChildrenCount(favorites, false) == 1; },
+        NativeTreeInput::Wait([&tree, favorites] { return tree.GetChildrenCount(favorites, false) == 1; },
                               "real mouse unchecks and removes exactly one favorite");
         Require(NativeDialogs::SelectTreeLabel(tree, "Go Source"), "native pointer can select a general scheme");
         NativeTreeInput::Click(tree, tree.GetSelection());
-        NativeTreeInput::Wait([&] { return tree.GetChildrenCount(favorites, false) == 2; },
+        NativeTreeInput::Wait([&tree, favorites] { return tree.GetChildrenCount(favorites, false) == 2; },
                               "real mouse checks and appends a favorite");
         item = tree.GetFirstChild(favorites, cookie);
         item = tree.GetNextChild(favorites, cookie);
         Require(tree.GetItemText(item) == "Go Source", "real pointer appended the requested stable scheme");
         NativeTreeInput::Drag(tree, item, favorites);
         NativeTreeInput::Wait(
-            [&] {
+            [&tree, favorites] {
                 wxTreeItemIdValue position;
                 return tree.GetItemText(tree.GetFirstChild(favorites, position)) == "Go Source";
             },
@@ -249,7 +249,7 @@ void PointerFavorites() {
             "real pointer favorite editing commits order without changing the current document scheme");
     Picker cancel;
     cancel.title = "Favorite Schemes";
-    cancel.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    cancel.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         NativeTreeInput::Present(dialog);
         Require(NativeDialogs::SelectTreeLabel(tree, "Rust Source"), "cancelled favorite edit selects Rust");
         NativeTreeInput::Click(tree, tree.GetSelection());
@@ -265,7 +265,7 @@ void PointerFavorites() {
                 settings.values.autoSelect,
             "native Cancel discards favorite edits and both temporary scheme preferences");
     Picker reopened;
-    reopened.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    reopened.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         Require(NativeDialogs::SelectTreeLabel(tree, "Favorite Schemes"), "normal chooser reopens favorites");
         wxTreeItemIdValue cookie;
         auto item = tree.GetFirstChild(tree.GetSelection(), cookie);
@@ -291,8 +291,8 @@ void FavoriteCapacity() {
     frame->Show();
     Picker picker;
     picker.title = "Favorite Schemes";
-    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
-        const auto toggle = [&](const wxString& label) {
+    picker.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
+        const auto toggle = [&tree](const wxString& label) {
             Require(NativeDialogs::SelectTreeLabel(tree, label), "favorite capacity target is delivered");
             wxTreeEvent click(wxEVT_TREE_STATE_IMAGE_CLICK, &tree, tree.GetSelection());
             Require(tree.GetEventHandler()->ProcessEvent(click), "native favorite checkbox handles capacity edit");
@@ -328,7 +328,7 @@ void FavoriteCapacity() {
     frame->Show();
     Picker characters;
     characters.title = "Favorite Schemes";
-    characters.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    characters.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         for (const auto* label : {"Go Source", "Python Script", "JSON Document"}) {
             Require(NativeDialogs::SelectTreeLabel(tree, label), "character-budget checkbox target is delivered");
             wxTreeEvent click(wxEVT_TREE_STATE_IMAGE_CLICK, &tree, tree.GetSelection());
@@ -349,8 +349,8 @@ void KeyboardChooser() {
     frame->SetTitle("wxnotepad scheme F12");
     frame->Show();
     bool presented = false;
-    NativeKeys::AfterPresentation(frame, [&](bool ready) { presented = ready; });
-    NativeTreeInput::Wait([&] { return presented; }, "F12 test frame is presented before native shortcut");
+    NativeKeys::AfterPresentation(frame, [&presented](bool ready) { presented = ready; });
+    NativeTreeInput::Wait([&presented] { return presented; }, "F12 test frame is presented before native shortcut");
     wxYield();
     frame->SetTitle("wxnotepad scheme F12");
     {
@@ -363,7 +363,7 @@ void KeyboardChooser() {
         Require(modified.shown == 0, "Ctrl+F12 does not activate the unrelated bare-F12 scheme command");
     }
     Picker picker;
-    picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    picker.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         NativeTreeInput::Present(dialog);
         Require(NativeDialogs::SelectTreeLabel(tree, "Python Script"), "keyboard chooser exposes Python base");
         tree.SetFocus();
@@ -375,7 +375,7 @@ void KeyboardChooser() {
             "native F12 and Enter select the current scheme");
     Picker management;
     management.title = "Favorite Schemes";
-    management.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
+    management.action = [](wxDialog& dialog, wxTreeCtrl& tree) {
         NativeTreeInput::Present(dialog);
         Require(NativeDialogs::SelectTreeLabel(tree, "Go Source"), "favorite keyboard chooser exposes Go base");
         tree.SetFocus();
@@ -387,10 +387,98 @@ void KeyboardChooser() {
             "favorite-mode keyboard confirmation preserves current scheme");
     frame->Destroy();
 }
+using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 21>;
+
+void CheckLocalizedCaptions(wxTreeCtrl& tree, const LocalizedSchemeCaptions& captions, size_t column) {
+    for (const auto& caption : captions) {
+        const auto expected = wxString::FromUTF8(caption[column]);
+        std::printf("CAPTION: %s\n", expected.utf8_str().data());
+        Require(NativeDialogs::SelectTreeLabel(tree, expected),
+                "every delivered base scheme has its independently expected localized tree caption");
+    }
+}
+
+wxCheckBox* CheckLocalizedDialogLayout(wxDialog& dialog, wxTreeCtrl& tree) {
+    auto* selected = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", &dialog), wxCheckBox);
+    auto* automatic = wxDynamicCast(wxWindow::FindWindowByName("AutoSelect", &dialog), wxCheckBox);
+    auto* ok = dialog.FindWindow(wxID_OK);
+    auto* cancel = dialog.FindWindow(wxID_CANCEL);
+    Require(selected && automatic && ok && cancel, "translated native scheme dialog has original bottom controls");
+    for (auto* control : {selected, automatic}) {
+        Require(control->GetSize().x >= control->GetBestSize().x &&
+                    control->GetRect().GetRight() < dialog.GetClientSize().x,
+                "translated default/automatic captions fit their native controls");
+    }
+    Require(tree.GetRect().GetBottom() < selected->GetPosition().y &&
+                selected->GetRect().GetBottom() < automatic->GetPosition().y &&
+                automatic->GetRect().GetBottom() < ok->GetPosition().y,
+            "tree and bottom controls retain original vertical order without overlap");
+    const auto client = dialog.GetClientSize();
+    const auto treeSize = tree.GetSize();
+    const auto optionPosition = selected->GetPosition();
+    const auto buttonPosition = ok->GetPosition();
+    dialog.SetClientSize(client + dialog.FromDIP(wxSize(120, 100)));
+    dialog.Layout();
+    wxYield();
+    const auto growth = dialog.GetClientSize() - client;
+    Require(growth.x > 0 && growth.y > 0 && tree.GetSize() - treeSize == growth &&
+                selected->GetPosition().y - optionPosition.y == growth.y &&
+                ok->GetPosition() - buttonPosition == wxPoint(growth.x, growth.y) &&
+                cancel->GetPosition().y == ok->GetPosition().y,
+            "two-axis resize grows the tree and moves original bottom options/buttons together");
+    return selected;
+}
+
+void OpenLocalizedChooser(EditorFrame* frame, const LocalizedSchemeCaptions& captions, size_t column,
+                          const wxString& python, bool favorite) {
+    Picker picker;
+    picker.title = wxGetTranslation(favorite ? "Favorite Schemes" : "Select Scheme");
+    picker.action = [&captions, column, python, favorite](wxDialog& dialog, wxTreeCtrl& tree) {
+        CheckLocalizedCaptions(tree, captions, column);
+        auto* selected = CheckLocalizedDialogLayout(dialog, tree);
+        if (!favorite) {
+            Require(NativeDialogs::SelectTreeLabel(tree, python), "localized Python chooser item is selectable");
+            NativeSearch::Toggle(selected, true);
+        }
+        NativeSearch::Click(&dialog, favorite ? wxID_CANCEL : wxID_OK);
+    };
+    const auto caption =
+        wxStripMenuCodes(wxGetTranslation(favorite ? "&Favorite Schemes..." : "&Syntax Scheme...\tF12"));
+    int command = wxNOT_FOUND;
+    for (auto* item : frame->GetMenuBar()->GetMenu(4)->GetMenuItems()) {
+        if (item->GetItemLabelText() == caption) command = item->GetId();
+    }
+    Require(command != wxNOT_FOUND, "translated original Scheme command is visible");
+    if (favorite)
+        NativeSearch::Command(frame, command);
+    else
+        NativeKeys::Shortcut(frame, WXK_F12, false, false, false, nullptr, "wxnotepad localized scheme F12");
+    Require(picker.error.empty(), picker.error.utf8_str());
+    Require(picker.shown == 1, "translated native chooser opened exactly once");
+}
+
+void CheckLocalizedIni(SettingsStore& settings, const LocalizedSchemeCaptions& captions, size_t column) {
+    Require(settings.Save(true), "accepted localized scheme settings save through the ordinary lifecycle");
+    const auto saved = Ini(TestFiles::Utf8Path(settings.Path().utf8_string()));
+    Require(saved.Contains("DefaultScheme=32") && saved.Contains("FavoriteSchemes=1 67") &&
+                saved.Contains("[Python Script]") && saved.Contains("[C/C++ Source]"),
+            "localized chooser preserves original numeric default/favorites and English INI identities");
+    if (column != 0) {
+        for (const auto& caption : captions)
+            if (std::string_view(caption[0]) != caption[column])
+                Require(!saved.Contains("[" + wxString::FromUTF8(caption[column]) + "]"),
+                        "visible translated captions never become INI section identities");
+    }
+    SettingsStore reopened(settings.Path());
+    Require(reopened.values.defaultScheme == 32 && reopened.values.favoriteSchemes == "1 67",
+            "localized default and favorite identities survive configuration reload");
+    std::puts("PASS: all localized F12/favorite captions and original INI identities");
+}
+
 void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) {
     // Independent expected captions: pinned original scheme titles, existing
     // application terminology, and original zh-Hans/zh-Hant NP2LEX_TEXTFILE.
-    constexpr std::array<std::array<const char*, 3>, 21> captions = {{
+    constexpr LocalizedSchemeCaptions captions = {{
         {"Text File", "文本文件", "文字檔案"},
         {"C/C++ Source", "C/C++ 源代码", "C/C++ 原始碼"},
         {"C# Source", "C# 源代码", "C# 原始碼"},
@@ -420,87 +508,18 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
     const auto python = wxString::FromUTF8(captions[PythonCaptionIndex][column]);
     frame->SetTitle("wxnotepad localized scheme F12");
     bool presented = false;
-    NativeKeys::AfterPresentation(frame, [&](bool ready) { presented = ready; });
-    NativeTreeInput::Wait([&] { return presented; }, "localized F12 frame is presented before native shortcut");
+    NativeKeys::AfterPresentation(frame, [&presented](bool ready) { presented = ready; });
+    NativeTreeInput::Wait([&presented] { return presented; },
+                          "localized F12 frame is presented before native shortcut");
     wxYield();
     // Initial editor-state events refresh the document title during mapping.
     // Set the owned focus target after that refresh, as KeyboardChooser does.
     frame->SetTitle("wxnotepad localized scheme F12");
-    for (const bool favorite : {false, true}) {
-        Picker picker;
-        picker.title = wxGetTranslation(favorite ? "Favorite Schemes" : "Select Scheme");
-        picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree) {
-            for (const auto& caption : captions) {
-                const auto expected = wxString::FromUTF8(caption[column]);
-                std::printf("CAPTION: %s\n", expected.utf8_str().data());
-                Require(NativeDialogs::SelectTreeLabel(tree, expected),
-                        "every delivered base scheme has its independently expected localized tree caption");
-            }
-            auto* selected = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", &dialog), wxCheckBox);
-            auto* automatic = wxDynamicCast(wxWindow::FindWindowByName("AutoSelect", &dialog), wxCheckBox);
-            auto* ok = dialog.FindWindow(wxID_OK);
-            auto* cancel = dialog.FindWindow(wxID_CANCEL);
-            Require(selected && automatic && ok && cancel,
-                    "translated native scheme dialog has original bottom controls");
-            for (auto* control : {selected, automatic}) {
-                Require(control->GetSize().x >= control->GetBestSize().x &&
-                            control->GetRect().GetRight() < dialog.GetClientSize().x,
-                        "translated default/automatic captions fit their native controls");
-            }
-            Require(tree.GetRect().GetBottom() < selected->GetPosition().y &&
-                        selected->GetRect().GetBottom() < automatic->GetPosition().y &&
-                        automatic->GetRect().GetBottom() < ok->GetPosition().y,
-                    "tree and bottom controls retain original vertical order without overlap");
-            const auto client = dialog.GetClientSize();
-            const auto treeSize = tree.GetSize();
-            const auto optionPosition = selected->GetPosition();
-            const auto buttonPosition = ok->GetPosition();
-            dialog.SetClientSize(client + dialog.FromDIP(wxSize(120, 100)));
-            dialog.Layout();
-            wxYield();
-            const auto growth = dialog.GetClientSize() - client;
-            Require(growth.x > 0 && growth.y > 0 && tree.GetSize() - treeSize == growth &&
-                        selected->GetPosition().y - optionPosition.y == growth.y &&
-                        ok->GetPosition() - buttonPosition == wxPoint(growth.x, growth.y) &&
-                        cancel->GetPosition().y == ok->GetPosition().y,
-                    "two-axis resize grows the tree and moves original bottom options/buttons together");
-            if (!favorite) {
-                Require(NativeDialogs::SelectTreeLabel(tree, python), "localized Python chooser item is selectable");
-                NativeSearch::Toggle(selected, true);
-            }
-            NativeSearch::Click(&dialog, favorite ? wxID_CANCEL : wxID_OK);
-        };
-        const auto caption =
-            wxStripMenuCodes(wxGetTranslation(favorite ? "&Favorite Schemes..." : "&Syntax Scheme...\tF12"));
-        int command = wxNOT_FOUND;
-        for (auto* item : frame->GetMenuBar()->GetMenu(4)->GetMenuItems()) {
-            if (item->GetItemLabelText() == caption) command = item->GetId();
-        }
-        Require(command != wxNOT_FOUND, "translated original Scheme command is visible");
-        if (favorite)
-            NativeSearch::Command(frame, command);
-        else
-            NativeKeys::Shortcut(frame, WXK_F12, false, false, false, nullptr, "wxnotepad localized scheme F12");
-        Require(picker.error.empty(), picker.error.utf8_str());
-        Require(picker.shown == 1, "translated native chooser opened exactly once");
-    }
+    for (const bool favorite : {false, true})
+        OpenLocalizedChooser(frame, captions, column, python, favorite);
     Require(frame->Editor()->Send(Scintilla::Message::GetTabWidth) == 6,
             "localized Python selection loads the original English INI scheme section");
-    Require(settings.Save(true), "accepted localized scheme settings save through the ordinary lifecycle");
-    const auto saved = Ini(TestFiles::Utf8Path(settings.Path().utf8_string()));
-    Require(saved.Contains("DefaultScheme=32") && saved.Contains("FavoriteSchemes=1 67") &&
-                saved.Contains("[Python Script]") && saved.Contains("[C/C++ Source]"),
-            "localized chooser preserves original numeric default/favorites and English INI identities");
-    if (column != 0) {
-        for (const auto& caption : captions)
-            if (std::string_view(caption[0]) != caption[column])
-                Require(!saved.Contains("[" + wxString::FromUTF8(caption[column]) + "]"),
-                        "visible translated captions never become INI section identities");
-    }
-    SettingsStore reopened(settings.Path());
-    Require(reopened.values.defaultScheme == 32 && reopened.values.favoriteSchemes == "1 67",
-            "localized default and favorite identities survive configuration reload");
-    std::puts("PASS: all localized F12/favorite captions and original INI identities");
+    CheckLocalizedIni(settings, captions, column);
 }
 class SchemeApp final : public wxApp {
 public:
