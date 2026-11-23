@@ -1,0 +1,153 @@
+--- a/tests/periodic_backup.cpp
++++ b/tests/periodic_backup.cpp
+@@ -4,6 +4,7 @@
+ #include "file_command_driver.h"
+ #include "settings/settings_store.h"
+ #include "steady_stopwatch.h"
++#include "periodic-bounded-trace.h"
+ #include <wx/app.h>
+ #include <wx/button.h>
+ #include <wx/checkbox.h>
+@@ -101,10 +102,12 @@
+ }
+ void Pump(long milliseconds) {
+     TestClock::StopWatch clock;
++    PeriodicTrace::Record(PeriodicTrace::Event::PumpBegin, static_cast<uint64_t>(milliseconds));
+     while (clock.Time() < milliseconds) {
+         wxTheApp->Yield(true);
+         wxMilliSleep(5);
+     }
++    PeriodicTrace::Record(PeriodicTrace::Event::PumpEnd, static_cast<uint64_t>(milliseconds));
+ }
+ template <typename Condition> void Wait(const Condition& condition, const char* message) {
+     TestClock::StopWatch clock;
+@@ -139,10 +142,14 @@
+     Pump(300);
+     Require(Backups(folder).size() == 1, "already backed revision creates no additional files");
+     TestClock::StopWatch clock;
++    PeriodicTrace::Record(PeriodicTrace::Event::ContinuousBegin, frame.Editor()->DocumentRevision());
+     while (clock.Time() < 500) {
++        PeriodicTrace::Record(PeriodicTrace::Event::AppendBegin, frame.Editor()->DocumentRevision());
+         TestEditor::Append(&frame, "x");
++        PeriodicTrace::Record(PeriodicTrace::Event::AppendEnd, frame.Editor()->DocumentRevision());
+         Pump(35);
+     }
++    PeriodicTrace::Record(PeriodicTrace::Event::ContinuousEnd, frame.Editor()->DocumentRevision());
+     Require(Backups(folder).size() >= 3, "continuously edited document is backed up during editing, without debounce");
+     Require(TestFiles::Bytes(source) == "seed\n" && frame.DocumentPath() == TestFiles::Filename(source) &&
+                 frame.DocumentIsModified() && frame.Editor()->Send(Message::CanUndo),
+@@ -506,6 +513,7 @@
+     bool OnInit() override {
+         static const PeriodicFixtureRoot fixture;
+         const auto& root = fixture.Path();
++        PeriodicTrace::Configure(root, wxGetProcessId());
+         const auto ini = root / "Notepad4.ini";
+ #ifndef __WXMSW__
+         wxSetEnv("XDG_DATA_HOME", TestFiles::Filename(root / "xdg"));
+@@ -528,8 +536,10 @@
+                 FailedBackupRetry(*frame, ini.parent_path());
+ #endif
+                 std::puts("PASS: native periodic backup settings");
++                PeriodicTrace::Dump("pass");
+             } catch (const std::exception& error) {
+                 std::fprintf(stderr, "FAIL: %s\n", error.what());
++                PeriodicTrace::Dump("fail");
+                 result_ = 1;
+             }
+             frame->Destroy();
+--- a/src/document/document_session.cpp
++++ b/src/document/document_session.cpp
+@@ -1,4 +1,5 @@
+ #include "document/document_session.h"
++#include "periodic-bounded-trace.h"
+ #include <utility>
+ #include "editor/editor_control.h"
+ #include "editor/editor_ids.h"
+@@ -82,14 +83,24 @@
+ 
+ BackupCreation CreateBackup(const wxString& path, std::string_view bytes) {
+ #ifdef __WXMSW__
++    const auto key = PeriodicTrace::NameKey(std::wstring_view(path.wc_str(), path.length()));
++    PeriodicTrace::Record(PeriodicTrace::Event::CreateBegin, key, bytes.size());
+     const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                   nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, nullptr);
++    const auto createError = file == INVALID_HANDLE_VALUE ? GetLastError() : ERROR_SUCCESS;
++    PeriodicTrace::Record(PeriodicTrace::Event::CreateEnd, key, reinterpret_cast<uintptr_t>(file), createError);
+     if (file == INVALID_HANDLE_VALUE) return BackupCreation::OpenFailed;
+     DWORD written = 0;
+-    const bool complete = bytes.size() <= MAXDWORD &&
+-                          WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr) &&
+-                          written == bytes.size();
+-    CloseHandle(file);
++    PeriodicTrace::Record(PeriodicTrace::Event::WriteBegin, key, bytes.size());
++    const bool writeSucceeded =
++        bytes.size() <= MAXDWORD && WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr);
++    const auto writeError = writeSucceeded ? ERROR_SUCCESS : GetLastError();
++    const bool complete = writeSucceeded && written == bytes.size();
++    PeriodicTrace::Record(PeriodicTrace::Event::WriteEnd, key, writeSucceeded, written, bytes.size(), writeError);
++    PeriodicTrace::Record(PeriodicTrace::Event::CloseBegin, key);
++    const bool closed = CloseHandle(file);
++    const auto closeError = closed ? ERROR_SUCCESS : GetLastError();
++    PeriodicTrace::Record(PeriodicTrace::Event::CloseEnd, key, closed, closeError);
+ #else
+     wxFile file;
+     if (!file.Create(path, false)) return BackupCreation::OpenFailed;
+@@ -630,12 +641,17 @@
+ }
+ 
+ void DocumentSession::StartBackupTimer(bool reset) {
++    PeriodicTrace::Record(PeriodicTrace::Event::TimerRequest, reset, backupTimer_.IsRunning(),
++                          autoSave_.periodMilliseconds, autoSave_.flags);
+     // AutoSave_Start at Notepad4 89b8b36: repeat from the first edit; later
+     // edits do not reset the timer. Win32 SetTimer caps at USER_TIMER_MAXIMUM.
+     if ((autoSave_.flags & AutoSaveOption::Periodic) && autoSave_.periodMilliseconds) {
+-        if (reset || !backupTimer_.IsRunning())
+-            backupTimer_.Start(static_cast<int>(
++        if (reset || !backupTimer_.IsRunning()) {
++            PeriodicTrace::Record(PeriodicTrace::Event::TimerStart, autoSave_.periodMilliseconds, reset);
++            const bool started = backupTimer_.Start(static_cast<int>(
+                 std::min(autoSave_.periodMilliseconds, static_cast<uint32_t>(std::numeric_limits<int>::max()))));
++            PeriodicTrace::Record(PeriodicTrace::Event::TimerStarted, started, backupTimer_.IsRunning());
++        }
+     } else {
+         backupTimer_.Stop();
+     }
+@@ -652,12 +668,14 @@
+ 
+ void DocumentSession::DocumentChanged() {
+     const auto revision = editor_.DocumentRevision();
++    PeriodicTrace::Record(PeriodicTrace::Event::DocumentChanged, revision, observedBackupRevision_);
+     if (revision == observedBackupRevision_) return;
+     observedBackupRevision_ = revision;
+     StartBackupTimer(false);
+ }
+ 
+ void DocumentSession::StopAutoSave(bool keepBackups) {
++    PeriodicTrace::Record(PeriodicTrace::Event::TimerStop, keepBackups, editor_.DocumentRevision());
+     // AutoSave_Stop: release this lifecycle's paths, retaining files only when
+     // requested by the file action or the original manual-deletion option.
+     backupTimer_.Stop();
+@@ -672,8 +690,14 @@
+ 
+ void DocumentSession::SaveBackup(bool automatic) {
+     const auto revision = editor_.DocumentRevision();
+-    if (automatic && (!IsModified() || revision == lastBackupRevision_)) return;
++    PeriodicTrace::Record(PeriodicTrace::Event::BackupBegin, automatic, revision, lastBackupRevision_);
++    if (automatic && (!IsModified() || revision == lastBackupRevision_)) {
++        PeriodicTrace::Record(PeriodicTrace::Event::BackupSkipped, revision, lastBackupRevision_);
++        return;
++    }
+     const auto path = WriteBackup(automatic);
++    PeriodicTrace::Record(PeriodicTrace::Event::BackupWritten, revision, !path.empty(),
++                          path.empty() ? 0 : PeriodicTrace::NameKey(std::wstring_view(path.wc_str(), path.length())));
+     if (path.empty()) return;
+     lastBackupRevision_ = revision;
+     if (!automatic) return; // Manual Save Backup is never rotated or cleaned up.
+@@ -706,6 +730,7 @@
+     }
+ 
+     const auto directory = DefaultBackupDirectory();
++    PeriodicTrace::ObserveFallback(std::wstring_view(directory.wc_str(), directory.length()));
+     if (!wxDirExists(directory)) wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+     const auto backup = wxFileName(directory, wxFileName(sibling).GetFullName()).GetFullPath();
+     if (untitled) return CreateBackup(backup, bytes) == BackupCreation::Complete ? backup : wxString{};
