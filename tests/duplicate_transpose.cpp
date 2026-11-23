@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
@@ -88,7 +90,7 @@ void StreamFixtures(EditorFrame* frame) {
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
         Menu(frame, fixture.command);
         if (TestEditor::Text(frame) != fixture.after)
-            std::fprintf(stderr, "%s before=<%s> actual=<%s> expected=<%s>\n", fixture.command, fixture.before,
+            std::println(stderr, "{} before=<{}> actual=<{}> expected=<{}>", fixture.command, fixture.before,
                          TestEditor::Text(frame).c_str(), fixture.after);
         Require(TestEditor::Text(frame) == fixture.after, "literal original stream result");
         TestEditor::RequireSelection(editor, fixture.resultAnchor, fixture.resultCaret,
@@ -349,7 +351,7 @@ void SavedBytes(EditorFrame* frame) {
                                             {"Save produces independent original encoded bytes",
                                              "Undo and Save restore independent source bytes",
                                              "Redo and Save restore independent transformed bytes"});
-            std::printf("PASS: %s %s saved bytes/BOM/Undo/Redo\n", fixture.name, commands[operation]);
+            std::println("PASS: {} {} saved bytes/BOM/Undo/Redo", fixture.name, commands[operation]);
         }
     }
     std::filesystem::remove_all(directory);
@@ -414,7 +416,7 @@ void Shortcuts(EditorFrame* frame) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
         NativeKey(frame, key, std::string(gesture) == "ctrl+alt+shift+d", true, true);
         if (TestEditor::Text(editor) != "AB\nCD" || editor->Send(CanUndo))
-            std::fprintf(stderr, "Native %s produced <%s>; CanUndo=%lld\n", gesture, TestEditor::Text(editor).c_str(),
+            std::println(stderr, "Native {} produced <{}>; CanUndo={:d}", gesture, TestEditor::Text(editor).c_str(),
                          static_cast<long long>(editor->Send(CanUndo)));
         Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(CanUndo),
                 "extra modifiers do not route duplication/transposition");
@@ -447,7 +449,7 @@ public:
                 Shortcuts(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

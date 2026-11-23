@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
@@ -5,6 +6,7 @@
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -220,7 +222,7 @@ public:
                     std::puts(save ? "PASS: native Save accepted" : "PASS: native Save cancelled");
                     result_ = 0;
                 } catch (const std::exception& error) {
-                    std::fprintf(stderr, "FAIL: %s\n", error.what());
+                    DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 }
                 frame->Destroy();
                 ExitMainLoop();
@@ -236,7 +238,7 @@ public:
                 SaveFailures(directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

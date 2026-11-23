@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -8,6 +9,7 @@
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <stdexcept>
 
@@ -199,7 +201,7 @@ public:
                 FailedRevert(frame, revert, path);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

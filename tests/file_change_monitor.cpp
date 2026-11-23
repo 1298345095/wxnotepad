@@ -1,8 +1,10 @@
+#include "diagnostics/print.h"
 #include "app/file_change_monitor.h"
 #include "file_helpers.h"
 #include "steady_stopwatch.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -81,7 +83,7 @@ public:
                 CheckMonitorLifetime(*owner);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             owner->Destroy();
             ExitMainLoop();

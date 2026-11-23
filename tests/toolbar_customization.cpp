@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
@@ -70,8 +72,9 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
     NativeSearch::Command(frame, large);
     NativePaint::Complete(frame->Editor());
     if (frame->Editor()->GetSize() != editorSize)
-        std::fprintf(
-            stderr, "Hidden toolbar geometry: editor=%dx%d -> %dx%d frame=%dx%d toolbarShown=%d statusShown=%d\n",
+        std::println(
+            stderr,
+            "Hidden toolbar geometry: editor={:d}x{:d} -> {:d}x{:d} frame={:d}x{:d} toolbarShown={:d} statusShown={:d}",
             editorSize.x, editorSize.y, frame->Editor()->GetSize().x, frame->Editor()->GetSize().y, frame->GetSize().x,
             frame->GetSize().y, frame->GetToolBar()->IsShown(), frame->GetStatusBar()->IsShown());
     Require(!frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown() &&
@@ -501,7 +504,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original toolbar customization and sizing");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

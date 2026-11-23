@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include "settings/settings_store.h"
 #include "file_helpers.h"
@@ -109,7 +111,7 @@ void CheckPolicy(EditorFrame* frame, const std::filesystem::path& directory, con
     const auto result = frame->SaveAs(Filename(output));
     if (result.status != SaveStatus::Saved || NativeSearch::Text(editor) != policy.expected ||
         Bytes(output) != policy.expected)
-        std::fprintf(stderr, "Policy fix=%d strip=%d status=%d length=%zu expected=%zu error=%s\n", policy.fix,
+        std::println(stderr, "Policy fix={:d} strip={:d} status={:d} length={:d} expected={:d} error={}", policy.fix,
                      policy.strip, std::to_underlying(result.status), NativeSearch::Text(editor).size(),
                      std::string(policy.expected).size(), result.error.utf8_str().data());
     Require(result.status == SaveStatus::Saved && Bytes(output) == policy.expected &&
@@ -253,9 +255,9 @@ void Encodings(EditorFrame* frame, const std::filesystem::path& directory) {
         Require(frame->Save().status == SaveStatus::Saved && Bytes(output) == sample.expected &&
                     Bytes(input) == sample.source,
                 "cleanup must save independent UTF-8, UTF-16LE and GBK literals without changing the original file");
-        std::printf("BYTES %s:", sample.name);
+        std::print("BYTES {}:", sample.name);
         for (const unsigned char byte : Bytes(output))
-            std::printf(" %02x", byte);
+            std::print(" {:02x}", byte);
         std::puts("");
     }
     std::puts("PASS: independent UTF-8/UTF-16LE/GBK disabled and cleanup destination bytes");
@@ -345,7 +347,7 @@ public:
                 Failures(frame, directory);
                 Defaults(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

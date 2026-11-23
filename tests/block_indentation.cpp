@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
@@ -12,6 +13,7 @@
 #include "steady_stopwatch.h"
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -190,7 +192,7 @@ void DialogTraversal(EditorFrame* frame) {
     DialogTabs goTo("Go To Line");
     Menu(frame, "Search", "Goto Line...");
     goTo.Stop();
-    if (!goTo.error.empty()) std::fprintf(stderr, "Go To Line: %s\n", goTo.error.c_str());
+    if (!goTo.error.empty()) std::println(stderr, "Go To Line: {}", goTo.error.c_str());
     Require(goTo.checked && goTo.error.empty(), "Go To Line retains native Tab/Shift+Tab focus traversal");
     frame->Editor()->Send(Message::SetSavePoint);
     DialogTabs open("Open file");
@@ -247,7 +249,7 @@ void SavedBytes(EditorFrame* frame) {
         editor->Send(Message::Redo);
         Require(frame->Save().status == SaveStatus::Saved && Bytes(path) == fixture.after,
                 "single Redo and Save restore indented independently read file bytes");
-        std::printf("PASS: %s independent saved bytes, one-step Undo/Redo\n", fixture.name);
+        std::println("PASS: {} independent saved bytes, one-step Undo/Redo", fixture.name);
     }
     std::filesystem::remove_all(directory);
 }
@@ -411,7 +413,7 @@ public:
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

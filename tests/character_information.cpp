@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "editor_test_helpers.h"
+#include <print>
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "character_information_fixtures.h"
@@ -116,7 +118,7 @@ const char* ClassifyClipboard(bool received, const wxString& text, const wxStrin
 }
 #endif
 void Progress(const char* phase, const char* fixture = "suite") {
-    std::fprintf(stderr, "Character Info [%s]: %s\n", fixture, phase);
+    std::println(stderr, "Character Info [{}]: {}", fixture, phase);
     std::fflush(stderr);
 }
 void Require(bool condition, const char* message) {
@@ -438,7 +440,7 @@ public:
                 EncodedDocuments(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             Progress("destroy native frame");
             frame->Destroy();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <array>
 #include "native_fold_helpers.h"
@@ -6,6 +7,7 @@
 #include "settings/settings_store.h"
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <fstream>
 #include <stdexcept>
 #include <tuple>
@@ -234,7 +236,7 @@ public:
                 std::puts("PASS: native EOL/wrap-symbol menu, accelerators and unchanged mixed-ending history");
                 Combined(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

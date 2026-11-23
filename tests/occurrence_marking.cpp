@@ -1,7 +1,9 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_paint_helpers.h"
 #include <wx/app.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 #include <chrono>
@@ -250,7 +252,7 @@ public:
                           "mouse/paint and large-document lifecycle");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

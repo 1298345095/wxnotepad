@@ -31,8 +31,8 @@ class MissingCoverage(unittest.TestCase):
             self.assertFalse((directory / 'reports').exists())
 
 
-@unittest.skipUnless(sys.platform == 'linux' and shutil.which('g++-13') and shutil.which('gcov-13'),
-                     'The coverage toolchain is Linux GCC 13')
+@unittest.skipUnless(sys.platform == 'linux' and shutil.which('g++-15') and shutil.which('gcov-15'),
+                     'The coverage toolchain is Linux GCC 15')
 class GCCReports(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='wxnotepad coverage 测试 ; $literal ')
@@ -75,7 +75,7 @@ class GCCReports(unittest.TestCase):
         self.compile(source, '-c', '-o', self.build / 'never.o')
 
     def compile(self, source, *arguments):
-        subprocess.run(['g++-13', '--coverage', '-O0', '-fprofile-abs-path', source, *arguments],
+        subprocess.run(['g++-15', '--coverage', '-O0', '-fprofile-abs-path', source, *arguments],
                        check=True, capture_output=True, text=True, encoding='utf-8')
 
     def assert_unique_source_lines(self, files):

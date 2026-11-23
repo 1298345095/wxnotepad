@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
@@ -9,6 +10,7 @@
 #include <wx/button.h>
 #include "native_search_helpers.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -170,7 +172,7 @@ public:
                 std::puts("PASS: single match and empty document terminate with defined selections");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

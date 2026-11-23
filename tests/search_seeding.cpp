@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "steady_stopwatch.h"
 #include "editor/editor_control.h"
@@ -11,6 +12,7 @@
 #include <wx/log.h>
 #include <wx/ffile.h>
 #include <cstdio>
+#include <print>
 #include <format>
 #include <utility>
 #include <stdexcept>
@@ -119,9 +121,9 @@ void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* quer
     const auto difference = std::mismatch(boundary.cbegin(), boundary.cend(), queryBytes.cbegin(), queryBytes.cend());
     const auto firstDifference = static_cast<size_t>(std::distance(boundary.cbegin(), difference.first));
     const bool utf8Suffix = boundaryQuery.EndsWith(wxString::FromUTF8("中"));
-    std::fprintf(stderr,
-                 "Boundary selection bytes=%lld query bytes=%zu exact=%d first_difference=%zu "
-                 "suffix_utf8=%d regex=%d transform=%d selection_only=%d\n",
+    std::println(stderr,
+                 "Boundary selection bytes={:d} query bytes={:d} exact={:d} first_difference={:d} suffix_utf8={:d} "
+                 "regex={:d} transform={:d} selection_only={:d}",
                  static_cast<long long>(editor->Send(GetSelText)), queryBytes.size(), queryBytes == boundary,
                  firstDifference, utf8Suffix, regex->GetValue(), transform->GetValue(), selectionOnly_);
     Require(queryBytes.size() == 1024 * 1024 && utf8Suffix && queryBytes == boundary,
@@ -275,7 +277,7 @@ public:
                 ReportStage("selection limits complete");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             ReportStage("frame Destroy begin");
             frame->Destroy();

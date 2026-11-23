@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include <array>
 #include "settings/settings_store.h"
 #include "encoded_file_helpers.h"
@@ -90,7 +92,7 @@ void Fixtures(EditorFrame* frame) {
             editor->Send(Message::SetSavePoint);
             Menu(frame, labels[command]);
             if (TestEditor::Text(editor) != expected) {
-                std::fprintf(stderr, "URL fixture %s command %s: expected %zu bytes, got %zu\n", fixture.name.c_str(),
+                std::println(stderr, "URL fixture {} command {}: expected {:d} bytes, got {:d}", fixture.name.c_str(),
                              labels[command], expected.size(), TestEditor::Text(editor).size());
                 throw std::runtime_error("native URL command matches captured original bytes");
             }
@@ -112,7 +114,7 @@ void Fixtures(EditorFrame* frame) {
         }
     }
     Require(capture.eof() && commandCases == capturedCaseCount, "all independently captured URL command cases ran");
-    std::printf("PASS: %u independently captured URL command cases\n", commandCases);
+    std::println("PASS: {:d} independently captured URL command cases", commandCases);
 }
 class RectangleFeedback final : public wxModalDialogHook {
 public:
@@ -268,7 +270,7 @@ public:
                 std::puts("PASS: original URL conversion");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

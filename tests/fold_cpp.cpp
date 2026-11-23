@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
@@ -7,6 +8,7 @@
 #include <ScintillaTypes.h>
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -67,7 +69,7 @@ void MarginBackground(EditorControl* editor) {
     for (const int y : {150, editor->GetClientSize().y - 20}) {
         for (const int x : {left + 1, left + width - 2}) {
             const auto pixel = read(x, y);
-            std::printf("margin pixel %d,%d = %u,%u,%u\n", x, y, pixel.Red(), pixel.Green(), pixel.Blue());
+            std::println("margin pixel {:d},{:d} = {:d},{:d},{:d}", x, y, pixel.Red(), pixel.Green(), pixel.Blue());
             Require(pixel == wxColour(255, 255, 255),
                     "fold background must cover the complete margin beyond one 8x8 tile");
         }
@@ -115,7 +117,7 @@ public:
                 const auto closedPixels = MarkerPixels(editor, 1);
                 const auto differences = std::inner_product(openPixels.begin(), openPixels.end(), closedPixels.begin(),
                                                             size_t{0}, std::plus<>(), std::not_equal_to<>());
-                std::printf("native folder marker changed pixels: %zu\n", differences);
+                std::println("native folder marker changed pixels: {:d}", differences);
                 Require(differences > 0, "native folder marker must visibly change from minus to plus");
                 Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "folding must preserve bytes, save point and history");
@@ -254,7 +256,7 @@ public:
                 std::puts("PASS: scrolling, contraction mapping and resizing preserve native margin hit positions");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

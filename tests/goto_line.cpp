@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "native_search_helpers.h"
@@ -8,6 +9,7 @@
 #include "steady_stopwatch.h"
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <exception>
 #include <utility>
 
@@ -253,7 +255,7 @@ void ColumnAndPositionNavigation(EditorFrame* frame) {
             const bool focused = WaitFor(
                 [invalid, column, input] { return wxWindow::FindFocus() == (invalid.position ? column : input); });
             if (!focused)
-                std::fprintf(stderr, "Validation focus: Line='%s', Column='%s', expected %s\n", invalid.line,
+                std::println(stderr, "Validation focus: Line='{}', Column='{}', expected {}", invalid.line,
                              invalid.column, invalid.position ? "column" : "line");
             Require(focused, "validation must focus the same field as the original dialog");
             NativeSearch::Selection(editor, 5, 5, "invalid coordinates must retain the previous caret");
@@ -389,7 +391,7 @@ public:
                 ScrolledAndWrappedNavigation(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

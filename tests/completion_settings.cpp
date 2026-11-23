@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 namespace {
 void Require(bool value, const char* message) {
@@ -52,7 +54,7 @@ public:
                 Require(store.Save(explicitSave), "completion preferences save");
                 std::puts("PASS: original completion settings load, toggle and save");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             if (frame) frame->Destroy();

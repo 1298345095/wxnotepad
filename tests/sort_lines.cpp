@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
@@ -254,7 +256,7 @@ void Fixtures(EditorControl* editor) {
         editor->Send(SetSel, 0, editor->Send(GetLength));
         editor->SortLines(fixture.options);
         if (TestEditor::Text(editor) != fixture.after)
-            std::fprintf(stderr, "options=%u actual=<%s> expected=<%s>\n", fixture.options,
+            std::println(stderr, "options={:d} actual=<{}> expected=<{}>", fixture.options,
                          TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after, "literal original sorting/filtering fixture");
         TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(std::strlen(fixture.after)),
@@ -472,7 +474,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

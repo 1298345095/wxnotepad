@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "native_fold_helpers.h"
@@ -8,6 +9,7 @@
 #include <wx/filename.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -67,9 +69,9 @@ public:
                                 Require(dialog->GetScreenRect().Contains(child->GetScreenRect()),
                                         "every native wrap control and button fits the dialog at the active DPI");
                         if (!reportedDpi_) {
-                            std::printf("wrap dialog dpi=%dx%d size=%dx%d work_area=%dx%d\n", dialog->GetDPI().x,
-                                        dialog->GetDPI().y, dialog->GetSize().x, dialog->GetSize().y, area.width,
-                                        area.height);
+                            std::println("wrap dialog dpi={:d}x{:d} size={:d}x{:d} work_area={:d}x{:d}",
+                                         dialog->GetDPI().x, dialog->GetDPI().y, dialog->GetSize().x,
+                                         dialog->GetSize().y, area.width, area.height);
                             reportedDpi_ = true;
                         }
                         action_(dialog);
@@ -166,9 +168,10 @@ void Resize(EditorFrame* frame, int width) {
         wxYield();
         wxMilliSleep(1);
     } while (std::chrono::steady_clock::now() < deadline);
-    std::fprintf(stderr, "Resize requested %dx%d; frame %dx%d; editor %dx%d; minimum %dx%d\n", requested.x, requested.y,
-                 frame->GetClientSize().x, frame->GetClientSize().y, frame->Editor()->GetSize().x,
-                 frame->Editor()->GetSize().y, frame->GetMinSize().x, frame->GetMinSize().y);
+    std::println(stderr, "Resize requested {:d}x{:d}; frame {:d}x{:d}; editor {:d}x{:d}; minimum {:d}x{:d}",
+                 requested.x, requested.y, frame->GetClientSize().x, frame->GetClientSize().y,
+                 frame->Editor()->GetSize().x, frame->Editor()->GetSize().y, frame->GetMinSize().x,
+                 frame->GetMinSize().y);
     Require(false, "native frame and editor reach requested geometry before checking wrap settings");
 }
 void Exercise(EditorFrame* frame, SettingsStore& settings) {
@@ -448,17 +451,18 @@ void OriginalReference(EditorFrame* frame, const wxString& input) {
             editor->Send(TextWidth, defaultStyle, reinterpret_cast<intptr_t>("中文"))};
         for (size_t field = 0; field < expected.size(); ++field) {
             if (observed[field] != expected[field])
-                std::fprintf(stderr,
-                             "original %s mode=%d indent=%d width=%d dpi=%d field=%zu expected=%lld actual=%lld\n",
-                             sample.c_str(), mode, indent, width, dpi, field, static_cast<long long>(expected[field]),
-                             static_cast<long long>(observed[field]));
+                std::println(
+                    stderr,
+                    "original {} mode={:d} indent={:d} width={:d} dpi={:d} field={:d} expected={:d} actual={:d}",
+                    sample.c_str(), mode, indent, width, dpi, field, static_cast<long long>(expected[field]),
+                    static_cast<long long>(observed[field]));
         }
         Require(observed == expected, "native wrap result equals independent original executable capture");
         Require(NativeSearch::Text(editor) == text, "original comparison retains exact sample bytes");
         ++records;
     }
     Require(records == 32, "all four original samples, modes and both viewports were compared");
-    std::printf("PASS: %d independent original dialog/wrap records at %d DPI\n", records, editor->GetDPI().y);
+    std::println("PASS: {:d} independent original dialog/wrap records at {:d} DPI", records, editor->GetDPI().y);
 }
 class WrapSettingsApp final : public wxApp {
 public:
@@ -519,7 +523,7 @@ public:
                     Exercise(frame, *settings_);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             if (exitSave)
                 frame->Close(true);

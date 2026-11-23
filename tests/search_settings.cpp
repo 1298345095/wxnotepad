@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
@@ -6,6 +7,7 @@
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <memory>
 
@@ -84,7 +86,7 @@ public:
                 frame->Close();
             } catch (const std::exception& error) {
                 result_ = 1;
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 frame->Destroy();
             }
             ExitMainLoop();

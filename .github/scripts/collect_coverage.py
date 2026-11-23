@@ -20,11 +20,11 @@ def collect(build, output, root=ROOT):
     reports.mkdir(parents=True, exist_ok=False)
     kept = 0
     with (output / 'gcov.log').open('w', encoding='utf-8') as log:
-        version = subprocess.check_output(['gcov-13', '--version'], text=True, encoding='utf-8')
+        version = subprocess.check_output(['gcov-15', '--version'], text=True, encoding='utf-8')
         log.write(version)
         for index, note in enumerate(notes):
             with tempfile.TemporaryDirectory(prefix='wxnotepad-gcov-') as temporary:
-                command = ['gcov-13', '-b', '-c', '-p', '-l', '--hash-filenames', '--', str(note)]
+                command = ['gcov-15', '-b', '-c', '-p', '-l', '--hash-filenames', '--', str(note)]
                 result = subprocess.run(command, cwd=temporary, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, text=True, encoding='utf-8')
                 log.write('+ ' + ' '.join(command) + '\n' + result.stdout)

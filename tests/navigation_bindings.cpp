@@ -1,7 +1,9 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "ScintillaTypes.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <stdexcept>
 
@@ -144,7 +146,7 @@ public:
                 FoldedParagraphs(editor);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

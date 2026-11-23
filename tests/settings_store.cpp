@@ -1,8 +1,10 @@
+#include "diagnostics/print.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/ffile.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -108,7 +110,7 @@ public:
             std::puts("PASS: settings field parsing and history replacement preserve original INI semantics");
             return 0;
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             return 1;
         }
     }

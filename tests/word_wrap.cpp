@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include "native_key_helpers.h"
@@ -8,6 +9,7 @@
 #include <wx/filename.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <print>
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
@@ -99,7 +101,7 @@ void AutomaticScrollWidth(EditorFrame* frame) {
         editor->Update();
         wxYield();
         if (editor->GetClientSize().y != height || editor->GetScrollRange(wxHORIZONTAL) != range)
-            std::fprintf(stderr, "bottom-edge paint=%d height=%d/%d range=%d/%d width=%lld\n", paint, height,
+            std::println(stderr, "bottom-edge paint={:d} height={:d}/{:d} range={:d}/{:d} width={:d}", paint, height,
                          editor->GetClientSize().y, range, editor->GetScrollRange(wxHORIZONTAL),
                          static_cast<long long>(editor->Send(GetScrollWidth)));
         Require(editor->GetClientSize().y == height && editor->GetScrollRange(wxHORIZONTAL) == range,
@@ -246,11 +248,11 @@ public:
                 Require(presented, "the native view is presented before layout-dependent scenarios");
                 auto* editor = frame->Editor();
                 Layout(frame);
-                std::printf("DPI=%d,%d client=%d,%d line=%lld\n", editor->GetDPI().x, editor->GetDPI().y,
-                            editor->GetClientSize().x, editor->GetClientSize().y,
-                            static_cast<long long>(editor->Send(TextHeight, 0)));
-                std::printf("blank horizontal range=%d thumb=%d offset=%d\n", editor->GetScrollRange(wxHORIZONTAL),
-                            editor->GetScrollThumb(wxHORIZONTAL), editor->GetScrollPos(wxHORIZONTAL));
+                std::println("DPI={:d},{:d} client={:d},{:d} line={:d}", editor->GetDPI().x, editor->GetDPI().y,
+                             editor->GetClientSize().x, editor->GetClientSize().y,
+                             static_cast<long long>(editor->Send(TextHeight, 0)));
+                std::println("blank horizontal range={:d} thumb={:d} offset={:d}", editor->GetScrollRange(wxHORIZONTAL),
+                             editor->GetScrollThumb(wxHORIZONTAL), editor->GetScrollPos(wxHORIZONTAL));
                 Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL),
                         "a new empty document must not create a horizontal scrollable range");
                 editor->Send(SetSel, 0, 0);
@@ -411,7 +413,7 @@ public:
                 Combined(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
 #ifdef __WXMSW__
                 auto* editor = frame->Editor();
                 const auto dpi = editor->GetDPI();

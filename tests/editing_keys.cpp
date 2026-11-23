@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "native_trace_helpers.h"
@@ -7,6 +8,7 @@
 #include <wx/ffile.h>
 #include "steady_stopwatch.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string>
 
@@ -38,7 +40,7 @@ void Key(EditorControl* editor, int key, bool control = false, bool shift = fals
 }
 void NativeKey(EditorControl* editor, int key, const char* gesture, bool control = false, bool shift = false) {
     const NativeTrace::Gesture trace(*editor, key, (control ? wxMOD_CONTROL : 0) | (shift ? wxMOD_SHIFT : 0));
-    std::printf("Native key: %s\n", gesture);
+    std::println("Native key: {}", gesture);
     std::fflush(stdout);
 #ifdef __WXMSW__
     BYTE previous[256];
@@ -287,7 +289,7 @@ public:
                 TabEscapeAndParagraphKeys(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

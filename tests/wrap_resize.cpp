@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
+#include <print>
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "native_key_helpers.h"
@@ -94,10 +96,10 @@ void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directo
             NativePaint::Complete(editor);
             const auto actual = editor->Send(WrapCount, line);
             if (actual != expected[index])
-                std::fprintf(stderr, "pass=%d line=%d width=%d expected=%zd actual=%zd\n", pass, line, Widths[index],
-                             expected[index], actual);
+                std::println(stderr, "pass={:d} line={:d} width={:d} expected={:d} actual={:d}", pass, line,
+                             Widths[index], expected[index], actual);
             if (actual != expected[index])
-                std::fprintf(stderr, "frame-client=%d,%d editor-client=%d,%d margins=%zd,%zd,%zd text=%zd\n",
+                std::println(stderr, "frame-client={:d},{:d} editor-client={:d},{:d} margins={:d},{:d},{:d} text={:d}",
                              frame->GetClientSize().x, frame->GetClientSize().y, editor->GetClientSize().x,
                              editor->GetClientSize().y, editor->Send(GetMarginWidthN, 0),
                              editor->Send(GetMarginWidthN, 1), editor->Send(GetMarginWidthN, 2),
@@ -160,7 +162,7 @@ public:
                 std::puts("PASS: styled multi-line and long-line wrapped resize, metrics, history and disk bytes");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

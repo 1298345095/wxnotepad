@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "steady_stopwatch.h"
@@ -11,6 +12,7 @@
 #include <wx/ffile.h>
 #include <wx/filename.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <memory>
 
@@ -31,7 +33,7 @@ void Status(EditorFrame* frame, const wxString& expected) {
     } while (clock.Time() < 2000);
     const auto actual = StatusPosition(frame);
     if (actual != expected)
-        std::fprintf(stderr, "Status: %s; expected %s\n", actual.utf8_str().data(), expected.utf8_str().data());
+        std::println(stderr, "Status: {}; expected {}", actual.utf8_str().data(), expected.utf8_str().data());
     Require(actual == expected, "status must describe the active logical caret");
 }
 void PressRight(EditorControl* editor, bool shift = false) {
@@ -286,7 +288,7 @@ public:
                     "PASS: batched edits moving a selection and returning its endpoints refresh selected contents");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

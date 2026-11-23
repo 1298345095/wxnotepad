@@ -116,8 +116,8 @@ def dependencies():
     for name in ('xgettext', 'msgmerge', 'msgfmt', 'msgcmp', 'msgattrib'):
         tool = gettext / (name + ('.exe' if WINDOWS else ''))
         version = subprocess.check_output([tool, '--version'], text=True, encoding='utf-8').splitlines()[0]
-        if not version.endswith(' 0.22.5'):
-            raise SystemExit('Expected pinned GNU gettext 0.22.5: ' + version)
+        if not version.endswith(' 0.23.2'):
+            raise SystemExit('Expected pinned GNU gettext 0.23.2: ' + version)
         print(version, flush=True)
     if 'GITHUB_ENV' in os.environ:
         with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
@@ -166,10 +166,9 @@ def configure(app_only, *, coverage=False, compiler_cache=False):
                '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
                '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
                '-DWXNOTEPAD_ENABLE_COVERAGE=' + ('ON' if coverage else 'OFF'),
+               f'-DPython3_EXECUTABLE={sys.executable}',
                '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON'),
                *compiler_launcher_arguments(compiler_cache and not coverage)])
-    if coverage:
-        command.append(f'-DPython3_EXECUTABLE={sys.executable}')
     run(command, prefix + 'configure.log')
 
 
@@ -347,6 +346,7 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                        '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
                        '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
+                       f'-DPython3_EXECUTABLE={sys.executable}',
                        *compiler_launcher_arguments(compiler_cache)]), 'diagnostic-configure.log')
     targets = ['wxnotepad', 'editing_keys', 'close_smoke']
     if WINDOWS:
@@ -452,7 +452,7 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         'Development build output, not a release/install package.\n'
         'See build.json for the tested source and executable checksum.\n'
         'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
-        'Linux: Ubuntu 24.04 x64 desktop libraries are required; run from this directory with\n'
+        'Linux: Ubuntu 26.04 x64 desktop libraries are required; run from this directory with\n'
         'GIO_LAUNCH_DESKTOP="$PWD/libexec/gio-launch-desktop" \\\n'
         'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'
         'The matching Linux symbols/ directory is retained with the build evidence.\n'

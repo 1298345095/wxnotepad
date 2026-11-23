@@ -4,6 +4,7 @@
 #include <wx/string.h>
 #include <wx/treectrl.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <iterator>
 #include <vector>
@@ -34,7 +35,7 @@ inline bool SelectTreeLabel(wxTreeCtrl& tree, const wxString& label) {
 }
 inline bool PathEquals(const wxString& actual, const wxString& expected) {
     if (actual == expected) return true;
-    std::fprintf(stderr, "Document path mismatch: expected='%s', actual='%s'\n", expected.utf8_str().data(),
+    std::println(stderr, "Document path mismatch: expected='{}', actual='{}'", expected.utf8_str().data(),
                  actual.utf8_str().data());
     return false;
 }

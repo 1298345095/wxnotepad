@@ -1,6 +1,8 @@
+#include "diagnostics/print.h"
 #include "measurement_workers.h"
 #include <atomic>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string_view>
 #include <system_error>
@@ -81,6 +83,6 @@ int main() try {
     std::puts("PASS: measurement workers join after partial startup and preserve work failures");
     return 0;
 } catch (const std::exception& failure) {
-    std::fprintf(stderr, "FAIL: %s\n", failure.what());
+    DiagnosticPrint::Print(stderr, "FAIL: {}\n", failure.what());
     return 1;
 }

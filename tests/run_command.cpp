@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 #include <wx/textctrl.h>
 #include <functional>
@@ -124,16 +126,16 @@ void LaunchArguments(EditorFrame* frame) {
     expected += "$WXNOTEPAD_RUN_VALUE\n$WXNOTEPAD_RUN_VALUE\nexpanded 中文 value\n;\n|\n>\n*.txt\n$(not-run)\n";
 #endif
     if (observed != expected)
-        std::fprintf(stderr, "Observed child bytes: <%s> expected <%s>\n", observed.c_str(), expected.c_str());
+        std::println(stderr, "Observed child bytes: <{}> expected <{}>", observed.c_str(), expected.c_str());
     Require(observed == expected, "independent child receives exact argv, empty/Unicode expansion and original cwd");
     if (!frame->DocumentPath().empty()) {
         const auto diskRecord = record.parent_path() / (record.filename().string() + ".disk");
         Require(std::filesystem::exists(diskRecord) && TestFiles::Bytes(diskRecord) == "disk document",
                 "independent child observes unchanged disk bytes while the buffer contains edits");
-        std::printf("CHILD disk bytes: <%s>\n", TestFiles::Bytes(diskRecord).c_str());
+        std::println("CHILD disk bytes: <{}>", TestFiles::Bytes(diskRecord).c_str());
     }
-    std::printf("CHILD executable=%s\nobserved cwd and argv (one entry per line, including empty entries):\n%s",
-                child.GetFullPath().utf8_string().c_str(), observed.c_str());
+    std::print("CHILD executable={}\nobserved cwd and argv (one entry per line, including empty entries):\n{}",
+               child.GetFullPath().utf8_string().c_str(), observed.c_str());
     std::puts("PASS: independent child argv, environment expansion and untitled startup cwd");
 }
 class ProgramBrowser final : public wxTimer {
@@ -516,7 +518,7 @@ public:
                 SaveBeforeTools(frame, *settings_);
                 SelfLaunch(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include "encoded_file_helpers.h"
 #include <wx/textctrl.h>
 #include "steady_stopwatch.h"
@@ -81,7 +83,7 @@ int Dialog(EditorFrame* frame, int id, const Action& action, bool shortcut = fal
                 long to = 0;
                 opening->GetSelection(&from, &to);
                 if (!opening->HasFocus() || from != 1 || to != 4)
-                    std::fprintf(stderr, "Initial tag focus=%d active=%d selection=%ld/%ld\n", opening->HasFocus(),
+                    std::println(stderr, "Initial tag focus={:d} active={:d} selection={:d}/{:d}", opening->HasFocus(),
                                  dialog->IsActive(), from, to);
                 Require((dialog->GetWindowStyle() & wxRESIZE_BORDER) && opening->GetValue() == "<tag>" &&
                             closing->GetValue() == "</tag>" && from == 1 && to == 4 && opening->HasFocus(),
@@ -142,7 +144,7 @@ void FieldKey(wxTextCtrl* input, int key, bool shift = false) {
     }
     // Native GTK dialog handling can consume key-up; verify its actual field/dialog result.
     if (!completed())
-        std::fprintf(stderr, "Native field key timeout: key=%d shift=%d focus=%s value=%s\n", key, shift,
+        std::println(stderr, "Native field key timeout: key={:d} shift={:d} focus={} value={}", key, shift,
                      wxWindow::FindFocus() ? wxWindow::FindFocus()->GetName().utf8_str().data() : "none",
                      input->GetValue().utf8_str().data());
     Require(completed(), "native field key produces its original dialog outcome");
@@ -255,8 +257,7 @@ void ScannerCaptures(EditorFrame* frame, int id) {
                 Require(second != std::string::npos, "scanner observation has opening and closing fields");
                 Edit(opening, FieldText(std::string_view(line).substr(first + 1, second - first - 1)));
                 const auto expected = FieldText(std::string_view(line).substr(second + 1));
-                if (closing->GetValue() != expected)
-                    std::fprintf(stderr, "Scanner capture mismatch: %s\n", line.c_str());
+                if (closing->GetValue() != expected) std::println(stderr, "Scanner capture mismatch: {}", line.c_str());
                 Require(closing->GetValue() == expected, "native closing field matches the original scanner capture");
                 ++count;
             }
@@ -351,7 +352,7 @@ void OriginalStates(EditorFrame* frame, int id) {
         const auto actual = Snapshot(editor);
         const auto expected = references.at(kind + '\t' + stage);
         if (actual != expected)
-            std::fprintf(stderr, "Original %s %s\nExpected: %s\nObserved: %s\n", kind.c_str(), stage, expected.c_str(),
+            std::println(stderr, "Original {} {}\nExpected: {}\nObserved: {}", kind.c_str(), stage, expected.c_str(),
                          actual.c_str());
         Require(actual == expected,
                 "tag command matches original document, selection, virtual space and history state");
@@ -466,7 +467,7 @@ public:
                 EmbeddedLineEndings(frame);
                 SavedBytes(frame, tags[1]);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);

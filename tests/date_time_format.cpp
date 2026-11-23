@@ -1,6 +1,7 @@
 #include "editor/date_time.h"
 #include <wx/init.h>
 #include <cstdio>
+#include <print>
 #include <cstdlib>
 #include <string_view>
 
@@ -21,7 +22,7 @@ int main(int argc, char**) {
         local.tm_sec = 5;
         const auto actual = FormatDateTimeInsertion(command, {value, local}, format);
         if (actual == wxString::FromUTF8(expected.data(), expected.size())) return true;
-        std::fprintf(stderr, "Expected <%.*s>, got <%s>\n", static_cast<int>(expected.size()), expected.data(),
+        std::println(stderr, "Expected <{}>, got <{}>", expected.substr(0, expected.find('\0')),
                      actual.utf8_str().data());
         return false;
     };

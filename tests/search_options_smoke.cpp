@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include <wx/wx.h>
@@ -8,6 +9,7 @@
 #include <wx/textctrl.h>
 #include "native_search_helpers.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -27,9 +29,8 @@ void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* 
     const auto actualStart = editor->Send(GetSelectionStart);
     const auto actualEnd = editor->Send(GetSelectionEnd);
     if (actualStart != start || actualEnd != end)
-        std::fprintf(stderr, "Range: %lld..%lld; expected %lld..%lld; flags: %lld\n",
-                     static_cast<long long>(actualStart), static_cast<long long>(actualEnd),
-                     static_cast<long long>(start), static_cast<long long>(end),
+        std::println(stderr, "Range: {:d}..{:d}; expected {:d}..{:d}; flags: {:d}", static_cast<long long>(actualStart),
+                     static_cast<long long>(actualEnd), static_cast<long long>(start), static_cast<long long>(end),
                      static_cast<long long>(editor->Send(GetSearchFlags)));
     NativeSearch::Selection(editor, start, end, message);
 }
@@ -199,7 +200,7 @@ public:
                 std::puts("PASS: current search options combine with both navigation directions and wrapping");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

@@ -3,6 +3,7 @@
 #include "editor/editor_ids.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "diagnostics/print.h"
 #include "diagnostics/trace.h"
 #include <wx/app.h>
 #include <wx/ffile.h>
@@ -257,11 +258,10 @@ void ProcessObserver::Publish() {
     if (!published && !publishPending_) {
         const unsigned long error = wxSysErrorCode();
         const char* stage = !written ? "write" : !closed ? "close" : "rename";
-        std::fprintf(stderr,
-                     "Observation publication failed: stage=%s error=%lu sequence=%s result=%s directory=%s; retry "
-                     "pending\n",
-                     stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(),
-                     observation_.utf8_str().data());
+        DiagnosticPrint::Print(
+            stderr,
+            "Observation publication failed: stage={} error={:d} sequence={} result={} directory={}; retry pending\n",
+            stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(), observation_.utf8_str().data());
         std::fflush(stderr);
     }
     publishPending_ = !published;
@@ -269,8 +269,9 @@ void ProcessObserver::Publish() {
 
 void ProcessObserver::CommandFailure(const char* stage, unsigned long error) {
     if (!commandPending_) {
-        std::fprintf(stderr, "Observation command failed: stage=%s error=%lu last_ack=%s directory=%s; retry pending\n",
-                     stage, error, sequence_.utf8_str().data(), observation_.utf8_str().data());
+        DiagnosticPrint::Print(
+            stderr, "Observation command failed: stage={} error={:d} last_ack={} directory={}; retry pending\n", stage,
+            error, sequence_.utf8_str().data(), observation_.utf8_str().data());
         std::fflush(stderr);
     }
     commandPending_ = true;

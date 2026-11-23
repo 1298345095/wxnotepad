@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
@@ -5,6 +6,7 @@
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <tuple>
 
@@ -82,7 +84,7 @@ void Lifecycle(EditorFrame* frame, SettingsStore& settings, int option, const wx
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings On Exit"));
     if (action == "explicit")
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
-    std::printf("PASS: selection lifecycle imported=%d action=%s\n", option, action.utf8_str().data());
+    std::println("PASS: selection lifecycle imported={:d} action={}", option, action.utf8_str().data());
 }
 class SelectionOptionsApp final : public wxApp {
 public:
@@ -110,10 +112,10 @@ public:
                 Check(*frame->Editor(), option);
                 Require(frame->Open(path).status == OpenStatus::Opened, "same-path Open must succeed");
                 Check(*frame->Editor(), option);
-                std::printf("PASS: SelectOption=%d at startup, New, Open and reopen\n", option);
+                std::println("PASS: SelectOption={:d} at startup, New, Open and reopen", option);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

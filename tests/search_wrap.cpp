@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "native_search_helpers.h"
@@ -11,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -318,7 +320,7 @@ public:
                 std::puts("PASS: Replace candidate selection, replacement and no-match caret retention");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

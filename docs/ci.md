@@ -8,8 +8,8 @@ and retain shareable results; they do not replace local verification.
 
 | Workflow | Trigger | Work |
 | --- | --- | --- |
-| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output, parallel Linux coverage backends and one merged SonarCloud analysis |
-| Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
+| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 26.04/GCC 15 builds, all registered CTest tests, development build output, parallel Linux coverage backends and one merged SonarCloud analysis |
+| Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 21 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
 Builds and native clang-tidy use the runner's available CPU count instead of a
@@ -101,10 +101,38 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
 
 ## Dependencies and reproducibility
 
+Linux CI and packaged binaries target Ubuntu 26.04+ with GCC 15 and its matching
+`gcov-15`. The retained SDK capability test also compiles, links and executes
+C++23 `std::print`/`std::println`, checking exact formatted UTF-8 bytes.
+Native analysis and fuzzing use Clang 21 against the same Linux environment.
+The runtime baseline increase from Ubuntu 24.04 was explicitly approved; existing
+test registration order, assertions, timeouts, parallelism and quality gates stay
+in force. CI and native GTK drivers use Python 3.14, matching Ubuntu 26.04's
+compiled GI bindings; after a system Python upgrade, use a fresh CMake build and recreate
+any virtual environment rather than reusing cached interpreter paths.
+GUI tests use Ubuntu 26.04's Weston 14 and Openbox packages. No separately built
+Weston or older distribution runtime libraries are selected.
+The native input driver uses upstream xdotool 4.20260303.1, built from a fixed
+release commit with its own libxdo embedded. Ubuntu's older xdotool misreads
+xkeyboard-config 2.46 function-key levels and injects an extra Alt modifier
+([upstream #491](https://github.com/jordansissel/xdotool/issues/491)). The original
+key names, XTEST delivery, behavior assertions and deadlines are retained.
+The regional-language fixture reads glibc's `%x` in an independent Python process
+under its private `LOCPATH`. Ubuntu 26.04's uutils `date` ignores that locale for
+this format ([upstream #10284](https://github.com/uutils/coreutils/issues/10284)).
+The existing before/after time boundary and exact output comparisons remain.
+The same independent glibc client checks the private locale's comma decimal
+separator after loading all locale categories. The runner's confined `locale`
+utility cannot read that private directory; its system policy remains unchanged.
+
 - Actions are pinned to full commit SHAs, annotated with their major versions.
+- actionlint 1.7.12 predates the official `ubuntu-26.04` runner label. Its
+  configuration lists that exact additional label; runner-label checking remains
+  enabled for all workflows and all other labels.
 - Linux provisioning has three profiles: `build` for CodeQL, `tidy` for native
   clang-tidy, and `gui` for the build/test matrix. GUI display tools and fonts
-  are installed by the `gui` profile, also used by coverage; the analyzer is installed by `tidy`.
+  are installed by the `gui` profile, also used by coverage. The analyzer is
+  installed by `tidy` and by `gui` for native analyzer contract tests.
 - Linux jobs use Ubuntu's official HTTPS archive in place of the Azure archive
   mirror or the runner's `/etc/apt/apt-mirrors.txt` mirror-list URI in legacy
   `.list` and Deb822 `.sources` files. Suites, components and signing keys are
@@ -154,7 +182,7 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   installation selects this overlay; its files participate in the existing cache
   key, and vcpkg's package ABI validates restored binaries. Local dependency builds
   can select the same overlay with `--overlay-ports=<repository>/.github/ports`.
-- Host-only GNU gettext 0.22.5 tools are pinned by the manifest baseline. CI
+- Host-only GNU gettext 0.23.2 tools are pinned by the repository overlay, matching Ubuntu 26.04. CI
   verifies their versions and extraction/format/release coverage before application
   builds; generated app and locked wxWidgets catalogs accompany every artifact.
   See [localization.md](localization.md) for maintenance and resource layout.
@@ -256,7 +284,7 @@ branch's results to PR analysis. The first filesystem-cache run populates a new
 cache. Source, dependency, compiler and rule changes remain subject to CFamily's
 cache validation. Python and other analyzers retain their server-managed caches.
 
-Python analysis targets the workflow's Python 3.12. Python files under `tests/`
+Python analysis targets the workflow's Python 3.14. Python files under `tests/`
 are classified as tests; their inclusion pattern also excludes them from the main
 source scope. C++ fixtures remain in `sonar.sources` because CFamily does not
 analyze files classified through `sonar.tests`. Generated language-scheme tables
@@ -279,7 +307,7 @@ and 60 seconds in ordinary builds. The instrumented scenario completed all check
 in 88.50 seconds under controlled CPU contention. Supported Linux CMake versions
 use SIGQUIT on timeout so the existing crash collector can preserve a core/stack.
 
-`collect_coverage.py` runs GCC 13's `gcov` separately for every notes file, including
+`collect_coverage.py` runs GCC 15's `gcov` separately for every notes file, including
 translation units without counters. It preserves unmodified maintained `src/`
 reports, zero-hit records and per-translation-unit header branches. GCC's filename
 option avoids filesystem name-length limits; source identity comes from each
@@ -361,7 +389,7 @@ Release and MinSizeRel enable `WXNOTEPAD_ENABLE_SIZE_OPTIMIZATIONS` by default.
 MSVC packages global data with `/Gw` and uses `/OPT:REF,ICF /INCREMENTAL:NO`.
 Linux GCC/Clang compile project libraries into function/data sections, then use
 `--gc-sections` and `-z pack-relative-relocs` when the actual linker supports
-them. The Linux runtime baseline is Ubuntu 24.04+, with DT_RELR-capable glibc.
+them. The Linux runtime baseline is Ubuntu 26.04+, with DT_RELR-capable glibc.
 Application and native-regression links use the same settings. Debug, coverage
 and fuzz-only builds retain their existing options; the compiler's speed
 optimization level and exception/unwind support remain in place.
@@ -446,7 +474,7 @@ a failed job retains earlier evidence rather than overwriting it.
 The artifacts are development builds rather than the planned Windows ZIP release
 or Ubuntu installer. Windows DLLs are included beside the executable. Linux
 output includes non-system vcpkg shared libraries and a README describing its
-Ubuntu 24.04 desktop/runtime requirement. Distribution packaging remains a
+Ubuntu 26.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
 
 Linux packaging also copies the selected SDK's `libexec/gio-launch-desktop`,
@@ -505,7 +533,7 @@ python3 .github/scripts/checks.py tidy --build-dir /path/to/native/cmake-build
 ```
 
 The formatter command requires clang-format 23.1.2 on PATH. The analyzer defaults
-to clang-tidy-18; use `--executable` for another installed native analyzer. Keep
+to clang-tidy-21; use `--executable` for another installed native analyzer. Keep
 source and compilation-database paths consistent. A local MSVC analysis needs its
 normal Visual Studio developer environment.
 

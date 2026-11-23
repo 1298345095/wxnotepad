@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
+#include <print>
 #include "native_search_helpers.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
@@ -319,7 +321,7 @@ public:
                     Require(frame->Open(TestFiles::Filename(candidate)).status == OpenStatus::Opened,
                             "shell detection fixture must open");
                     Paint(frame);
-                    std::printf("CASE: %s\n", fixture.name);
+                    std::println("CASE: {}", fixture.name);
                     Require(StatusMetadata(frame).Contains(" | " + wxString(fixture.language) + " | "),
                             "filename and shebang precedence must match the original");
                     if (editor->Send(Message::GetLexer) == SCLEX_BASH)
@@ -392,7 +394,7 @@ public:
                 gated->Destroy();
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

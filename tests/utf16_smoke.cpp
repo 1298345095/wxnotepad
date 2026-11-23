@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -9,6 +10,7 @@
 #include "settings/settings_store.h"
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -107,7 +109,7 @@ public:
                     "PASS: explicit no-BOM/empty/NUL roundtrips, edited Save As, failure/history and New metadata");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

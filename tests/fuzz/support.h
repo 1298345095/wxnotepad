@@ -1,5 +1,6 @@
 #pragma once
 
+#include "diagnostics/print.h"
 #include <wx/init.h>
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +10,7 @@
 
 namespace Fuzz {
 [[noreturn]] inline void Fail(const char* requirement) {
-    std::fprintf(stderr, "Fuzz invariant failed: %s\n", requirement);
+    DiagnosticPrint::Print(stderr, "Fuzz invariant failed: {}\n", requirement);
     std::abort();
 }
 inline void Check(bool condition, const char* requirement) {

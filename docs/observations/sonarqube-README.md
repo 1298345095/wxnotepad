@@ -8,7 +8,8 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [PR #247 native workflows](#pr-247-native-workflows).
+Latest review: [PR #262 GCC 15 formatted output](#pr-262-gcc-15-formatted-output).
+Previous review: [PR #247 native workflows](#pr-247-native-workflows).
 Earlier review: [PR #225 analysis follow-up](#pr-225-analysis-follow-up), following
 [Array and raw-literal cleanup](#array-and-raw-literal-cleanup),
 on [`codex/sonar-arrays-raw-literals`](https://github.com/1298345095/wxnotepad/tree/codex/sonar-arrays-raw-literals).
@@ -1976,3 +1977,87 @@ identities, while the exact visible selection was absent. Independent original
 and current native controls retain both results without changing that required
 selection assertion. Native and hosted results for the final source are recorded
 in the PR description.
+
+## PR #262 GCC 15 formatted output
+
+PR #262 raises the supported Linux baseline to GCC 15 and retains an SDK test
+that compiles, links and executes C++23 `std::print` and `std::println`. The
+earlier GCC 13 `<print>` limitation described above no longer applies to this
+branch.
+
+The current-project main review on November 23 found 357 FALSE_POSITIVE S6494
+printing recommendations in 149 files, plus 138 OPEN printing recommendations.
+All 495 reported `printf`/`fprintf` calls in 187 files now use C++23 formatted
+output. Ordinary diagnostics call `std::print` or `std::println`; failure and
+cleanup paths use the shared `DiagnosticPrint::Print` boundary over
+`std::vprint_unicode`. Each consumer directly includes its output interface. The historical ledgers retain the
+compiler baseline and disposition that were valid at their recorded revisions.
+Other ignored rules were checked for compiler or standard-library limitations;
+none depended on the missing GCC 13 print facility.
+
+The conversion keeps each output stream, line ending, explicit flush, numeric
+base, width and precision. Integer presentation remains explicit where printf
+previously promoted booleans and characters; GTK enums are converted to their
+integer values. The two bounded string-view diagnostics still stop at the first
+NUL byte. Pointer-only diagnostics use the standard pointer representation;
+their consumers correlate addresses rather than requiring a CRT-specific
+spelling. Existing assertions, fixture data, timeouts and GUI actions are
+unchanged.
+
+`std::print` can throw on output or allocation failure. The shared diagnostic
+boundary catches these new formatting and output exceptions, writes the exception
+description through nonallocating stdio, and returns failure. The process
+observer retains its publication and command retries when formatted output fails.
+The platform assertion and fuzz invariant helpers retain their unconditional
+`abort()` even if printing fails. The separate variadic debug and tracing
+interfaces keep their existing printf-format protocol.
+
+Fixture destructors, native callbacks and final test-failure handlers use the
+same boundary. Popup-key cleanup still releases the native key before its
+existing deadline when formatted output fails. Directory cleanup and callback
+unbinding retain their original order.
+
+Local GCC 14.2/libstdc++ 14 verification compares each migrated format against
+the original `fprintf` output: 495 formats with 12 input sets, plus 12 typed
+boolean, character and bounded-string checks, pass all 5,952 byte comparisons.
+The existing `bit_intrinsics`, `measurement_worker_start` and
+`parallel_surface_failure` native tests compile and pass through `ci.py probe`.
+The exact assertion and fuzz-failure functions also retain `SIGABRT` with normal
+stderr and with an unbuffered `/dev/full` sink. Canonical clang-format 23.1.2
+passes the maintained C++ sources. The first migration commit `d8720090` also
+passes hosted GCC 15.2 and MSVC builds, X11/Wayland native tests, clang-tidy,
+Fuzz and CodeQL. Its Sonar analysis reports zero open S6494 findings.
+
+
+### Diagnostic failure coverage and analysis follow-up
+
+`native_print_failure_handling` runs the actual production helper against a real
+input-only FILE and the existing allocation-failure injector. It checks exact
+UTF-8/numeric output, exception-specific fallback messages, unchanged input,
+and successful output after each failure. Local GCC 14.2 with `-Werror` passes
+all three scenarios and covers all 11 executable header lines. The observer
+regression additionally blocks its actual `state.tmp` file, verifies the prior
+acknowledgement remains intact, observes automatic retry, submits a malformed
+command and verifies its real diagnostic and recovery. The existing deadlines
+and native assertions remain in place.
+
+`native_assert_output_failure` links the real `editor_runtime` and invokes
+`Platform::Assert` with normal stderr and with a real read-only stderr handle.
+The process driver distinguishes the required abort from `std::terminate` and
+checks the diagnostic and unchanged input. This test is registered for the
+hosted SDK build. Both new tests are appended after the existing registrations.
+
+The first formatted-output analysis also reports 43 S5145 findings in test
+fixture diagnostics. The [individual disposition ledger](sonarqube-2026-11-23-pr262-dispositions.json)
+records each source-to-output path, fixture/source hashes, reviewed commit and
+successful transition. These sources are repository TSV metadata, fixed labels,
+hexadecimal data or numeric observations; the word-wrap case preserves its
+explicit developer-selected reference-directory contract. Exact-key queries
+confirm 43 FALSE_POSITIVE matches and zero OPEN/CONFIRMED matches. This separate
+review leaves the historical GCC 13 printing dispositions intact while their
+495 corresponding printing recommendations receive code changes.
+
+The first analysis exposed uncovered output-failure branches and a destructor's
+indirect printing exception path. Shared failure handling, real fault tests and
+protected destructor traces address those findings. The final submitted
+revision's hosted results are recorded in the PR description.

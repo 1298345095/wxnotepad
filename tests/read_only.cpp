@@ -1,4 +1,7 @@
 #include "native_key_helpers.h"
+#include "diagnostics/print.h"
+#include <print>
+#include <exception>
 #include <array>
 #include "encoded_file_helpers.h"
 #include "file_command_driver.h"
@@ -114,8 +117,8 @@ void FileProtection(EditorFrame* frame) {
             std::error_code error;
             std::filesystem::permissions(path, permissions, error);
             if (error)
-                std::fprintf(stderr, "FAIL: restore native read-only fixture permissions (%s: %d)\n",
-                             error.category().name(), error.value());
+                DiagnosticPrint::Print(stderr, "FAIL: restore native read-only fixture permissions ({}: {:d})\n",
+                                       error.category().name(), error.value());
         }
     };
     RestorePermissions restore{source, permissions};
@@ -557,7 +560,7 @@ public:
                 TransformationDialogs(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetReadOnly, 0);
             frame->Editor()->Send(Message::SetSavePoint);

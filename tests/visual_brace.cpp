@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "brace_observation.h"
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
@@ -9,6 +10,7 @@
 #include <wx/dcclient.h>
 #include <functional>
 #include <cstdio>
+#include <print>
 
 namespace {
 using Scintilla::Message;
@@ -21,9 +23,9 @@ void Paint(EditorControl* editor) {
 void Expect(EditorControl* editor, intptr_t first, intptr_t second, intptr_t style, intptr_t guide) {
     Paint(editor);
     const auto actual = EditorCoreObservation::Braces(*editor);
-    std::printf("brace=%lld,%lld style=%lld guide=%lld\n", static_cast<long long>(actual[0]),
-                static_cast<long long>(actual[1]), static_cast<long long>(actual[2]),
-                static_cast<long long>(editor->Send(Message::GetHighlightGuide)));
+    std::println("brace={:d},{:d} style={:d} guide={:d}", static_cast<long long>(actual[0]),
+                 static_cast<long long>(actual[1]), static_cast<long long>(actual[2]),
+                 static_cast<long long>(editor->Send(Message::GetHighlightGuide)));
     Require(actual == std::array<intptr_t, 3>{first, second, style} &&
                 editor->Send(Message::GetHighlightGuide) == guide,
             "automatic brace decoration agrees with original caret-adjacent positions/style/guide");
@@ -40,7 +42,7 @@ void Reference(EditorFrame* frame) {
             editor->Send(EmptyUndoBuffer);
             editor->Send(SetSavePoint);
             editor->Send(Colourise, 0, -1);
-            std::printf("reference %s/%s ", name, fixture.name);
+            std::print("reference {}/{} ", name, fixture.name);
             const auto match = fixture.match[language];
             Expect(editor, fixture.position, match, match < 0 && fixture.position >= 0 ? 35 : 34, fixture.guide);
             Require(NativeSearch::Text(editor) == fixture.text && editor->Send(GetAnchor) == fixture.anchor &&
@@ -104,8 +106,8 @@ int ColouredPixels(EditorControl* editor, intptr_t position, bool bad) {
             if (coloured) ++count;
         }
     }
-    std::printf("native brace pixels position=%lld bad=%d count=%d dpi=%d\n", static_cast<long long>(position), bad,
-                count, editor->GetDPI().y);
+    std::println("native brace pixels position={:d} bad={:d} count={:d} dpi={:d}", static_cast<long long>(position),
+                 bad, count, editor->GetDPI().y);
     return count;
 }
 void BraceAppearance(EditorFrame* frame, int toggle) {
@@ -286,7 +288,7 @@ public:
                 SavedState(frame, toggle);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

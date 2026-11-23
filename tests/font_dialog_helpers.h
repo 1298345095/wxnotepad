@@ -1,6 +1,7 @@
 #pragma once
 
 #include "native_key_helpers.h"
+#include <print>
 #include <wx/fontdlg.h>
 #include <wx/modalhook.h>
 #include <chrono>
@@ -31,7 +32,7 @@ public:
                 error_ = "font chooser starts with the selected default foreground, which font confirmation preserves";
                 return wxID_CANCEL;
             }
-            std::fprintf(stderr, "native chooser initial: %s\n",
+            std::println(stderr, "native chooser initial: {}",
                          dialog_->GetFontData().GetInitialFont().GetNativeFontInfoDesc().utf8_str().data());
 #ifdef __WXGTK__
             // wx's native GTK chooser bypasses wxWindow's key event handlers.

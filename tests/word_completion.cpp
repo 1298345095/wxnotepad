@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_completion_helpers.h"
+#include <print>
 #include <wx/vlbox.h>
 #include "completion_reference.h"
 #include "completion_behavior_reference.h"
@@ -51,11 +53,11 @@ void FrozenCompletion(EditorFrame* frame, int id) {
         NativeSearch::Command(frame, id);
         const auto actual = Candidates(editor);
         if (TestEditor::Text(editor) != fixture.after || actual != fixture.items) {
-            std::fprintf(stderr, "Fixture %s: %s\nActual text: %s\n", fixture.language, fixture.before,
+            std::println(stderr, "Fixture {}: {}\nActual text: {}", fixture.language, fixture.before,
                          TestEditor::Text(editor).c_str());
             for (const auto& word : actual)
-                std::fprintf(stderr, "[%s] ", word.c_str());
-            std::fprintf(stderr, "\n");
+                std::print(stderr, "[{}] ", word.c_str());
+            std::println(stderr, "");
         }
         Require(TestEditor::Text(editor) == fixture.after, "original command bytes");
         Require(actual == fixture.items, "original candidate list and native Down order");
@@ -86,7 +88,7 @@ void RequireDocumentState(EditorControl* editor, const CompletionDocumentState& 
 void FrozenBehaviors(EditorFrame* frame, SettingsStore& store, int command) {
     auto* editor = frame->Editor();
     for (const auto& ref : completionBehaviors) {
-        std::fprintf(stderr, "Reference behavior %s: %s\n", ref.scheme, ref.before);
+        std::println(stderr, "Reference behavior {}: {}", ref.scheme, ref.before);
         editor->Send(Message::AutoCCancel);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", ref.scheme));
         auto& settings = store.values.completion;
@@ -104,8 +106,8 @@ void FrozenBehaviors(EditorFrame* frame, SettingsStore& store, int command) {
         const auto actual = Candidates(editor);
         if (actual != ref.items) {
             for (const auto& item : actual)
-                std::fprintf(stderr, "[%s] ", item.c_str());
-            std::fprintf(stderr, "\n");
+                std::print(stderr, "[{}] ", item.c_str());
+            std::println(stderr, "");
         }
         Require(actual == ref.items, "original document and language candidate order");
         if (!ref.items.empty()) {
@@ -294,7 +296,7 @@ public:
                 Require(TestEditor::Text(editor) == "pri" && !editor->Send(Message::CanUndo),
                         "confirmation is one Undo step");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

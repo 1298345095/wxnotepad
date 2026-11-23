@@ -9,6 +9,7 @@
 #include "text_measurement.h"
 #include "native_drawing_error.h"
 #include "popup_placement.h"
+#include "diagnostics/print.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
@@ -643,7 +644,7 @@ bool ShowAssertionPopUps(bool value) noexcept {
     return value;
 }
 [[noreturn]] void Assert(const char* c, const char* file, int line) noexcept {
-    std::fprintf(stderr, "%s:%d: %s\n", file, line, c);
+    DiagnosticPrint::Print(stderr, "{}:{:d}: {}\n", file, line, c);
     std::abort();
 }
 } // namespace Platform

@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_selection_helpers.h"
+#include <print>
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
 #include <fstream>
@@ -39,7 +41,7 @@ void CheckReference(EditorControl* editor, const std::string& name) {
             fields >> expected;
             const auto actual = editor->Send(message);
             if (!fields || actual != expected) {
-                std::fprintf(stderr, "%s message=%u expected=%lld actual=%lld\n", name.c_str(),
+                std::println(stderr, "{} message={:d} expected={:d} actual={:d}", name.c_str(),
                              static_cast<unsigned>(std::to_underlying(message)), static_cast<long long>(expected),
                              static_cast<long long>(actual));
                 throw std::runtime_error("public editor state matches frozen original runtime");
@@ -78,9 +80,9 @@ void History(EditorFrame* frame) {
             const auto clientWidth = editor->GetClientSize().x;
             const std::string prefix =
                 std::string("history-") + (enabled ? "True-" : "False-") + (reverse ? "True-" : "False-");
-            std::printf("History scene: dpi=%d client=%d line=%lld scroll=%lld; %s\n", editor->GetDPI().x, clientWidth,
-                        static_cast<long long>(lineWidth), static_cast<long long>(editor->Send(GetScrollWidth)),
-                        prefix.c_str());
+            std::println("History scene: dpi={:d} client={:d} line={:d} scroll={:d}; {}", editor->GetDPI().x,
+                         clientWidth, static_cast<long long>(lineWidth),
+                         static_cast<long long>(editor->Send(GetScrollWidth)), prefix.c_str());
             Require(lineWidth > clientWidth && editor->Send(GetScrollWidth) > clientWidth,
                     "history fixture must have a genuinely scrollable horizontal viewport");
             editor->Send(SetSel, reverse ? 2444 : 2440, reverse ? 2440 : 2444);
@@ -238,7 +240,7 @@ public:
                 Gestures(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

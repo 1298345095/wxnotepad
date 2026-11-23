@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include "settings/settings_store.h"
 #include "encoded_file_helpers.h"
 #include <wx/radiobut.h>
@@ -454,7 +456,7 @@ public:
                 SavedBytes(frame);
                 std::puts("PASS: original Align Lines");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

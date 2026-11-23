@@ -16,7 +16,7 @@ concurrency:
 jobs:
   analyze:
     name: CodeQL / ${{ matrix.language }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     env:
       SCCACHE_DISABLE: '1'
@@ -40,7 +40,7 @@ jobs:
         if: matrix.language == 'cpp'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Set up dependencies before tracing compilation
         if: matrix.language == 'cpp'
         uses: ./.github/actions/dependencies

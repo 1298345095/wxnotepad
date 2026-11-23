@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
+#include <print>
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -30,7 +32,7 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void Phase(const char* phase) {
-    std::fprintf(stderr, "phase: %s\n", phase);
+    std::println(stderr, "phase: {}", phase);
     std::fflush(stderr);
 }
 std::filesystem::path Root() {
@@ -67,7 +69,7 @@ void WaitForChild(const std::string& expected, const wxString& path, const wxStr
     Require(std::filesystem::exists(marker), "real child records launch");
     wxString recorded;
     Require(ReadChildRecord(marker, recorded), "child record is readable");
-    std::fprintf(stderr, "recorded: %s\nexpected: %s | %s | %s\n", recorded.utf8_str().data(), path.utf8_str().data(),
+    std::println(stderr, "recorded: {}\nexpected: {} | {} | {}", recorded.utf8_str().data(), path.utf8_str().data(),
                  cwd.utf8_str().data(), expected.c_str());
     std::fflush(stderr);
     Require(recorded ==
@@ -113,7 +115,7 @@ public:
             if (title == "Could not execute document" || title == "Could not open document with program") {
                 gchar* text = nullptr;
                 g_object_get(widget, "text", &text, nullptr);
-                std::fprintf(stderr, "Native launch error: %s\n", text ? text : "");
+                std::println(stderr, "Native launch error: {}", text ? text : "");
                 g_free(text);
                 ++errors;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_OK);
@@ -294,7 +296,7 @@ void Shortcut(const std::filesystem::path& shortcut, const wxString& target) {
 class Association final {
 public:
     Association() {
-        std::fprintf(stderr, "phase: registering association\n");
+        std::println(stderr, "phase: registering association");
         std::fflush(stderr);
         const auto executable = wxStandardPaths::Get().GetExecutablePath();
 #ifdef __WXMSW__
@@ -345,7 +347,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
                 "without an XDG Desktop configuration Open With defaults to the native home directory");
     }
 #endif
-    std::fprintf(stderr, "phase: direct Execute menu\n");
+    std::println(stderr, "phase: direct Execute menu");
     std::fflush(stderr);
     Require(frame->Open(Name(path)).status == OpenStatus::Opened, "open named document");
     auto* editor = frame->Editor();
@@ -378,7 +380,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
                 editor->Send(Message::GetCurrentPos) == 6 && frame->DocumentEncoding() == encoding &&
                 TestEditor::Text(frame) == "disk bytes unsaved",
             "Ctrl+L with preference off preserves the complete live document");
-    std::fprintf(stderr, "phase: Open With\n");
+    std::println(stderr, "phase: Open With");
     std::fflush(stderr);
     const auto program = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetFullName();
     settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
@@ -420,7 +422,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
                 "native directory selection immediately updates OpenWithDir, including after Cancel");
     }
     Require(!std::filesystem::exists(Root() / "record.txt"), "directory change and Cancel launch no child");
-    std::fprintf(stderr, "phase: save policy\n");
+    std::println(stderr, "phase: save policy");
     std::fflush(stderr);
     NativeSearch::Command(frame, preference);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
@@ -460,7 +462,7 @@ void Actions(EditorFrame* frame, SettingsStore& settings) {
     WaitForChild("disk bytes", Name(path), Name(Root()));
     // Replacing the backing file with a directory makes the ordinary required
     // Save fail on both platforms, without changing editor identity.
-    std::fprintf(stderr, "phase: failed save\n");
+    std::println(stderr, "phase: failed save");
     std::fflush(stderr);
     std::filesystem::remove(path);
     std::filesystem::create_directory(path);
@@ -530,7 +532,7 @@ Exec=/missing-wxnotepad-owned-program-244 %f
                 !std::filesystem::exists(Root() / "record.txt"),
             "failed launch retains the current document and reports one recoverable error");
     settings.values.openWithDirectory = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
-    std::fprintf(stderr, "phase: untitled\n");
+    std::println(stderr, "phase: untitled");
     std::fflush(stderr);
     Require(frame->NewDocument(), "clean named document becomes untitled");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -559,7 +561,7 @@ public:
 #else
         std::freopen(Name(Root() / TestFiles::Utf8Path(log.utf8_string())).utf8_str(), "ab", stderr);
 #endif
-        std::fprintf(stderr, "phase: init argc=%d\n", argc);
+        std::println(stderr, "phase: init argc={:d}", argc);
         std::fflush(stderr);
         if (!fixture) {
             const int firstArgument = argc >= 3 && wxString(argv[1]) == "--record" ? 3 : 1;
@@ -580,14 +582,14 @@ public:
         directoryLoadOrder_ = std::make_unique<NativeDialogs::DirectoryLoadOrder>();
 #endif
         settings_ = std::make_unique<SettingsStore>(Name(Root() / "Notepad4.ini"));
-        std::fprintf(stderr, "phase: constructing frame\n");
+        std::println(stderr, "phase: constructing frame");
         std::fflush(stderr);
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
-        std::fprintf(stderr, "phase: awaiting presentation\n");
+        std::println(stderr, "phase: awaiting presentation");
         std::fflush(stderr);
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
-            std::fprintf(stderr, "phase: presented=%d\n", ready);
+            std::println(stderr, "phase: presented={:d}", ready);
             std::fflush(stderr);
             try {
                 Require(ready, "owned editor must be presented");
@@ -597,7 +599,7 @@ public:
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "app/localization.h"
 #include "editor/editor_control.h"
@@ -18,6 +19,7 @@
 #include <memory>
 #include <string_view>
 #include <cstdio>
+#include <print>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -43,7 +45,7 @@ public:
             try {
                 auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Syntax schemes", dialog), wxTreeCtrl);
                 Require(tree, "native scheme dialog exposes its tree");
-                std::printf("DIALOG: %s\n", title.utf8_str().data());
+                std::println("DIALOG: {}", title.utf8_str().data());
                 action(*dialog, *tree);
             } catch (const std::exception& failure) {
                 error = failure.what();
@@ -392,7 +394,7 @@ using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 21>;
 void CheckLocalizedCaptions(wxTreeCtrl& tree, const LocalizedSchemeCaptions& captions, size_t column) {
     for (const auto& caption : captions) {
         const auto expected = wxString::FromUTF8(caption[column]);
-        std::printf("CAPTION: %s\n", expected.utf8_str().data());
+        std::println("CAPTION: {}", expected.utf8_str().data());
         Require(NativeDialogs::SelectTreeLabel(tree, expected),
                 "every delivered base scheme has its independently expected localized tree caption");
     }
@@ -578,7 +580,7 @@ public:
                 std::puts("PASS: native scheme selection and favorite workflows");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

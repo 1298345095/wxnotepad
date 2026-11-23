@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include "diagnostics/print.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -13,6 +14,8 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <exception>
+#include <print>
 #include <functional>
 #include <algorithm>
 #include <vector>
@@ -431,7 +434,8 @@ public:
         std::error_code error;
         fs::permissions(directory_, original_, error);
         if (error)
-            std::fprintf(stderr, "FAIL: restore private backup directory permissions: %s\n", error.message().c_str());
+            DiagnosticPrint::Print(stderr, "FAIL: restore private backup directory permissions: {}\n",
+                                   error.message().c_str());
     }
     BackupDirectoryWriteBlock(const BackupDirectoryWriteBlock&) = delete;
     BackupDirectoryWriteBlock& operator=(const BackupDirectoryWriteBlock&) = delete;
@@ -529,7 +533,7 @@ public:
 #endif
                 std::puts("PASS: native periodic backup settings");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

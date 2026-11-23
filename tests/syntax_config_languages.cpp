@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
@@ -12,6 +13,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <sstream>
 #include <fstream>
@@ -201,7 +203,7 @@ void OriginalOperations(EditorFrame* frame) {
         }
         if (TestEditor::Text(editor) != Unhex(fields[5]) || editor->Send(Message::GetAnchor) != std::stoll(fields[6]) ||
             editor->Send(Message::GetCurrentPos) != std::stoll(fields[7])) {
-            std::fprintf(stderr, "operation fixture=%s kind=%s action=%zu actual=%zd/%zd expected=%s/%s\n",
+            std::println(stderr, "operation fixture={} kind={} action={:d} actual={:d}/{:d} expected={}/{}",
                          fields[0].c_str(), fields[1].c_str(), action, editor->Send(Message::GetAnchor),
                          editor->Send(Message::GetCurrentPos), fields[6].c_str(), fields[7].c_str());
             throw std::runtime_error("native operation must match independently captured original result");
@@ -252,7 +254,7 @@ public:
                 std::puts("PASS: native Open and Save As for TOML, YAML and CMake");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

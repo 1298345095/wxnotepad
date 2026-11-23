@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include "native_fold_helpers.h"
 #include "file_helpers.h"
@@ -6,6 +7,7 @@
 #include "selection_rectangle_reference.h"
 #include <array>
 #include <cstdio>
+#include <print>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -25,10 +27,10 @@ void Position(EditorControl* editor, const SelectionReference::Fixture& row,
         editor->Send(GetMainSelection) != row.main ||
         editor->Send(GetRectangularSelectionAnchorVirtualSpace) != row.anchorVirtual ||
         editor->Send(GetRectangularSelectionCaretVirtualSpace) != row.caretVirtual) {
-        std::fprintf(
+        std::println(
             stderr,
-            "case document=%d command=%d mode=%d setup=%d repeat=%d input=%ld/%ld "
-            "actual=%lld/%lld mode=%lld count=%lld expected=%ld/%ld mode=%d count=%d\n",
+            "case document={:d} command={:d} mode={:d} setup={:d} repeat={:d} input={:d}/{:d} actual={:d}/{:d} "
+            "mode={:d} count={:d} expected={:d}/{:d} mode={:d} count={:d}",
             row.document, row.command, row.mode, row.setup, row.repetition, row.anchor, row.caret,
             static_cast<long long>(editor->Send(GetAnchor)), static_cast<long long>(editor->Send(GetCurrentPos)),
             static_cast<long long>(editor->Send(GetSelectionMode)), static_cast<long long>(editor->Send(GetSelections)),
@@ -44,16 +46,15 @@ void Position(EditorControl* editor, const SelectionReference::Fixture& row,
             editor->Send(GetSelectionNCaret, index) != range.caret ||
             editor->Send(GetSelectionNAnchorVirtualSpace, index) != range.anchorVirtual ||
             editor->Send(GetSelectionNCaretVirtualSpace, index) != range.caretVirtual) {
-            std::fprintf(stderr,
-                         "range doc=%d command=%d mode=%d setup=%d input=%ld/%ld N=%lld actual=%lld/%lld %lld/%lld "
-                         "expected=%ld/%ld %ld/%ld",
-                         row.document, row.command, row.mode, row.setup, row.anchor, row.caret,
-                         static_cast<long long>(index),
-                         static_cast<long long>(editor->Send(GetSelectionNAnchor, index)),
-                         static_cast<long long>(editor->Send(GetSelectionNCaret, index)),
-                         static_cast<long long>(editor->Send(GetSelectionNAnchorVirtualSpace, index)),
-                         static_cast<long long>(editor->Send(GetSelectionNCaretVirtualSpace, index)), range.anchor,
-                         range.caret, range.anchorVirtual, range.caretVirtual);
+            std::print(stderr,
+                       "range doc={:d} command={:d} mode={:d} setup={:d} input={:d}/{:d} N={:d} actual={:d}/{:d} "
+                       "{:d}/{:d} expected={:d}/{:d} {:d}/{:d}",
+                       row.document, row.command, row.mode, row.setup, row.anchor, row.caret,
+                       static_cast<long long>(index), static_cast<long long>(editor->Send(GetSelectionNAnchor, index)),
+                       static_cast<long long>(editor->Send(GetSelectionNCaret, index)),
+                       static_cast<long long>(editor->Send(GetSelectionNAnchorVirtualSpace, index)),
+                       static_cast<long long>(editor->Send(GetSelectionNCaretVirtualSpace, index)), range.anchor,
+                       range.caret, range.anchorVirtual, range.caretVirtual);
             throw std::runtime_error(
                 "every original multiple/rectangular selection range retains exact endpoints and virtual space");
         }
@@ -148,9 +149,10 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
             constexpr auto DefaultStyle = std::to_underlying(Scintilla::StylesCommon::Default);
             char font[128]{};
             editor->Send(StyleGetFont, DefaultStyle, reinterpret_cast<intptr_t>(font));
-            std::printf("Native rectangle geometry: font=%s size=%lld prepared range=%ld/%ld; original range=%ld/%ld\n",
-                        font, static_cast<long long>(editor->Send(StyleGetSize, DefaultStyle)),
-                        rectangleRanges[0].anchor, rectangleRanges[0].caret, row.ranges[0].anchor, row.ranges[0].caret);
+            std::println(
+                "Native rectangle geometry: font={} size={:d} prepared range={:d}/{:d}; original range={:d}/{:d}", font,
+                static_cast<long long>(editor->Send(StyleGetSize, DefaultStyle)), rectangleRanges[0].anchor,
+                rectangleRanges[0].caret, row.ranges[0].anchor, row.ranges[0].caret);
         }
         NativeSearch::Command(frame, commands[row.command]);
         Position(editor, row,
@@ -159,9 +161,8 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
         if (NativeSearch::Text(editor) != SelectionReference::documents[row.document] || editor->Send(GetModify) ||
             editor->Send(CanUndo) != undo || editor->Send(CanRedo) != redo || frame->DocumentEncoding() != encoding ||
             frame->DocumentHasBom() != bom) {
-            std::fprintf(stderr,
-                         "state document=%d setup=%d input=%ld/%ld modify=%lld undo=%lld redo=%lld "
-                         "text=%s\n",
+            std::println(stderr,
+                         "state document={:d} setup={:d} input={:d}/{:d} modify={:d} undo={:d} redo={:d} text={}",
                          row.document, row.setup, row.anchor, row.caret,
                          static_cast<long long>(editor->Send(GetModify)), static_cast<long long>(editor->Send(CanUndo)),
                          static_cast<long long>(editor->Send(CanRedo)), NativeSearch::Text(editor).c_str());
@@ -246,7 +247,7 @@ void ViewportCases(EditorFrame* frame, const int* commands) {
         Require(first == 30 && horizontal > 0, "viewport fixture starts away from document origin on both axes");
         NativeSearch::Command(frame, commands[command]);
         if (editor->Send(GetFirstVisibleLine) != first || editor->Send(GetXOffset) != horizontal) {
-            std::fprintf(stderr, "viewport command=%d before=%lld/%lld after=%lld/%lld\n", command,
+            std::println(stderr, "viewport command={:d} before={:d}/{:d} after={:d}/{:d}", command,
                          static_cast<long long>(first), static_cast<long long>(horizontal),
                          static_cast<long long>(editor->Send(GetFirstVisibleLine)),
                          static_cast<long long>(editor->Send(GetXOffset)));
@@ -331,7 +332,7 @@ public:
                             "original selection menus disable on empty documents");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

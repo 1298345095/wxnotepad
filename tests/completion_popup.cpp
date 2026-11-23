@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include "native_completion_helpers.h"
 #include "native_paint_helpers.h"
@@ -5,6 +6,8 @@
 #include <wx/popupwin.h>
 #include <wx/vlbox.h>
 #include <wx/display.h>
+#include <cstdio>
+#include <print>
 
 namespace {
 using Scintilla::Message;
@@ -87,10 +90,10 @@ void CheckPopupWorkArea(EditorFrame* frame) {
         const auto caret =
             editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(PointXFromPosition, 0, position)),
                                            static_cast<int>(editor->Send(PointYFromPosition, 0, position))));
-        std::fprintf(stderr,
-                     "completion boundary: bounds=%d,%d,%d,%d popup=%d,%d,%d,%d list=%p active=%zd "
-                     "frame=%d,%d,%d,%d editor=%d,%d,%d,%d caret=%d,%d DPI=%d,%d scale=%g "
-                     "first=%zd xOffset=%zd\n",
+        std::println(stderr,
+                     "completion boundary: bounds={:d},{:d},{:d},{:d} popup={:d},{:d},{:d},{:d} list={:p} active={:d} "
+                     "frame={:d},{:d},{:d},{:d} editor={:d},{:d},{:d},{:d} caret={:d},{:d} DPI={:d},{:d} scale={:.6g} "
+                     "first={:d} xOffset={:d}",
                      bounds.x, bounds.y, bounds.width, bounds.height, scrolledPopup.x, scrolledPopup.y,
                      scrolledPopup.width, scrolledPopup.height, static_cast<void*>(list), editor->Send(AutoCActive),
                      frameRect.x, frameRect.y, frameRect.width, frameRect.height, editorRect.x, editorRect.y,
@@ -135,9 +138,9 @@ void CheckPopupWheelAndFocus(EditorFrame* frame) {
     const auto lineAfterWheel = editor->Send(GetFirstVisibleLine);
     const auto activeAfterWheel = editor->Send(AutoCActive);
     if (lineAfterWheel != firstLine || !activeAfterWheel)
-        std::fprintf(stderr,
-                     "completion wheel: first=%zd before=%zd after=%zd active=%zd,%zd "
-                     "focus=%p,%p editor=%p list=%p\n",
+        std::println(stderr,
+                     "completion wheel: first={:d} before={:d} after={:d} active={:d},{:d} "
+                     "focus={:p},{:p} editor={:p} list={:p}",
                      firstLine, lineBeforeWheel, lineAfterWheel, activeBeforeWheel, activeAfterWheel,
                      static_cast<void*>(focusBeforeWheel), static_cast<void*>(wxWindow::FindFocus()),
                      static_cast<void*>(editor), static_cast<void*>(list));
@@ -165,8 +168,8 @@ void CheckPopup(EditorFrame* frame) {
     CheckInitialPopup(editor);
     CheckPopupWorkArea(frame);
     CheckPopupWheelAndFocus(frame);
-    std::printf("PASS: native completion popup placement, nonfocusable list, cancellation; DPI=%dx%d",
-                editor->GetDPI().x, editor->GetDPI().y);
+    std::print("PASS: native completion popup placement, nonfocusable list, cancellation; DPI={:d}x{:d}",
+               editor->GetDPI().x, editor->GetDPI().y);
 }
 class CompletionPopupApp final : public wxApp {
 public:
@@ -183,7 +186,7 @@ public:
                 Require(presented, "native compositor presents completion test editor");
                 CheckPopup(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

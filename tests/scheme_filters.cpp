@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
@@ -6,6 +7,7 @@
 #include "file_helpers.h"
 #include <wx/timer.h>
 #include <cstdio>
+#include <print>
 #include <functional>
 #include <vector>
 
@@ -41,7 +43,7 @@ public:
         } catch (const std::exception& failure) {
             error = failure.what();
             for (const auto& type : types)
-                std::fprintf(stderr, "native filter: %s\n", type.utf8_str().data());
+                std::println(stderr, "native filter: {}", type.utf8_str().data());
         }
     }
     void Notify() override {
@@ -123,7 +125,7 @@ public:
                 Case({}, {"All Files", "Python", "Plain Text"}, {"Python", "Plain Text", "All Files"});
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             lifetime->Destroy();
             ExitMainLoop();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -7,6 +8,7 @@
 #include <SciLexer.h>
 #include <algorithm>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -141,7 +143,7 @@ public:
                 fresh->Destroy();
                 std::puts("PASS: whitespace menu toggles original core markers without changing document or geometry");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

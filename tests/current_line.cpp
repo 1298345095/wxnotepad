@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor/editor_control.h"
@@ -8,6 +9,7 @@
 #include <wx/menu.h>
 #include <wx/button.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <fstream>
 #include <chrono>
@@ -138,7 +140,7 @@ public:
         wxColour colour;
         Require(pixels.GetPixel(x, y, &colour), "read the actual owned editor's painted background");
 #endif
-        std::printf("sample %d,%d=%u,%u,%u\n", x, y, colour.Red(), colour.Green(), colour.Blue());
+        std::println("sample {:d},{:d}={:d},{:d},{:d}", x, y, colour.Red(), colour.Green(), colour.Blue());
         return colour;
     }
 
@@ -321,14 +323,14 @@ public:
                 editor->Send(SetSavePoint);
                 const int y = static_cast<int>(editor->Send(TextHeight, 0)) / 2;
                 const auto colour = pixels.Read(200, y);
-                std::printf("current-line pixel=%u,%u,%u at 200,%d dpi=%d\n", colour.Red(), colour.Green(),
-                            colour.Blue(), y, editor->GetDPI().y);
+                std::println("current-line pixel={:d},{:d},{:d} at 200,{:d} dpi={:d}", colour.Red(), colour.Green(),
+                             colour.Blue(), y, editor->GetDPI().y);
                 Require(colour.Red() == 255 && colour.Green() == 255 && colour.Blue() >= 164 && colour.Blue() <= 166,
                         "original alpha90 yellow must blend over the white editor background");
                 std::puts("PASS: actual editor current-line alpha rendering");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

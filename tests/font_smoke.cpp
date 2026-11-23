@@ -1,9 +1,11 @@
+#include "diagnostics/print.h"
 #include "editor/platform/core_headers.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
 #include <wx/image.h>
 #include <cstdio>
+#include <print>
 #include <iostream>
 #include <stdexcept>
 #include <string_view>
@@ -79,9 +81,9 @@ public:
                 const auto buffered = pixmap->WidthText(font.get(), "Hg 0123456789");
                 const auto directHeight = surface->Metrics(font.get()).height;
                 const auto bufferedHeight = pixmap->Metrics(font.get()).height;
-                std::printf(
-                    "dpi=%d reference_width=%d direct_width=%g buffered_width=%g direct_height=%g buffered_height=%g\n",
-                    frame->GetDPI().y, expected.x, direct, buffered, directHeight, bufferedHeight);
+                std::println("dpi={:d} reference_width={:d} direct_width={:.6g} buffered_width={:.6g} "
+                             "direct_height={:.6g} buffered_height={:.6g}",
+                             frame->GetDPI().y, expected.x, direct, buffered, directHeight, bufferedHeight);
                 if (direct != expected.x || buffered != expected.x || directHeight != bufferedHeight ||
                     surface->LogPixelsY() != pixmap->LogPixelsY())
                     throw FontFailure(
@@ -94,7 +96,7 @@ public:
 #endif
                 result_ = 0;
             } catch (const FontFailure& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

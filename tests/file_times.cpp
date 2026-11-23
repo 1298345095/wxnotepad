@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor/editor_control.h"
@@ -6,6 +7,7 @@
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <chrono>
 #include <memory>
 #include <stdexcept>
@@ -112,8 +114,8 @@ bool InitialTimesEqual(const Times& times) {
     return times.access == times.modified;
 }
 void LogTimes(const char* label, const Times& times) {
-    std::printf("%s access=%lld modified=%lld ctime=%lld (ns since Unix epoch)\n", label, times.access, times.modified,
-                times.change);
+    std::println("{} access={:d} modified={:d} ctime={:d} (ns since Unix epoch)", label, times.access, times.modified,
+                 times.change);
 }
 bool OtherTimesEqual(const Times& before, const Times& after) {
     return before.access == after.access;
@@ -140,7 +142,7 @@ void PreserveTimes(EditorFrame* frame, const std::filesystem::path& path, int sa
     Require(frame->Editor()->Send(GetModify), "Undo across original-time save must be dirty");
     frame->Editor()->Send(Redo);
     Require(!frame->Editor()->Send(GetModify), "Redo to original-time save must be clean");
-    std::printf("PASS: original-time content save preserves timestamps, mtime=%lld\n", ModifiedSeconds(after));
+    std::println("PASS: original-time content save preserves timestamps, mtime={:d}", ModifiedSeconds(after));
 }
 void UpdateDirty(EditorFrame* frame, const std::filesystem::path& path, int update) {
     using enum Scintilla::Message;
@@ -172,8 +174,8 @@ void UpdateDirty(EditorFrame* frame, const std::filesystem::path& path, int upda
     Require(editor->Send(GetModify) && TestEditor::Text(frame) == text,
             "timestamp-only action must retain pending Redo text");
     editor->Send(Undo);
-    std::printf("PASS: timestamp-only dirty update preserves disk bytes/editor state, mtime=%lld\n",
-                ModifiedSeconds(after));
+    std::println("PASS: timestamp-only dirty update preserves disk bytes/editor state, mtime={:d}",
+                 ModifiedSeconds(after));
 }
 void SaveDestinations(EditorFrame* frame) {
     Require(frame->NewDocument(), "clean document must allow New");
@@ -282,8 +284,8 @@ void UpdateFailures(EditorFrame* frame, int update) {
 #ifndef __WXMSW__
     struct stat created{};
     Require(::stat(path.c_str(), &created) == 0, "recreated file metadata must be independently readable");
-    std::printf("Timestamp-only recreated file permissions=%03o under umask 000\n",
-                static_cast<unsigned>(created.st_mode & 0777));
+    std::println("Timestamp-only recreated file permissions={:03o} under umask 000",
+                 static_cast<unsigned>(created.st_mode & 0777));
     Require((created.st_mode & 0777) == 0600,
             "timestamp-only recreation must grant only owner read/write under a permissive umask");
 #endif
@@ -386,7 +388,7 @@ public:
                 std::puts("PASS: file-time menu enablement and shared save action");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
 #ifdef __WXMSW__
             if (linkFrame_) linkFrame_->Destroy();

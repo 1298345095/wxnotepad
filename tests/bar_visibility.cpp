@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
+#include <print>
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
@@ -175,7 +177,7 @@ public:
 #endif
                 const auto initial = frame->Editor()->GetSize();
                 const auto initialStatus = frame->GetStatusBar()->GetSize();
-                std::printf("Initial frame client height=%d\n", frame->GetClientSize().y);
+                std::println("Initial frame client height={:d}", frame->GetClientSize().y);
                 NativeSearch::Command(frame, status);
                 NativePaint::Complete(frame->Editor());
                 Require(!frame->GetStatusBar()->IsShown(), "native menu hides status bar");
@@ -190,10 +192,10 @@ public:
                 WaitForLayout([&] { return frame->Editor()->GetSize().y == withMenu.y; },
                               "restored menu returns its native client area");
                 NativeSearch::Command(frame, status);
-                std::printf("Native bar layout: initial editor=%d status=%d, hidden-status editor=%d, "
-                            "restored editor=%d status=%d, frame=%d client=%d\n",
-                            initial.y, initialStatus.y, withMenu.y, frame->Editor()->GetSize().y,
-                            frame->GetStatusBar()->GetSize().y, frame->GetSize().y, frame->GetClientSize().y);
+                std::println("Native bar layout: initial editor={:d} status={:d}, hidden-status editor={:d}, restored "
+                             "editor={:d} status={:d}, frame={:d} client={:d}",
+                             initial.y, initialStatus.y, withMenu.y, frame->Editor()->GetSize().y,
+                             frame->GetStatusBar()->GetSize().y, frame->GetSize().y, frame->GetClientSize().y);
                 WaitForLayout([&] { return frame->Editor()->GetSize().y == initial.y; },
                               "restored status returns its native client area");
                 Require(MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "native commands restore both bars");
@@ -201,7 +203,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: original native menu controls, check states and client-area layout");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             if (frame) frame->Destroy();
             ExitMainLoop();

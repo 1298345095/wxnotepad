@@ -4,6 +4,7 @@
 #include <wx/wx.h>
 #include <algorithm>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace TestSyntax {
@@ -29,7 +30,7 @@ inline void Command(EditorFrame* frame, int id) {
 inline void Style(EditorControl* editor, size_t position, int expected) {
     const auto actual = editor->Send(Scintilla::Message::GetStyleIndexAt, position);
     if (actual != expected) {
-        std::fprintf(stderr, "position=%zu expected_style=%d actual_style=%zd\n", position, expected, actual);
+        std::println(stderr, "position={:d} expected_style={:d} actual_style={:d}", position, expected, actual);
         throw TestEditor::Failure("syntax style at known UTF-8 byte position differs from pinned lexer");
     }
 }

@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include "native_completion_helpers.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
@@ -104,7 +106,7 @@ void CapturedCommands(EditorFrame* frame) {
             editor->Send(Message::Redo);
             Check(editor, redo);
         } catch (...) {
-            std::fprintf(stderr, "original Base64 sample %u, command %s, input %s\n", cases, labels[command],
+            std::println(stderr, "original Base64 sample {:d}, command {}, input {}", cases, labels[command],
                          bytes.c_str());
             throw;
         }
@@ -112,7 +114,7 @@ void CapturedCommands(EditorFrame* frame) {
     }
     Require(source.eof() && cases == 498, "replay every independently captured original Base64 command");
     std::filesystem::remove_all(directory);
-    std::printf("PASS: %u original Base64 byte/selection/history samples\n", cases);
+    std::println("PASS: {:d} original Base64 byte/selection/history samples", cases);
 }
 class RectangleFeedback final : public wxModalDialogHook {
 public:
@@ -527,7 +529,7 @@ public:
                 NativeAnsiBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);
             frame->Destroy();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
@@ -11,6 +12,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <utility>
 #include <sstream>
 #include <fstream>
@@ -125,7 +127,7 @@ public:
                 std::puts("PASS: native Open and Save As for Rust, Go and Lua");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

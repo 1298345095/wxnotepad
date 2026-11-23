@@ -51,7 +51,7 @@ if(WXNOTEPAD_ENABLE_SIZE_OPTIMIZATIONS)
             if(WXNOTEPAD_LINKER_GC_SECTIONS)
                 target_link_options(${target} PRIVATE "$<${size_configuration}:LINKER:--gc-sections>")
             endif()
-            # The packaged Linux runtime targets Ubuntu 24.04+. The linker probe
+            # The packaged Linux runtime targets Ubuntu 26.04+. The linker probe
             # also links against libc, including its DT_RELR ABI requirement.
             if(WXNOTEPAD_LINKER_RELR)
                 target_link_options(${target} PRIVATE "$<${size_configuration}:LINKER:-z,pack-relative-relocs>")

@@ -1,6 +1,6 @@
 # Headless fuzz testing
 
-The optional Linux Clang 18 build uses libFuzzer, AddressSanitizer and
+The optional Linux Clang 21 build uses libFuzzer, AddressSanitizer and
 UndefinedBehaviorSanitizer. It instruments the production encoding and
 file-variable implementations and the pinned `UniConversion.cxx`; the existing
 wxWidgets binary dependency is reused without sanitizer instrumentation. The
@@ -25,13 +25,13 @@ focus, clipboard ownership, IME and window lifetime.
 ## Local build
 
 Use the existing wxWidgets 3.3.3 dependency and prepared original source. On
-Ubuntu 24.04 the test tools are `clang-18`, `llvm-18` and `libclang-rt-18-dev`.
+Ubuntu 26.04 the test tools are `clang-21`, `llvm-21` and `libclang-rt-21-dev`.
 Prepare the source with the existing `tools/build.py --prepare-only` entry point,
 then configure a separate build directory:
 
 ```sh
 cmake -S . -B .ci/build/fuzz -G Ninja \
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-18 \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-21 \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DWXNOTEPAD_FUZZ_ONLY=ON \
   -DNOTEPAD4_SOURCE="$PWD/.ci/build/original-core" \
   -DCMAKE_TOOLCHAIN_FILE="$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake" \
@@ -71,7 +71,7 @@ Raw original-source archives and preparation records are retained too.
 To reproduce a saved input, use the matching executable:
 
 ```sh
-ASAN_SYMBOLIZER_PATH="$(command -v llvm-symbolizer-18)" \
+ASAN_SYMBOLIZER_PATH="$(command -v llvm-symbolizer-21)" \
   .ci/build/fuzz/tests/fuzz/fuzz_codecs path/to/crash-input
 ```
 

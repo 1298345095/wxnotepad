@@ -1,4 +1,5 @@
 #include "status_helpers.h"
+#include <print>
 #pragma once
 
 #include "native_search_helpers.h"
@@ -193,7 +194,7 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
         Require(styles.size() == text.size(), "original styles must cover every UTF-8 byte");
         for (size_t position = 0; position < styles.size(); ++position) {
             if (editor->Send(Message::GetStyleIndexAt, position) != static_cast<unsigned char>(styles[position])) {
-                std::fprintf(stderr, "fixture=%s state=%s position=%zu expected=%u actual=%zd\n", name.c_str(),
+                std::println(stderr, "fixture={} state={} position={:d} expected={:d} actual={:d}", name.c_str(),
                              state.c_str(), position, static_cast<unsigned char>(styles[position]),
                              editor->Send(Message::GetStyleIndexAt, position));
                 throw TestEditor::Failure(styleMessage);
@@ -203,7 +204,7 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
         size_t foldLine = 0;
         while (std::getline(folds, line, ',')) {
             if (editor->Send(Message::GetFoldLevel, foldLine) != std::stoi(line)) {
-                std::fprintf(stderr, "fixture=%s state=%s line=%zu expected=%d actual=%zd\n", name.c_str(),
+                std::println(stderr, "fixture={} state={} line={:d} expected={:d} actual={:d}", name.c_str(),
                              state.c_str(), foldLine, std::stoi(line), editor->Send(Message::GetFoldLevel, foldLine));
                 throw TestEditor::Failure(foldMessage);
             }

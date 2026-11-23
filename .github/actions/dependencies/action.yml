@@ -51,7 +51,7 @@ runs:
       run: |
         set -euo pipefail
         linux_packages=(
-          build-essential gcc-13 g++-13 ninja-build pkg-config autoconf autoconf-archive automake
+          build-essential gcc-15 g++-15 ninja-build pkg-config autoconf autoconf-archive automake
           libtool libltdl-dev gettext gperf bison flex
           libgtk-3-dev libwayland-dev libwayland-egl-backend-dev libxkbcommon-dev
           libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev libx11-dev libxi-dev
@@ -59,11 +59,11 @@ runs:
         )
         case "$DEPENDENCY_PROFILE" in
           build) ;;
-          gui) linux_packages+=(gdb xvfb xauth x11-utils dbus-x11 xdotool openbox fonts-dejavu-core fonts-noto-cjk
+          gui) linux_packages+=(gdb clang-tidy-21 xvfb xauth x11-utils dbus-x11 openbox weston fonts-dejavu-core fonts-noto-cjk
                                 python3-gi gir1.2-atspi-2.0 at-spi2-core locales
                                 meson libinput-dev libdrm-dev libx11-xcb-dev libxcb-xkb-dev wayland-protocols) ;;
-          tidy) linux_packages+=(clang-tidy-18) ;;
-          fuzz) linux_packages+=(clang-18 llvm-18 libclang-rt-18-dev) ;;
+          tidy) linux_packages+=(clang-tidy-21) ;;
+          fuzz) linux_packages+=(clang-21 llvm-21 libclang-rt-21-dev) ;;
           *) printf 'Unknown dependency profile: %s\n' "$DEPENDENCY_PROFILE" >&2; exit 2 ;;
         esac
         printf 'Linux dependency profile: %s\n' "$DEPENDENCY_PROFILE"
@@ -77,7 +77,7 @@ runs:
           -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends "${linux_packages[@]}"
         # APT changes partial to _apt:root/0700; Python analysis walks this directory.
         sudo chown "$(id -u):$(id -g)" "$apt_archives/partial"
-        printf '%s\n' 'CC=gcc-13' 'CXX=g++-13' >> "$GITHUB_ENV"
+        printf '%s\n' 'CC=gcc-15' 'CXX=g++-15' >> "$GITHUB_ENV"
         if compgen -G "$apt_archives/*.deb" > /dev/null; then
           printf '%s\n' 'archives=true' >> "$GITHUB_OUTPUT"
         fi
@@ -87,43 +87,46 @@ runs:
       with:
         path: .ci/apt-archives/*.deb
         key: ${{ steps.apt-cache.outputs.cache-primary-key }}
-    - name: Restore pinned private compositor
+    - name: Verify native Ubuntu GUI tools
       if: runner.os == 'Linux' && inputs.profile == 'gui'
-      id: weston-cache
+      shell: bash
+      run: |
+        set -euo pipefail
+        weston --version
+        python -c 'import sys; sys.path.append("/usr/lib/python3/dist-packages"); import gi; gi.require_version("Atspi", "2.0"); from gi.repository import Atspi; print("Native GTK bindings:", sys.version.split()[0])'
+    - name: Restore current native keyboard driver
+      if: runner.os == 'Linux' && inputs.profile == 'gui'
+      id: xdotool-cache
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
-        path: .ci/weston
-        key: weston-13.0.4-${{ runner.os }}-${{ runner.arch }}-${{ steps.metadata.outputs.image }}-${{ hashFiles('.github/scripts/build-weston.sh', '.github/actions/dependencies/action.yml') }}
-    - name: Checkout Weston 13.0.4
-      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.weston-cache.outputs.cache-hit != 'true'
+        path: .ci/xdotool
+        key: xdotool-4.20260303.1-${{ runner.os }}-${{ runner.arch }}-${{ steps.metadata.outputs.image }}-${{ hashFiles('.github/scripts/build-xdotool.sh') }}
+    - name: Checkout xdotool 4.20260303.1
+      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.xdotool-cache.outputs.cache-hit != 'true'
       uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
-        repository: wayland-mirror/weston
-        ref: d522890e23290addf4dd8b88762e65f7455c235d # 13.0.4, includes desktop-shell fix 042d02f
-        path: .ci/weston-source
+        repository: jordansissel/xdotool
+        ref: d37c16111dbe38ea29194f20ac9de03cff8dfc1c # v4.20260303.1
+        path: .ci/xdotool-source
         persist-credentials: false
-    - name: Build pinned private compositor
-      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.weston-cache.outputs.cache-hit != 'true'
+    - name: Build current native keyboard driver
+      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.xdotool-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p .ci/reports
-        bash .github/scripts/build-weston.sh .ci/weston-source .ci/weston \
-          2>&1 | tee .ci/reports/weston-build.log
-    - name: Select pinned private compositor
+      run: bash .github/scripts/build-xdotool.sh .ci/xdotool-source .ci/xdotool
+    - name: Select current native keyboard driver
       if: runner.os == 'Linux' && inputs.profile == 'gui'
       shell: bash
       run: |
         set -euo pipefail
-        prefix="$GITHUB_WORKSPACE/.ci/weston"
-        test "$("$prefix/bin/weston" --version)" = 'weston 13.0.4'
+        prefix="$GITHUB_WORKSPACE/.ci/xdotool"
+        test "$("$prefix/bin/xdotool" --version)" = 'xdotool version 4.20260303.1'
         printf '%s\n' "$prefix/bin" >> "$GITHUB_PATH"
-    - name: Save pinned private compositor before tests
-      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.weston-cache.outputs.cache-hit != 'true'
+    - name: Save current native keyboard driver
+      if: runner.os == 'Linux' && inputs.profile == 'gui' && steps.xdotool-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
-        path: .ci/weston
-        key: ${{ steps.weston-cache.outputs.cache-primary-key }}
+        path: .ci/xdotool
+        key: ${{ steps.xdotool-cache.outputs.cache-primary-key }}
     - name: Bootstrap vcpkg on Windows
       if: runner.os == 'Windows' && steps.vcpkg-tool-cache.outputs.cache-hit != 'true'
       shell: pwsh

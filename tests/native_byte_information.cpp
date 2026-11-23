@@ -1,8 +1,10 @@
+#include "diagnostics/print.h"
 #include "native_completion_helpers.h"
 #include "file_helpers.h"
 #include <wx/clipbrd.h>
 #include <wx/stattext.h>
 #include <cstdio>
+#include <print>
 #include <exception>
 
 namespace {
@@ -13,7 +15,7 @@ void Require(bool condition, const char* message) {
 }
 
 void Phase(const char* phase) {
-    std::fprintf(stderr, "Character Info phase: %s\n", phase);
+    std::println(stderr, "Character Info phase: {}", phase);
     std::fflush(stderr);
 }
 
@@ -68,7 +70,7 @@ void CheckInvalidByte(EditorFrame* frame) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info"));
     Phase("Character Info returned");
     const auto output = feedback.payload.utf8_string();
-    std::printf("Character Info: %s\n", output.c_str());
+    std::println("Character Info: {}", output.c_str());
     Require(feedback.shown == 1 && output.starts_with("Unicode: U+DD01\nUTF-16: DD01\nUTF-8: EF BF BD\nHTML: &#56577;"),
             "invalid UTF-8 Character Info retains the original sentinel and replacement UTF-8 field");
     Phase("opening clipboard for result");
@@ -118,7 +120,7 @@ public:
                 CheckInvalidByte(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

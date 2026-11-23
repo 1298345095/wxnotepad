@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "document/document_session.h"
 #include "editor/editor_control.h"
 #include "editor/platform/native_encoding.h"
@@ -5,6 +6,7 @@
 #include <wx/wx.h>
 #include <array>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string_view>
 #ifdef __WXMSW__
@@ -86,7 +88,7 @@ public:
 private:
     void Check(const char* name, DocumentSession& opened, const OpenResult& result, std::string_view input,
                std::string_view text, FileEncoding encoding, bool bom) const {
-        if (result.status != OpenStatus::Opened) std::fprintf(stderr, "%s: %s\n", name, result.error.utf8_str().data());
+        if (result.status != OpenStatus::Opened) std::println(stderr, "{}: {}", name, result.error.utf8_str().data());
         Require(result.status == OpenStatus::Opened, name);
         Require(Text(*editor_) == text && opened.Encoding() == encoding && opened.HasBom() == bom, name);
         Require(opened.Save().status == SaveStatus::Saved && TestFiles::Bytes(directory_ / name) == input, name);
@@ -442,7 +444,7 @@ public:
                 CheckQuickReloadWithUtf8SystemAnsi();
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

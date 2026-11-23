@@ -337,3 +337,20 @@ foreach(language IN ITEMS en zh_CN zh_TW)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
     set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)
 endforeach()
+
+add_executable(diagnostic_print tests/diagnostic_print.cpp tests/completion_allocation_fault.cpp)
+target_include_directories(diagnostic_print PRIVATE src)
+if(MSVC)
+    target_compile_options(diagnostic_print PRIVATE /utf-8)
+endif()
+add_test(NAME native_print_failure_handling COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostic_print_process.py" "$<TARGET_FILE:diagnostic_print>")
+set_tests_properties(native_print_failure_handling PROPERTIES TIMEOUT 30)
+
+add_executable(diagnostic_assert tests/diagnostic_assert.cpp)
+target_include_directories(diagnostic_assert PRIVATE src/editor/platform
+    "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+target_link_libraries(diagnostic_assert PRIVATE editor_runtime)
+add_test(NAME native_assert_output_failure COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostic_assert_process.py" "$<TARGET_FILE:diagnostic_assert>")
+set_tests_properties(native_assert_output_failure PROPERTIES TIMEOUT 30)

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "settings/settings_store.h"
 #include "native_key_helpers.h"
@@ -10,6 +11,7 @@
 #include <array>
 #include <wx/menu.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #ifdef __WXGTK__
 #include <gtk/gtkunixprint.h>
@@ -215,8 +217,8 @@ public:
         acceptedChoice = acceptedPath && wxString::FromUTF8(acceptedPath) == output_ &&
                          gtk_print_settings_get_print_pages(accepted) == pages_;
         if (!acceptedChoice)
-            std::fprintf(stderr, "Native Print selection %d, URI %s\n", gtk_print_settings_get_print_pages(accepted),
-                         uri ? uri : "(none)");
+            std::println(stderr, "Native Print selection {:d}, URI {}",
+                         static_cast<int>(gtk_print_settings_get_print_pages(accepted)), uri ? uri : "(none)");
         g_free(acceptedPath);
         g_object_unref(accepted);
         Stop();
@@ -396,7 +398,7 @@ public:
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

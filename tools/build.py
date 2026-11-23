@@ -88,6 +88,7 @@ def main():
     configure = ["cmake", "-S", ROOT, "-B", build / "cmake",
                  f"-DNOTEPAD4_SOURCE={staged}",
                  f"-DCMAKE_TOOLCHAIN_FILE={args.vcpkg_root}/scripts/buildsystems/vcpkg.cmake",
+                 f"-DPython3_EXECUTABLE={sys.executable}",
                  "-DVCPKG_MANIFEST_MODE=OFF"]
     if sys.platform == "win32":
         # Keep CMake's cached /showIncludes prefix consistent with later builds.

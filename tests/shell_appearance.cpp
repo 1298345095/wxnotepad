@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include "native_paint_helpers.h"
 #include "toolbar_art_reference.h"
 #include "settings/settings_store.h"
@@ -8,6 +10,7 @@
 #include <wx/toolbar.h>
 #include <wx/statusbr.h>
 #include <memory>
+#include <utility>
 #include <wx/log.h>
 #include <wx/dialog.h>
 #include <wx/clipbrd.h>
@@ -76,7 +79,8 @@ void NativeSelectionColours(EditorControl* editor) {
         const auto colour =
             static_cast<uint32_t>(editor->Send(Scintilla::Message::GetElementColour, static_cast<uintptr_t>(element)));
         const uint32_t native = 0xFF000000U | expected.Red() | (expected.Green() << 8U) | (expected.Blue() << 16U);
-        std::printf("Selection element %d: expected=%08x actual=%08x\n", static_cast<int>(element), native, colour);
+        std::println("Selection element {:d}: expected={:08x} actual={:08x}", std::to_underlying(element), native,
+                     colour);
         Require(colour == native, "default selected text uses the native highlight foreground/background pair");
     }
 }
@@ -148,8 +152,9 @@ void DisabledArtworkColours(wxToolBar* toolbar) {
             CheckDisabledArtwork(tool, command, size, background);
         }
     }
-    std::printf("PASS: native Dark disabled artwork foreground #%02x%02x%02x on #%02x%02x%02x\n", foreground.Red(),
-                foreground.Green(), foreground.Blue(), background.Red(), background.Green(), background.Blue());
+    std::println("PASS: native Dark disabled artwork foreground #{:02x}{:02x}{:02x} on #{:02x}{:02x}{:02x}",
+                 foreground.Red(), foreground.Green(), foreground.Blue(), background.Red(), background.Green(),
+                 background.Blue());
 }
 #ifdef __WXMSW__
 void DumpStatusLayout(wxStatusBar* status, const char* stage) {
@@ -490,7 +495,7 @@ public:
                 result_ = 0;
                 std::puts("PASS: native default toolbar");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

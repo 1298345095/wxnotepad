@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
+#include <print>
 #include "app/new_window.h"
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
@@ -259,7 +261,7 @@ public:
                 } else
                     result_ = Parent(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 std::ofstream(Directory() / "failure.txt") << error.what() << '\n';
                 result_ = 1;
                 frame->Destroy();

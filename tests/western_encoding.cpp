@@ -1,4 +1,5 @@
 #include "status_helpers.h"
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -12,6 +13,7 @@
 #include <wx/listbox.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -393,9 +395,9 @@ void ExplicitOpen(EditorFrame* frame) {
                 const auto state = ExplicitOpenChooserState(expected);
                 if (state.empty() || state == previousState) return;
                 previousState = state;
-                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label.c_str(), state.utf8_str().data());
+                DiagnosticPrint::Print(stderr, "WESTERN-OPEN [{}] {}\n", label.c_str(), state.utf8_str().data());
             } else
-                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label.c_str(), transition);
+                DiagnosticPrint::Print(stderr, "WESTERN-OPEN [{}] {}\n", label.c_str(), transition);
             std::fflush(stderr);
         };
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, wxID_OK,
@@ -433,7 +435,7 @@ public:
                 }
                 Suppression(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

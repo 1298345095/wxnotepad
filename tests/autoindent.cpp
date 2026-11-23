@@ -1,6 +1,8 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <utility>
 
@@ -20,7 +22,7 @@ void Case(EditorControl* editor, const char* before, intptr_t anchor, intptr_t c
     editor->Send(SetUndoSelectionHistory, 3);
     editor->Send(NewLine);
     if (NativeSearch::Text(editor) != after)
-        std::fprintf(stderr, "Before='%s' actual='%s' expected='%s'\n", before, NativeSearch::Text(editor).c_str(),
+        std::println(stderr, "Before='{}' actual='{}' expected='{}'", before, NativeSearch::Text(editor).c_str(),
                      after);
     Require(NativeSearch::Text(editor) == after, "Enter must produce exact original bytes");
     NativeSearch::Selection(editor, expectedCaret, expectedCaret, "Enter caret placement");
@@ -99,7 +101,7 @@ public:
                 Require(editor->AutoIndentEnabled(), "Auto Indent menu enables the original option");
                 std::puts("PASS: JSON defaults, CRLF/LF/CR, independent widths and enabled/disabled options");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

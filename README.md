@@ -320,19 +320,24 @@ for triggers, cached dependencies, downloadable builds and retained evidence.
 For opt-in native input, clipboard and shutdown tracing, see
 [native diagnostics](docs/diagnostics.md). Ordinary builds exclude tracing.
 
-Prerequisites: Git, Python 3.12+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
-**3.3.3#1** from vcpkg. Tested compilers are MSVC 14.51 and GCC 13.3. On Linux use
+Prerequisites: Git, Python 3.14+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
+**3.3.3#6** from vcpkg. CI uses MSVC and GCC 15. On Linux use Ubuntu 26.04+ and
 GTK3 with `gtk+-3.0`, `wayland-egl` and `wayland-cursor` development packages,
 Ninja, and a working desktop. Keep WSL sources and builds on its Linux filesystem.
+The SDK capability test compiles and runs C++23 `std::print` and `std::println`,
+including exact formatted UTF-8 output. GCC coverage uses the matching `gcov-15`.
 
-`vcpkg.json` fixes the registry baseline and wxWidgets port revision. To provision
-dependencies on another machine, use the manifest with the corresponding triplet:
+`vcpkg.json` fixes the registry baseline and wxWidgets port revision. From this
+repository root, provision dependencies with its overlay ports and a matching
+host triplet so the host-only gettext tools use the same native platform:
 
 ```text
-vcpkg install --triplet x64-windows --x-install-root=G:/vcpkg/installed
-vcpkg install --triplet x64-linux --x-install-root=/home/ctrls/vcpkg/installed
+vcpkg install --triplet x64-windows --host-triplet x64-windows --overlay-ports=.github/ports --x-install-root=G:/vcpkg/installed
+vcpkg install --triplet x64-linux --host-triplet x64-linux --overlay-ports=.github/ports --x-install-root=/home/ctrls/vcpkg/installed
 ```
 
+The overlays select GNU gettext 0.23.2 and the project's wxWidgets/GTK recipes.
+Use them when updating an existing installation as well as creating a new one.
 The build entry point reuses an existing vcpkg installation and does not install
 packages. Adapt those example installation paths to `<vcpkg-root>/installed` on
 your machine. Pass its root explicitly when it is not `G:/vcpkg` (Windows) or
@@ -405,5 +410,4 @@ See the [search validation record](docs/observations/search-README.md) for final
 regression, review and static-analysis results.
 
 Format tracked C++ files under `src/` and `tests/` with clang-format **23.1.2**
-and the repository's `.clang-format`. The configuration also parses with the
-installed Linux clang-format 18.1.3; version 23.1.2 is the canonical formatter.
+and the repository's `.clang-format`.

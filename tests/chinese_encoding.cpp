@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include <array>
@@ -14,6 +15,7 @@
 #include <wx/listbox.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 #include <utility>
@@ -390,7 +392,7 @@ void Detection(EditorFrame* frame) {
             const auto opened = frame->Open(TestFiles::Filename(path));
             if (opened.status != Opened || frame->DocumentEncoding() != codec.encoding ||
                 TestEditor::Text(frame) != prefix + "中")
-                std::fprintf(stderr, "Alias %s: status=%d, codec=%d expected=%d, error=%s\n", name,
+                std::println(stderr, "Alias {}: status={:d}, codec={:d} expected={:d}, error={}", name,
                              std::to_underlying(opened.status), std::to_underlying(frame->DocumentEncoding()),
                              std::to_underlying(codec.encoding), opened.error.utf8_str().data());
             Require(opened.status == Opened && frame->DocumentEncoding() == codec.encoding &&
@@ -474,7 +476,7 @@ public:
                 Big5BestFit(frame);
                 std::puts("PASS: original Chinese file workflows");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

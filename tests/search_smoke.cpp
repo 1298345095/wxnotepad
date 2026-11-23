@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "steady_stopwatch.h"
@@ -11,6 +12,7 @@
 #include <wx/checkbox.h>
 #include "native_search_helpers.h"
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -160,7 +162,7 @@ public:
                 std::puts("PASS: distant match reveal and F3 after native dialog close");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

@@ -1,9 +1,11 @@
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "native_key_helpers.h"
 #include "native_scroll_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -228,7 +230,7 @@ public:
                 ScrollingAndCaret(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

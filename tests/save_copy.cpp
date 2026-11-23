@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor/editor_control.h"
@@ -12,6 +13,7 @@
 #include <filesystem>
 #include <utility>
 #include <cstdio>
+#include <print>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -220,7 +222,7 @@ void SaveSuggestedCopy(EditorFrame* frame, const std::filesystem::path& director
     // untouched suggestion and independently verify its full effective name.
     if (result.status != SaveStatus::Saved || chooser.folder != Filename(directory) ||
         !std::filesystem::is_regular_file(target))
-        std::fprintf(stderr, "Suggested copy folder='%s' display='%s' expected='%s' status=%d\n",
+        std::println(stderr, "Suggested copy folder='{}' display='{}' expected='{}' status={:d}",
                      chooser.folder.utf8_str().data(), chooser.filename.utf8_str().data(),
                      Filename(target).utf8_str().data(), std::to_underlying(result.status));
     Require(result.status == SaveStatus::Saved && chooser.choosers == 1 && chooser.folder == Filename(directory) &&
@@ -281,7 +283,7 @@ void RememberDirectory(EditorFrame* frame, const std::filesystem::path& director
             "native Save Copy chooser must support cancellation");
     cancel.Stop();
     if (cancel.folder != Filename(remembered))
-        std::fprintf(stderr, "Copy chooser folder='%s' name='%s'\n", cancel.folder.utf8_str().data(),
+        std::println(stderr, "Copy chooser folder='{}' name='{}'", cancel.folder.utf8_str().data(),
                      cancel.filename.utf8_str().data());
     Require(cancel.folder == Filename(remembered), "next copy chooser must remember successful directory");
     SaveSuggestedCopy(frame, remembered, "source.txt", Bytes(directory / "source.txt"));
@@ -620,7 +622,7 @@ public:
                 LegacyLoss(settings_.get(), directory);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <filesystem>
@@ -200,7 +202,7 @@ void OriginalStates(EditorFrame* frame) {
         Require(editor->Send(Message::GetCodePage) == 65001,
                 "special insertion retains the single UTF-8 editor buffer for every file-encoding identity");
         if (actual != expected) {
-            std::fprintf(stderr, "Original state mismatch: %s\nExpected: %s\nActual: %s\n", line.c_str(),
+            std::println(stderr, "Original state mismatch: {}\nExpected: {}\nActual: {}", line.c_str(),
                          expected.c_str(), actual.c_str());
             matched = false;
         }
@@ -373,7 +375,7 @@ public:
                 NativeAnsi(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetSavePoint);
             frame->Destroy();

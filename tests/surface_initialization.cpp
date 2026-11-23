@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "editor/editor_core.h"
 #include "editor/platform/text_measurement.h"
 #include "completion_allocation_fault.h"
@@ -9,6 +10,7 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <cstdlib>
 #include <exception>
 #include <new>
@@ -406,9 +408,9 @@ void CheckUndoRecovery(EditorControl* editor) {
         if (!injected) break;
     }
     Require(injectedCount >= 2, "Undo fault injection reaches both style refresh and later visual surface creation");
-    std::printf("PASS: every Undo visual surface allocation preserves text, selection and future editing "
-                "(injected=%u; first uninjected skip=%zu)\n",
-                injectedCount, skip);
+    std::println("PASS: every Undo visual surface allocation preserves text, selection and future editing "
+                 "(injected={:d}; first uninjected skip={:d})",
+                 injectedCount, skip);
 }
 
 struct RectangleSelectionState {
@@ -427,7 +429,7 @@ struct RectangleSelectionState {
     void RequireUnchanged(const EditorControl& editor) const {
         const auto& selection = EditorCoreObservation::Selection(editor);
         if (selection.Main() != main)
-            std::fprintf(stderr, "Rectangular main selection: %zu; expected %zu\n", selection.Main(), main);
+            std::println(stderr, "Rectangular main selection: {:d}; expected {:d}", selection.Main(), main);
         Require(selection.IsRectangular() && selection.Main() == main && selection.Count() == ranges.size() &&
                     selection.RectangularCopy() == rectangle,
                 "Undo and visual retry preserve the rectangular endpoints, range count and original main row");
@@ -489,9 +491,9 @@ void CheckRectangularUndoRecovery(EditorControl* editor) {
     }
     Require(injectedCount >= 3,
             "rectangular Undo fault injection reaches style refresh, range reconstruction and caret measurement");
-    std::printf("PASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo "
-                "(injected=%u; first uninjected skip=%zu)\n",
-                injectedCount, skip);
+    std::println("PASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo "
+                 "(injected={:d}; first uninjected skip={:d})",
+                 injectedCount, skip);
 }
 
 void CheckNativeRecovery(EditorControl* editor) {
@@ -580,7 +582,7 @@ public:
                 CheckSurfaces(frame, presented);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

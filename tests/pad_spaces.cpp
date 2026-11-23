@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "encoded_file_helpers.h"
@@ -8,6 +9,7 @@
 #include <wx/menu.h>
 #include "steady_stopwatch.h"
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -35,7 +37,7 @@ void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t ca
 void Selection(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
     using enum Scintilla::Message;
     if (editor->Send(GetAnchor) != anchor || editor->Send(GetCurrentPos) != caret)
-        std::fprintf(stderr, "Selection: %lld/%lld; expected %lld/%lld\n",
+        std::println(stderr, "Selection: {:d}/{:d}; expected {:d}/{:d}",
                      static_cast<long long>(editor->Send(GetAnchor)),
                      static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
@@ -84,7 +86,7 @@ void StreamFixtures(EditorFrame* frame) {
         Selection(editor, fixture.resultAnchor, fixture.resultCaret, fixture.name);
         Require(editor->Send(Message::GetEOLMode) == mode, "padding preserves EOL mode");
         History(editor, fixture.before, fixture.after, fixture.anchor, fixture.caret);
-        std::printf("PASS: %s, literal selection and single Undo/Redo\n", fixture.name);
+        std::println("PASS: {}, literal selection and single Undo/Redo", fixture.name);
     }
     Reset(editor, "\tX\n123456\nq", 0, 0);
     editor->SetIndentationWidths(8, 8);
@@ -271,6 +273,7 @@ void Shortcuts(EditorFrame* frame) {
     std::puts("PASS: actual native Alt+P, extra Ctrl/Shift exclusions and read-only routing");
 }
 void SavedBytes(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-pad-spaces");
     std::filesystem::create_directory(directory);
@@ -285,10 +288,10 @@ void SavedBytes(EditorFrame* frame) {
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "saved-byte fixture opens through application");
-        editor->Send(Message::SetSel, 0, 0);
+        editor->Send(SetSel, 0, 0);
         Menu(frame);
         Require(frame->DocumentEncoding() == fixture.encoding && frame->Save().status == SaveStatus::Saved &&
                     TestFiles::Bytes(path) == fixture.after,
@@ -298,14 +301,13 @@ void SavedBytes(EditorFrame* frame) {
             std::filesystem::copy_file(
                 path, std::filesystem::path(evidence.ToStdString()) / (std::string(fixture.name) + ".saved"),
                 std::filesystem::copy_options::overwrite_existing);
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "single Undo and Save restore independently read original bytes");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "single Redo and Save restore independently read padded bytes");
-        std::printf("PASS: %s independent saved bytes, encoding/BOM/EOL preservation and one Undo/Redo\n",
-                    fixture.name);
+        std::println("PASS: {} independent saved bytes, encoding/BOM/EOL preservation and one Undo/Redo", fixture.name);
     }
     std::filesystem::remove_all(directory);
 }
@@ -339,7 +341,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

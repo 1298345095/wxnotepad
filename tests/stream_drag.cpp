@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -12,6 +13,7 @@
 #include <wx/process.h>
 #include "steady_stopwatch.h"
 #include <cstdio>
+#include <print>
 #include <atomic>
 #include <stdexcept>
 #include <thread>
@@ -32,9 +34,9 @@ void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
 void PrintBytes(const char* name, std::string_view value) {
-    std::fprintf(stderr, "%s (%zu bytes):", name, value.size());
+    std::print(stderr, "{} ({:d} bytes):", name, value.size());
     for (const unsigned char byte : value)
-        std::fprintf(stderr, " %02x", static_cast<unsigned int>(byte));
+        std::print(stderr, " {:02x}", static_cast<unsigned int>(byte));
     std::fputc('\n', stderr);
 }
 std::string Text(EditorControl* editor) {
@@ -93,7 +95,8 @@ gboolean ObserveSourceAction(gpointer value) {
         const auto status = source.identity + wxString::Format(":target:%u", action);
         if (action != 0 && target == status) {
             PublishDragState(source.control + ".drag-action", status);
-            std::fprintf(stderr, "Native drag gesture=%s observed=source-selected-action\n", status.utf8_str().data());
+            DiagnosticPrint::Print(stderr, "Native drag gesture={} observed=source-selected-action\n",
+                                   status.utf8_str().data());
             return G_SOURCE_REMOVE;
         }
     }
@@ -125,8 +128,8 @@ void ObserveNativeDrags(wxString* control) {
                 if (observation.target)
                     state += wxString::Format(":%u", gdk_drag_context_get_selected_action(observation.target));
                 PublishDragState(observation.path, state);
-                std::fprintf(stderr, "Native drag gesture=%s observed=%s\n", state.utf8_str().data(),
-                             observation.event);
+                DiagnosticPrint::Print(stderr, "Native drag gesture={} observed={}\n", state.utf8_str().data(),
+                                       observation.event);
                 return G_SOURCE_REMOVE;
             },
             pending.release(),
@@ -144,8 +147,8 @@ void ObserveNativeDrags(wxString* control) {
             const auto phase = ReadDragState(control + ".drag-phase");
             const auto* event = static_cast<GdkEventButton*>(g_value_get_boxed(arguments + 1));
             if (phase.EndsWith(":start") && event->button == 1) {
-                std::fprintf(stderr, "Native drag gesture=%s press-type=%d at=%.0f,%.0f\n", phase.utf8_str().data(),
-                             static_cast<int>(event->type), event->x, event->y);
+                DiagnosticPrint::Print(stderr, "Native drag gesture={} press-type={:d} at={:.0f},{:.0f}\n",
+                                       phase.utf8_str().data(), static_cast<int>(event->type), event->x, event->y);
                 queue({control + ".drag-pressed", phase, nullptr, "button-press-processed"});
             }
             return TRUE;
@@ -184,8 +187,8 @@ void ObserveNativeDrags(wxString* control) {
         g_signal_lookup("drag-failed", GTK_TYPE_WIDGET), 0,
         +[](GSignalInvocationHint*, guint, const GValue* arguments, gpointer value) -> gboolean {
             const auto phase = ReadDragState(*static_cast<wxString*>(value) + ".drag-phase");
-            std::fprintf(stderr, "Native drag gesture=%s result=%d\n", phase.utf8_str().data(),
-                         g_value_get_enum(arguments + 2));
+            DiagnosticPrint::Print(stderr, "Native drag gesture={} result={:d}\n", phase.utf8_str().data(),
+                                   g_value_get_enum(arguments + 2));
             return TRUE;
         },
         control, nullptr);
@@ -381,16 +384,17 @@ public:
     std::function<void()> changed;
     bool IsDragging() const { return dragging_; }
     void PrintSourceState(FILE* output = stderr) const {
-        std::fprintf(output, "Peer source stage=%s attempts=%u dragging=%d", sourceStage_, sourceAttempts_, dragging_);
+        std::print(output, "Peer source stage={} attempts={:d} dragging={:d}", sourceStage_, sourceAttempts_,
+                   dragging_);
 #ifdef __WXGTK__
-        std::fprintf(output, " failed=%d failed-result=%d deleted=%d native-action-mask=%u selection=%ld,%ld", failed_,
-                     static_cast<int>(failedResult_), deleted_, static_cast<unsigned int>(operation_), sourceStart_,
-                     sourceEnd_);
+        std::print(output, " failed={:d} failed-result={:d} deleted={:d} native-action-mask={:d} selection={:d},{:d}",
+                   failed_, static_cast<int>(failedResult_), deleted_, static_cast<unsigned int>(operation_),
+                   sourceStart_, sourceEnd_);
 #else
         std::fprintf(output, " native-result=%d", static_cast<int>(result));
 #endif
         const auto bounds = GetScreenRect();
-        std::fprintf(output, " screen-bounds=%d,%d,%d,%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
+        std::println(output, " screen-bounds={:d},{:d},{:d},{:d}", bounds.x, bounds.y, bounds.width, bounds.height);
     }
     void WaitForSource() const {
         // Failed native GTK drags can animate after pointer release. Observe
@@ -463,7 +467,7 @@ void Drag([[maybe_unused]] wxFrame* frame, wxPoint from, wxPoint to, const wxStr
 #ifdef __WXGTK__
         PublishDragState(control + ".drag-phase", identity + ":start");
 #endif
-        std::fprintf(stderr, "Native drag gesture=%s from=%d,%d to=%d,%d modifier=%s cancel=%d\n",
+        std::println(stderr, "Native drag gesture={} from={:d},{:d} to={:d},{:d} modifier={} cancel={:d}",
                      identity.utf8_str().data(), from.x, from.y, to.x, to.y, modifier.utf8_str().data(), cancel);
         wxFFile request(control, "wb");
         const unsigned int action = reject ? 0 : modifier == "ctrl" ? 2 : 4;
@@ -630,7 +634,7 @@ public:
     void PrintSourceState() const {
         wxFFile file(directory + "/source-state", "rb");
         wxString state;
-        if (file.IsOpened() && file.ReadAll(&state)) std::fprintf(stderr, "%s", state.utf8_str().data());
+        if (file.IsOpened() && file.ReadAll(&state)) std::print(stderr, "{}", state.utf8_str().data());
     }
     void Seed(const wxString& text = wxString::FromUTF8("中😀\nline")) {
         wxFFile file(directory + "/seed", "wb");
@@ -726,8 +730,7 @@ void SelfDrags(wxFrame* frame, EditorControl* editor) {
     std::puts("PASS: native stream move and one-step undo");
     editor->Send(Message::SetSel, 0, 3);
     Drag(frame, At(editor, 1), At(editor, 13), "ctrl");
-    if (Text(editor) != "one two threeone")
-        std::fprintf(stderr, "Observed Ctrl drag text: <%s>\n", Text(editor).c_str());
+    if (Text(editor) != "one two threeone") std::println(stderr, "Observed Ctrl drag text: <{}>", Text(editor).c_str());
     Require(Text(editor) == "one two threeone", "Ctrl native drag must copy stream text");
     editor->Send(Message::Undo);
     Require(Text(editor) == "one two three", "copy must undo in one action");
@@ -871,7 +874,7 @@ void IndependentOutgoingDrags(wxFrame* frame, EditorControl* editor, PeerProcess
         editor->Send(GetModify) || editor->Send(GetSelectionStart) != 0 || editor->Send(GetSelectionEnd) != 13) {
         PrintBytes("Cancelled external drag source", Text(editor));
         PrintBytes("Cancelled external drag target", cancelledPeer.ToStdString(wxConvUTF8));
-        std::fprintf(stderr, "Cancelled source undo=%lld modified=%lld selection=%lld,%lld\n",
+        std::println(stderr, "Cancelled source undo={:d} modified={:d} selection={:d},{:d}",
                      static_cast<long long>(editor->Send(CanUndo)), static_cast<long long>(editor->Send(GetModify)),
                      static_cast<long long>(editor->Send(GetSelectionStart)),
                      static_cast<long long>(editor->Send(GetSelectionEnd)));
@@ -922,7 +925,7 @@ void IndependentProcessDrags(wxFrame* frame, EditorControl* editor) {
         peerOrigin = origins.second;
         Require(peerOrigin.x >= editorOrigin.x + editor->GetSize().x,
                 "native compositor must leave both owned transfer clients visible");
-        std::fprintf(stderr, "Native client origins: editor=%d,%d peer=%d,%d\n", editorOrigin.x, editorOrigin.y,
+        std::println(stderr, "Native client origins: editor={:d},{:d} peer={:d},{:d}", editorOrigin.x, editorOrigin.y,
                      peerOrigin.x, peerOrigin.y);
     } else
         Front("main");
@@ -1087,7 +1090,7 @@ private:
             try {
                 NativeFileDrop(frame, peerDelay);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();
@@ -1112,7 +1115,7 @@ private:
                 DragScrollCancellation(frame, editor);
                 IndependentProcessDrags(frame, editor);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();
@@ -1173,7 +1176,7 @@ private:
                         "driver acknowledgement must preserve an already opened request snapshot");
                 std::puts("PASS: native input acknowledgement preserves an open request snapshot");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();
@@ -1235,7 +1238,7 @@ private:
                 WaylandOrigins(editor, peer.directory);
                 std::puts("PASS: native peer geometry waits for delayed coordinate publication");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

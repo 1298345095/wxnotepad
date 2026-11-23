@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "editor_test_helpers.h"
+#include <print>
 #include <array>
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
@@ -259,7 +261,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

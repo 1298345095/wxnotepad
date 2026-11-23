@@ -25,8 +25,8 @@ jobs:
           - os: windows-2025
             name: Windows MSVC
             artifact: windows-x64
-          - os: ubuntu-24.04
-            name: Linux GCC 13 / X11 + Wayland
+          - os: ubuntu-26.04
+            name: Linux GCC 15 / X11 + Wayland
             artifact: linux-x64
     env:
       PYTHONUTF8: '1'
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Test build preparation and CI invocation
         shell: bash
         run: |
@@ -307,7 +307,7 @@ jobs:
 
   coverage-tests:
     name: Linux coverage / ${{ matrix.backend }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -326,7 +326,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Install fixed coverage test dependency
         shell: bash
         run: |
@@ -422,7 +422,7 @@ jobs:
     name: Linux coverage / SonarCloud
     needs: coverage-tests
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     env:
       PYTHONUTF8: '1'
@@ -445,7 +445,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Install fixed coverage report dependencies
         shell: bash
         run: |

@@ -11,6 +11,7 @@
 #include <wx/modalhook.h>
 #include <algorithm>
 #include <cstdio>
+#include <print>
 #include <initializer_list>
 #include <stdexcept>
 #include <string>
@@ -115,7 +116,7 @@ inline void Selection(EditorControl* editor, intptr_t start, intptr_t end, const
     const auto actualStart = editor->Send(Scintilla::Message::GetSelectionStart);
     const auto actualEnd = editor->Send(Scintilla::Message::GetSelectionEnd);
     if (actualStart != start || actualEnd != end)
-        std::fprintf(stderr, "Range: %lld..%lld; expected %lld..%lld\n", static_cast<long long>(actualStart),
+        std::println(stderr, "Range: {:d}..{:d}; expected {:d}..{:d}", static_cast<long long>(actualStart),
                      static_cast<long long>(actualEnd), static_cast<long long>(start), static_cast<long long>(end));
     if (actualStart != start || actualEnd != end) throw std::runtime_error(message);
 }

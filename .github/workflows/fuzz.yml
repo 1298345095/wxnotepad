@@ -21,8 +21,8 @@ concurrency:
 
 jobs:
   fuzz:
-    name: Linux Clang 18 / libFuzzer + ASan + UBSan
-    runs-on: ubuntu-24.04
+    name: Linux Clang 21 / libFuzzer + ASan + UBSan
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     env:
       PYTHONUTF8: '1'
@@ -35,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Set up cached dependencies and Clang runtime
         uses: ./.github/actions/dependencies
         with:
@@ -45,8 +45,9 @@ jobs:
       - name: Configure instrumented headless targets
         run: >-
           cmake -S . -B .ci/build/fuzz -G Ninja
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-18
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER=clang++-21
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DWXNOTEPAD_FUZZ_ONLY=ON
+          -DPython3_EXECUTABLE="$(command -v python)"
           -DNOTEPAD4_SOURCE="${{ github.workspace }}/.ci/build/original-core"
           -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/.ci/vcpkg/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_INSTALLED_DIR="${{ github.workspace }}/.ci/vcpkg/installed"

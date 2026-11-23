@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -13,6 +14,7 @@
 #include "file_command_driver.h"
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <functional>
 #include <stdexcept>
 #include <utility>
@@ -288,9 +290,9 @@ void AnsiTransition(EditorFrame* frame) {
                 }
                 return result;
             };
-            std::fprintf(stderr,
-                         "ANSI conversion diagnostic: shown=%d native_encoding=%d converted=%d read_only=%lld "
-                         "undo_actions=%lld markers=%lld title=%s expected_utf8_hex=%s actual_utf8_hex=%s\n",
+            std::println(stderr,
+                         "ANSI conversion diagnostic: shown={:d} native_encoding={:d} converted={:d} read_only={:d} "
+                         "undo_actions={:d} markers={:d} title={} expected_utf8_hex={} actual_utf8_hex={}",
                          driver.shown, std::to_underlying(native->encoding), converted,
                          static_cast<long long>(editor->Send(GetReadOnly)),
                          static_cast<long long>(editor->Send(GetUndoActions)),
@@ -516,7 +518,7 @@ public:
                 EmptyRules(frame);
                 FormatOnlyDecisions(frame);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

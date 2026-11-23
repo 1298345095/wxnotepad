@@ -39,8 +39,8 @@ application wording takes precedence for shared message keys.
 
 ## Host tools
 
-The manifest requests host-only `gettext[tools]` without default features, under
-the existing vcpkg baseline (GNU gettext 0.22.5). CI supplies an explicit host
+The manifest requests host-only `gettext[tools]` without default features. The
+repository overlay selects GNU gettext 0.23.2, matching Ubuntu 26.04. CI supplies an explicit host
 triplet, verifies the actual tool versions and checks catalogs after dependency
 installation. Tools reside under the host installation's
 `tools/gettext/bin`; they are neither copied beside the application nor linked
@@ -52,10 +52,8 @@ Local SDKs need the same host tools. Set `WXNOTEPAD_GETTEXT_BIN` or pass
 that directory in the host triplet automatically, otherwise it searches PATH.
 The maintained native validation entry points are in [ci.md](ci.md).
 
-For this development host, the existing Windows directory is
-`G:/vcpkg/installed/x64-windows/tools/gettext/bin`; the WSL directory is
-`/home/ctrls/wxnotepad-native-rendering-sdk/installed/x64-linux/tools/gettext/bin`.
-Use the directory matching the interpreter/build platform.
+Existing SDKs need the repository overlay when updating host tools. Select the
+host triplet's `tools/gettext/bin` directory matching the interpreter/build platform.
 
 ## Marking messages
 

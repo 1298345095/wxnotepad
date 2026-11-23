@@ -13,7 +13,7 @@ add_test(NAME original_date_time_literals COMMAND date_time_format)
 if(UNIX)
     set_tests_properties(original_date_time_literals PROPERTIES ENVIRONMENT "LC_ALL=C.UTF-8")
 endif()
-find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 3.14 REQUIRED COMPONENTS Interpreter)
 add_subdirectory(tests/fuzz)
 add_gui_program(sdk_capabilities tests/sdk_capabilities.cpp wx::core wx::base)
 target_compile_definitions(sdk_capabilities PRIVATE

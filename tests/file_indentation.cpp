@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "tab_settings_helpers.h"
+#include <print>
 #include "file_helpers.h"
 #include <filesystem>
 #include <fstream>
@@ -10,7 +12,7 @@ void Require(bool value, const char* message) {
 }
 void Check(EditorControl* editor, int tab, int indent, bool spaces) {
     using enum Scintilla::Message;
-    std::fprintf(stderr, "Indentation actual=%lld/%lld/%lld expected=%d/%d/%d\n",
+    std::println(stderr, "Indentation actual={:d}/{:d}/{:d} expected={:d}/{:d}/{:d}",
                  static_cast<long long>(editor->Send(GetTabWidth)), static_cast<long long>(editor->Send(GetIndent)),
                  static_cast<long long>(editor->Send(GetUseTabs)), tab, indent, !spaces);
     Require(editor->Send(GetTabWidth) == tab && editor->Send(GetIndent) == indent &&
@@ -138,7 +140,7 @@ public:
                 std::puts("PASS: variable grammar, clamping, beginning/end gates, partial precedence, ties, sampling "
                           "and transitions");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             std::filesystem::remove_all(directory);

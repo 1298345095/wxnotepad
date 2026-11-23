@@ -1,6 +1,8 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include <cstdio>
+#include <print>
 #include <exception>
 #include <memory>
 #include <utility>
@@ -13,7 +15,7 @@ void Require(bool condition, const char* message) {
 void Position(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
     using enum Scintilla::Message;
     if (editor->Send(GetAnchor) != anchor || editor->Send(GetCurrentPos) != caret) {
-        std::fprintf(stderr, "Anchor/caret: %lld/%lld; expected %lld/%lld\n",
+        std::println(stderr, "Anchor/caret: {:d}/{:d}; expected {:d}/{:d}",
                      static_cast<long long>(editor->Send(GetAnchor)),
                      static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
@@ -247,7 +249,7 @@ public:
                 CollapsedBraceTargets(frame, find, select);
                 WrappedBraceTargets(frame, find, select);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Destroy();

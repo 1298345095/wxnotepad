@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_search_helpers.h"
+#include <print>
 #include <array>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
@@ -65,10 +67,10 @@ void Fixtures(EditorFrame* frame) {
     }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
-        std::printf("Fixture: %s\n", fixture.name);
+        std::println("Fixture: {}", fixture.name);
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
         Compress(frame);
-        if (TestEditor::Text(editor) != fixture.after) std::fprintf(stderr, "Fixture: %s\n", fixture.name);
+        if (TestEditor::Text(editor) != fixture.after) std::println(stderr, "Fixture: {}", fixture.name);
         Require(TestEditor::Text(editor) == fixture.after, "literal original compressed bytes");
         Range(editor, fixture.resultAnchor, fixture.resultCaret);
         Require(static_cast<bool>(editor->Send(CanUndo)) == fixture.changed &&
@@ -263,7 +265,7 @@ public:
                 SavedBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -1,4 +1,6 @@
+#include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include <print>
 #include "file_helpers.h"
 #include "file_command_driver.h"
 #include "editor_test_helpers.h"
@@ -267,7 +269,7 @@ public:
                 OwnedFile(frame, *settings_);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Message::SetReadOnly, 0);
             frame->Editor()->Send(Message::SetSavePoint);

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
@@ -8,6 +9,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -80,12 +82,12 @@ public:
                             !StatusMetadata(frame).Contains("override") && !editor->Send(GetModify) &&
                             !editor->Send(CanUndo),
                         "large-file naming must restore filename-based lexer selection without adding edit history");
-                std::printf(
-                    "PASS: %zu-byte C++ Open, manual Plain Text, ordinary Save and Save As with independent bytes\n",
+                std::println(
+                    "PASS: {:d}-byte C++ Open, manual Plain Text, ordinary Save and Save As with independent bytes",
                     bytes.size());
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             std::filesystem::remove_all(directory);
             frame->Destroy();

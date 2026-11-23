@@ -1,5 +1,5 @@
 if(WIN32)
-    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    find_package(Python3 3.14 REQUIRED COMPONENTS Interpreter)
     set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
     execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
         "${NOTEPAD4_SOURCE}" "${directwrite_generated}" COMMAND_ERROR_IS_FATAL ANY)

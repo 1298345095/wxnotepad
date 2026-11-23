@@ -3,6 +3,7 @@
 #include <limits>
 #include <memory>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 
 namespace {
@@ -46,6 +47,6 @@ int main() try {
     std::puts("PASS: original 32-bit bit operations retain state and memory boundaries on LP64");
     return 0;
 } catch (const std::exception& error) {
-    std::fprintf(stderr, "%s\n", error.what());
+    std::println(stderr, "{}", error.what());
     return 1;
 }

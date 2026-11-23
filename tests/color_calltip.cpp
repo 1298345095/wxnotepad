@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include "diagnostics/print.h"
 #include "native_completion_helpers.h"
 #include "native_paint_helpers.h"
 #include "native_search_helpers.h"
@@ -11,6 +12,7 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <vector>
 #include <SciLexer.h>
@@ -38,8 +40,8 @@ void ObservePopupPointerAncestry(gpointer owner) {
     if (!owner) return;
     if (!GTK_IS_WIDGET(owner)) return;
     for (auto* widget = GTK_WIDGET(owner); widget; widget = gtk_widget_get_parent(widget))
-        std::fprintf(stderr, "CallTip GTK pointer ancestry widget=%p class=%s name=%s\n", static_cast<void*>(widget),
-                     G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
+        DiagnosticPrint::Print(stderr, "CallTip GTK pointer ancestry widget={:p} class={} name={}\n",
+                               static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget));
 }
 
 void ObservePopupWindow(GtkWidget* widget, GtkWidget* frameWidget, GtkWidget* tipWidget) {
@@ -64,16 +66,17 @@ void ObservePopupWindow(GtkWidget* widget, GtkWidget* frameWidget, GtkWidget* ti
                 surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
         }
     }
-    std::fprintf(stderr,
-                 "CallTip GTK window widget=%p class=%s name=%s type=%d hint=%d is_frame=%d is_tip=%d "
-                 "is_tooltip=%d visible=%d realized=%d mapped=%d transient=%p gdk=%p native_parent=%p "
-                 "native_toplevel=%p gdk_type=%d gdk_visible=%d gdk_viewable=%d destroyed=%d surface=%u\n",
-                 static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
-                 gtk_window_get_window_type(GTK_WINDOW(widget)), hint, widget == frameWidget, widget == tipWidget,
-                 hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget), gtk_widget_get_realized(widget),
-                 gtk_widget_get_mapped(widget), static_cast<void*>(transient), static_cast<void*>(window),
-                 static_cast<void*>(parent), static_cast<void*>(toplevel), type, visible, viewable, destroyed,
-                 surfaceId);
+    DiagnosticPrint::Print(
+        stderr,
+        "CallTip GTK window widget={:p} class={} name={} type={:d} hint={:d} is_frame={:d} is_tip={:d} "
+        "is_tooltip={:d} visible={:d} realized={:d} mapped={:d} transient={:p} gdk={:p} native_parent={:p} "
+        "native_toplevel={:p} gdk_type={:d} gdk_visible={:d} gdk_viewable={:d} destroyed={:d} surface={:d}\n",
+        static_cast<void*>(widget), G_OBJECT_TYPE_NAME(widget), gtk_widget_get_name(widget),
+        static_cast<int>(gtk_window_get_window_type(GTK_WINDOW(widget))), static_cast<int>(hint), widget == frameWidget,
+        widget == tipWidget, hint == GDK_WINDOW_TYPE_HINT_TOOLTIP, gtk_widget_get_visible(widget),
+        gtk_widget_get_realized(widget), gtk_widget_get_mapped(widget), static_cast<void*>(transient),
+        static_cast<void*>(window), static_cast<void*>(parent), static_cast<void*>(toplevel), type, visible, viewable,
+        destroyed, surfaceId);
 }
 
 void ObservePopupState(const char* phase, EditorFrame* frame) {
@@ -87,9 +90,10 @@ void ObservePopupState(const char* phase, EditorFrame* frame) {
     auto* pointerWindow = pointer ? gdk_device_get_window_at_position(pointer, &pointerX, &pointerY) : nullptr;
     gpointer pointerOwner = nullptr;
     if (pointerWindow) gdk_window_get_user_data(pointerWindow, &pointerOwner);
-    std::fprintf(stderr, "CallTip GTK observation phase=%s frame=%p tip=%p pointer_window=%p pointer=%d,%d\n", phase,
-                 static_cast<void*>(frameWidget), static_cast<void*>(tipWidget), static_cast<void*>(pointerWindow),
-                 pointerX, pointerY);
+    DiagnosticPrint::Print(
+        stderr, "CallTip GTK observation phase={} frame={:p} tip={:p} pointer_window={:p} pointer={:d},{:d}\n", phase,
+        static_cast<void*>(frameWidget), static_cast<void*>(tipWidget), static_cast<void*>(pointerWindow), pointerX,
+        pointerY);
     ObservePopupPointerAncestry(pointerOwner);
     auto* windows = gtk_window_list_toplevels();
     for (auto* item = windows; item; item = item->next)
@@ -344,9 +348,9 @@ public:
     }
     void Report() const {
         for (const auto& event : events_)
-            std::fprintf(stderr,
-                         "color preview event: kind=%s elapsed_ms=%lld id=%d timestamp=%ld point=%d,%d "
-                         "timer_interval_ms=%d\n",
+            std::println(stderr,
+                         "color preview event: kind={} elapsed_ms={:d} id={:d} timestamp={:d} point={:d},{:d} "
+                         "timer_interval_ms={:d}",
                          event.kind, event.elapsed, event.id, event.timestamp, event.point.x, event.point.y,
                          event.interval);
     }
@@ -415,7 +419,7 @@ void CapturePreview(wxWindow* popup, const char* placement) {
         if (!wxImage::FindHandler(wxBITMAP_TYPE_PNG)) wxImage::AddHandler(new wxPNGHandler);
         Require(bitmap.SaveFile(filename, wxBITMAP_TYPE_PNG), "save actual Windows CallTip pixels");
 #endif
-        std::printf("PASS: captured native CallTip paint at %dx%d physical pixels\n", width, height);
+        std::println("PASS: captured native CallTip paint at {:d}x{:d} physical pixels", width, height);
     });
 }
 
@@ -454,9 +458,9 @@ void CheckPreview(EditorFrame* frame, bool typingInteraction = true) {
     const auto display = wxDisplay::GetFromWindow(frame);
     Require(display != wxNOT_FOUND && wxDisplay(display).GetClientArea().Contains(popup->GetScreenRect()),
             "the native popup fits the active monitor's work area");
-    std::printf("PASS: native popup RGB, editor focus and work area; DPI=%dx%d scale=%.1f size=%dx%d\n",
-                popup->GetDPI().x, popup->GetDPI().y, popup->GetContentScaleFactor(), popup->GetSize().x,
-                popup->GetSize().y);
+    std::println("PASS: native popup RGB, editor focus and work area; DPI={:d}x{:d} scale={:.1f} size={:d}x{:d}",
+                 popup->GetDPI().x, popup->GetDPI().y, popup->GetContentScaleFactor(), popup->GetSize().x,
+                 popup->GetSize().y);
     CapturePreview(popup, "inline");
     if (!typingInteraction) {
 #ifdef __WXMSW__
@@ -481,7 +485,7 @@ void CheckPreview(EditorFrame* frame, bool typingInteraction = true) {
     letter.m_uniChar = 'q';
     editor->GetEventHandler()->ProcessEvent(letter);
     if (!VisibleCallTip(editor) || NativeSearch::Text(editor) != "qpre #aB3 and")
-        std::fprintf(stderr, "color typing: lexer=%zd visible=%d text=[%s]\n", editor->Send(GetLexer),
+        std::println(stderr, "color typing: lexer={:d} visible={:d} text=[{}]", editor->Send(GetLexer),
                      VisibleCallTip(editor) != nullptr, NativeSearch::Text(editor).c_str());
     Require(VisibleCallTip(editor) && NativeSearch::Text(editor) == "qpre #aB3 and",
             "ordinary typing changes the document and retains the existing CallTip");
@@ -644,10 +648,10 @@ void CheckColorEdit(EditorFrame* frame, size_t caseIndex, const ColorEditCase& e
     if (!preview) {
         const auto mouse = editor->ScreenToClient(wxGetMousePosition());
         const auto client = editor->GetClientSize();
-        std::fprintf(stderr,
-                     "color preview failed: case=%zu lexer=%zd style=%zd mode=%s source=[%s] hover=%td "
-                     "point=%d,%d previous=%d,%d hit=%zd "
-                     "client=%dx%d dpi=%dx%d calltip=%zd completion=%zd frameActive=%d editorFocus=%d mouse=%d,%d\n",
+        std::println(stderr,
+                     "color preview failed: case={:d} lexer={:d} style={:d} mode={} source=[{}] hover={:d} "
+                     "point={:d},{:d} previous={:d},{:d} hit={:d} client={:d}x{:d} dpi={:d}x{:d} calltip={:d} "
+                     "completion={:d} frameActive={:d} editorFocus={:d} mouse={:d},{:d}",
                      caseIndex, editor->Send(GetLexer), editor->Send(GetStyleIndexAt, edit.hover), edit.mode,
                      edit.source, edit.hover, point.x, point.y, hover.previous.x, hover.previous.y,
                      editor->Send(PositionFromPointClose, point.x, point.y), client.x, client.y, editor->GetDPI().x,
@@ -795,7 +799,7 @@ void CheckTokenBounds(EditorFrame* frame) {
     Require(popup.y < anchorY, "the original CallTip moves above the anchor at the bottom editor edge");
     CapturePreview(window, "bottom");
     editor->Send(CallTipCancel);
-    std::printf("PASS: original token bounds and bottom-edge placement (anchor=%d popup=%d)\n", anchorY, popup.y);
+    std::println("PASS: original token bounds and bottom-edge placement (anchor={:d} popup={:d})", anchorY, popup.y);
 }
 
 void CheckPersistence(EditorFrame* frame, const wxString& path) {
@@ -839,7 +843,7 @@ public:
         popupWarnings_ = std::make_unique<PopupWarnings>(frame);
 #endif
         TestRenderer::Select(frame->Editor());
-        std::printf("Native CallTip DPI: %d x %d\n", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
+        std::println("Native CallTip DPI: {:d} x {:d}", frame->Editor()->GetDPI().x, frame->Editor()->GetDPI().y);
 #ifdef __WXMSW__
         if (wxGetenv("WXNOTEPAD_CALLTIP_DPI96"))
             Require(frame->Editor()->GetDPI().y == 96, "the complementary native CallTip fixture uses 96 DPI");
@@ -894,7 +898,7 @@ public:
                 CheckTokenBounds(frame);
                 CheckPersistence(frame, path_);
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             if (!frame->IsBeingDeleted()) frame->Destroy();

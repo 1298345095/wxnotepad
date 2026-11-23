@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "native_renderer_helpers.h"
 #include "native_search_helpers.h"
 #include "syntax/syntax_scheme.h"
@@ -7,6 +8,7 @@
 #include <initializer_list>
 #include "auto_insertion_reference.h"
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <utility>
 namespace {
@@ -20,7 +22,7 @@ void Character(EditorControl* editor, int ch) {
 void State(EditorControl* editor, const AutoInsertionReference::State& state) {
     using enum Scintilla::Message;
     if (NativeSearch::Text(editor) != state.text) {
-        std::fprintf(stderr, "actual='%s' expected='%s'\n", NativeSearch::Text(editor).c_str(), state.text);
+        std::println(stderr, "actual='{}' expected='{}'", NativeSearch::Text(editor).c_str(), state.text);
         throw std::runtime_error("character notification must reproduce original text");
     }
     if (editor->Send(GetAnchor) != state.anchor || editor->Send(GetCurrentPos) != state.caret)
@@ -50,8 +52,8 @@ public:
                 auto* editor = frame->Editor();
                 unsigned index = 0;
                 for (const auto& item : AutoInsertionReference::cases) {
-                    std::printf("case %u language=%d ch=%d\n", index++,
-                                static_cast<int>(std::to_underlying(item.language)), item.character);
+                    std::println("case {:d} language={:d} ch={:d}", index++,
+                                 static_cast<int>(std::to_underlying(item.language)), item.character);
                     editor->Send(SetReadOnly, 0);
                     ApplySyntaxLanguage(*editor, item.language);
                     editor->Send(SetUndoSelectionHistory, 0);
@@ -84,7 +86,7 @@ public:
                 std::puts("PASS: original character notifications, styles, read-only state and Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include <array>
 #include "editor_test_helpers.h"
@@ -19,6 +20,7 @@
 #include <vector>
 #include <chrono>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -422,7 +424,7 @@ public:
                 }
                 std::puts("PASS: original indentation guide commands");
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;
             }
             frame->Editor()->Send(Message::SetSavePoint);

@@ -1,3 +1,4 @@
+#include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "native_search_helpers.h"
@@ -7,6 +8,7 @@
 #include <wx/dialog.h>
 #include <wx/dcclient.h>
 #include <cstdio>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -189,10 +191,10 @@ void CheckZoomedGeometry(EditorControl* editor, std::string_view bytes, uint64_t
                         editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 9 && editor->Send(CanUndo) &&
                         editor->Send(CanRedo) && editor->Send(GetModify),
                     "zoom preserves base point size, bytes, selection, save point and undo/redo state");
-            std::printf("PASS: technology=%d zoom=%d native_points=%d dpi=%d height=%lld margin=%lld "
-                        "text/hit geometry\n",
-                        std::to_underlying(technology), zoom, points, editor->GetDPI().y,
-                        static_cast<long long>(height), static_cast<long long>(editor->Send(GetMarginWidthN, 0)));
+            std::println(
+                "PASS: technology={:d} zoom={:d} native_points={:d} dpi={:d} height={:d} margin={:d} text/hit geometry",
+                std::to_underlying(technology), zoom, points, editor->GetDPI().y, static_cast<long long>(height),
+                static_cast<long long>(editor->Send(GetMarginWidthN, 0)));
         }
     }
 }
@@ -226,7 +228,7 @@ void CheckZoom(EditorFrame* frame) {
     Require(editor->Send(GetZoom) == 10, "zoom out clamps at 10 percent");
     Menu(frame, "Reset Zoom");
     Require(editor->Send(GetZoom) == 100, "reset command restores original default");
-    std::printf("PASS: original zoom commands, shortcuts, reset, steps and limits; dpi=%d\n", editor->GetDPI().y);
+    std::println("PASS: original zoom commands, shortcuts, reset, steps and limits; dpi={:d}", editor->GetDPI().y);
     std::string text;
     for (int line = 0; line < 200; ++line)
         text += std::string(200, 'W') + "\r\n";
@@ -329,7 +331,7 @@ public:
                 CheckZoom(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Destroy();
             ExitMainLoop();

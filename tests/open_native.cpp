@@ -1,4 +1,5 @@
 #include "status_helpers.h"
+#include "diagnostics/print.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -8,6 +9,7 @@
 #include "file_command_driver.h"
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <print>
 #include <filesystem>
 #include <fstream>
 #include "settings/settings_store.h"
@@ -28,9 +30,9 @@ using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
 
-void TraceFileCommand(const char* transition) {
+void TraceFileCommand(const char* transition) noexcept {
     if (!std::string_view(transition).starts_with("driver callback"))
-        std::fprintf(stderr, "native-open-driver: %s\n", transition);
+        DiagnosticPrint::Print(stderr, "native-open-driver: {}\n", transition);
 }
 
 #ifdef __WXGTK__
@@ -121,7 +123,7 @@ void DelayedOpenAs(EditorFrame* frame, const std::filesystem::path& directory) {
     driver.Stop();
     if (!selection.Held() || !selection.Restored() || result.status != OpenStatus::Opened ||
         frame->DocumentPath() != Filename(expected))
-        std::fprintf(stderr, "Delayed native Open As status=%d held=%d restored=%d path='%s' error='%s'\n",
+        std::println(stderr, "Delayed native Open As status={:d} held={:d} restored={:d} path='{}' error='{}'",
                      std::to_underlying(result.status), selection.Held(), selection.Restored(),
                      frame->DocumentPath().utf8_str().data(), result.error.utf8_str().data());
     Require(selection.Held() && selection.Restored() && result.status == OpenStatus::Opened &&
@@ -313,9 +315,10 @@ void NativeUtf16OpenAs(EditorFrame* frame, const std::filesystem::path& director
     utf16Pick.Stop();
     if (utf16Pick.choosers != 1 || Text(frame) != "A中😀\r\n" || frame->DocumentEncoding() != FileEncoding::Utf16Le ||
         frame->DocumentHasBom())
-        std::fprintf(stderr, "Open As state: choosers=%d prompts=%d errors=%d path='%s' bytes=%zu encoding=%d bom=%d\n",
-                     utf16Pick.choosers, utf16Pick.prompts, utf16Pick.errors, frame->DocumentPath().utf8_str().data(),
-                     Text(frame).size(), std::to_underlying(frame->DocumentEncoding()), frame->DocumentHasBom());
+        std::println(
+            stderr, "Open As state: choosers={:d} prompts={:d} errors={:d} path='{}' bytes={:d} encoding={:d} bom={:d}",
+            utf16Pick.choosers, utf16Pick.prompts, utf16Pick.errors, frame->DocumentPath().utf8_str().data(),
+            Text(frame).size(), std::to_underlying(frame->DocumentEncoding()), frame->DocumentHasBom());
     Require(utf16Pick.choosers == 1 && Text(frame) == "A中😀\r\n" &&
                 frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom(),
             "native explicit Open As must decode no-BOM UTF-16LE");
@@ -364,7 +367,7 @@ public:
                 frame->Destroy();
                 result_ = 0;
             } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 if (!frame->IsBeingDeleted()) frame->Destroy();
             }
             std::filesystem::remove_all(directory);
