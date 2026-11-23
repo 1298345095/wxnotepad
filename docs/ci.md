@@ -131,7 +131,8 @@ utility cannot read that private directory; its system policy remains unchanged.
   enabled for all workflows and all other labels.
 - Linux provisioning has three profiles: `build` for CodeQL, `tidy` for native
   clang-tidy, and `gui` for the build/test matrix. GUI display tools and fonts
-  are installed by the `gui` profile, also used by coverage; the analyzer is installed by `tidy`.
+  are installed by the `gui` profile, also used by coverage. The analyzer is
+  installed by `tidy` and by `gui` for native analyzer contract tests.
 - Linux jobs use Ubuntu's official HTTPS archive in place of the Azure archive
   mirror or the runner's `/etc/apt/apt-mirrors.txt` mirror-list URI in legacy
   `.list` and Deb822 `.sources` files. Suites, components and signing keys are

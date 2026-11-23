@@ -327,14 +327,17 @@ Ninja, and a working desktop. Keep WSL sources and builds on its Linux filesyste
 The SDK capability test compiles and runs C++23 `std::print` and `std::println`,
 including exact formatted UTF-8 output. GCC coverage uses the matching `gcov-15`.
 
-`vcpkg.json` fixes the registry baseline and wxWidgets port revision. To provision
-dependencies on another machine, use the manifest with the corresponding triplet:
+`vcpkg.json` fixes the registry baseline and wxWidgets port revision. From this
+repository root, provision dependencies with its overlay ports and a matching
+host triplet so the host-only gettext tools use the same native platform:
 
 ```text
-vcpkg install --triplet x64-windows --x-install-root=G:/vcpkg/installed
-vcpkg install --triplet x64-linux --x-install-root=/home/ctrls/vcpkg/installed
+vcpkg install --triplet x64-windows --host-triplet x64-windows --overlay-ports=.github/ports --x-install-root=G:/vcpkg/installed
+vcpkg install --triplet x64-linux --host-triplet x64-linux --overlay-ports=.github/ports --x-install-root=/home/ctrls/vcpkg/installed
 ```
 
+The overlays select GNU gettext 0.23.2 and the project's wxWidgets/GTK recipes.
+Use them when updating an existing installation as well as creating a new one.
 The build entry point reuses an existing vcpkg installation and does not install
 packages. Adapt those example installation paths to `<vcpkg-root>/installed` on
 your machine. Pass its root explicitly when it is not `G:/vcpkg` (Windows) or
