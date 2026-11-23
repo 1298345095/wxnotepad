@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wx/log.h>
-#include <windows.h>
+#include <wx/msw/wrapwin.h>
 
 // Observe the real wx GetData call without changing its error delivery.
 class ClipboardReadErrors final : public wxLog {
