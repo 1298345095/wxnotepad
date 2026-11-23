@@ -783,8 +783,11 @@ msgstr ""
 msgid "Align Lines"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_FILTER_ALL caption; %s is the platform all-file wildcard (*.* on Windows, * on
+#. Unix).
 #: src/app/dialogs/document_dialogs.cpp
-msgid "All Files (*)"
+#, c-format
+msgid "All Files (%s)"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.

@@ -859,9 +859,12 @@ msgstr "行对齐(&N)...\tAlt+J"
 msgid "Align Lines"
 msgstr "行对齐"
 
+#. TRANSLATORS: Original IDS_FILTER_ALL caption; %s is the platform all-file wildcard (*.* on Windows, * on
+#. Unix).
 #: src/app/dialogs/document_dialogs.cpp
-msgid "All Files (*)"
-msgstr "所有文件 (*)"
+#, c-format
+msgid "All Files (%s)"
+msgstr "所有文件 (%s)"
 
 #. TRANSLATORS: Linux IDD_RUN program browser filter; preserve the wildcard and vertical-bar separator.
 #: src/app/run_command.cpp
@@ -3563,6 +3566,9 @@ msgstr "m4"
 
 #~ msgid "&Expand All"
 #~ msgstr "全部展开(&E)"
+
+#~ msgid "All Files (*)"
+#~ msgstr "所有文件 (*)"
 
 #~ msgid "All files (*.*)"
 #~ msgstr "所有文件 (*.*)"

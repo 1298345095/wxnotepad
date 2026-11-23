@@ -556,9 +556,12 @@ class Acceptance:
                     except BaseException:
                         capture_and_check(self.dialogs, app, window, self.logs / f'navigation-failure-{suffix}.png', system_dialog=True)
                         raise
-                    # Approved original current/text/favorites policy uses the
-                    # application's captions, including the extensionless (*) filter.
-                    expected = {'en': 'All Files (*)', 'zh_CN': '所有文件 (*)', 'zh_TW': '所有檔案 (*)'}[code]
+                    # Independent platform literals: original Windows IDS_FILTER_ALL
+                    # uses *.*; the Unix all-file filter uses * for extensionless names.
+                    if sys.platform == 'win32':
+                        expected = {'en': 'All Files (*.*)', 'zh_CN': '所有文件 (*.*)', 'zh_TW': '所有檔案 (*.*)'}[code]
+                    else:
+                        expected = {'en': 'All Files (*)', 'zh_CN': '所有文件 (*)', 'zh_TW': '所有檔案 (*)'}[code]
                     filters = self.dialogs.file_filters(window)
                     assert expected in filters, (expected, filters)
                     text_filter = {'en': 'Plain Text (*.txt)', 'zh_CN': '纯文本 (*.txt)', 'zh_TW': '純文字 (*.txt)'}[code]
