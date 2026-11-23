@@ -1,8 +1,8 @@
 # Editor dependency profile
 
 This overlay copies wxWidgets 3.3.3#1 from the pinned vcpkg baseline
-`d186940b2f0c4e8e5b4ff804af57d2a26fbfa091`. Local port version 5 retains the
-version 4 profile, which disables
+`d186940b2f0c4e8e5b4ff804af57d2a26fbfa091`. Local port version 6 retains the
+earlier Windows profile, which disables
 JPEG, TIFF, WebP and wxRegEx on Windows and removes their package dependencies.
 The application's regular-expression commands use the pinned Notepad4 core,
 including its standalone Boost.Regex engine, rather than wxRegEx.
@@ -12,11 +12,28 @@ Doc/View/MDI frameworks. The application owns its document model, uses one
 document per top-level window, and does not use those controls. wxGridSizer is
 a layout class, independent of the disabled wxGrid table control.
 
-Printing and page setup remain enabled for the original Notepad4 functionality.
-Native ListCtrl/TreeCtrl, book controls, standard dialogs, PNG/SVG art, zlib,
-accessibility, IME, clipboard, drag/drop and both rendering technologies remain
-available. The wxWidgets archive reference, integrity value and upstream patches
-are preserved.
+Version 6 also removes these unused implementations from the Windows core/base
+DLLs:
+
+- GIF, PCX, TGA, IFF and PNM image codecs and animation controls.
+- Calendar/date/time pickers, wxFindReplaceDialog, wizards, splash screens,
+  ActiveX containers, joysticks, wxSearchCtrl and rich tooltips.
+- SVG file-export drawing and PostScript/AFM printing. SVG artwork still uses
+  NanoSVG; printing and page setup still use the Windows native printer path.
+- ZIP/TAR streams and archive virtual filesystems. Ordinary file streams and
+  zlib remain available for PNG artwork and compressed compatibility tables.
+
+Native ListCtrl/TreeCtrl, book controls, standard dialogs, PNG/ICO/XPM/SVG art,
+accessibility, IME, clipboard, drag/drop, file watching and both rendering
+technologies remain available. All toolbar images and application icon sizes
+remain available, including artwork reserved for future commands. The wxWidgets
+archive reference, integrity value and upstream patches are preserved.
+
+`sdk_retained_capabilities` verifies the disabled options against the selected
+SDK's actual headers when `WXNOTEPAD_VERIFY_TRIMMED_SDK=ON`. It also creates native
+controls and printing/page-setup objects, round-trips zlib and PNG, rasterizes
+SVG/XPM artwork and loads the application's Windows icon resource. The ordinary
+native suites continue to exercise the editor's dialogs, printing and input.
 
 Both Windows and Linux disable wxSTC. The overlay no longer fetches or copies
 wxWidgets' Scintilla/Lexilla submodules, and its SDK license collection covers

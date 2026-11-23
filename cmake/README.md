@@ -11,6 +11,7 @@ fuzz-only entry point, and includes the build modules in dependency order.
 | `Localization.cmake` | Generate language data, build catalogs and define installation rules. |
 | `Tests.cmake` | Define `add_editor_test` and include the ordered test groups below. |
 | `Coverage.cmake` | Instrument the project targets after application and test targets have been defined. |
+| `SizeOptimizations.cmake` | Apply Release data/code elimination and supported Linux RELR links; expose optional IPO. |
 
 These files use `include()` in the top-level directory scope. Relative source
 paths, generated files, executable locations and CTest working directories

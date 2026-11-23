@@ -117,6 +117,10 @@ add_editor_test(save_native save_as_native 60)
 add_editor_test(search_smoke find_literal_next 30)
 add_editor_test(search_wildcards original_wildcard_search 30)
 add_editor_test(search_seeding original_find_query_seeding 60)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+    set_tests_properties(original_find_query_seeding PROPERTIES
+        TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+endif()
 if(WIN32)
     add_dependencies(search_seeding clipboard_peer)
     add_test(NAME native_test_failure_logging COMMAND "${Python3_EXECUTABLE}"

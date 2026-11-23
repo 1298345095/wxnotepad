@@ -119,7 +119,7 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
   package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
-  **3.3.3#5**. Only core features are requested, matching the prepared development
+  **3.3.3#6**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
 - The wxWidgets overlay disables JPEG, TIFF and WebP codecs and their package
   dependencies on Windows. PNG/SVG art and native bitmap support remain enabled.
@@ -131,6 +131,14 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Scintilla/Lexilla source downloads; the application uses the separately pinned
   Notepad4 core and preserves its notices. Local dependency installs need
   the same `--overlay-ports=<repository>/.github/ports` option as CI.
+  Version 6 also removes unused Windows GIF/PCX/TGA/IFF/PNM handlers,
+  animation/date/time controls, wx's stock find/replace and wizard/splash
+  dialogs, ActiveX/joystick, SearchCtrl/RichTooltip, SVG file export,
+  PostScript/AFM and ZIP/TAR archive facilities. Native Windows printing,
+  PNG/ICO/XPM decoding, NanoSVG artwork and zlib remain enabled. The application
+  icon and every toolbar image, including currently unused slots and all five
+  DPI variants, remain complete. Windows loads its existing icon resource group;
+  other platforms retain the embedded ICO byte array.
   The wxMSW overlay also locks the pending-watch removal vector shared by the
   UI thread and IOCP worker, preventing concurrent reallocation/erase from
   destroying the same watch twice. `native_file_watcher_lifetime` exercises
@@ -349,6 +357,41 @@ References: [SonarCloud GitHub Actions setup](https://docs.sonarsource.com/sonar
 
 ## Evidence and build output
 
+Release and MinSizeRel enable `WXNOTEPAD_ENABLE_SIZE_OPTIMIZATIONS` by default.
+MSVC packages global data with `/Gw` and uses `/OPT:REF,ICF /INCREMENTAL:NO`.
+Linux GCC/Clang compile project libraries into function/data sections, then use
+`--gc-sections` and `-z pack-relative-relocs` when the actual linker supports
+them. The Linux runtime baseline is Ubuntu 24.04+, with DT_RELR-capable glibc.
+Application and native-regression links use the same settings. Debug, coverage
+and fuzz-only builds retain their existing options; the compiler's speed
+optimization level and exception/unwind support remain in place.
+
+Set `-DWXNOTEPAD_ENABLE_SIZE_OPTIMIZATIONS=OFF` for an otherwise identical
+comparison build. `-DWXNOTEPAD_ENABLE_IPO=ON` separately enables checked
+interprocedural optimization for the application and its four project libraries
+in Release/MinSizeRel. It defaults to OFF because the full native suite links
+many independent executables against those archives. For a focused application
+comparison, combine it with `-DBUILD_TESTING=OFF` in a separate build directory.
+IPO and coverage require separate build trees.
+
+The build evidence retains `application-build-commands.txt`, including the
+final link command, and `binary-size.json`. The size report inventories actual
+distributed files, executable sections and symbols/relocations. It also verifies
+that all five complete toolbar PNG strips and every original ICO image payload
+occur in the packaged application, so unused artwork remains available for
+future features. Native appearance tests separately load all eight icon sizes.
+Run from a working directory that contains the report files. `--output` and
+the optional `--baseline-report` must resolve inside that directory, including
+any symlink destinations. Artifact and source inputs can be read from other
+directories. To inspect an existing package, use:
+
+```text
+python -X utf8 .github/scripts/binary_size.py --artifact-dir /path/to/artifact --source-root . --output .ci/reports/binary-size.json
+```
+
+Add `--baseline-report .ci/reports/binary-size-before.json` to compare against
+a report from the same platform.
+
 Windows configures WER full dumps for `visual_brace.exe` and `eol_open.exe`
 under `.ci/reports/windows-dumps`. These targets have produced an observed
 `0xc0000374` heap failure and a `mixed_line_ending_open` process crash,
@@ -385,6 +428,10 @@ dump grace period.
 The existing Linux core collector retains its executable and GDB thread stacks.
 After the complete Linux suites, a separate private Wayland session repeats this
 case up to 20 times, stopping at the first failure; its logs remain separate.
+
+The search-seeding fixture uses the same SIGQUIT mechanism under its original
+60-second deadline. Its flushed monotonic stage logs distinguish the 1 MiB
+selection boundary, over-limit selection, clipboard fallback and window cleanup.
 
 Evidence artifacts retain JUnit XML, complete CTest logs, Weston logs, configure
 logs, source provenance and dependency build logs, including on failed jobs.

@@ -44,3 +44,4 @@ if(BUILD_TESTING)
 endif()
 
 include(cmake/Coverage.cmake)
+include(cmake/SizeOptimizations.cmake)
