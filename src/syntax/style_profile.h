@@ -11,6 +11,10 @@ struct StyleDefinition {
     size_t count;
 };
 enum class StyleTheme { Default = 0, Dark = 1 };
+namespace StyleProfileLimits {
+inline constexpr size_t StyleCharacters = 127;
+inline constexpr size_t ExtensionCharacters = 255;
+} // namespace StyleProfileLimits
 std::span<const StyleDefinition> GlobalStyleDefinitions();
 std::span<const StyleDefinition> SyntaxStyleDefinitions(SyntaxLanguage language);
 const char* OriginalDarkProfile();

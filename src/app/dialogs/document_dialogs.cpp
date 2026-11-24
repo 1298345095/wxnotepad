@@ -21,7 +21,8 @@ struct SchemeFilters {
     wxString wildcard;
     std::vector<SaveFileType> types;
 };
-SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, const wxString& favorites, bool open) {
+SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, const wxString& favorites, bool open,
+                                const SyntaxExtensions& extensions) {
     SchemeFilters result;
     const auto all = [&] {
         const wxString pattern = wxASCII_STR(wxFileSelectorDefaultWildcardStr);
@@ -35,8 +36,8 @@ SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, co
     const auto add = [&](SyntaxLanguage language, bool active) {
         const auto& definition = SyntaxFor(language);
         wxArrayString patterns;
-        for (const auto* extension : definition.extensions)
-            patterns.Add("*." + wxString(extension));
+        for (const auto& extension : SyntaxExtensionList(language, extensions))
+            patterns.Add("*." + extension);
         if (const auto extension = wxFileName(path).GetExt();
             active && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
             patterns.Add("*." + extension);
@@ -57,8 +58,9 @@ SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, co
 } // namespace
 
 OpenFileDialog::OpenFileDialog(wxWindow* parent, SyntaxLanguage current, const wxString& path,
-                               const wxString& favorites)
-    : wxFileDialog(parent, _("Open file"), {}, {}, FileSchemeFilters(current, path, favorites, true).wildcard,
+                               const wxString& favorites, const SyntaxExtensions& extensions)
+    : wxFileDialog(parent, _("Open file"), {}, {},
+                   FileSchemeFilters(current, path, favorites, true, extensions).wildcard,
                    wxFD_OPEN | wxFD_FILE_MUST_EXIST) {
 }
 
@@ -69,10 +71,10 @@ std::optional<wxString> OpenFileDialog::Choose() {
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
                                              const wxString& path, const SaveFileLocation& initial,
-                                             const wxString& favorites) {
+                                             const wxString& favorites, const SyntaxExtensions& extensions) {
     // Pinned Styles.cpp::Style_GetFileDialogFilter; unavailable fixed text schemes
     // are omitted. Current dialect remains distinct from its shared base filter.
-    const auto filters = FileSchemeFilters(currentLanguage, path, favorites, false);
+    const auto filters = FileSchemeFilters(currentLanguage, path, favorites, false, extensions);
     const wxFileName current(path);
     wxFileDialog dialog(parent, title, initial.directory.empty() ? current.GetPath() : initial.directory,
                         initial.filename.empty() ? current.GetFullName() : initial.filename, filters.wildcard,

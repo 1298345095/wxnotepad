@@ -131,6 +131,10 @@ msgstr ""
 msgid "&Available toolbar buttons:"
 msgstr ""
 
+#: src/app/dialogs/style_customization.cpp
+msgid "&Back..."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Base64"
 msgstr ""
@@ -213,6 +217,10 @@ msgstr ""
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Current toolbar buttons:"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+msgid "&Customize Schemes...\tCtrl+F12"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -318,6 +326,10 @@ msgstr ""
 msgid "&Find...\tCtrl+F"
 msgstr ""
 
+#: src/app/dialogs/style_customization.cpp
+msgid "&Font..."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Goto"
 msgstr ""
@@ -336,6 +348,10 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "&Highlight current subline"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "&Import..."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -504,6 +520,10 @@ msgstr ""
 msgid "&Prefix text to lines:"
 msgstr ""
 
+#: src/app/dialogs/style_customization.cpp
+msgid "&Preview"
+msgstr ""
+
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Print...\tCtrl+P"
@@ -538,6 +558,7 @@ msgstr ""
 msgid "&Replace"
 msgstr ""
 
+#: src/app/dialogs/style_customization.cpp
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Reset"
 msgstr ""
@@ -758,6 +779,10 @@ msgstr ""
 msgid "ASP JavaScript"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "ASP Tag"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "ASP VBScript"
 msgstr ""
@@ -777,6 +802,10 @@ msgstr ""
 #. TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
 #: src/app/editor_frame_commands.cpp
 msgid "Action on &Selection"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Alias"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -799,8 +828,16 @@ msgstr ""
 msgid "All files (*)|*"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Anchor"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Angle brackets <>"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Annotation"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -824,6 +861,22 @@ msgstr ""
 #. TRANSLATORS: Reopen the file with UTF-8 as the source encoding (CMD_RELOADUTF8).
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Assignment"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Associated file&name extensions:"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "At Rule"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Attribute"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -889,6 +942,7 @@ msgid "Backspace at Indentation Deletes up to Tab Stop"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/syntax/generated/style_profiles.h
 msgid "Backticks"
 msgstr ""
 
@@ -906,8 +960,16 @@ msgstr ""
 msgid "Bash"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Basic Function"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Batch File"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bit Field"
 msgstr ""
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
@@ -923,12 +985,20 @@ msgstr ""
 msgid "Block (&OVR Mode)"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Block Quote"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Boo&kmark matched line"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bookmark"
 msgstr ""
 
 #. TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
@@ -948,6 +1018,26 @@ msgstr ""
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #, c++-format
 msgid "Braces {}"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bracket Argument"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Built-in Constant"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Built-in Function"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Built-in default value:"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bytes"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -973,6 +1063,10 @@ msgstr ""
 #. TRANSLATORS: Original C/C++ base-scheme chooser title, independent of its INI section key.
 #: src/syntax/syntax_catalog.cpp
 msgid "C/C++ Source"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "CDATA"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1003,6 +1097,14 @@ msgstr[1] ""
 msgid "CSS Style Sheet"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "CallTip"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Caret"
+msgstr ""
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
 msgstr ""
@@ -1023,6 +1125,10 @@ msgstr ""
 
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Change &background color."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Change History Marker"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
@@ -1068,6 +1174,14 @@ msgstr ""
 msgid "Choose program"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Citation"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Class"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr ""
@@ -1090,6 +1204,18 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Close"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Cmdlet"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Code Block"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Code Folding"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1125,6 +1251,14 @@ msgstr ""
 msgid "Column Wrap"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Command"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Comment"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Comments"
 msgstr ""
@@ -1149,6 +1283,10 @@ msgstr ""
 msgid "Con&vert"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Constant"
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Continuation &indent:"
 msgstr ""
@@ -1159,6 +1297,10 @@ msgstr ""
 
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Continuous number."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Control Character"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1184,6 +1326,11 @@ msgstr ""
 #. TRANSLATORS: Copies styled text to the clipboard in Rich Text Format (IDM_EDIT_COPYRTF).
 #: src/app/editor_frame_commands.cpp
 msgid "Copy as &RTF"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+#, c-format
+msgid "Could not access %s"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
@@ -1224,6 +1371,14 @@ msgstr ""
 #. TRANSLATORS: IDM_FILE_LAUNCH error title; the message body contains the native launch error.
 #: src/app/document_tools.cpp
 msgid "Could not execute document"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Could not export schemes"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Could not import schemes"
 msgstr ""
 
 #. TRANSLATORS: Linux IDM_FILE_LAUNCH/OPENWITH error loading a native .desktop entry; no parameters.
@@ -1367,6 +1522,10 @@ msgstr ""
 msgid "Current Date &Time"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Current Line"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Current encoding"
 msgstr ""
@@ -1388,6 +1547,14 @@ msgstr ""
 msgid "Customi&ze Toolbar..."
 msgstr ""
 
+#: src/app/dialogs/style_customization.cpp
+msgid "Customize Schemes - Dark Theme"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Customize Schemes - Default Theme"
+msgstr ""
+
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Customize Toolbar"
 msgstr ""
@@ -1404,8 +1571,20 @@ msgstr ""
 msgid "Dar&k"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "DateTime"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Decode as &Hex"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Decorator"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Default"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1420,12 +1599,24 @@ msgstr ""
 msgid "Default Code Font"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Default Code Style"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
 msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Default Text Font"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Default Text Style"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Default Value"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1436,6 +1627,18 @@ msgstr ""
 msgid "Default line ending mode"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Definition List"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Delimiter"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Delimiter Row"
+msgstr ""
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Detect Indentation"
 msgstr ""
@@ -1443,6 +1646,26 @@ msgstr ""
 #. TRANSLATORS: Original NP2LEX_DIFF scheme title.
 #: src/syntax/syntax_catalog.cpp
 msgid "Diff File"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Directive"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Display Math"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Doc Comment"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Doc Comment Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Document"
 msgstr ""
 
 #: src/app/dialogs/modify_lines_dialog.cpp
@@ -1455,6 +1678,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Don't parse encoding &tags."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Double Quoted String"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1472,6 +1699,18 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "E&xit wxnotepad"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "E&xport..."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Emoji"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Emphasis"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1511,6 +1750,10 @@ msgstr ""
 msgid "Enter"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Enumeration"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Esca&pe C Chars\tCtrl+Alt+E"
 msgstr ""
@@ -1519,20 +1762,36 @@ msgstr ""
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Escape Sequence"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Example List"
+msgstr ""
+
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
 #: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
 msgid "Execute &Document\tCtrl+L"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Export Schemes"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Extra Esc &Key Function"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Extra Line Spacing"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr ""
 
-#: src/app/dialogs/scheme_chooser.cpp
+#: src/app/dialogs/scheme_chooser.cpp src/app/dialogs/style_customization.cpp
 msgid "Favorite Schemes"
 msgstr ""
 
@@ -1626,6 +1885,14 @@ msgstr ""
 msgid "Fnd %s%s"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Fold Ellipsis"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Folding Marker"
+msgstr ""
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
@@ -1633,6 +1900,18 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "For&e..."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Specifier"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Formatted String"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1652,6 +1931,14 @@ msgstr ""
 msgid "Full Scree&n Mode"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Function"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Function Definition"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "GitHub GFM"
 msgstr ""
@@ -1662,6 +1949,10 @@ msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Global"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Global Styles"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1726,6 +2017,74 @@ msgstr ""
 msgid "HSS Style Sheet"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Attribute"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Comment"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Element Text"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Entity"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Other Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Unknown Attribute"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Unknown Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Value"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Hard Line Break"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 1"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 2"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 3"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 4"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 5"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 6"
+msgstr ""
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
@@ -1733,6 +2092,22 @@ msgstr ""
 
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Headers and Footers"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Delimiter)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Single Quoted)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Heredoc String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Hex String"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1756,6 +2131,18 @@ msgstr ""
 msgid "Highlight Current &Block"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Horizontal Rule"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotKey"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotString"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "I&nsert"
 msgstr ""
@@ -1764,8 +2151,24 @@ msgstr ""
 msgid "IAFS — Inhibit Arabic form s&haping"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "IME Indicator"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "INI Files (*.ini)|*.ini|All Files (*)|*"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "ISS — Inhibit s&ymmetric swapping"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Import Schemes"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Important"
 msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -1788,6 +2191,10 @@ msgstr ""
 msgid "Indentation &Guides\tCtrl+Shift+G"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Indentation Guide"
+msgstr ""
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Indentation Width (0–256):"
 msgstr ""
@@ -1795,6 +2202,14 @@ msgstr ""
 #. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
 #: src/syntax/syntax_catalog.cpp
 msgid "Ini Config File"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Inline Code"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Inline Math"
 msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
@@ -1811,6 +2226,14 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Insert Tabs as &Spaces"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Instruction"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Interface"
 msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp src/app/editor_frame.cpp
@@ -1859,6 +2282,14 @@ msgstr ""
 msgid "Justify (&Paragraph mode)."
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Key"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Keyword"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Kotlin Source"
 msgstr ""
@@ -1888,6 +2319,10 @@ msgstr ""
 
 #: src/editor/special_insert.h
 msgid "LS — L&ine Separator"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Label"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1925,6 +2360,10 @@ msgstr ""
 msgid "Level 1&0"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Lifetime"
+msgstr ""
+
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Limit for long lines"
 msgstr ""
@@ -1937,12 +2376,24 @@ msgstr ""
 msgid "Line &Numbers\tCtrl+Shift+N"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Line Addition"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Line Change"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Line Endin&gs"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Line Endings"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Line Removal"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1965,6 +2416,14 @@ msgstr ""
 msgid "Line ending conversion"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Link"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Link Text"
+msgstr ""
+
 #: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
@@ -1978,6 +2437,10 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Logical &number comparison."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Long Line Marker"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1997,9 +2460,25 @@ msgstr ""
 msgid "Lua Script"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Macro"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Magic Constant"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Magic Method"
+msgstr ""
+
 #. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
 #: src/syntax/syntax_catalog.cpp
 msgid "Makefile"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Margin and Line Number"
 msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
@@ -2018,6 +2497,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Mark &Occurrences"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Mark Occurrences"
 msgstr ""
 
 #. TRANSLATORS: Original Scheme/Markdown family and dialect order.
@@ -2046,6 +2529,14 @@ msgstr ""
 msgid "Match found"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Matching Brace"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Matching Brace Error"
+msgstr ""
+
 #: src/app/dialogs/recent_files_dialog.cpp
 msgid "Maximum recent &files:"
 msgstr ""
@@ -2060,6 +2551,22 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Merge Duplicate Lines"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Metadata"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Metamethod"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Method"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Method Definition"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2143,6 +2650,14 @@ msgstr ""
 #. TRANSLATORS: IDS_PRINT_COLOR choice: normal print color mapping.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Normal"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Nowdoc String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Number"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_OPENWITH menu command; choose a program for the current document.
@@ -2236,6 +2751,14 @@ msgstr ""
 msgid "Open the selected text using this action's command."
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Operator"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Ordered List"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Other Sett&ings"
 msgstr ""
@@ -2250,6 +2773,10 @@ msgstr ""
 
 #: src/editor/special_insert.h
 msgid "PDI — Po&p directional isolate"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "PHP Tag"
 msgstr ""
 
 #: src/editor/special_insert.h
@@ -2290,8 +2817,24 @@ msgstr ""
 msgid "Paper and &Orientation..."
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Parameter"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Parameter Expansion"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Parentheses ()"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Parsing Error"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Placeholder"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -2299,8 +2842,20 @@ msgstr ""
 msgid "Plain Text"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Position Setting"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "PowerShell Script"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Predefined Variable"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Preprocessor"
 msgstr ""
 
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -2352,8 +2907,20 @@ msgstr ""
 msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Property"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Pseudo Class"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Pseudo Element"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -2393,6 +2960,14 @@ msgstr ""
 msgid "RS — Record Separator (&Block separator)"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Raw Bytes"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Raw String"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "Reached the beginning of the document, restarting search at the end."
 msgstr ""
@@ -2424,6 +2999,18 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Recoding requires reloading file from disk, unsaved changes will be lost!"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Record"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Regex"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Register"
 msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -2487,6 +3074,14 @@ msgstr ""
 msgid "Replace with"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Reserved Word"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Reset All"
+msgstr ""
+
 #: src/app/new_window.cpp
 msgid "Restart failed"
 msgstr ""
@@ -2534,6 +3129,10 @@ msgstr ""
 #. TRANSLATORS: Original Sass SCSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
 msgid "SCSS Style Sheet"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "SGML"
 msgstr ""
 
 #: src/editor/special_insert.h
@@ -2638,6 +3237,10 @@ msgstr ""
 msgid "Save with Original Time"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Scalar $var"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Scan document words inside"
 msgstr ""
@@ -2656,6 +3259,10 @@ msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Scheme"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Scheme styles"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -2681,6 +3288,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Section"
 msgstr ""
 
 #. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
@@ -2728,6 +3339,13 @@ msgstr ""
 msgid "Select Scheme"
 msgstr ""
 
+#: src/app/dialogs/style_customization.cpp
+msgid ""
+"Select a scheme to edit its filename extensions, or select a style.\n"
+"font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
+"Preview applies the settings to the document. Cancel restores the original styles."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
 msgstr ""
@@ -2758,6 +3376,14 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Selected Text"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Send Key"
 msgstr ""
 
 #: src/app/editor_frame_toolbar.cpp
@@ -2843,6 +3469,10 @@ msgstr ""
 msgid "Simplified Chinese (GBK, GB2312)"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Single Quoted String"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Single quotes"
 msgstr ""
@@ -2861,6 +3491,10 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort Lines"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Source and Destination"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -2895,6 +3529,14 @@ msgstr ""
 msgid "Standard &Encode"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Strikethrough"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "String"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
 msgstr ""
@@ -2913,6 +3555,30 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Strip Leading Blan&ks"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Strong"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Structure"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Style &settings:"
+msgstr ""
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Style settings"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Subscript"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Superscript"
 msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
@@ -2988,8 +3654,48 @@ msgstr ""
 msgid "Tabify Selection\tCtrl+Shift+T"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Table"
+msgstr ""
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag Attribute"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag Class"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag Id"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Target"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Task List"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Task Marker"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Template Literal"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Text Block"
 msgstr ""
 
 #. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
@@ -3146,6 +3852,10 @@ msgstr ""
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Trait"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Transform &backslashes"
 msgstr ""
@@ -3160,6 +3870,26 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Triple &Single Quotes\tCtrl+3"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Triple Quoted Bytes"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Triple Quoted Formatted String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Triple Quoted String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Type"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Type Keyword"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -3218,12 +3948,32 @@ msgstr ""
 msgid "Unicode &Control Character"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Union"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Unix Timesta&mp"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Unix/macOS (LF)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unknown Property"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unknown Pseudo Class"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unknown Pseudo Element"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unordered List"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -3258,6 +4008,42 @@ msgstr ""
 msgid "Use Scheme Tab Settings"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Comment"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Default"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Keyword"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Number"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Operator"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Value"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Variable"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Verbatim String"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Visible rows"
 msgstr ""
@@ -3279,6 +4065,7 @@ msgid "Western European"
 msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
+#: src/syntax/generated/style_profiles.h
 msgid "Whitespace"
 msgstr ""
 
@@ -3347,12 +4134,48 @@ msgstr ""
 msgid "Wrap indent same as first subline"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "XML Attribute"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Comment"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "XML Document"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "XML Element Text"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Entity"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Identifier"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Other Tag"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "XML Schema"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Value"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp

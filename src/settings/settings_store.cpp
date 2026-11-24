@@ -288,6 +288,23 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const auto theme = static_cast<StyleTheme>(std::clamp(ReadInt("StyleTheme", 0, "Styles"), 0, 1));
     values.fonts = LoadStyleProfile(theme);
     loadedFonts_ = values.fonts;
+    for (const auto& scheme : SyntaxCatalog()) {
+        if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
+        if (const auto extension = FindValue(SyntaxSettingsSection(scheme.language), "File Extensions");
+            extension && !extension->empty())
+            values.schemeExtensions[scheme.language] = *extension;
+    }
+    loadedExtensions_ = values.schemeExtensions;
+}
+
+void SettingsStore::WriteExtensions() {
+    for (const auto& scheme : SyntaxCatalog()) {
+        if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
+        const auto value = SyntaxExtensionsFor(scheme.language, values.schemeExtensions);
+        if (value != SyntaxExtensionsFor(scheme.language, loadedExtensions_))
+            WriteString(SyntaxSettingsSection(scheme.language), value, SyntaxExtensionsFor(scheme.language),
+                        "File Extensions");
+    }
 }
 
 wxString SettingsStore::DarkProfilePath() const {
@@ -314,6 +331,7 @@ FontSettings SettingsStore::LoadStyleProfile(StyleTheme theme) {
     }
     FontSettings result;
     result.theme = theme;
+    ReadCustomColours(result);
     for (const auto& definition : GlobalStyleDefinitions()) {
         const auto value = ReadStyle(definition.key, definition.defaultValue, "Global Styles");
         if (wxString::FromUTF8(definition.key) == "Default Code Style")
@@ -342,6 +360,12 @@ FontSettings SettingsStore::LoadStyleProfile(StyleTheme theme) {
 }
 
 void SettingsStore::WriteStyleProfile() {
+    for (size_t index = 0; index < values.fonts.customColours.size(); ++index) {
+        if (values.fonts.customColours[index] != loadedFonts_.customColours[index])
+            WriteString(wxString::Format("%02zu", index + 1),
+                        wxString::Format("#%06X", values.fonts.customColours[index]),
+                        wxString::Format("#%06X", DefaultCustomColours[index]), "Custom Colors");
+    }
     for (const auto& definition : GlobalStyleDefinitions()) {
         const auto key = wxString::FromUTF8(definition.key);
         const auto value = values.fonts.GlobalStyle(key);
@@ -361,6 +385,93 @@ void SettingsStore::WriteStyleProfile() {
                             section);
         }
     }
+}
+
+void SettingsStore::ReadCustomColours(FontSettings& profile) const {
+    for (size_t index = 0; index < profile.customColours.size(); ++index) {
+        const auto value = FindValue(wxString::Format("%02zu", index + 1), "Custom Colors");
+        unsigned long rgb;
+        if (value && value->StartsWith('#') && value->Mid(1).ToULong(&rgb, 16))
+            profile.customColours[index] = static_cast<unsigned>(rgb) & 0xffffffU;
+    }
+}
+
+FontSettings SettingsStore::ResetStyles() {
+    return values.fonts.theme == StyleTheme::Dark ? LoadStyleProfile(StyleTheme::Dark) : FontSettings{};
+}
+
+bool SettingsStore::ImportStyles(const wxString& path) {
+    const wxLogNull noGuiLog;
+    const auto originalPath = path_;
+    auto originalLines = std::move(lines_);
+    path_ = path;
+    const bool success = wxFileExists(path) && LoadLines();
+    if (success) {
+        ReadCustomColours(values.fonts);
+        for (const auto& definition : GlobalStyleDefinitions()) {
+            const auto key = wxString::FromUTF8(definition.key);
+            const auto value = FindValue(key, "Global Styles");
+            if (!value) continue;
+            if (key == "Default Code Style")
+                values.fonts.codeStyle = value->Left(StyleProfileLimits::StyleCharacters);
+            else if (key == "Default Text Style")
+                values.fonts.textStyle = value->Left(StyleProfileLimits::StyleCharacters);
+            else
+                values.fonts.globalStyles[key] = value->Left(StyleProfileLimits::StyleCharacters);
+        }
+        for (const auto& scheme : SyntaxCatalog()) {
+            if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
+            const auto* section = SyntaxSettingsSection(scheme.language);
+            if (const auto extension = FindValue(section, "File Extensions"); extension && !extension->empty())
+                values.schemeExtensions[scheme.language] = extension->Left(StyleProfileLimits::ExtensionCharacters);
+            auto& styles = values.fonts.Scheme(scheme.language);
+            styles.useCode = ReadBool("UseDefaultCodeStyle", styles.useCode, section);
+            for (const auto& definition : SyntaxStyleDefinitions(scheme.language)) {
+                const auto key = wxString::FromUTF8(definition.key);
+                const auto value = FindValue(key, section);
+                if (!value) continue;
+                if (key == "Default")
+                    styles.defaultStyle = value->Left(StyleProfileLimits::StyleCharacters);
+                else
+                    styles.tokenStyles[key] = value->Left(StyleProfileLimits::StyleCharacters);
+            }
+        }
+    }
+    path_ = originalPath;
+    lines_ = std::move(originalLines);
+    return success;
+}
+
+bool SettingsStore::ExportStyles(const wxString& path) {
+    const wxLogNull noGuiLog;
+    const auto originalPath = path_;
+    auto originalLines = std::move(lines_);
+    path_ = path;
+    bool success = (!wxFileExists(path) || wxIsWritable(path)) && LoadLines();
+    if (success) {
+        for (const auto& definition : GlobalStyleDefinitions()) {
+            const auto key = wxString::FromUTF8(definition.key);
+            WriteString(key, values.fonts.GlobalStyle(key), {}, "Global Styles", true);
+        }
+        for (const auto& scheme : SyntaxCatalog()) {
+            if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
+            const auto* section = SyntaxSettingsSection(scheme.language);
+            WriteString(section, SyntaxExtensionsFor(scheme.language, values.schemeExtensions), {}, "File Extensions",
+                        true);
+            WriteString("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode ? "1" : "0", {}, section,
+                        true);
+            for (const auto& definition : SyntaxStyleDefinitions(scheme.language))
+                WriteString(wxString::FromUTF8(definition.key), values.fonts.TokenStyle(scheme.language, definition),
+                            {}, section, true);
+        }
+        for (size_t index = 0; index < values.fonts.customColours.size(); ++index)
+            WriteString(wxString::Format("%02zu", index + 1),
+                        wxString::Format("#%06X", values.fonts.customColours[index]), {}, "Custom Colors", true);
+        success = SaveLines();
+    }
+    path_ = originalPath;
+    lines_ = std::move(originalLines);
+    return success;
 }
 
 bool SettingsStore::SaveStyleProfile() {
@@ -388,7 +499,7 @@ bool SettingsStore::SwitchStyleTheme(StyleTheme theme) {
     // Style_OnStyleThemeChanged saves all dirty styles before changing identity,
     // including when the ordinary SaveSettings option is disabled.
     bool saved = true;
-    if (values.fonts != loadedFonts_) {
+    if (values.fonts != loadedFonts_ || values.schemeExtensions != loadedExtensions_) {
         // SaveSettingsNow(true, true) calls Style_Save only. Ordinary view/tool
         // preferences remain unsaved when Save Settings On Exit is disabled.
         const wxLogNull noGuiLog;
@@ -398,12 +509,14 @@ bool SettingsStore::SwitchStyleTheme(StyleTheme theme) {
             WriteInt("DefaultScheme", values.defaultScheme, 0, "Styles");
             WriteBool("AutoSelect", values.autoSelect, true, "Styles");
             WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
+            WriteExtensions();
             saved = SaveStyleProfile() && SaveLines();
         }
     }
     // The original still changes theme after reporting a style-save failure.
     values.fonts = LoadStyleProfile(theme);
     loadedFonts_ = values.fonts;
+    if (saved) loadedExtensions_ = values.schemeExtensions;
     return saved;
 }
 
@@ -598,7 +711,7 @@ void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const
 }
 
 void SettingsStore::WriteString(const wxString& key, const wxString& value, const wxString& fallback,
-                                const wxString& sectionName) {
+                                const wxString& sectionName, bool includeDefault) {
     bool settings = false;
     bool foundSection = false;
     size_t insertion = lines_.size();
@@ -617,7 +730,7 @@ void SettingsStore::WriteString(const wxString& key, const wxString& value, cons
         }
         ++index;
     }
-    if (value == fallback) return;
+    if (value == fallback && !includeDefault) return;
     if (!foundSection) {
         lines_.push_back("[" + sectionName + "]");
         insertion = lines_.size();
@@ -642,6 +755,7 @@ bool SettingsStore::Save(bool explicitSave) {
     WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
         if (!SaveStyleProfile()) return false;
+        WriteExtensions();
         WriteInt("StyleTheme", std::to_underlying(values.fonts.theme), 0, "Styles");
         WriteInt("AutoSaveOption", values.autoSave.flags, defaults.autoSave.flags);
         WriteInt("AutoSavePeriod", static_cast<int32_t>(values.autoSave.periodMilliseconds),
@@ -779,7 +893,10 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteRecentFiles(values.recentFiles);
     }
     const bool saved = SaveLines();
-    if (saved && (values.saveSettings || explicitSave)) loadedFonts_ = values.fonts;
+    if (saved && (values.saveSettings || explicitSave)) {
+        loadedFonts_ = values.fonts;
+        loadedExtensions_ = values.schemeExtensions;
+    }
     return saved;
 }
 

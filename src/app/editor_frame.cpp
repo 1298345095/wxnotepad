@@ -8,6 +8,7 @@
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/scheme_chooser.h"
+#include "app/dialogs/style_customization.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
 #include "app/dialogs/recent_files_dialog.h"
@@ -74,7 +75,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
                                                   settings->values.noHtmlGuess,
                                                   SyntaxFromOriginalSchemeId(settings->values.defaultScheme)
-                                                      .value_or(SyntaxLanguage::PlainText)}
+                                                      .value_or(SyntaxLanguage::PlainText),
+                                                  settings->values.schemeExtensions}
                          : SyntaxDetectionOptions{},
                 settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
@@ -543,8 +545,24 @@ void EditorFrame::ShowSyntaxScheme(bool favorite) {
     const auto language = ChooseSyntaxScheme(this, document_.Language(), preferences, favorite);
     document_.SetSyntaxDetectionOptions(
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
-         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText)});
+         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
+         preferences.schemeExtensions});
     if (language) ChooseLanguage(*language);
+}
+
+void EditorFrame::CustomizeStyles() {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    CustomizeSyntaxStyles(this, document_.Language(), preferences, settings_, [this, &preferences] {
+        editor_->SetFontSettings(preferences.fonts);
+        ApplySyntaxStyles(*editor_, document_.Language());
+        UpdatePositionStatus();
+    });
+    editor_->SetFontSettings(preferences.fonts);
+    document_.SetSyntaxDetectionOptions(
+        {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
+         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
+         preferences.schemeExtensions});
+    editor_->SetFocus();
 }
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
@@ -577,7 +595,8 @@ SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMod
                              _("Read only file"), wxYES_NO | wxICON_WARNING, this) != wxYES)
                 return {SaveStatus::Cancelled, {}};
             const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path(), {},
-                                               (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                                               (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                                               (settings_ ? settings_->values : defaults_).schemeExtensions);
             if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
@@ -591,7 +610,8 @@ SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMod
         return result;
     }
     const auto chosen = ChooseSaveFile(this, _("Save file"), document_.Language(), document_.Path(), {},
-                                       (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                                       (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                                       (settings_ ? settings_->values : defaults_).schemeExtensions);
     if (!chosen) return SaveFirst(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
     return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
@@ -620,7 +640,8 @@ bool EditorFrame::UpdateFileTime() {
 
 SaveResult EditorFrame::SaveAs() {
     const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path(), {},
-                                       (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                                       (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                                       (settings_ ? settings_->values : defaults_).schemeExtensions);
     if (!chosen) return SaveAs(std::nullopt);
     return SaveAs(chosen->path, {}, chosen->type);
 }
@@ -645,7 +666,8 @@ SaveResult EditorFrame::SaveCopy() {
         // the filename and adds the current scheme's default extension.
         wxFileName initial(directory);
         if (!initial.GetFullName().empty() && !initial.HasExt()) {
-            const auto extensions = SyntaxFor(document_.Language()).extensions;
+            const auto extensions =
+                SyntaxExtensionList(document_.Language(), (settings_ ? settings_->values : defaults_).schemeExtensions);
             if (!extensions.empty()) initial.SetExt(extensions.front());
         }
         directory = initial.GetPath();
@@ -653,7 +675,8 @@ SaveResult EditorFrame::SaveCopy() {
     }
     const auto chosen =
         ChooseSaveFile(this, _("Save Copy"), document_.Language(), document_.Path(), {directory, filename},
-                       (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                       (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                       (settings_ ? settings_->values : defaults_).schemeExtensions);
     return SaveCopy(chosen ? std::optional<wxString>(chosen->path) : std::nullopt);
 }
 
@@ -779,7 +802,8 @@ OpenResult EditorFrame::ReloadQuickEncoding(QuickReloadEncoding encoding) {
 
 OpenResult EditorFrame::Open() {
     OpenFileDialog dialog(this, document_.Language(), document_.Path(),
-                          (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                          (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                          (settings_ ? settings_->values : defaults_).schemeExtensions);
     const auto result = Open(dialog.Choose());
     // Original FileLoad determines excerpt retention before the chooser supplies
     // its path. A successful chooser clears it even for the current file.
@@ -802,7 +826,8 @@ void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
     std::optional<wxString> source = path;
     if (wxDirExists(path)) {
         OpenFileDialog dialog(this, document_.Language(), document_.Path(),
-                              (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                              (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                              (settings_ ? settings_->values : defaults_).schemeExtensions);
         dialog.SetDirectory(path);
         source = dialog.Choose();
     }
@@ -813,7 +838,8 @@ void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
 
 OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
     OpenFileDialog dialog(this, document_.Language(), document_.Path(),
-                          (settings_ ? settings_->values : defaults_).favoriteSchemes);
+                          (settings_ ? settings_->values : defaults_).favoriteSchemes,
+                          (settings_ ? settings_->values : defaults_).schemeExtensions);
     return Open(dialog.Choose(), encoding);
 }
 

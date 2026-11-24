@@ -133,6 +133,7 @@ add_library(app_shell STATIC
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/scheme_chooser.cpp
+    src/app/dialogs/style_customization.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
     src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp

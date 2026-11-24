@@ -5,6 +5,7 @@
 #include "app/desktop_launch.h"
 #include "syntax/syntax_catalog.h"
 #include "settings/environment_expansion.h"
+#include "settings/settings_store.h"
 #include "diagnostics/trace.h"
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
@@ -344,8 +345,11 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
     if (path && !wxDirExists(*path)) {
         const wxFileName name(*path);
         const auto extension = name.GetExt().Lower();
+        SyntaxDetectionOptions detection;
+        detection.extensions = (settings_ ? settings_->values : defaults_).schemeExtensions;
         const bool supported = location.present || name.GetFullName().StartsWith(".") || extension.empty() ||
-                               extension == "cgi" || extension == "fcgi" || DetectLanguage(*path, {}).has_value();
+                               extension == "cgi" || extension == "fcgi" ||
+                               DetectLanguage(*path, {}, detection).has_value();
         if (supported) {
             std::vector<wxString> arguments{wxStandardPaths::Get().GetExecutablePath(), "--startup-file", *path};
             if (location.present) {
