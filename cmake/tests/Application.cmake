@@ -46,6 +46,10 @@ add_test(NAME original_scroll_past_last_line_lifecycle COMMAND "${Python3_EXECUT
 set_tests_properties(original_scroll_past_last_line_lifecycle PROPERTIES TIMEOUT 120)
 add_editor_test(menu_hierarchy original_menu_hierarchy 60)
 add_editor_test(context_menu original_editor_context_menu 60)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+    set_tests_properties(original_editor_context_menu PROPERTIES
+        TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+endif()
 add_dependencies(context_menu wxnotepad_catalogs)
 foreach(language zh_CN zh_TW)
     add_test(NAME original_editor_context_menu_${language} COMMAND context_menu --localized ${language})

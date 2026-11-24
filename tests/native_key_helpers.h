@@ -20,21 +20,7 @@
 namespace NativeKeys {
 inline constexpr auto FocusAcknowledgementTimeout = std::chrono::seconds(3);
 inline void DispatchFocusEvents([[maybe_unused]] wxWindow* window) {
-#ifdef __WXGTK__
-    // Wayland focus preparation also settles compositor surface transitions.
-    // Preserve its native drain before publishing an activation request.
-    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(window->GetHandle())))) {
-        wxYield();
-        return;
-    }
-    // Return between native iterations so ready activity cannot prevent the
-    // shortcut's focus predicate and original deadline being checked.
-    gtk_main_iteration_do(FALSE);
-    wxTheApp->ProcessPendingEvents();
-    wxTheApp->ProcessIdle();
-#else
-    wxYield();
-#endif
+    NativeSearch::DispatchEvents(window);
 }
 inline int UnshiftedPunctuation(int key) {
     switch (key) {
@@ -471,6 +457,6 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         throw std::runtime_error("native shortcut release must reach the owned editor or its dialog");
     }
 #endif
-    wxYield();
+    NativeSearch::DispatchEvents(frame);
 }
 } // namespace NativeKeys

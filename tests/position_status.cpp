@@ -21,6 +21,23 @@ using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+#ifdef __WXGTK__
+class PendingNativeActivity final {
+public:
+    explicit PendingNativeActivity(EditorControl* editor) {
+        if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle())))) {
+            source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
+            Require(source_ != 0, "keep native activity queued while observing real status paints");
+        }
+    }
+    ~PendingNativeActivity() {
+        if (source_) g_source_remove(source_);
+    }
+
+private:
+    guint source_ = 0;
+};
+#endif
 void Status(EditorFrame* frame, const wxString& expected) {
     auto* status = frame->GetStatusBar();
     Require(status->GetFieldsCount() >= 2, "status must expose a position field");
@@ -101,7 +118,12 @@ public:
         CallAfter([this, frame] {
             try {
                 auto* editor = frame->Editor();
-                Status(frame, "Ln 1, Col 1");
+                {
+#ifdef __WXGTK__
+                    const PendingNativeActivity activity(editor);
+#endif
+                    Status(frame, "Ln 1, Col 1");
+                }
                 editor->Send(Message::SetText, 0,
                              reinterpret_cast<intptr_t>("one\r\n\t\x{E4}\x{B8}\x{AD}\x{F0}\x{9F}\x{98}\x{80}"));
                 editor->Send(Message::SetTabWidth, 4);
@@ -175,8 +197,11 @@ public:
                 Status(frame, "Ln 2, Col 6 | Sel 4");
                 std::puts("PASS: native Right, Shift+Right, mouse and Shift+click update live status");
                 std::exception_ptr dialogFailure;
-                CallAfter([frame, &dialogFailure] {
+                wxTimer modalResponse;
+                modalResponse.Bind(wxEVT_TIMER, [frame, &dialogFailure, &modalResponse](wxTimerEvent&) {
                     auto* dialog = wxDynamicCast(wxWindow::FindWindowByName("Go to line", frame), wxDialog);
+                    if (!dialog || !dialog->IsShown() || !dialog->IsModal()) return;
+                    modalResponse.Stop();
                     try {
                         Require(dialog && dialog->IsModal(), "Go To Line must open its native dialog");
                         auto* input =
@@ -189,6 +214,7 @@ public:
                         if (dialog && dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
                     }
                 });
+                modalResponse.Start(10);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Search", "Goto Line..."));
                 if (dialogFailure) std::rethrow_exception(dialogFailure);
                 Status(frame, "Ln 3, Col 1");
