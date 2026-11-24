@@ -1380,8 +1380,18 @@ SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& ext
     }
     for (const auto& [identity, stockExtensions] : associations) {
         const auto language = SyntaxFromOriginalSchemeId(identity);
-        const auto effective = language ? SyntaxExtensionsFor(*language, extensions)
-                                        : wxString::FromUTF8(stockExtensions.data(), stockExtensions.size());
+        auto effective = language ? SyntaxExtensionsFor(*language, extensions)
+                                  : wxString::FromUTF8(stockExtensions.data(), stockExtensions.size());
+        if (language && !extensions.contains(*language)) {
+            // Delivered dialects share the original canonical association slot.
+            // An explicit replacement still replaces that whole scheme's list.
+            for (const auto& definition : definitions) {
+                if (definition.language == *language || SyntaxSettingsLanguage(definition.language) != *language)
+                    continue;
+                for (const auto* candidate : definition.extensions)
+                    effective += ";" + wxString::FromUTF8(candidate);
+            }
+        }
         wxStringTokenizer candidates(effective, "; \t\r\n", wxTOKEN_STRTOK);
         while (candidates.HasMoreTokens())
             if (extension.CmpNoCase(candidates.GetNextToken()) == 0) return language ? dialect(*language) : PlainText;

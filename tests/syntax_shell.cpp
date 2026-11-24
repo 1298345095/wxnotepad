@@ -311,7 +311,7 @@ public:
                          {"script.js", "#!/bin/bash", "JavaScript", 0},
                          {"script.cfg", "#!/bin/bash", "Bash", 0},
                          {"my.ini", "#!/bin/bash", "Bash", 0},
-                         {"Makefile", "#!/bin/bash", "Plain Text", 0},
+                         {"Makefile", "#!/bin/bash", "Makefile", 0},
                      }) {
                     const auto folder = directory / std::to_string(++sequence);
                     std::filesystem::create_directory(folder);

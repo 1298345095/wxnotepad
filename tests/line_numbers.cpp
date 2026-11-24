@@ -52,8 +52,20 @@ void NativeMarginColours(EditorFrame* frame) {
     constexpr auto numberStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber);
     constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
     auto* editor = frame->Editor();
-    const auto foreground = ColourValue(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT));
-    const auto background = ColourValue(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
+    const auto originalFonts = editor->Fonts();
+    const auto nativeForeground = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT);
+    const auto nativeBackground = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
+    const auto foreground = ColourValue(nativeForeground);
+    const auto background = ColourValue(nativeBackground);
+    constexpr unsigned OriginalMarginForeground = 0xAF912B;
+    Require(editor->Send(StyleGetFore, numberStyle) == OriginalMarginForeground &&
+                editor->Send(StyleGetBack, numberStyle) == background,
+            "original Default margin uses fore:#2B91AF and the native fallback background");
+    auto fonts = originalFonts;
+    fonts.globalStyles["Margin and Line Number"] = "size:-2; fore:" + nativeForeground.GetAsString(wxC2S_HTML_SYNTAX) +
+                                                   "; back:" + nativeBackground.GetAsString(wxC2S_HTML_SYNTAX);
+    editor->SetFontSettings(fonts);
+    ApplySyntaxStyles(*editor, SyntaxLanguage::PlainText);
     std::println("Default native margin: expected={:06x}/{:06x} actual={:06x}/{:06x}",
                  static_cast<long long>(foreground), static_cast<long long>(background),
                  static_cast<long long>(editor->Send(StyleGetFore, numberStyle)),
@@ -61,8 +73,6 @@ void NativeMarginColours(EditorFrame* frame) {
     Require(editor->Send(StyleGetFore, numberStyle) == foreground &&
                 editor->Send(StyleGetBack, numberStyle) == background,
             "default line numbers use a coherent native foreground/background pair");
-    const auto originalFonts = editor->Fonts();
-    auto fonts = originalFonts;
     // A document may explicitly use a light palette while native chrome is dark.
     fonts.textStyle = "fore:#102030; back:#F0E0D0";
     fonts.codeStyle = "fore:#213141; back:#E1D1C1";
@@ -121,6 +131,16 @@ void MenuAndShortcut(EditorFrame* frame) {
 void MarginGeometry(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
+    constexpr int GeometryFontSizePoints = 12;
+    constexpr int OriginalRelativeMarginSizePoints = 10;
+    Require(editor->Send(StyleGetSize, std::to_underlying(Scintilla::StylesCommon::LineNumber)) ==
+                    OriginalRelativeMarginSizePoints &&
+                editor->Send(StyleGetSize, std::to_underlying(Scintilla::StylesCommon::Default)) ==
+                    GeometryFontSizePoints,
+            "original relative-2 margin is 10pt for the explicit 12pt document style");
+    // Geometry below explicitly grows and restores the number font at 12pt;
+    // keep that existing baseline separate from the original relative-2 default.
+    editor->Send(StyleSetSize, std::to_underlying(Scintilla::StylesCommon::LineNumber), GeometryFontSizePoints);
     for (const int boundary : {9, 99, 9999}) {
         const auto source = Lines(boundary);
         editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));

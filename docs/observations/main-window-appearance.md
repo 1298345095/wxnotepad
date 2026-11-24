@@ -20,7 +20,9 @@ plane is checked through the actual toolbar bundle on each native backend.
 Toolbar visibility is independent of the menu/status preferences and fullscreen.
 The editor has no added border. The title follows the original filename,
 `[directory]`, modified `* ` and read-only indications with wxnotepad's identity.
-Native typography, colors and title decorations follow the active platform.
+Native shell typography, chrome colors and title decorations follow the active
+platform. Editor colors follow the selected [original style profile](style-themes.md)
+and its native fallback roles.
 Toolbar layout and numeric sizing preferences are documented in
 [toolbar customization](toolbar-customization.md).
 

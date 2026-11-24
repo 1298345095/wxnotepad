@@ -283,11 +283,14 @@ void PointerFavorites() {
     frame->Destroy();
 }
 void FavoriteCapacity() {
-    // Independent pinned EditLexer.h IDs, all undelivered by #254/#255/#256.
-    const wxString unavailable = "7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 36 38 39 40 41 42 43 44";
+    // Keep the original imported IDs. Batch36 and PowerShell38 are now delivered;
+    // the other 27 unavailable identities retain their original positions.
+    const wxString importedIds = "7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 36 38 39 40 41 42 43 44";
+    const wxString expected =
+        "1 36 7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 38 15 39 40 41 42 43 44";
     const auto ini = TestFiles::TemporaryDirectory("scheme-capacity.ini");
     TestFiles::WriteBytes(ini, "[Settings]\nSaveSettings=0\n[Styles]\nFavoriteSchemes=1 67 " +
-                                   unavailable.utf8_string() + "\n");
+                                   importedIds.utf8_string() + "\n");
     SettingsStore settings(TestFiles::Filename(ini));
     auto* frame = new EditorFrame(&settings);
     frame->Show();
@@ -310,10 +313,10 @@ void FavoriteCapacity() {
     };
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Favorite Schemes..."));
     Require(picker.error.empty(), picker.error.utf8_str());
-    Require(settings.values.favoriteSchemes == "1 15 " + unavailable && settings.Save(true),
+    Require(settings.values.favoriteSchemes == expected && settings.Save(true),
             "favorite capacity preserves every unavailable ID while replacing one supported slot");
     SettingsStore reopened(TestFiles::Filename(ini));
-    Require(reopened.values.favoriteSchemes == "1 15 " + unavailable,
+    Require(reopened.values.favoriteSchemes == expected,
             "accepted favorite replacement remains inside original limits across settings restart");
     frame->Destroy();
     wxString wideIds;
