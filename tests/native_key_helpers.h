@@ -19,6 +19,17 @@
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
 inline constexpr auto FocusAcknowledgementTimeout = std::chrono::seconds(3);
+inline void DispatchPendingInput() {
+#ifdef __WXGTK__
+    // Return between native iterations so ready activity cannot prevent the
+    // shortcut's focus predicate and original deadline being checked.
+    gtk_main_iteration_do(FALSE);
+    wxTheApp->ProcessPendingEvents();
+    wxTheApp->ProcessIdle();
+#else
+    wxYield();
+#endif
+}
 inline int UnshiftedPunctuation(int key) {
     switch (key) {
     case '{':
@@ -310,7 +321,7 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     auto* widget = GTK_WIDGET(frame->GetHandle());
     const bool wayland = GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget));
 #endif
-    wxYield();
+    DispatchPendingInput();
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile))
         throw std::runtime_error("native shortcuts require a private display");
     const auto focusDeadline = Clock::now() + FocusAcknowledgementTimeout;
@@ -349,7 +360,7 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     while (Clock::now() < focusDeadline) {
         observeAcknowledgement();
         if (acknowledged && frame->IsActive() && editor->HasFocus()) break;
-        wxYield();
+        DispatchPendingInput();
         wxMilliSleep(10);
     }
 #ifdef __WXGTK__

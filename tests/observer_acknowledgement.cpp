@@ -33,12 +33,31 @@ void Require(bool condition, const char* message) {
 template <typename Predicate> void Await(Predicate ready, const char* message) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
     do {
+#ifdef __WXGTK__
+        // A ready native source can keep wxYield draining forever. Check the
+        // condition and original deadline between finite native dispatches.
+        wxTheApp->ProcessPendingEvents();
+        gtk_main_iteration_do(FALSE);
+#else
         wxYield();
+#endif
         if (ready()) return;
         wxMilliSleep(10);
     } while (std::chrono::steady_clock::now() < deadline);
     Require(false, message);
 }
+#ifdef __WXGTK__
+class PendingNativeActivity final {
+public:
+    PendingNativeActivity() : source_(g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr)) {
+        Require(source_ != 0, "keep real native activity queued during the publication obstruction");
+    }
+    ~PendingNativeActivity() { g_source_remove(source_); }
+
+private:
+    guint source_;
+};
+#endif
 
 class CapturedStderr final {
 public:
@@ -232,9 +251,14 @@ private:
         const auto previousState = TestFiles::Bytes(root / "state");
         const auto blockedPublication = root / "state.tmp";
         Require(std::filesystem::create_directory(blockedPublication), "block the next observation's temporary file");
-        Command(3);
-        Await([&root] { return !std::filesystem::exists(root / "command"); },
-              "observer consumes the command while publication is blocked");
+        {
+#ifdef __WXGTK__
+            const PendingNativeActivity activity;
+#endif
+            Command(3);
+            Await([&root] { return !std::filesystem::exists(root / "command"); },
+                  "observer consumes the command while publication is blocked");
+        }
         Require(TestFiles::Bytes(root / "state") == previousState && Sequence("sequence\t2\n"),
                 "failed temporary-file publication preserves the entire previous acknowledgement");
         Require(std::filesystem::remove(blockedPublication), "remove the owned publication obstruction");

@@ -285,7 +285,13 @@ bool EditorClipboard::HasText() noexcept {
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
     if (!lock) return false;
+#ifdef __WXGTK__
+    // GTK finishes when its native availability response arrives, without
+    // draining unrelated pending work as wxClipboard's synchronous query does.
+    return gtk_clipboard_wait_is_text_available(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD));
+#else
     return wxTheClipboard->IsSupported(wxDF_UNICODETEXT);
+#endif
 #endif
 }
 

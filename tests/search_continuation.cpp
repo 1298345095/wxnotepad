@@ -1,6 +1,7 @@
 #include "diagnostics/print.h"
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
+#include "steady_stopwatch.h"
 #include <wx/filename.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
@@ -13,9 +14,44 @@ namespace {
 using enum Scintilla::Message;
 constexpr int InitialRegexAndBackslashFlags = 8294;
 
+void ReportStage(const char* stage) {
+    static const TestClock::StopWatch elapsed;
+    std::println(stderr, "Search continuation elapsed_ms={} stage={}", elapsed.Time(), stage);
+    std::fflush(stderr);
+}
+
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+
+#ifdef __WXGTK__
+class PendingNativeActivity final : public wxEventFilter {
+public:
+    explicit PendingNativeActivity(EditorControl* editor)
+        : editor_(editor), source_(g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr)) {
+        Require(source_ != 0, "keep real native activity queued during the selection-limit shortcut");
+        wxEvtHandler::AddFilter(this);
+    }
+    ~PendingNativeActivity() override {
+        wxEvtHandler::RemoveFilter(this);
+        if (source_) g_source_remove(source_);
+    }
+    int FilterEvent(wxEvent& event) override {
+        // Only the real shortcut reaching this editor ends the queued work.
+        // A focus acknowledgement or request publication cannot satisfy it.
+        if (source_ && event.GetEventType() == wxEVT_CHAR_HOOK && event.GetEventObject() == editor_ &&
+            static_cast<wxKeyEvent&>(event).GetKeyCode() == WXK_F3) {
+            g_source_remove(source_);
+            source_ = 0;
+        }
+        return Event_Skip;
+    }
+
+private:
+    EditorControl* editor_;
+    guint source_;
+};
+#endif
 
 void RequireSelection(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
     const auto actualAnchor = editor->Send(GetAnchor);
@@ -119,16 +155,30 @@ void SelectionLimit(EditorFrame* frame) {
     constexpr intptr_t OneMiB = 1024 * 1024;
     const std::string text(OneMiB, 'a');
     auto* editor = frame->Editor();
+    ReportStage("selection limit ResetStream begin");
     TestEditor::ResetStream(editor, text.c_str(), 0, OneMiB);
-    NativeKeys::Shortcut(frame, WXK_F3, false, true);
+    ReportStage("selection limit ResetStream complete; save begin");
+    {
+#ifdef __WXGTK__
+        const PendingNativeActivity activity(editor);
+#endif
+        NativeKeys::Shortcut(frame, WXK_F3, false, true);
+    }
+    ReportStage("selection limit save complete; Find begin");
     NativeKeys::Shortcut(frame, WXK_F3, false);
+    ReportStage("selection limit Find complete; Cancel begin");
     Require(FindVisible(frame) && FindQuery(frame)->IsEmpty(), "explicit save rejects a selection at the byte limit");
     NativeSearch::Click(FindQuery(frame)->GetParent(), wxID_CANCEL);
+    ReportStage("selection limit Cancel complete; near-limit SetSel begin");
     editor->Send(SetSel, 0, OneMiB - 1);
+    ReportStage("near-limit SetSel complete; save begin");
     NativeKeys::Shortcut(frame, WXK_F3, false, true);
+    ReportStage("near-limit save complete; Find begin");
     NativeKeys::Shortcut(frame, WXK_F3, false);
+    ReportStage("near-limit Find complete; validation begin");
     Require(!FindVisible(frame), "explicit save accepts a selection one byte below the limit");
     RequireSelection(editor, 0, OneMiB - 1, "the saved near-limit query selects the exact original range");
+    ReportStage("near-limit validation complete");
 }
 
 wxTextCtrl* Replacement(EditorFrame* frame) {
@@ -444,7 +494,11 @@ class ContinuationApp final : public wxApp {
                 Require(ready, "private compositor must present the owned search fixture");
                 std::optional<NativeSearch::AcceptFeedback> feedback;
                 if (scenario.acceptFeedback) feedback.emplace();
+                std::println(stderr, "Search continuation scenario begin: {}/{}", next_, scenarios.size());
+                std::fflush(stderr);
                 scenario.run(frame);
+                std::println(stderr, "Search continuation scenario complete: {}/{}", next_, scenarios.size());
+                std::fflush(stderr);
                 if (scenario.inspectSettings) {
                     frame->Editor()->Send(SetSavePoint);
                     Require(frame->Close(), "closing the owned frame saves its search settings");
