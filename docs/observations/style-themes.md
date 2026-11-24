@@ -36,6 +36,10 @@ without resetting the lexer or document styling. The document's bytes,
 encoding, selection, save point, history and folds remain owned by the existing
 editor/document lifecycle. A scheme change uses `ApplySyntaxLanguage`, which
 retains the same active profile. Pixel style sizes follow native DPI and zoom.
+After changing the lexer, the pinned core's `ClearDocumentStyle` clears bytes
+without rewinding its styled extent. The original's `StartStyling(0)` restarts
+lazy styling so a loaded file paints its token colours. Style-only theme
+changes do not clear or restart the document's styling.
 
 The editor's fallback palette is separate from application chrome. On Windows,
 the original uses `GetSysColor(COLOR_WINDOWTEXT/COLOR_WINDOW)`: ordinary Light

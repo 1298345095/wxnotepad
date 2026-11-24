@@ -23,6 +23,8 @@ CAPTIONS = {
 LANGUAGES = {'en': 1033, 'zh_CN': 2052, 'zh_TW': 1028}
 DOCUMENT_FIELDS = ('length', 'dirty', 'encoding', 'bom', 'eol_mode', 'caret_position',
                    'selection_start', 'selection_end', 'zoom')
+CPP_LINE_COMMENT_STYLE = 2  # Pinned SciLexer.h SCE_C_COMMENTLINE.
+ORIGINAL_COMMENT_FOREGROUND_BGR = 0x608060
 
 
 class ThemeAcceptance(Acceptance):
@@ -78,10 +80,12 @@ def close(app):
         app.stop()
 
 
-def change(fixture, app, code, dark, document, original):
+def change(fixture, app, code, dark, document, original, foreground=ORIGINAL_COMMENT_FOREGROUND_BGR):
     before = dict(app.state)
     app.choose(menu_id(app.state, CAPTIONS[code][dark]))
     checked(app, code, dark)
+    assert app.state['style_at_caret'] == str(CPP_LINE_COMMENT_STYLE), app.state
+    assert app.state['style_foreground_at_caret'] == str(foreground), app.state
     for field in DOCUMENT_FIELDS:
         assert app.state[field] == before[field], (field, before[field], app.state[field])
     app.send('save')
@@ -97,6 +101,8 @@ def basic(fixture):
     dark_file.unlink(missing_ok=True)
     app = launch(fixture, document)
     try:
+        assert app.state['style_at_caret'] == str(CPP_LINE_COMMENT_STYLE), app.state
+        assert app.state['style_foreground_at_caret'] == str(ORIGINAL_COMMENT_FOREGROUND_BGR), app.state
         system_code = {'&File': 'en', '文件(&F)': 'zh_CN', '檔案(&F)': 'zh_TW'}[app.state['menu_top.0.label']]
         checked(app, system_code, False)
         record(fixture, 'unconfigured-startup', app)
@@ -159,7 +165,7 @@ def basic(fixture):
             assert app.state['font_size_fractional'] == '1700', app.state
             app.choose(menu_id(app.state, 'Use Default Code Style'))
             assert app.state['font_size_fractional'] == '2150', app.state
-            change(fixture, app, 'en', False, document, original)
+            change(fixture, app, 'en', False, document, original, foreground=0x563412)
             assert app.state['font_size_fractional'] == '1500', app.state
             main = read_settings(fixture.config)
             dark = read_settings(dark_file)
