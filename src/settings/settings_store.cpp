@@ -333,13 +333,15 @@ FontSettings SettingsStore::LoadStyleProfile(StyleTheme theme) {
     result.theme = theme;
     ReadCustomColours(result);
     for (const auto& definition : GlobalStyleDefinitions()) {
-        const auto value = ReadStyle(definition.key, definition.defaultValue, "Global Styles");
-        if (wxString::FromUTF8(definition.key) == "Default Code Style")
-            result.codeStyle = value;
-        else if (wxString::FromUTF8(definition.key) == "Default Text Style")
-            result.textStyle = value;
+        const auto key = wxString::FromUTF8(definition.key);
+        // Preserve the established global font string contract: remove outer
+        // double quotes, retain enclosed spaces and use defaults for empty.
+        if (key == "Default Code Style")
+            result.codeStyle = ReadString(key, wxString::FromUTF8(definition.defaultValue), "Global Styles");
+        else if (key == "Default Text Style")
+            result.textStyle = ReadString(key, wxString::FromUTF8(definition.defaultValue), "Global Styles");
         else
-            result.globalStyles[wxString::FromUTF8(definition.key)] = value;
+            result.globalStyles[key] = ReadStyle(definition.key, definition.defaultValue, "Global Styles");
     }
     for (const auto& scheme : SyntaxCatalog()) {
         if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
