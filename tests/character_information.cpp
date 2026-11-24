@@ -21,24 +21,67 @@ namespace {
 using enum Scintilla::Message;
 constexpr char PriorClipboardOffer[] = "owned previous offer";
 #ifdef __WXMSW__
+void ReportSeedFailure(const char* operation, DWORD error, HWND owner) {
+    const auto holder = ::GetOpenClipboardWindow();
+    DWORD holderProcess = 0;
+    if (holder) ::GetWindowThreadProcessId(holder, &holderProcess);
+    std::println(stderr, "Native prior-offer failure: api={} error={} owner={} openHolder={} holderProcess={}",
+                 operation, error, static_cast<void*>(owner), static_cast<void*>(holder), holderProcess);
+    std::fflush(stderr);
+}
 bool PublishPriorClipboard(HWND owner) {
-    if (!::OpenClipboard(owner)) return false;
+    // Match the original ScintillaWin/native clipboard acquisition rule.
+    constexpr int ClipboardOpenAttempts = 8;
+    constexpr DWORD FirstClipboardOpenDelayMilliseconds = 1;
+    bool opened = false;
+    for (int attempt = 0; attempt < ClipboardOpenAttempts; ++attempt) {
+        if (attempt) ::Sleep(FirstClipboardOpenDelayMilliseconds << (attempt - 1));
+        if (::OpenClipboard(owner)) {
+            opened = true;
+            break;
+        }
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("OpenClipboard", error, owner);
+    }
+    if (!opened) return false;
     const auto value = wxString::FromUTF8(PriorClipboardOffer).ToStdWstring();
     const auto memory = ::GlobalAlloc(GMEM_MOVEABLE, (value.size() + 1) * sizeof(wchar_t));
-    auto* bytes = memory ? ::GlobalLock(memory) : nullptr;
+    if (!memory) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("GlobalAlloc", error, owner);
+        ::CloseClipboard();
+        return false;
+    }
+    auto* bytes = ::GlobalLock(memory);
     if (!bytes) {
-        if (memory) ::GlobalFree(memory);
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("GlobalLock", error, owner);
+        ::GlobalFree(memory);
         ::CloseClipboard();
         return false;
     }
     std::memcpy(bytes, value.c_str(), (value.size() + 1) * sizeof(wchar_t));
     ::GlobalUnlock(memory);
-    if (!::EmptyClipboard() || !::SetClipboardData(CF_UNICODETEXT, memory)) {
+    if (!::EmptyClipboard()) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("EmptyClipboard", error, owner);
         ::GlobalFree(memory);
         ::CloseClipboard();
         return false;
     }
-    return ::CloseClipboard() != 0;
+    if (!::SetClipboardData(CF_UNICODETEXT, memory)) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("SetClipboardData", error, owner);
+        ::GlobalFree(memory);
+        ::CloseClipboard();
+        return false;
+    }
+    if (!::CloseClipboard()) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("CloseClipboard", error, owner);
+        return false;
+    }
+    return true;
 }
 struct ClipboardObservation {
     HWND owner = nullptr;
