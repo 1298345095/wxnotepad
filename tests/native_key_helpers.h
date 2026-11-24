@@ -318,19 +318,17 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     wxString intent = wxString(active ? "focus:" : "front:") + focusName;
 #ifdef __WXGTK__
     unsigned int surfaceId = 0;
-    const bool deadlineGated = wayland || active;
-    if (deadlineGated) {
-        const auto remaining =
-            std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
-        const auto expiry = static_cast<long long>(g_get_monotonic_time() + remaining);
-        if (active) {
-            intent = wxString::Format("focus-until:%lld:", expiry) + focusName;
-        } else {
-            auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
-            if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
-            surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
-            intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(), surfaceId, expiry);
-        }
+    const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
+    const auto expiry = static_cast<long long>(g_get_monotonic_time() + remaining);
+    if (active) {
+        intent = wxString::Format("focus-until:%lld:", expiry) + focusName;
+    } else if (wayland) {
+        auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+        if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
+        surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
+        intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(), surfaceId, expiry);
+    } else {
+        intent = wxString::Format("front-until:%lld:", expiry) + focusName;
     }
 #endif
     {
@@ -358,7 +356,7 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     // A GUI callback can outlast polling even when the driver claimed on time.
     // These requests are deadline-gated by the driver, so a fresh read cannot
     // turn a claim after the original deadline into a successful wait.
-    if (deadlineGated && !acknowledged) observeAcknowledgement();
+    if (!acknowledged) observeAcknowledgement();
 #endif
     if (!acknowledged || !frame->IsActive() || !editor->HasFocus()) {
 #ifdef __WXGTK__
