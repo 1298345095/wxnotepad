@@ -99,7 +99,18 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
     };
     NativeKeys::Shortcut(frame, WXK_F11, false);
     const auto delivered = observe("F11 key release");
-    NativePaint::Complete(frame->Editor());
+#ifdef __WXGTK__
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame->GetHandle())))) {
+        // wxGTK's legacy X11 fullscreen first requests screen size + 1px.
+        // Its cached frame size can lag the final native allocation even after
+        // editor paints. Observe both at the requested bounds before comparing
+        // the toolbar rebuild, within the existing paint deadline.
+        const auto bounds = wxDisplay(frame).GetGeometry();
+        NativePaint::Complete(frame->Editor(),
+                              [&] { return frame->GetRect() == bounds && nativeClient() == bounds.GetSize(); });
+    } else
+#endif
+        NativePaint::Complete(frame->Editor());
     const auto fullscreen = frame->GetRect();
     const auto entered = observe("fullscreen paint complete");
     NativeSearch::Command(frame, large);
