@@ -3,7 +3,7 @@
 #include "steady_stopwatch.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
-#include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include <wx/wx.h>
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
@@ -58,27 +58,10 @@ bool Focused(wxWindow* window) {
 void ClipboardGesture(EditorControl* editor, [[maybe_unused]] bool keepNativeQueuePending = false) {
     wxString path;
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &path)) return;
-    auto* frame = wxDynamicCast(wxGetTopLevelParent(editor), wxFrame);
-    const auto title = frame->GetTitle();
-    const auto focusTitle = wxString::Format("wxnotepad clipboard focus: editor [%lu]", wxGetProcessId());
-    frame->SetTitle(focusTitle);
-    {
-        wxFFile request(path, "wb");
-        request.Write("editor");
-    }
-    frame->Raise();
-    editor->SetFocus();
-    TestClock::StopWatch activation;
-    while ((!frame->IsActive() || !editor->HasFocus()) && activation.Time() < 3000) {
-        frame->SetTitle(focusTitle);
-        wxYield();
-        wxMilliSleep(10);
-    }
-    {
-        wxFFile request(path, "wb");
-    }
-    Require(frame->IsActive() && editor->HasFocus(), "private clipboard publisher must receive native focus");
-    frame->SetTitle(title);
+    auto* frame = static_cast<EditorFrame*>(wxGetTopLevelParent(editor));
+    // Native focus alone does not claim the mailbox. Wait for the driver ACK
+    // before publishing the next gesture, using the existing focus deadline.
+    NativeKeys::FocusEditor(frame, "wxnotepad", path);
     bool received = false;
     wxEvtHandler nativeEvents;
     nativeEvents.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
@@ -106,7 +89,7 @@ void ClipboardGesture(EditorControl* editor, [[maybe_unused]] bool keepNativeQue
         }
     }
     editor->PopEventHandler(false);
-    Require(received, "private native gesture must precede Wayland clipboard publication");
+    Require(received, "private native gesture must precede clipboard publication");
 }
 void SwitchDialog(wxWindow* link) {
     Require(link, "original Find/Replace toggle link must exist");
