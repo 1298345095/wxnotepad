@@ -12,6 +12,7 @@
 #include <wx/graphics.h>
 #include <cairo.h>
 #include <gdk/gdkwayland.h>
+#include <gtk/gtk.h>
 #endif
 
 namespace NativePaint {
