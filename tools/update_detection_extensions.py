@@ -17,11 +17,17 @@ def main():
     files = subprocess.check_output(["git", "-C", str(args.source), "ls-tree", "-r", "--name-only",
                                      REVISION, "src/EditLexers"], text=True).splitlines()
     lexers = {}
+    identities = {}
+    resources = read_pinned(args.source, 'src/EditLexer.h')
+    ids = {key.decode(): int(value) for key, value in re.findall(rb'#define\s+(NP2LEX_\w+)\s+(\d+)', resources)}
     for file in files:
         if not file.endswith(".cpp"):
             continue
         text = read_pinned(args.source, file).decode("utf-8-sig")
         for name, body in re.findall(r"EDITLEXER\s+(lex\w+)\s*=\s*\{(.*?)\n\};", text, re.S):
+            identity = re.search(r'\bNP2LEX_\w+', body)
+            if identity:
+                identities[name] = ids[identity[0]] - ids['NP2LEX_TEXTFILE']
             extension = re.search(r'EDITLEXER_(?:HOLE|TEXT)\([^\n]*\),\s*L"([^"]*)"', body)
             if extension:
                 lexers[name] = [item.strip().lower() for item in extension[1].split(";") if item.strip()]
@@ -40,6 +46,11 @@ def main():
     lines[-1] += ";"
     config = sorted(extension for extension, name in associations.items() if name == "lexConfig")
     lines.append('constexpr std::string_view originalConfigExtensions = "' + ';'.join(config) + ';";')
+    lines.append('// Original association order, before applying FavoriteSchemes and per-scheme replacements.')
+    lines.append('constexpr auto originalSyntaxAssociations = std::to_array<std::pair<int, std::string_view>>({')
+    for name in names[1:]:
+        lines.append(f'    {{{identities[name]}, "' + ';'.join(lexers.get(name, [])) + '"},')
+    lines.append('});')
     target = Path(__file__).resolve().parents[1] / "src/syntax/generated/detection_extensions.h"
     target.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

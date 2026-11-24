@@ -75,6 +75,7 @@ struct SyntaxDetectionOptions {
     bool noHtmlGuess = false;
     SyntaxLanguage defaultLanguage = SyntaxLanguage::PlainText;
     SyntaxExtensions extensions;
+    wxString favoriteSchemes;
 };
 struct DetectedSyntax {
     // Original pLex is chosen before the independent np2LexLangIndex sniff.
@@ -193,7 +194,8 @@ inline constexpr size_t FavoriteConfigCharacters = 127;
 } // namespace SyntaxSchemeLimits
 std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
 std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration);
-SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions = {});
+SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions = {},
+                              const wxString& favoriteSchemes = {});
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options = {});

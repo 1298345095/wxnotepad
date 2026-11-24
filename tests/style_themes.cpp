@@ -53,7 +53,7 @@ public:
         wxRemoveFile(directory_);
         wxFileName::Mkdir(directory_);
         path_ = wxFileName(directory_, "Notepad4.ini").GetFullPath();
-        if (argc > 1) {
+        if (argc > 1 && wxString(argv[1]) == "profiles") {
             SetExitOnFrameDelete(false);
             CallAfter([this] {
                 try {
@@ -66,13 +66,39 @@ public:
             });
             return true;
         }
+        const bool associations = argc > 1 && wxString(argv[1]) == "associations";
+        const bool caret = argc > 1 && wxString(argv[1]) == "caret";
+        const bool whitespace = argc > 1 && wxString(argv[1]) == "whitespace";
+        if (associations) {
+            wxFFile ini(path_, "w");
+            Require(ini.Write("[Settings]\nSaveSettings=0\n[File Extensions]\nPython Script=cpp\n"),
+                    "write original extension ambiguity fixture");
+        }
         settings_ = std::make_unique<SettingsStore>(path_);
         auto* frame = new EditorFrame(settings_.get());
         frame->SetWindowStyleFlag(frame->GetWindowStyleFlag() | wxSTAY_ON_TOP);
         frame->ShowWithoutActivating();
-        NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
+        NativeKeys::AfterPresentation(frame, [this, frame, associations, caret, whitespace](bool ready) {
             try {
                 Require(ready, "theme window is presented");
+                if (associations) {
+                    Associations(frame);
+                    result_ = 0;
+                    frame->Close();
+                    return;
+                }
+                if (caret) {
+                    Caret(frame);
+                    result_ = 0;
+                    frame->Close();
+                    return;
+                }
+                if (whitespace) {
+                    Whitespace(frame);
+                    result_ = 0;
+                    frame->Close();
+                    return;
+                }
                 auto* bar = frame->GetMenuBar();
                 const int dark = bar->FindMenuItem("Scheme", "Dark");
                 const int light = bar->FindMenuItem("Scheme", "Default");
@@ -181,6 +207,77 @@ public:
     }
 
 private:
+    void Whitespace(EditorFrame* frame) {
+        auto* editor = frame->Editor();
+        auto fonts = editor->Fonts();
+        fonts.globalStyles["Whitespace"] = "fore:#0000FF; back:#FF0000; alpha:0";
+        editor->SetFontSettings(fonts);
+        ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour,
+                                                   std::to_underlying(Scintilla::Element::WhiteSpace))) == 0x00ff0000 &&
+                    static_cast<unsigned>(editor->Send(Message::GetElementColour,
+                                                       std::to_underlying(Scintilla::Element::WhiteSpaceBack))) == 0xff0000ff,
+                "original alpha0 makes whitespace foreground transparent while its background remains opaque");
+        TestEditor::ResetStream(editor, "a b");
+        editor->Send(Message::SetViewWS, std::to_underlying(Scintilla::WhiteSpace::VisibleAlways));
+        NativePaint::Complete(editor);
+    }
+    void Caret(EditorFrame* frame) {
+        auto* editor = frame->Editor();
+        auto fonts = editor->Fonts();
+        fonts.codeStyle = "fore:#000000; back:#FFFFFF";
+        fonts.globalStyles["Caret"] = "fore:#FFFFFF";
+        editor->SetFontSettings(fonts);
+        ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour, 14)) == 0xff000000 &&
+                    static_cast<unsigned>(editor->Send(Message::GetElementColour, 15)) == 0xff000000,
+                "white primary caret falls back to document foreground and absent additional inherits it");
+        fonts.globalStyles["Caret"] = "fore:#000000; back:#FFFFFF";
+        editor->SetFontSettings(fonts);
+        ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour, 15)) == 0x00ffffff,
+                "original low-contrast additional caret retains parsed RGB without opaque alpha");
+        fonts.globalStyles["Caret"] = "fore:#FFFFFF; back:#FF0000";
+        editor->SetFontSettings(fonts);
+        ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour, 14)) == 0xff000000 &&
+                    static_cast<unsigned>(editor->Send(Message::GetElementColour, 15)) == 0xff0000ff,
+                "contrasting additional caret becomes opaque independently of primary fallback");
+        NativePaint::Complete(editor);
+    }
+    void Associations(EditorFrame* frame) {
+        std::println(stderr, "style associations: open default ambiguity");
+        const auto sample = wxFileName(directory_, "sample.cpp").GetFullPath();
+        {
+            wxFFile file(sample, "wb");
+            Require(file.Write("int value;\r\n"), "write original extension ambiguity document");
+        }
+        // Literal lexer outcomes observed in the independent pinned original.
+        Require(frame->Open(sample).status == OpenStatus::Opened && frame->Editor()->Send(Message::GetLexer) == 3,
+                "Python's cpp override does not outrank the earlier stock C/C++ association");
+        settings_->values.favoriteSchemes = "32 1";
+        Require(settings_->Save(true), "save original favorite ordering");
+        SettingsStore pythonFirst(path_);
+        auto* favorite = new EditorFrame(&pythonFirst);
+        Require(favorite->Open(sample).status == OpenStatus::Opened && favorite->Editor()->Send(Message::GetLexer) == 2,
+                "original Python-first favorites participate in extension ambiguity order");
+        delete favorite;
+        settings_->values.favoriteSchemes = "1 32";
+        Require(settings_->Save(true), "save original C/C++ favorite ordering");
+        SettingsStore cppFirst(path_);
+        auto* stockFirst = new EditorFrame(&cppFirst);
+        Require(stockFirst->Open(sample).status == OpenStatus::Opened &&
+                    stockFirst->Editor()->Send(Message::GetLexer) == 3,
+                "original C/C++-first favorites retain stock priority over Python's override");
+        delete stockFirst;
+        settings_->values.schemeExtensions[SyntaxLanguage::Cpp] = "review";
+        Require(settings_->Save(true), "save replacement extensions");
+        SettingsStore replaced(path_);
+        auto* custom = new EditorFrame(&replaced);
+        Require(custom->Open(sample).status == OpenStatus::Opened && custom->Editor()->Send(Message::GetLexer) == 2,
+                "C/C++'s replacement list removes its stock cpp association");
+        delete custom;
+    }
     FontSettings QuotedProfile() const {
         const auto path = wxFileName(directory_, "QuotedStyles.ini").GetFullPath();
         wxFFile file(path, "wb");

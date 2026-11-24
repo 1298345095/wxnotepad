@@ -347,6 +347,7 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
         const auto extension = name.GetExt().Lower();
         SyntaxDetectionOptions detection;
         detection.extensions = (settings_ ? settings_->values : defaults_).schemeExtensions;
+        detection.favoriteSchemes = (settings_ ? settings_->values : defaults_).favoriteSchemes;
         const bool supported = location.present || name.GetFullName().StartsWith(".") || extension.empty() ||
                                extension == "cgi" || extension == "fcgi" ||
                                DetectLanguage(*path, {}, detection).has_value();
