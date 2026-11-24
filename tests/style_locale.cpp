@@ -57,6 +57,21 @@ public:
                 check("zh-sg");
                 SetNativeStyleLocaleDefaults(L"de-DE", L"fr-FR");
                 check("de-de");
+#elif defined(__WXGTK__)
+                fonts.textStyle.clear();
+                editor->SetFontSettings(fonts);
+                ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+                NativePaint::Complete(editor);
+                const wxRect textArea(0, 0, 300, 40);
+                const auto systemRaster = NativePaint::Read(editor, textArea);
+                fonts.textStyle = "locale:invalid-locale-name";
+                editor->SetFontSettings(fonts);
+                ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+                NativePaint::Complete(editor);
+                std::array<char, 100> actual{};
+                editor->Send(Scintilla::Message::GetFontLocale, 0, reinterpret_cast<intptr_t>(actual.data()));
+                Require(actual.front() == '\0' && NativePaint::Read(editor, textArea) == systemRaster,
+                        "invalid original locale falls back to native system language and its actual glyph raster");
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {
