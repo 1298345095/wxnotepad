@@ -23,6 +23,7 @@
 
 namespace {
 using Scintilla::Message;
+constexpr auto BodyStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -47,7 +48,7 @@ void SplitFixture(EditorFrame* frame) {
     editor->SetCodeFoldingVisible(false);
     editor->Send(SetMarginLeft, 0, 0);
     editor->Send(SetMarginRight, 0, 0);
-    const auto width = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+    const auto width = editor->Send(TextWidth, BodyStyle, reinterpret_cast<intptr_t>("one two ")) + 1;
     editor->SetClientSize(static_cast<int>(width), 200);
     wxYield();
     Split(frame);
@@ -401,7 +402,7 @@ void SelectionAndProtection(EditorFrame* frame) {
 void SplitCases(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const auto width = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+    const auto width = editor->Send(TextWidth, BodyStyle, reinterpret_cast<intptr_t>("one two ")) + 1;
     editor->SetClientSize(static_cast<int>(width), 200);
     wxYield();
     TestEditor::ResetStream(editor, "one two three", 5, 1, Scintilla::EndOfLine::CrLf);
@@ -452,7 +453,7 @@ void SplitCases(EditorFrame* frame) {
     editor->Refresh();
     editor->Update();
     wxYield();
-    Require(editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) > width,
+    Require(editor->Send(TextWidth, BodyStyle, reinterpret_cast<intptr_t>("one two ")) > width,
             "zoom updates original core text measurement");
     Split(frame);
     Require(TestEditor::Text(editor) == "one two \nthree", "zoom changes core measurement for split");
@@ -465,7 +466,7 @@ void SplitCases(EditorFrame* frame) {
          }) {
         TestEditor::ResetStream(editor, before, 0, static_cast<intptr_t>(std::string_view(before).size()),
                                 Scintilla::EndOfLine::Lf);
-        const auto measured = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>(prefix));
+        const auto measured = editor->Send(TextWidth, BodyStyle, reinterpret_cast<intptr_t>(prefix));
         editor->SetClientSize(static_cast<int>(measured + 1), 200);
         wxYield();
         Split(frame);
@@ -525,7 +526,7 @@ void SavedBytes(EditorFrame* frame) {
             editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
             editor->Send(SelectAll);
             if (split) {
-                const auto width = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+                const auto width = editor->Send(TextWidth, BodyStyle, reinterpret_cast<intptr_t>("one two ")) + 1;
                 editor->SetClientSize(static_cast<int>(width), 200);
                 wxYield();
                 Split(frame);

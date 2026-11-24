@@ -215,8 +215,9 @@ def policy(fixture):
                 expected = b'X' if name == 'untitled-save' else b'' if unnamed else (
                     b'X' + original if chosen_save else original)
                 assert child.state['length'] == str(len(expected))
-                assert child.state['document_path'] == (str(saved_as) if name == 'untitled-save' else
-                                                       '' if unnamed else str(document))
+                expected_path = str(saved_as) if name == 'untitled-save' else '' if unnamed else str(document)
+                assert child.state['document_path'] == expected_path, (
+                    name, 'document_path', expected_path, child.state['document_path'])
                 child.send('save', str(fixture.directory / (name + '-child.txt')))
                 assert (fixture.directory / (name + '-child.txt')).read_bytes() == expected
                 child.close()
@@ -445,8 +446,10 @@ def main():
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='current-file-window-') as directory:
+        # Match native Document Open and Save As expansion of TEMP's 8.3 aliases.
+        root = Path(directory).resolve(strict=True)
         {'basic': basic, 'policy': policy, 'encodings': encodings, 'failures': failures,
-         'history': history, 'installed': installed}[args.scenario](CurrentFileAcceptance(args, Path(directory)))
+         'history': history, 'installed': installed}[args.scenario](CurrentFileAcceptance(args, root))
 
 
 if __name__ == '__main__':
