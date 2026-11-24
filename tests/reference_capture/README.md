@@ -16,6 +16,7 @@ output path as documented in the corresponding observation:
 - [Markdown dialects](../../docs/observations/syntax-markdown.md)
 - [Manual word completion](../../docs/observations/word-completion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
+- [Selection search and custom actions](../../docs/observations/selection-actions.md)
 - [Search continuation](../../docs/observations/search-continuation.md)
 - [Manual Save Backup](../../docs/observations/save-backup.md)
 - [Word wrap settings and DPI](../../docs/observations/word-wrap-settings.md)

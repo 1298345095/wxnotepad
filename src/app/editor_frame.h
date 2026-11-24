@@ -147,6 +147,9 @@ private:
     void AppendDocumentTools(wxMenu* tools);
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();
+    void RunSelectionAction(SelectionAction action);
+    bool HandleSelectionActionKey(const wxKeyEvent& event);
+    bool LaunchSelectionCommand(const wxString& command, const wxString& directory, wxString& error);
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);

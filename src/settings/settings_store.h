@@ -13,6 +13,7 @@ public:
     bool Save(bool explicitSave);
     bool SaveUILanguage(int language);
     int OriginalRunCommandWidth(int screenWidth, int screenHeight) const;
+    wxString SelectionActionTemplate(SelectionAction action);
     bool SaveSchemeTabs(SyntaxLanguage language);
     int MessageSuppression(const wxString& key);
     bool SuppressMessage(const wxString& key);

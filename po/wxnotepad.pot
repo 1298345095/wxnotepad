@@ -1235,7 +1235,7 @@ msgid "Could not open new window"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
-#: src/app/open_targets.cpp
+#: src/app/open_targets.cpp src/app/selection_actions.cpp
 msgid "Could not open target"
 msgstr ""
 
@@ -1298,7 +1298,7 @@ msgid "Could not restart wxnotepad."
 msgstr ""
 
 #. TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
-#: src/app/run_command.cpp
+#: src/app/run_command.cpp src/app/selection_actions.cpp
 #, c-format
 msgid "Could not run command: %s"
 msgstr ""
@@ -1358,6 +1358,14 @@ msgstr ""
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print with the current editor theme colors.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Current screen color (WYSIWYG)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Custom Action &1\tCtrl+Shift+1"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Custom Action &2\tCtrl+Shift+2"
 msgstr ""
 
 #: src/app/editor_frame_toolbar.cpp
@@ -2179,6 +2187,11 @@ msgstr ""
 msgid "Open file"
 msgstr ""
 
+#. TRANSLATORS: Selection action status help; the command receives the selected text.
+#: src/app/editor_frame_commands.cpp
+msgid "Open the selected text using this action's command."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Other Sett&ings"
 msgstr ""
@@ -2603,6 +2616,19 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Scroll Past &Last Line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Search on &Wikipedia"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Search with &Bing"
+msgstr ""
+
+#. TRANSLATORS: CMD_ONLINE_SEARCH_GOOGLE/BING/WIKI and CMD_CUSTOM_ACTION1/2, in original menu order.
+#: src/app/editor_frame_commands.cpp
+msgid "Search with &Google"
 msgstr ""
 
 #: src/app/editor_frame.cpp
@@ -3333,6 +3359,12 @@ msgstr ""
 #: src/app/editor_frame_commands.cpp
 #, c-format
 msgid "Zoom level (%d%% to %d%%):"
+msgstr ""
+
+#. TRANSLATORS: Original IDS_WIKI_SEARCH_URL default; preserve the literal %s placeholder.
+#: src/app/selection_actions.cpp
+#, c-format
+msgid "https://en.wikipedia.org/wiki/Special:Search?search=%s"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp

@@ -149,6 +149,7 @@ add_library(app_shell STATIC
     src/app/new_window.cpp
     src/app/open_targets.cpp
     src/app/run_command.cpp
+    src/app/selection_actions.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp

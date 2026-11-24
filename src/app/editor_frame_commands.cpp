@@ -161,6 +161,24 @@ wxMenu* EditorFrame::CreateToolsMenu() {
     tools->AppendSeparator();
     auto* selection = new wxMenu;
     AppendOpenTargetCommands(selection);
+    selection->AppendSeparator();
+    // TRANSLATORS: CMD_ONLINE_SEARCH_GOOGLE/BING/WIKI and CMD_CUSTOM_ACTION1/2, in original menu order.
+    const std::array selectionActions{std::pair{SelectionAction::Google, _("Search with &Google")},
+                                      std::pair{SelectionAction::Bing, _("Search with &Bing")},
+                                      std::pair{SelectionAction::Wikipedia, _("Search on &Wikipedia")},
+                                      std::pair{SelectionAction::Custom1, _("Custom Action &1\tCtrl+Shift+1")},
+                                      std::pair{SelectionAction::Custom2, _("Custom Action &2\tCtrl+Shift+2")}};
+    for (const auto& [action, label] : selectionActions) {
+        if (action == SelectionAction::Custom1) selection->AppendSeparator();
+        const int id = wxWindow::NewControlId();
+        // TRANSLATORS: Selection action status help; the command receives the selected text.
+        selection->Append(id, label, _("Open the selected text using this action's command."));
+        Bind(wxEVT_MENU, [this, action](wxCommandEvent&) { RunSelectionAction(action); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
     // TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
     tools->AppendSubMenu(selection, _("Action on &Selection"));
     auto* base64 = new wxMenu;
@@ -1729,6 +1747,7 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (HandleSelectionActionKey(event)) return true;
     if (event.GetKeyCode() == WXK_F12 && !event.HasAnyModifiers()) {
         ShowSyntaxScheme();
         return true;
