@@ -80,6 +80,7 @@ def focus_owned_window(focus, title, deadline_us=None, *, raise_window=False):
             # reads its UTF-8 _NET_WM_NAME correctly.
             candidates = xdo("search", "--onlyvisible", "--class", ".").splitlines()
             windows = [window for window in candidates if re.search(title, xdo("getwindowname", window))]
+        driver_trace(focus, "driver.focus-search", f"title={title};windows={','.join(windows)}")
         if not windows:
             return False
         if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
