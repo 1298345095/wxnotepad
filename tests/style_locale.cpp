@@ -59,6 +59,10 @@ public:
                 SetNativeStyleLocaleDefaults(L"de-DE", L"fr-FR");
                 check("de-de");
 #elif defined(__WXGTK__)
+                // Compare the entire native glyph raster at a stable caret phase.
+                auto caret = editor->GetCaretAppearance();
+                caret.blinkPeriod = 0;
+                editor->SetCaretAppearance(caret);
                 fonts.textStyle.clear();
                 editor->SetFontSettings(fonts);
                 ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
