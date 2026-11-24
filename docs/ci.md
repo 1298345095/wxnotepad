@@ -74,6 +74,55 @@ the failed paste is not answered with a successful result. The registered
 `native_windows_clipboard_peer_lifecycle` case checks this path with the real peer
 and verifies that it exits after acknowledging shutdown.
 
+### Focused Windows investigations
+
+During diagnosis, use `windows_context_investigation.py` against a configured
+Windows build. It selects registered CTest cases and uses the existing Windows
+desktop guard, serial execution, assertions and case timeouts. Every attempt
+keeps a separate JUnit/log directory; a failed attempt stops further attempts.
+Report roots must be fresh. The saved `plan.json` identifies the actual test
+selection and the native targets built for it.
+
+| Scenario | Registered cases | Build scope |
+| --- | --- | --- |
+| `prefix` | Original order through `original_editor_context_menu` (currently 43 cases) | Fourteen inspected predecessor targets and their existing dependencies |
+| `clipboard` | Complete `original_editor_context_menu` and `native_windows_clipboard_peer_lifecycle` | `context_menu`, including its `clipboard_peer` dependency |
+
+The prefix target list is explicit because CTest omits command paths for unbuilt
+executables. Update `PREFIX_TARGETS` when a new predecessor requires another
+program. Test selection still comes from the current CTest registration.
+
+```text
+python -X utf8 .github/scripts/windows_context_investigation.py build --scenario prefix --cmake-dir F:/native-build/cmake --report-dir F:/evidence/context-build-01
+python -X utf8 .github/scripts/windows_context_investigation.py run --scenario prefix --runs 3 --cmake-dir F:/native-build/cmake --report-dir F:/evidence/context-prefix-01
+```
+
+Use the `plan` action to inspect the selection without compiling or opening test
+windows. Use `--scenario clipboard` for iterations confined to the clipboard peer.
+An applicable earlier full-suite result remains evidence for unchanged code;
+run related cases during diagnosis, then the complete required checks on the
+final proposed fix.
+
+The separate **Windows investigation** workflow runs on pushes to
+`codex/windows-context-investigation-*`, using the same Windows 2025 runner,
+pinned SDK, compiler cache and display conditions. Its default is three prefix
+attempts, with the original independent reference controls run first. It builds
+only the selected native targets and does not run Linux, coverage, packaging or
+the complete Windows suite. Keep investigation branches without a pull request
+so their pushes do not trigger the ordinary PR workflows. Transfer final changes
+to the repair PR once ready for complete validation.
+
+After its first branch-push run registers the workflow, it can also be dispatched
+against that branch, for example:
+
+```text
+gh workflow run windows-investigation.yml --ref codex/windows-context-investigation-2026-11-24 -f scenario=clipboard -f runs=3
+```
+
+Its **Windows context investigation** check is separate from required merge
+checks. The ordinary CI/Quality/CodeQL/Fuzz workflows and full acceptance remain
+unchanged; a focused success does not establish full-suite acceptance.
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims

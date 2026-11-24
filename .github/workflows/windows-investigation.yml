@@ -1,0 +1,107 @@
+name: Windows investigation
+
+on:
+  push:
+    branches: ['codex/windows-context-investigation-*']
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Original predecessor sequence, or complete menu and peer lifecycle only
+        type: choice
+        options: [prefix, clipboard]
+        default: prefix
+      runs:
+        description: Serial attempts; stop on the first failing attempt
+        type: number
+        default: 3
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-investigation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  investigate:
+    name: Windows context investigation
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: '1'
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
+      INVESTIGATION_SCENARIO: ${{ inputs.scenario || 'prefix' }}
+      INVESTIGATION_RUNS: ${{ inputs.runs }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Check focused runner contract
+        shell: bash
+        run: python -X utf8 -m unittest discover -s tests -p 'test_windows_context_investigation.py' -v
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
+      - name: Set up compiler cache
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.19.0
+      - name: Configure
+        shell: bash
+        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
+      - name: Build selected native targets
+        shell: bash
+        run: |
+          python -X utf8 .github/scripts/windows_context_investigation.py build \
+            --scenario "$INVESTIGATION_SCENARIO" --report-dir .ci/reports/investigation-build
+      - name: Prepare the original Windows display conditions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $testDisplayWidth = 1920
+          $testDisplayHeight = 1080
+          Set-DisplayResolution -Width $testDisplayWidth -Height $testDisplayHeight -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bounds | ConvertTo-Json | Tee-Object -FilePath .ci/reports/windows-display.json
+          if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
+            throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
+          }
+      - name: Preserve the original reference-control predecessors
+        if: env.INVESTIGATION_SCENARIO == 'prefix'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -X utf8 tests/reference_capture/native_original_reference.py \
+            --archive .ci/build/notepad4-source.tar --build-dir .ci/original-reference \
+            --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
+            --word-wrap-output-dir .ci/reports/original-word-wrap \
+            2>&1 | tee .ci/reports/original-gdi-reference.log
+      - name: Run focused registered cases
+        shell: bash
+        env:
+          WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
+          WXNOTEPAD_ORIGINAL_WRAP_REFERENCE: ${{ github.workspace }}/.ci/reports/original-word-wrap
+        run: |
+          python -X utf8 .github/scripts/windows_context_investigation.py run \
+            --scenario "$INVESTIGATION_SCENARIO" --runs "${INVESTIGATION_RUNS:-3}" \
+            --report-dir .ci/reports/investigation-runs
+      - name: Preserve investigation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-investigation-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/build/cmake/Testing/Temporary/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
