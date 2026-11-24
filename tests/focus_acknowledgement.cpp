@@ -1,5 +1,6 @@
 #include "diagnostics/print.h"
 #include "native_key_helpers.h"
+#include "native_paint_helpers.h"
 #include <print>
 #include <wx/log.h>
 #include <thread>
@@ -36,6 +37,40 @@ void HoldGui(const std::shared_ptr<BusyObservation>& observed, const wxString& p
         stderr, "Busy GUI callback: entered={} completed={} acknowledged_before_expiry={} return_after_expiry_us={}",
         observed->entered, observed->completed, observed->acknowledgedBeforeExpiry, g_get_monotonic_time() - expiry);
     std::fflush(stderr);
+}
+void QueuedFocusAcknowledgement(EditorFrame* frame) {
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame->GetHandle())))) return;
+    auto* editor = frame->Editor();
+    int focusLosses = 0;
+    wxEvtHandler focusEvents;
+    focusEvents.Bind(wxEVT_KILL_FOCUS, [&focusLosses](wxFocusEvent& event) {
+        ++focusLosses;
+        event.Skip();
+    });
+    editor->PushEventHandler(&focusEvents);
+    struct RemoveHandler {
+        EditorControl* editor;
+        ~RemoveHandler() { editor->PopEventHandler(false); }
+    } removeHandler{editor};
+    wxString focus;
+    NativeKeys::FocusEditor(frame, frame->GetTitle(), focus, [&focus](const wxString& request) {
+        Require(request.StartsWith("focus-until:"), "the presented editor begins with native focus");
+        const auto expiry = std::stoll(request.AfterFirst(':').ToStdString());
+        // Let the real driver finish while this GUI callback leaves its native
+        // focus events queued. No GTK event is consumed before the ACK exists.
+        while (!Pending(focus).empty() && g_get_monotonic_time() < expiry)
+            std::this_thread::yield();
+        Require(Pending(focus).empty() && g_get_monotonic_time() < expiry,
+                "the actual native focus operation completes within its original deadline");
+    });
+    const auto lossesAtReturn = focusLosses;
+    Require(frame->IsActive() && editor->HasFocus() && editor->Send(Scintilla::Message::GetFocus),
+            "the acknowledged native focus operation returns with the editor focused");
+    NativePaint::Complete(editor);
+    Require(focusLosses == lossesAtReturn,
+            "the acknowledged native focus operation cannot deliver a delayed focus loss after return");
+    Require(frame->IsActive() && editor->HasFocus() && editor->Send(Scintilla::Message::GetFocus),
+            "the editor retains native and core focus through subsequent real paints");
 }
 void EarlyAcknowledgement(EditorFrame* frame) {
     wxString focus;
@@ -90,6 +125,7 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
             try {
                 Require(ready, "the private display presents the actual editor frame");
+                QueuedFocusAcknowledgement(frame);
                 EarlyAcknowledgement(frame);
                 ExpiredAcknowledgement(frame);
                 result_ = 0;

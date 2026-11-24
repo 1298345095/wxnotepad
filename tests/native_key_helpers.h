@@ -353,9 +353,32 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
         lastPending = pending;
         acknowledged = pending.empty();
     };
+    bool nativeFocusSettled = true;
+#ifdef __WXGTK__
+    bool nativeFocusSynchronized = wayland;
+    nativeFocusSettled = wayland;
+    const auto settleNativeFocus = [&] {
+        if (!acknowledged || nativeFocusSettled) return;
+        if (!nativeFocusSynchronized) {
+            // The driver ACK covers its X11 connection. Round-trip this GUI
+            // connection before trusting focus flags from before the request.
+            gdk_display_sync(gtk_widget_get_display(widget));
+            nativeFocusSynchronized = true;
+            // Flush deferred wx focus changes in one finite dispatch, also
+            // when the final ACK refresh follows an overlong GUI callback.
+            DispatchFocusEvents(frame);
+        }
+        while (gdk_events_pending() && Clock::now() < focusDeadline)
+            DispatchFocusEvents(frame);
+        nativeFocusSettled = !gdk_events_pending();
+    };
+#endif
     while (Clock::now() < focusDeadline) {
         observeAcknowledgement();
-        if (acknowledged && frame->IsActive() && editor->HasFocus()) break;
+#ifdef __WXGTK__
+        settleNativeFocus();
+#endif
+        if (acknowledged && nativeFocusSettled && frame->IsActive() && editor->HasFocus()) break;
         DispatchFocusEvents(frame);
         wxMilliSleep(10);
     }
@@ -364,8 +387,9 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     // These requests are deadline-gated by the driver, so a fresh read cannot
     // turn a claim after the original deadline into a successful wait.
     if (!acknowledged) observeAcknowledgement();
+    settleNativeFocus();
 #endif
-    if (!acknowledged || !frame->IsActive() || !editor->HasFocus()) {
+    if (!acknowledged || !nativeFocusSettled || !frame->IsActive() || !editor->HasFocus()) {
 #ifdef __WXGTK__
         ObserveFocusFailure(frame, widget, focusFile, intent, lastPending, acknowledged, surfaceId, expiry);
 #endif
