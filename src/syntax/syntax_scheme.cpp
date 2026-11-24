@@ -66,7 +66,7 @@ void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool
 
 void ApplyLongLineColour(EditorControl& editor) {
     // The original default style supplies a line foreground but no background.
-    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT);
+    const auto background = StyleSystemColour(wxSYS_COLOUR_3DLIGHT);
     const auto colour = StyleColour(editor.Fonts().GlobalStyle("Long Line Marker"),
                                     editor.Send(Scintilla::Message::GetEdgeMode) == 1 ? "fore" : "back",
                                     editor.Send(Scintilla::Message::GetEdgeMode) == 1

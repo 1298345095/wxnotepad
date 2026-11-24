@@ -11,7 +11,7 @@ namespace {
 using enum Scintilla::Message;
 constexpr auto DefaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
 unsigned SystemColour(wxSystemColour colour) {
-    return wxSystemSettings::GetColour(colour).GetRGB();
+    return StyleSystemColour(colour).GetRGB();
 }
 void Indicator(EditorControl& editor, uintptr_t id, const wxString& text, unsigned fallback, int alpha, int outline) {
     editor.Send(IndicSetStyle, id, std::to_underlying(Scintilla::IndicatorStyle::RoundBox));

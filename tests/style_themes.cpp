@@ -33,6 +33,7 @@ void Pixels(EditorFrame* frame, const char* name, unsigned background) {
 class ThemesApp final : public wxApp {
 public:
     bool OnInit() override {
+        SetAppearance(Appearance::System);
         wxInitAllImageHandlers();
         directory_ = wxFileName::CreateTempFileName("wxnotepad-style-themes");
         wxRemoveFile(directory_);
@@ -92,9 +93,14 @@ public:
                             !wxFileExists(settings_->DarkProfilePath()),
                         "selecting Dark again leaves the active style and missing user profile unchanged");
                 NativeSearch::Command(frame, light);
-                Require(editor->Send(Message::StyleGetBack, DefaultStyle) == 0xffffff && bar->IsChecked(light),
+#ifdef __WXMSW__
+                const auto defaultBackground = ::GetSysColor(COLOR_WINDOW);
+#else
+                constexpr unsigned defaultBackground = 0xffffff;
+#endif
+                Require(editor->Send(Message::StyleGetBack, DefaultStyle) == defaultBackground && bar->IsChecked(light),
                         "Default restores its profile independently of system theme");
-                Pixels(frame, "default", 0xffffff);
+                Pixels(frame, "default", defaultBackground);
                 Require(TestEditor::Text(editor) == bytes && frame->DocumentEncoding() == encoding &&
                             editor->Send(Message::GetAnchor) == 8 && editor->Send(Message::GetCurrentPos) == 2 &&
                             !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
