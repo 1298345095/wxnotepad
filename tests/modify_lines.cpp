@@ -186,7 +186,7 @@ void InputReturn(wxTextCtrl* field, bool shift = false, bool control = false, bo
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "multiline input uses private native keys");
     bool received = false;
-    NativeKeys::KeyRelease observer(keypad ? WXK_NUMPAD_ENTER : WXK_RETURN, received, nullptr);
+    NativeKeys::KeyReleaseObserver observer(keypad ? WXK_NUMPAD_ENTER : WXK_RETURN, received, nullptr);
     {
         wxFFile file(focusFile, "wb");
         file.Write(wxString("key:") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") +

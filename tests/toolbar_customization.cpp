@@ -157,7 +157,7 @@ void KeyboardClick(wxButton* button) {
     } while (std::chrono::steady_clock::now() < focusDeadline);
     Require(focused, "physical keyboard targets the owned active customization button");
     bool released = false;
-    NativeKeys::KeyRelease observer(' ', released, nullptr);
+    NativeKeys::KeyReleaseObserver observer(' ', released, nullptr);
     {
         wxFFile request(focusFile, "wb");
         Require(request.IsOpened() && request.Write("key:space"), "native Space request is published");

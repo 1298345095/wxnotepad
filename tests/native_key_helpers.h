@@ -14,6 +14,10 @@
 #include <vector>
 #ifdef __WXGTK__
 #include <gdk/gdkwayland.h>
+#include <gdk/gdkx.h>
+#include <X11/extensions/XInput2.h>
+#undef None
+#undef Status
 #include <wayland-client-core.h>
 #endif
 
@@ -97,7 +101,7 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
     wxTheApp->CallAfter([callback = std::move(callback)] { callback(true); });
 }
 
-class KeyRelease final : public wxEventFilter {
+class KeyReleaseObserver final : public wxEventFilter {
 public:
     struct Observation {
         const char* phase = "none";
@@ -106,11 +110,11 @@ public:
         wxObject* target = nullptr;
     };
 
-    KeyRelease(int key, bool& received, bool* signal, wxWindow* intended = nullptr)
+    KeyReleaseObserver(int key, bool& received, bool* signal, wxWindow* intended = nullptr)
         : key_(key), received_(received), signal_(signal), intended_(intended) {
         wxEvtHandler::AddFilter(this);
     }
-    ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
+    ~KeyReleaseObserver() override { wxEvtHandler::RemoveFilter(this); }
     const Observation& LastKeyEvent() const { return lastKeyEvent_; }
     int FilterEvent(wxEvent& event) override {
         if (event.GetEventType() == wxEVT_KEY_DOWN || event.GetEventType() == wxEVT_KEY_UP) {
@@ -238,7 +242,8 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
 #ifndef __WXMSW__
 #ifdef __WXGTK__
 inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& focusFile, const wxString& request,
-                                          int expectedKey, bool received, const KeyRelease::Observation& lastEvent) {
+                                          int expectedKey, bool received,
+                                          const KeyReleaseObserver::Observation& lastEvent) {
     auto* widget = GTK_WIDGET(frame->GetHandle());
     if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
     const auto failedAt = g_get_monotonic_time();
@@ -315,7 +320,15 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
     editor->SetFocus();
 #ifdef __WXGTK__
     auto* widget = GTK_WIDGET(frame->GetHandle());
-    const bool wayland = GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget));
+    auto* display = gtk_widget_get_display(widget);
+    const bool wayland = GDK_IS_WAYLAND_DISPLAY(display);
+    auto* nativeDisplay = wayland ? nullptr : gdk_x11_display_get_xdisplay(display);
+    int inputOpcode = 0;
+    if (!wayland) {
+        int firstEvent = 0;
+        int firstError = 0;
+        XQueryExtension(nativeDisplay, "XInputExtension", &inputOpcode, &firstEvent, &firstError);
+    }
 #endif
     DispatchFocusEvents(frame);
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile))
@@ -369,20 +382,44 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
             // when the final ACK refresh follows an overlong GUI callback.
             DispatchFocusEvents(frame);
         }
-        // Inspect ready native events without dispatching around wx's YieldFor
-        // filter. Replay the whole batch in order for the normal GTK handler;
-        // unrelated notifications need not leave the queue before focus is ready.
         const auto pendingFocus = [&] {
             using Event = std::unique_ptr<GdkEvent, decltype(&gdk_event_free)>;
             std::vector<Event> events;
             bool focusPending = false;
-            while (auto* event = gdk_display_get_event(gtk_widget_get_display(widget))) {
+            // Only this GUI thread consumes these queues. Peek does not fetch
+            // native input; while its event exists, get_event cannot fetch it
+            // either. Thus this loop only removes the existing GDK prefix.
+            while (auto* peek = gdk_display_peek_event(display)) {
+                gdk_event_free(peek);
+                auto* event = gdk_display_get_event(display);
                 events.emplace_back(event, gdk_event_free);
                 focusPending |= event->type == GDK_FOCUS_CHANGE;
             }
             for (const auto& event : events)
-                gdk_display_put_event(gtk_widget_get_display(widget), event.get());
-            return focusPending;
+                gdk_display_put_event(display, event.get());
+            struct NativePrefix {
+                int remaining;
+                int inputOpcode;
+                bool focusPending = false;
+            } prefix{XEventsQueued(nativeDisplay, QueuedAlready), inputOpcode};
+            if (prefix.remaining) {
+                XEvent peek{};
+                // The Nth event is already queued. Match it regardless of
+                // focus, so this read-only peek cannot wait for newer input.
+                XPeekIfEvent(
+                    nativeDisplay, &peek,
+                    +[](Display*, XEvent* event, XPointer data) -> Bool {
+                        auto* prefix = reinterpret_cast<NativePrefix*>(data);
+                        // Inspect headers only; normal Xlib/GDK dispatch retains cookie ownership.
+                        prefix->focusPending |=
+                            event->type == FocusIn || event->type == FocusOut ||
+                            (event->type == GenericEvent && event->xcookie.extension == prefix->inputOpcode &&
+                             (event->xcookie.evtype == XI_FocusIn || event->xcookie.evtype == XI_FocusOut));
+                        return --prefix->remaining == 0;
+                    },
+                    reinterpret_cast<XPointer>(&prefix));
+            }
+            return focusPending || prefix.focusPending;
         };
         nativeFocusSettled = !pendingFocus();
         while (!nativeFocusSettled && Clock::now() < focusDeadline) {
@@ -464,7 +501,7 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
                                    {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
     if (key == '[' || key == ']' || key == ',' || key == '.') {
         bool received = false;
-        KeyRelease observer(key, received, releaseSignal, frame->Editor());
+        KeyReleaseObserver observer(key, received, releaseSignal, frame->Editor());
         const LPARAM flags = (LPARAM{KF_UP | KF_REPEAT | (alt ? KF_ALTDOWN : 0)} << 16) | 1;
         SendMessageW(static_cast<HWND>(frame->Editor()->GetHandle()), alt ? WM_SYSKEYUP : WM_KEYUP, nativeKey, flags);
         if (!received) throw std::runtime_error("native punctuation release must reach the intended editor");
@@ -476,7 +513,7 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     FocusEditor(frame, focusName, focusFile);
     bool received = false;
     const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
-    KeyRelease observer(key, received, releaseSignal, punctuation ? editor : nullptr);
+    KeyReleaseObserver observer(key, received, releaseSignal, punctuation ? editor : nullptr);
     wxString request;
     {
         wxFFile file(focusFile, "wb");

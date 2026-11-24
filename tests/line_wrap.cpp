@@ -84,7 +84,7 @@ void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
 #else
     bool released = false;
     auto* previousFocus = wxWindow::FindFocus();
-    NativeKeys::KeyRelease observer(key, released, nullptr);
+    NativeKeys::KeyReleaseObserver observer(key, released, nullptr);
     wxString focus;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus), "dialog keys use private display");
     if (!dialog->IsActive()) {
