@@ -36,6 +36,23 @@ without resetting the lexer or document styling. The document's bytes,
 encoding, selection, save point, history and folds remain owned by the existing
 editor/document lifecycle. A scheme change uses `ApplySyntaxLanguage`, which
 retains the same active profile. Pixel style sizes follow native DPI and zoom.
+After changing the lexer, the pinned core's `ClearDocumentStyle` clears bytes
+without rewinding its styled extent. The original's `StartStyling(0)` restarts
+lazy styling so a loaded file paints its token colours. Style-only theme
+changes do not clear or restart the document's styling.
+
+The editor's fallback palette is separate from application chrome. On Windows,
+the original uses `GetSysColor(COLOR_WINDOWTEXT/COLOR_WINDOW)`: ordinary Light
+and Dark system appearance both give black text on white, while Night Sky high
+contrast gives white text on black. wxMSW's dark-mode `GetColour` override would
+instead supply a dark document background and is therefore bypassed for style
+fallbacks. On GTK, the equivalent Default document fallback is explicitly
+black/white; GTK's themed text-view colours follow `GTK_THEME` and must not
+silently turn Default into Dark. Token, folding, list and caret colours derived
+from the document style follow the selected profile. Explicit custom colours
+and the original Dark profile override these fallbacks. Other native system
+colour roles retain their platform values. wxGTK exposes no high-contrast
+appearance query; this mapping does not infer a separate theme from GTK names.
 
 The independent Windows capture uses an owned original executable copy on a
 named private desktop, direct owned-window messages, and no clipboard input.

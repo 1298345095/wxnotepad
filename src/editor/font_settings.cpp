@@ -171,6 +171,12 @@ wxColour StyleSystemColour(wxSystemColour colour) {
     // dark-mode GetColour override belongs to the application chrome palette.
     const auto rgb = ::GetSysColor(colour);
     return wxColour(GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+#elif defined(__WXGTK__)
+    // GTK's text-view palette follows the application theme. Original Default
+    // uses the standard black/white document palette even with dark chrome.
+    if (colour == wxSYS_COLOUR_WINDOWTEXT) return *wxBLACK;
+    if (colour == wxSYS_COLOUR_WINDOW) return *wxWHITE;
+    return wxSystemSettings::GetColour(colour);
 #else
     return wxSystemSettings::GetColour(colour);
 #endif
