@@ -9,9 +9,9 @@
 #include <wx/dataobj.h>
 #include <array>
 #include <cstdlib>
-#include <cstring>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #ifdef __WXMSW__
 #include "native_published_file.h"
 #endif
@@ -209,9 +209,9 @@ public:
                 "action preserves bytes, encoding/BOM/EOL, selections, folds, save point and history");
         CheckClipboard();
     }
-    void Stream(const char* input, const std::optional<std::string>& escaped, unsigned action = 3,
+    void Stream(const std::string& input, const std::optional<std::string>& escaped, unsigned action = 3,
                 bool shortcut = false) {
-        TestEditor::ResetStream(frame_->Editor(), input, 0, static_cast<intptr_t>(std::strlen(input)));
+        TestEditor::ResetStream(frame_->Editor(), input.c_str(), 0, static_cast<intptr_t>(input.size()));
         Invoke(action, escaped, shortcut);
     }
     wxString command;

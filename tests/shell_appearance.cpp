@@ -210,8 +210,8 @@ void CheckDocumentStatus(EditorFrame* frame) {
     auto* editor = frame->Editor();
     {
         wxFrame nativeHost(nullptr, wxID_ANY, "Native unprofiled editor palette");
-        auto* nativeEditor = new EditorControl(&nativeHost);
-        NativeSelectionColours(nativeEditor);
+        EditorControl nativeEditor(&nativeHost);
+        NativeSelectionColours(&nativeEditor);
     }
     OriginalProfileSelectionColours(editor);
     editor->Send(SetFoldMarginColour, 0);
