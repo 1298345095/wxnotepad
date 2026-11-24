@@ -25,6 +25,7 @@ FAILURE_HISTORY_EVENTS = 256
 FOCUS_UNTIL_PREFIX = "focus-until:"
 FRONT_UNTIL_PREFIX = "front-until:"
 KEY_DELAY_PREFIX = "key-delay:"
+X11_WINDOW_PREFIX = "x11-window:"
 
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
@@ -73,8 +74,15 @@ def focus_owned_window(focus, title, deadline_us=None, *, raise_window=False):
         driver_trace(focus, "driver.expired")
         return True
     if backend == "x11":
-        windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
-        if not windows:
+        if title.startswith(X11_WINDOW_PREFIX):
+            # A title may change while native document notifications settle.
+            # Resolve the exact owned XID, retaining the native mapping check.
+            target = title[len(X11_WINDOW_PREFIX):]
+            candidates = xdo("search", "--onlyvisible", "--class", ".").splitlines()
+            windows = [target] if target in candidates else []
+        else:
+            windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
+        if not windows and not title.startswith(X11_WINDOW_PREFIX):
             # GTK omits legacy WM_NAME for some non-Latin titles. xdotool's
             # search then misses the visible window although getwindowname
             # reads its UTF-8 _NET_WM_NAME correctly.

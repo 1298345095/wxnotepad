@@ -14,6 +14,8 @@
 #endif
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
+#include <gdk/gdkx.h>
+#undef None
 #endif
 
 namespace {
@@ -138,12 +140,17 @@ void WindowActionKey(EditorFrame* frame, bool shift = false, [[maybe_unused]] bo
         Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus),
                 "composition keys use the existing private driver");
     else {
-        // Document notifications update the frame title. Process those already
-        // queued before naming the exact native input target.
-        NativeKeys::DispatchFocusEvents(frame);
-        const auto title = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
-        frame->SetTitle(title);
-        NativeKeys::FocusEditor(frame, title, focus);
+        auto* widget = GTK_WIDGET(frame->GetHandle());
+        wxString target;
+        if (GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget))) {
+            // Document notifications can change the title during activation.
+            // Keep targeting this owned native window throughout the handshake.
+            target = wxString::Format("x11-window:%lu", gdk_x11_window_get_xid(gtk_widget_get_window(widget)));
+        } else {
+            target = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
+            frame->SetTitle(target);
+        }
+        NativeKeys::FocusEditor(frame, target, focus);
     }
     {
         wxFFile request(focus, "wb");
