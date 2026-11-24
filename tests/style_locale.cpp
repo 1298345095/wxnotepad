@@ -38,25 +38,25 @@ public:
                     ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
                     NativePaint::Complete(editor);
                     const auto observed = NativeStyleLocales();
-                    for (const auto& locale : observed)
-                        std::println(stderr, "native style locale: {}", locale);
+                    std::println(stderr, "native style locale: {} ({} realizations)",
+                                 observed.empty() ? "<none>" : observed.front(), observed.size());
                     Require(std::ranges::find(observed, expected) != observed.end(),
                             "selected global locale reaches the actual native font/layout used for rendering");
                 };
-                check("ja-JP");
+                check("ja-jp");
                 fonts.Scheme(SyntaxLanguage::Cpp).useCode = false;
-                check("zh-TW");
+                check("zh-tw");
 #ifdef __WXMSW__
                 // Literal outcomes of Styles.cpp::Style_SetFontLocaleName:
                 // a non-CJK user locale yields to a CJK system locale.
                 SetNativeStyleLocaleDefaults(L"en-US", L"ja-JP");
                 fonts.textStyle = "locale:invalid-locale-name";
-                check("ja-JP");
+                check("ja-jp");
                 fonts.textStyle.clear();
                 SetNativeStyleLocaleDefaults(L"zh-SG", L"ja-JP");
-                check("zh-SG");
+                check("zh-sg");
                 SetNativeStyleLocaleDefaults(L"de-DE", L"fr-FR");
-                check("de-DE");
+                check("de-de");
 #endif
                 result_ = 0;
             } catch (const std::exception& error) {

@@ -57,7 +57,7 @@ public:
                    .FaceName(wxString::FromUTF8(p.faceName))
                    .Weight(static_cast<wxFontWeight>(std::to_underlying(p.weight)))
                    .Italic(p.italic)),
-          measurement(font) {}
+          measurement(font, p.localeName) {}
 };
 std::shared_ptr<Font> Font::Allocate(const FontParameters& p) {
 #ifdef __WXMSW__
@@ -301,7 +301,12 @@ public:
         FontSet(f);
         dc_->SetTextForeground(Color(fore));
         dc_->SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
+#ifdef __WXGTK__
+        measurement_->DrawText(*dc_, static_cast<const WxFont*>(f)->measurement, text, utf8_,
+                                static_cast<int>(r.left), static_cast<int>(base - Metrics(f).ascent));
+#else
         dc_->DrawText(String(text), r.left, base - Metrics(f).ascent);
+#endif
     }
     void SCICALL DrawTextNoClip(PRectangle r, const Font* f, XYPOSITION base, std::string_view text, ColourRGBA fore,
                                 ColourRGBA back) override {

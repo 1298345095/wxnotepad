@@ -106,7 +106,7 @@ struct MeasurementFont::Data {
     }
 };
 
-MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Data>()) {
+MeasurementFont::MeasurementFont(const wxFont& font, std::string_view) : data_(std::make_unique<Data>()) {
     const auto* native = font.GetNativeFontInfo();
     if (!native) throw NativeDrawingError("Native text measurement needs a valid font");
     data_->description = native->lf;

@@ -178,12 +178,19 @@ std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount) {
 
 struct MeasurementFont::Data {
     FontDescription description{nullptr, &pango_font_description_free};
+    PangoLanguage* language = nullptr;
+    std::unique_ptr<PangoAttrList, decltype(&pango_attr_list_unref)> attributes{nullptr, &pango_attr_list_unref};
 };
 
-MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Data>()) {
+MeasurementFont::MeasurementFont(const wxFont& font, std::string_view locale) : data_(std::make_unique<Data>()) {
     const auto* info = font.GetNativeFontInfo();
     if (!info || !info->description) throw NativeDrawingError("The native measurement font is unavailable");
     data_->description.reset(pango_font_description_copy(info->description));
+    if (!locale.empty()) {
+        data_->language = pango_language_from_string(std::string(locale).c_str());
+        data_->attributes.reset(pango_attr_list_new());
+        pango_attr_list_insert(data_->attributes.get(), pango_attr_language_new(data_->language));
+    }
 }
 
 MeasurementFont::~MeasurementFont() = default;
@@ -252,6 +259,7 @@ struct TextMeasurement::Data {
             description = scaled.get();
         }
         pango_layout_set_font_description(worker.layout.get(), description);
+        pango_layout_set_attributes(worker.layout.get(), font.attributes.get());
         pango_layout_set_text(worker.layout.get(), characters.text.data(), static_cast<int>(characters.text.size()));
     }
 };
@@ -310,7 +318,8 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
     if (utf8 && !extents.empty() &&
         std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; })) {
         cursorPositions.resize(characters.count + 1);
-        pango_get_log_attrs(characters.text.data(), static_cast<int>(characters.text.size()), 0, data_->language,
+        pango_get_log_attrs(characters.text.data(), static_cast<int>(characters.text.size()), 0,
+                            font.data_->language ? font.data_->language : data_->language,
                             cursorPositions.data(), static_cast<int>(cursorPositions.size()));
     }
     size_t character = 0;
@@ -339,5 +348,23 @@ double TextMeasurement::WidthText(const MeasurementFont& font, std::string_view 
     int width = 0;
     pango_layout_get_pixel_size(worker.layout.get(), &width, nullptr);
     return width;
+}
+
+void TextMeasurement::DrawText(wxDC& dc, const MeasurementFont& font, std::string_view text, bool utf8,
+                               int x, int y) const {
+    auto* cairo = static_cast<cairo_t*>(dc.GetImpl()->GetCairoContext());
+    if (!cairo || cairo_status(cairo) != CAIRO_STATUS_SUCCESS)
+        throw NativeDrawingError("The native Cairo text drawing context is unavailable");
+    const auto characters = Decode(text, utf8);
+    auto& worker = data_->Context();
+    data_->SetText(worker, *font.data_, characters);
+    const auto colour = dc.GetTextForeground();
+    cairo_save(cairo);
+    cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
+    cairo_set_source_rgba(cairo, colour.Red() / 255.0, colour.Green() / 255.0, colour.Blue() / 255.0,
+                          colour.Alpha() / 255.0);
+    cairo_move_to(cairo, x, y);
+    pango_cairo_show_layout(cairo, worker.layout.get());
+    cairo_restore(cairo);
 }
 } // namespace Scintilla::Internal

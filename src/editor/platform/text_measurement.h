@@ -15,7 +15,7 @@ namespace Scintilla::Internal {
 // Capture native font data on the GUI thread. Measurements never access wxFont.
 class MeasurementFont final {
 public:
-    explicit MeasurementFont(const wxFont& font);
+    explicit MeasurementFont(const wxFont& font, std::string_view locale = {});
     ~MeasurementFont();
     MeasurementFont(const MeasurementFont&) = delete;
     MeasurementFont& operator=(const MeasurementFont&) = delete;
@@ -42,6 +42,10 @@ public:
 
     void MeasureWidths(const MeasurementFont& font, std::string_view text, bool utf8, double* positions) const;
     double WidthText(const MeasurementFont& font, std::string_view text, bool utf8) const;
+#ifdef __WXGTK__
+    // Draw with the same private Pango font/language snapshot used for widths.
+    void DrawText(wxDC& dc, const MeasurementFont& font, std::string_view text, bool utf8, int x, int y) const;
+#endif
 
 private:
     struct Data;
