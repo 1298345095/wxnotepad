@@ -419,7 +419,8 @@ void EncodedDocuments(EditorFrame* frame) {
         NativeSearch::Command(frame, wxID_UNDO);
     }
 #endif
-    std::filesystem::remove_all(directory);
+    // TemporaryRoot removes these files after wx cleanup has destroyed the
+    // frame and joined its file-watcher worker.
     std::puts("PASS: original UTF-8, explicit GBK/Windows-1252 and UTF-16 editor-byte interpretation and disk bytes");
 }
 class CharacterInformationApp final : public wxApp {
