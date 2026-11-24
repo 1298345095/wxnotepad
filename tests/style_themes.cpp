@@ -4,6 +4,7 @@
 #include "syntax/syntax_scheme.h"
 #include <wx/ffile.h>
 #include <wx/filename.h>
+#include <wx/dcmemory.h>
 #include <SciLexer.h>
 
 namespace {
@@ -21,6 +22,17 @@ void Pixels(EditorFrame* frame, const char* name, unsigned background) {
     wxString directory;
     if (!wxGetEnv("WXNOTEPAD_THEME_EVIDENCE", &directory)) return;
     const wxRect area(0, 0, std::min(size.x, 500), std::min(size.y, 160));
+#ifdef __WXMSW__
+    // A remote display can make GetPixel a round trip per pixel. Copy the
+    // actual client surface once for optional evidence, keeping the same guard.
+    wxBitmap bitmap(area.width, area.height, 32);
+    wxMemoryDC memory(bitmap);
+    wxClientDC client(editor);
+    Require(memory.Blit(0, 0, area.width, area.height, &client, area.x, area.y),
+            "copy the actual native editor raster");
+    memory.SelectObject(wxNullBitmap);
+    const auto image = bitmap.ConvertToImage();
+#else
     const auto pixels = NativePaint::Read(editor, area);
     wxImage image(area.width, area.height);
     for (size_t index = 0; index < pixels.size(); ++index) {
@@ -28,6 +40,7 @@ void Pixels(EditorFrame* frame, const char* name, unsigned background) {
         image.GetData()[index * 3 + 1] = pixels[index].Green();
         image.GetData()[index * 3 + 2] = pixels[index].Blue();
     }
+#endif
     Require(image.SaveFile(wxFileName(directory, wxString::FromUTF8(name) + ".png").GetFullPath(), wxBITMAP_TYPE_PNG),
             "retain selected profile's actual native raster");
 }
@@ -125,6 +138,15 @@ public:
                         "original grouped comment styles inherit the Dark document background");
                 Require(!editor->Send(Message::GetFoldExpanded, 0) && TestEditor::Text(editor) == foldedBytes,
                         "style-only theme reapplication preserves the collapsed block and its document bytes");
+                editor->SetFontSettings(QuotedProfile());
+                ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
+                Require(editor->Send(Message::StyleGetFore, SCE_C_COMMENTLINE) == 0x563412 &&
+                            editor->Send(Message::StyleGetFore, SCE_C_STRING) ==
+                                editor->Send(Message::StyleGetFore, DefaultStyle) &&
+                            editor->Send(Message::StyleGetSizeFractional, DefaultStyle) == 1200,
+                        "original quoted style text renders its numeric prefixes and quoted empty inherits the base");
+                editor->SetFontSettings(settings_->values.fonts);
+                ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
                 NativeSearch::Command(frame, bar->FindMenuItem("Scheme", "Python"));
                 Require(editor->Send(Message::StyleGetBack, SCE_PY_COMMENTLINE) == 0x1e1e1e &&
                             editor->Send(Message::StyleGetFore, SCE_PY_COMMENTLINE) == 0x608060,
@@ -159,7 +181,23 @@ public:
     }
 
 private:
+    FontSettings QuotedProfile() const {
+        const auto path = wxFileName(directory_, "QuotedStyles.ini").GetFullPath();
+        wxFFile file(path, "wb");
+        Require(file.IsOpened() &&
+                    file.Write("[Settings]\nSaveSettings=0\n[C/C++ Source]\nDefault=\"size:12\"\n"
+                               "Comment=\"fore:#123456\"\nString=\"\"\n") &&
+                    file.Close(),
+                "write an owned quoted original style profile");
+        const SettingsStore quoted(path);
+        const auto& scheme = quoted.values.fonts.Scheme(SyntaxLanguage::Cpp);
+        Require(scheme.defaultStyle == "\"size:12\"" && scheme.tokenStyles.at("Comment") == "\"fore:#123456\"" &&
+                    scheme.tokenStyles.at("String") == "\"\"",
+                "style section values retain original quotes and explicit quoted empty text");
+        return quoted.values.fonts;
+    }
     void ProfileSettings() {
+        (void)QuotedProfile();
         {
             wxFFile file(path_, "wb");
             Require(file.IsOpened() &&

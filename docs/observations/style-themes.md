@@ -27,6 +27,12 @@ changing theme, including when ordinary Save Settings On Exit is off. Omitted
 the original; other absent style strings use their original source defaults.
 Explicitly empty styles remain empty. Saving merges supported fields and
 preserves unavailable-language sections and unimplemented keys.
+The original style loader reads complete INI sections, which retain surrounding
+quotes. A quoted `Comment="fore:#123456"` therefore remains quoted in the style
+model and renders through the original substring/numeric-prefix grammar;
+`String=""` supplies no attributes and inherits the base style. The two existing
+global font fields keep their established string-reader contract: remove outer
+double quotes, retain enclosed spaces, and use their defaults for empty values.
 The switch saves style metadata/profile changes only; unrelated dirty view/tool
 preferences retain their ordinary save policy. As in the original, a failed
 pre-switch save is reported while the requested theme still becomes active.
