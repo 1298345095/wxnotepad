@@ -23,6 +23,7 @@ WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
 FAILURE_HISTORY_EVENTS = 256
 FOCUS_UNTIL_PREFIX = "focus-until:"
+FRONT_UNTIL_PREFIX = "front-until:"
 KEY_DELAY_PREFIX = "key-delay:"
 
 backend, *command = sys.argv[1:]
@@ -65,7 +66,7 @@ def acknowledge(focus, deadline_us=None):
     return True
 
 
-def focus_owned_window(focus, title, deadline_us=None):
+def focus_owned_window(focus, title, deadline_us=None, *, raise_window=False):
     # Reject expired requests before native input; acknowledge rechecks after
     # X11's synchronous focus call and immediately before publishing the claim.
     if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
@@ -81,6 +82,11 @@ def focus_owned_window(focus, title, deadline_us=None):
             windows = [window for window in candidates if re.search(title, xdo("getwindowname", window))]
         if not windows:
             return False
+        if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
+            driver_trace(focus, "driver.expired")
+            return True
+        if raise_window:
+            xdo("windowraise", windows[0])
         xdo("windowfocus", "--sync", windows[0])
     if not acknowledge(focus, deadline_us):
         driver_trace(focus, "driver.expired")
@@ -226,7 +232,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:", "pointer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:", "pointer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -383,13 +389,14 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         pending.replace(phase)
                     wait_drag_state(".drag-ended", "end")
                     acknowledge(focus)
-                elif request.startswith(("focus:", FOCUS_UNTIL_PREFIX)):
-                    if request.startswith(FOCUS_UNTIL_PREFIX):
+                elif request.startswith(("focus:", FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX)):
+                    if request.startswith((FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX)):
                         _, expiry, title = request.split(":", 2)
                         deadline_us = int(expiry)
                     else:
                         deadline_us, title = None, request[6:]
-                    if not focus_owned_window(focus, title, deadline_us):
+                    if not focus_owned_window(focus, title, deadline_us,
+                                              raise_window=request.startswith(FRONT_UNTIL_PREFIX)):
                         time.sleep(.03)
                         continue
                 elif request.startswith("tree-drag:"):
