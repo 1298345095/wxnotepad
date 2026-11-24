@@ -105,7 +105,9 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
     NativeSearch::Command(frame, large);
     const auto rebuilt = observe("toolbar command complete");
     NativePaint::Complete(frame->Editor());
-    if (frame->GetRect() != fullscreen || frame->GetToolBar()->IsShown() || frame->GetStatusBar()->IsShown()) {
+    const bool preserved =
+        frame->GetRect() == fullscreen && !frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown();
+    if (!preserved) {
         for (const auto& value : {delivered, entered, rebuilt, observe("toolbar paint complete")})
             std::println(stderr,
                          "Toolbar fullscreen geometry: stage={} frame={},{},{}x{} native={}x{} fullscreen={} "
@@ -113,8 +115,7 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
                          value.stage, value.frame.x, value.frame.y, value.frame.width, value.frame.height,
                          value.native.x, value.native.y, value.fullscreen, value.toolbarShown, value.statusShown);
     }
-    Require(frame->GetRect() == fullscreen && !frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown(),
-            "toolbar rebuilding preserves fullscreen geometry and hidden bars");
+    Require(preserved, "toolbar rebuilding preserves fullscreen geometry and hidden bars");
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativePaint::Complete(frame->Editor());
     Require(frame->GetRect() == window, "returning from full screen restores native window placement");
