@@ -48,7 +48,7 @@ def generate(source):
         output += provenance('style_profiles.py', path, data)
         output += [f'constexpr StyleDefinition {filename.lower()}ProfileStyles[] = {{']
         for key, value, ids in records:
-            output += ['    {' + json.dumps(key) + ', ' + json.dumps(value) + ', {' + ', '.join(ids) + '}, ' + str(len(ids)) + '},']
+            output += ['    {wxTRANSLATE(' + json.dumps(key) + '), ' + json.dumps(value) + ', {' + ', '.join(ids) + '}, ' + str(len(ids)) + '},']
         output += ['};']
     output += ['constexpr StyleSchemeDefinition profileSchemes[] = {']
     output += ['    {' + json.dumps(section) + ', ' + name + 'ProfileStyles},' for section, name in schemes]

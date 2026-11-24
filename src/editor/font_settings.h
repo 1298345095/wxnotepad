@@ -9,6 +9,9 @@
 #include <utility>
 
 class EditorControl;
+inline constexpr std::array<unsigned, 16> DefaultCustomColours = {
+    0xB000B0, 0xFF8000, 0x008000, 0x608060, 0xA46000, 0x0080FF, 0xFFF1AB, 0xFFC040,
+    0x1E90FF, 0x648000, 0x006633, 0x408080, 0x008080, 0xFF0080, 0x408040, 0x0080C0};
 struct SchemeFontStyle {
     bool useCode = true;
     wxString defaultStyle;
@@ -19,6 +22,7 @@ struct SchemeFontStyle {
 // Retain style text so a font-only edit does not discard other style attributes.
 struct FontSettings {
     StyleTheme theme = StyleTheme::Default;
+    std::array<unsigned, 16> customColours = DefaultCustomColours;
     std::map<wxString, wxString> globalStyles;
     wxString codeStyle = "font:$(Code)";
     wxString textStyle = "font:$(Text)";
@@ -34,6 +38,7 @@ struct FontSettings {
     bool operator==(const FontSettings&) const = default;
 };
 wxFont DefaultStyleFont(const FontSettings& settings, bool code);
+wxFont StyleFont(const FontSettings& settings, const wxString& style, bool code, bool globalBase = false);
 wxColour DefaultStyleForeground(const FontSettings& settings, bool code);
 wxString MergeChosenFont(const wxString& style, const wxFont& font);
 void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language);

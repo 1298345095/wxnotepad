@@ -2,6 +2,7 @@
 #include <SciLexer.h>
 #include <wx/filename.h>
 #include <wx/translation.h>
+#include <wx/tokenzr.h>
 #include <array>
 #include <cstdlib>
 #include <algorithm>
@@ -1127,7 +1128,25 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
     }
 }
 
-SyntaxLanguage LanguageForPath(const wxString& path) {
+wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& extensions) {
+    const auto canonical = SyntaxSettingsLanguage(language);
+    if (const auto found = extensions.find(canonical); found != extensions.end()) return found->second;
+    wxString result;
+    for (const auto* extension : SyntaxFor(canonical).extensions) {
+        if (!result.empty()) result += "; ";
+        result += wxString::FromUTF8(extension);
+    }
+    return result;
+}
+
+std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions) {
+    std::vector<wxString> result;
+    wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n");
+    while (tokens.HasMoreTokens()) result.push_back(tokens.GetNextToken());
+    return result;
+}
+
+SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions) {
     using enum SyntaxLanguage;
     const auto name = wxFileName(path).GetFullName();
     // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
@@ -1141,10 +1160,30 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
         if (ch >= 'A' && ch <= 'Z') extension[index] = ch + ('a' - 'A');
     }
     // Dialect-specific associations precede their canonical scheme's full list.
-    if (extension == "asp") return AspVb;
-    if (extension == "aspx") return AspxCs;
+    const auto dialect = [&](SyntaxLanguage language) {
+        if (language == Html && extension == "asp") return AspVb;
+        if (language == Html && extension == "aspx") return AspxCs;
+        // Keep delivered dialect identities when their canonical association
+        // retains the suffix; custom suffixes use the canonical scheme.
+        for (size_t index = std::size(definitions); index-- > 0;) {
+            const auto& definition = definitions[index];
+            if (SyntaxSettingsLanguage(definition.language) != language) continue;
+            for (const auto* candidate : definition.extensions)
+                if (extension == candidate) return definition.language;
+        }
+        return language;
+    };
+    for (const auto& [language, value] : extensions) {
+        for (const auto& candidate : SyntaxExtensionList(language, extensions))
+            if (extension.CmpNoCase(candidate) == 0) return dialect(language);
+    }
+    if (!extensions.contains(Html)) {
+        if (extension == "asp") return AspVb;
+        if (extension == "aspx") return AspxCs;
+    }
     for (size_t index = std::size(definitions); index-- > 0;) {
         const auto& definition = definitions[index];
+        if (extensions.contains(SyntaxSettingsLanguage(definition.language))) continue;
         for (const auto* candidate : definition.extensions) {
             if (extension == candidate) return definition.language;
         }
@@ -1166,11 +1205,11 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
-        if (const auto language = LanguageForPath(underlying); language != PlainText) return DetectedSyntax{language};
+        if (const auto language = LanguageForPath(underlying, options.extensions); language != PlainText) return DetectedSyntax{language};
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
-    const auto language = templateConfig ? PlainText : LanguageForPath(path);
+    const auto language = templateConfig ? PlainText : LanguageForPath(path, options.extensions);
     if (language != PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return DetectedSyntax{SyntaxSettingsLanguage(language), DetectMarkupDocType(prefix).value_or(language)};

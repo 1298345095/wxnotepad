@@ -229,6 +229,7 @@ private:
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     void ShowSyntaxScheme(bool favorite = false);
+    void CustomizeStyles();
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const DocumentLoad::Intent& intent);

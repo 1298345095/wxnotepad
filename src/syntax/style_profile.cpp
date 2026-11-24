@@ -1,6 +1,7 @@
 #include "syntax/style_profile.h"
 #include <Scintilla.h>
 #include <SciLexer.h>
+#include <wx/translation.h>
 
 namespace {
 struct StyleSchemeDefinition {

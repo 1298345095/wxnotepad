@@ -356,9 +356,19 @@ void KeyboardChooser() {
     wxYield();
     frame->SetTitle("wxnotepad scheme F12");
     {
+        class AnswerCustomization final : public wxModalDialogHook {
+        public:
+            AnswerCustomization() { Register(); }
+            ~AnswerCustomization() override { Unregister(); }
+            int Enter(wxDialog* dialog) override {
+                if (dialog->GetTitle().StartsWith("Customize Schemes"))
+                    wxTheApp->CallAfter([dialog] { NativeSearch::Click(dialog, wxID_CANCEL); });
+                return wxID_NONE;
+            }
+        } customization;
         Picker modified;
         modified.action = [](wxDialog& dialog, wxTreeCtrl&) { NativeSearch::Click(&dialog, wxID_CANCEL); };
-        // Pinned Ctrl+F12 belongs to undelivered Customize Schemes, not the
+        // Pinned Ctrl+F12 belongs to Customize Schemes, not the
         // public Syntax Scheme chooser. Do not let GTK alias it to bare F12.
         NativeKeys::Shortcut(frame, WXK_F12, true, false, false, nullptr, "wxnotepad scheme F12");
         Require(modified.error.empty(), modified.error.utf8_str());

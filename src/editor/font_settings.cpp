@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <charconv>
+#include <cstdlib>
+#include <optional>
 
 namespace {
 using Scintilla::Message;
@@ -15,12 +18,23 @@ constexpr int NormalWeight = 400;
 constexpr int BoldWeight = 700;
 constexpr int MinimumFontSize = 2 * Scintilla::FontSizeMultiplier;
 wxString Value(const wxString& style, const wxString& key) {
-    wxStringTokenizer tokens(style, ";");
-    while (tokens.HasMoreTokens()) {
-        auto token = tokens.GetNextToken().Trim().Trim(false);
-        if (token.BeforeFirst(':') == key && token.Contains(':')) return token.AfterFirst(':').Trim().Trim(false);
-    }
-    return {};
+    const auto position = style.find(key + ':');
+    return position == wxString::npos ? wxString{} : style.Mid(position + key.length() + 1).BeforeFirst(';').Strip(wxString::both);
+}
+std::optional<int> Integer(const wxString& text) {
+    const auto bytes = text.utf8_string();
+    char* end = nullptr;
+    const long value = std::strtol(bytes.c_str(), &end, 10);
+    if (end == bytes.c_str()) return std::nullopt;
+    return static_cast<int>(std::clamp(value, static_cast<long>(std::numeric_limits<int>::min()), static_cast<long>(std::numeric_limits<int>::max())));
+}
+std::optional<unsigned> Colour(const wxString& text) {
+    if (!text.StartsWith('#')) return std::nullopt;
+    const auto bytes = text.Mid(1).utf8_string();
+    char* end = nullptr;
+    const auto rgb = std::strtoul(bytes.c_str(), &end, 16);
+    if (end == bytes.c_str()) return std::nullopt;
+    return static_cast<unsigned>(((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU));
 }
 bool Attribute(const wxString& style, const wxString& name) {
     wxStringTokenizer tokens(style, ";");
@@ -47,10 +61,14 @@ int BaseSize() {
     const double points = display.x < 1920 && display.y < 1080 ? 10.5 : 11;
     return static_cast<int>(points * Scintilla::FontSizeMultiplier);
 }
-int Size(const wxString& style, int base) {
+std::optional<int> Size(const wxString& style, int base) {
     const auto text = Value(style, "size");
-    double points;
-    if (!text.ToDouble(&points) || !std::isfinite(points)) return base;
+    auto bytes = text.utf8_string();
+    std::string_view number(bytes);
+    if (number.starts_with('+')) number.remove_prefix(1);
+    float points = 0;
+    const auto parsed = std::from_chars(number.data(), number.data() + number.size(), points);
+    if (parsed.ptr == number.data() || parsed.ec != std::errc{} || !std::isfinite(points)) return std::nullopt;
     const bool relative = text.StartsWith('+') || text.StartsWith('-');
     // Keep the original 2pt floor and the core's integer size representation.
     const double scaled = points * Scintilla::FontSizeMultiplier + (relative ? base : 0);
@@ -59,8 +77,8 @@ int Size(const wxString& style, int base) {
 }
 int Weight(const wxString& style, int fallback) {
     if (Attribute(style, "bold")) return BoldWeight;
-    long weight;
-    return Value(style, "weight").ToLong(&weight) && weight > 0 && weight < 1000 ? static_cast<int>(weight) : fallback;
+    const auto weight = Integer(Value(style, "weight"));
+    return weight && *weight > 0 && *weight < 1000 ? *weight : fallback;
 }
 wxString Family(const wxString& style, const FontSettings& settings, bool global) {
     const auto face = Value(style, "font");
@@ -77,7 +95,7 @@ void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxStr
         const auto face = family.ToUTF8();
         editor.Send(Message::StyleSetFont, target, reinterpret_cast<intptr_t>(face.data()));
     }
-    if (!Value(style, "size").empty()) editor.Send(Message::StyleSetSizeFractional, target, Size(style, base));
+    if (const auto size = Size(style, base)) editor.Send(Message::StyleSetSizeFractional, target, *size);
     editor.Send(Message::StyleSetWeight, target,
                 Weight(style, static_cast<int>(editor.Send(Message::StyleGetWeight, target))));
     for (const auto& [attribute, message] : {std::pair{"italic", Message::StyleSetItalic},
@@ -88,13 +106,9 @@ void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxStr
         if (Attribute(style, attribute)) editor.Send(message, target, true);
     for (const auto& [attribute, message] :
          {std::pair{"fore", Message::StyleSetFore}, {"back", Message::StyleSetBack}}) {
-        auto value = Value(style, attribute);
-        unsigned long rgb;
-        if (value.StartsWith('#') && value.Mid(1).ToULong(&rgb, 16))
-            editor.Send(message, target, ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU));
+        if (const auto colour = Colour(Value(style, attribute))) editor.Send(message, target, *colour);
     }
-    long charset;
-    if (Value(style, "charset").ToLong(&charset)) editor.Send(Message::StyleSetCharacterSet, target, charset);
+    if (const auto charset = Integer(Value(style, "charset"))) editor.Send(Message::StyleSetCharacterSet, target, *charset);
 }
 } // namespace
 
@@ -105,15 +119,10 @@ bool StyleAttribute(const wxString& style, const wxString& attribute) {
     return Attribute(style, attribute);
 }
 int StyleInteger(const wxString& style, const wxString& key, int fallback) {
-    long value;
-    return Value(style, key).ToLong(&value) ? static_cast<int>(value) : fallback;
+    return Integer(Value(style, key)).value_or(fallback);
 }
 unsigned StyleColour(const wxString& style, const wxString& key, unsigned fallback) {
-    auto value = Value(style, key);
-    unsigned long rgb;
-    return value.StartsWith('#') && value.Mid(1).ToULong(&rgb, 16)
-               ? ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU)
-               : fallback;
+    return Colour(Value(style, key)).value_or(fallback);
 }
 void ApplyStyleText(EditorControl& editor, int id, const wxString& style, int baseSize) {
     ApplyStyle(editor, editor.Fonts(), style, baseSize, static_cast<uintptr_t>(id));
@@ -137,7 +146,7 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
     auto face = Family(style, settings, true);
     if (face.empty()) face = CodeFamily();
     wxFont font(wxFontInfo(11).FaceName(face));
-    font.SetFractionalPointSize(static_cast<double>(Size(style, BaseSize())) / Scintilla::FontSizeMultiplier);
+    font.SetFractionalPointSize(static_cast<double>(Size(style, BaseSize()).value_or(BaseSize())) / Scintilla::FontSizeMultiplier);
     font.SetNumericWeight(Weight(style, NormalWeight));
     font.SetStyle(Attribute(style, "italic") ? wxFONTSTYLE_ITALIC : wxFONTSTYLE_NORMAL);
     font.SetUnderlined(Attribute(style, "underline"));
@@ -147,6 +156,17 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
 wxColour DefaultStyleForeground(const FontSettings& settings, bool code) {
     const wxColour colour(Value(code ? settings.codeStyle : settings.textStyle, "fore"));
     return colour.IsOk() ? colour : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+}
+wxFont StyleFont(const FontSettings& settings, const wxString& style, bool code, bool globalBase) {
+    auto font = DefaultStyleFont(settings, code);
+    const auto base = static_cast<int>(std::lround(font.GetFractionalPointSize() * Scintilla::FontSizeMultiplier));
+    if (const auto face = Family(style, settings, globalBase); !face.empty()) font.SetFaceName(face);
+    font.SetFractionalPointSize(static_cast<double>(Size(style, base).value_or(base)) / Scintilla::FontSizeMultiplier);
+    font.SetNumericWeight(Weight(style, NormalWeight));
+    font.SetStyle(Attribute(style, "italic") ? wxFONTSTYLE_ITALIC : wxFONTSTYLE_NORMAL);
+    font.SetUnderlined(Attribute(style, "underline"));
+    font.SetStrikethrough(Attribute(style, "strike"));
+    return font;
 }
 wxString MergeChosenFont(const wxString& style, const wxFont& font) {
     // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SelectFont (BSD-3-Clause).

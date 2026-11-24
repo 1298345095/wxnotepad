@@ -8,6 +8,7 @@
 #include <optional>
 #include <limits>
 #include <vector>
+#include <map>
 
 enum class SyntaxLanguage : uint8_t {
     PlainText,
@@ -59,11 +60,15 @@ inline constexpr std::size_t PrefixBytes = 255;
 inline constexpr std::size_t DocTypeBytes = 3999;
 } // namespace SyntaxDetectionLimits
 
+using SyntaxExtensions = std::map<SyntaxLanguage, wxString>;
+wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& extensions = {});
+std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions = {});
 struct SyntaxDetectionOptions {
     bool autoSelect = true;
     bool noCgiGuess = false;
     bool noHtmlGuess = false;
     SyntaxLanguage defaultLanguage = SyntaxLanguage::PlainText;
+    SyntaxExtensions extensions;
 };
 struct DetectedSyntax {
     // Original pLex is chosen before the independent np2LexLangIndex sniff.
@@ -182,7 +187,7 @@ inline constexpr size_t FavoriteConfigCharacters = 127;
 } // namespace SyntaxSchemeLimits
 std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
 std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration);
-SyntaxLanguage LanguageForPath(const wxString& path);
+SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions = {});
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options = {});

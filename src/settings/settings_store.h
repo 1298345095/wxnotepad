@@ -12,6 +12,9 @@ public:
     const wxString& Path() const { return path_; }
     bool Save(bool explicitSave);
     bool SwitchStyleTheme(StyleTheme theme);
+    bool ImportStyles(const wxString& path);
+    bool ExportStyles(const wxString& path);
+    FontSettings ResetStyles();
     wxString DarkProfilePath() const;
     bool SaveUILanguage(int language);
     int OriginalRunCommandWidth(int screenWidth, int screenHeight) const;
@@ -26,6 +29,9 @@ private:
     wxString path_;
     std::vector<wxString> lines_;
     FontSettings loadedFonts_;
+    SyntaxExtensions loadedExtensions_;
+    void WriteExtensions();
+    void ReadCustomColours(FontSettings& profile) const;
     FontSettings LoadStyleProfile(StyleTheme theme);
     void WriteStyleProfile();
     bool SaveStyleProfile();
@@ -39,7 +45,7 @@ private:
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
     wxString ReadString(const wxString& key, const wxString& fallback, const wxString& sectionName = "Settings") const;
     void WriteString(const wxString& key, const wxString& value, const wxString& fallback,
-                     const wxString& sectionName = "Settings");
+                     const wxString& sectionName = "Settings", bool includeDefault = false);
     wxString ReadDateTimeFormat(const wxString& key) const;
     std::vector<wxString> ReadHistory(const wxString& sectionName, size_t capacity,
                                       bool preserveWhitespace = false) const;

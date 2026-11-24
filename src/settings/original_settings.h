@@ -32,6 +32,7 @@ struct OriginalSettings {
     static constexpr auto DefaultToolbarButtons =
         "22 3 0 1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 16 0 17";
     FontSettings fonts;
+    SyntaxExtensions schemeExtensions;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
     wxString openWithDirectory;
