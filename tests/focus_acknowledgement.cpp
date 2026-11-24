@@ -32,30 +32,27 @@ void HoldGui(const std::shared_ptr<BusyObservation>& observed, const wxString& p
     while (g_get_monotonic_time() < expiry + margin)
         std::this_thread::sleep_for(PollInterval);
     observed->completed = true;
+    std::println(
+        stderr, "Busy GUI callback: entered={} completed={} acknowledged_before_expiry={} return_after_expiry_us={}",
+        observed->entered, observed->completed, observed->acknowledgedBeforeExpiry, g_get_monotonic_time() - expiry);
+    std::fflush(stderr);
 }
 void EarlyAcknowledgement(EditorFrame* frame) {
     wxString focus;
     NativeKeys::FocusEditor(frame, frame->GetTitle(), focus);
+    // Finish initial presentation/activation before the separate timed overlap.
+    wxYield();
+    Require(frame->IsActive() && frame->Editor()->HasFocus(), "warmup settles actual native activation and focus");
     const auto observed = std::make_shared<BusyObservation>();
-    std::jthread worker([observed, focus](std::stop_token stop) {
-        while (!stop.stop_requested()) {
-            const auto request = Pending(focus);
-            if (request.StartsWith("focus:") || request.StartsWith("focus-until:")) {
-                const auto expiry =
-                    request.StartsWith("focus-until:")
-                        ? std::stoll(request.AfterFirst(':').ToStdString())
-                        : g_get_monotonic_time() + std::chrono::duration_cast<std::chrono::microseconds>(
-                                                       NativeKeys::FocusAcknowledgementTimeout)
-                                                       .count();
-                wxTheApp->CallAfter([observed, focus, expiry] { HoldGui(observed, focus, expiry); });
-                return;
-            }
-            std::this_thread::sleep_for(PollInterval);
-        }
+    NativeKeys::FocusEditor(frame, frame->GetTitle(), focus, [observed, &focus](const wxString& request) {
+        Require(request.StartsWith("focus-until:"), "the already-active editor publishes its original focus deadline");
+        const auto expiry = std::stoll(request.AfterFirst(':').ToStdString());
+        // Queue and enter the real GUI callback after publication, while the
+        // private driver can acknowledge independently. It must run before a
+        // fast acknowledgement can let FocusEditor return without exercising it.
+        wxTheApp->CallAfter([observed, focus, expiry] { HoldGui(observed, focus, expiry); });
+        wxTheApp->ProcessPendingEvents();
     });
-    NativeKeys::FocusEditor(frame, frame->GetTitle(), focus);
-    worker.request_stop();
-    worker.join();
     Require(observed->entered && observed->completed && observed->acknowledgedBeforeExpiry,
             "the GUI callback outlasts the wait after a driver acknowledgement within its original deadline");
     Require(frame->IsActive() && frame->Editor()->HasFocus(), "the owned editor retains actual native focus");

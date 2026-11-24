@@ -319,7 +319,8 @@ inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxS
         std::fputs("Could not publish native focus failure snapshot\n", stderr);
 }
 #endif
-inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString& focusFile) {
+inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString& focusFile,
+                        const std::function<void(const wxString&)>& requestPublished = {}) {
     using Clock = std::chrono::steady_clock;
     auto* editor = frame->Editor();
     editor->SetFocus();
@@ -352,6 +353,7 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
         wxFFile file(focusFile, "wb");
         file.Write(NativeTrace::Request(intent));
     }
+    if (requestPublished) requestPublished(intent);
     bool acknowledged = false;
     wxString lastPending;
     const auto observeAcknowledgement = [&] {
