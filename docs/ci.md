@@ -57,6 +57,12 @@ The Windows `native_windows_failure_capture` regression compares the configured
 Python path with its compiled value and launches the real capture helper against
 an owned hidden window. CMake normalizes path separators before embedding the
 Python executable in a C++ string literal.
+Windows reproduces the original configured test prefix through the context-menu
+case, then runs a bounded twenty-process context-menu probe with the case's
+sixty-second outer timeout. The probe stops on the first failure and preserves
+every completed verdict. Those reports and native failure evidence are uploaded
+immediately, before the complete registered suite runs. That suite still executes
+after a reproduction failure; later success cannot replace an earlier failure.
 
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use

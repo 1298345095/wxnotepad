@@ -170,6 +170,54 @@ jobs:
             Get-ItemProperty -Path $crashDumpKey | Select-Object PSChildName, DumpFolder, DumpType, DumpCount
           }
           $dumpSettings | ConvertTo-Json | Tee-Object -FilePath .ci/reports/windows-crash-dumps.json
+      - name: Reproduce original Windows context-menu test prefix
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_crash_capture.outcome == 'success' }}
+        shell: bash
+        env:
+          WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
+          WXNOTEPAD_ORIGINAL_WRAP_REFERENCE: ${{ github.workspace }}/.ci/reports/original-word-wrap
+        run: |
+          python -X utf8 - <<'PY'
+          import json
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+
+          build = Path('.ci/build/cmake').resolve()
+          listing = json.loads(subprocess.check_output(
+              ['ctest', '--test-dir', str(build), '-C', 'Release', '--show-only=json-v1'],
+              text=True, encoding='utf-8'))
+          names = []
+          for case in listing['tests']:
+              names.append(case['name'])
+              if case['name'] == 'original_editor_context_menu':
+                  break
+          else:
+              raise SystemExit('The original native context-menu case must be registered')
+          expression = '^(' + '|'.join(re.escape(name) for name in names) + ')$'
+          subprocess.run([sys.executable, '-X', 'utf8', '.github/scripts/ci.py', 'test',
+                          '--backend', 'windows', '--jobs', '1', '--cmake-dir', str(build),
+                          '--report-dir', '.ci/reports/context-menu-prefix', '--tests', expression], check=True)
+          PY
+      - name: Repeat Windows context-menu regression with native evidence
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/context-menu-repeat `
+            --cwd .ci/build/cmake --timeout 60 --runs 20 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/context_menu.exe"
+      - name: Preserve early Windows context-menu reproduction evidence
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: context-menu-evidence-${{ matrix.artifact }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/context-menu-prefix/
+            .ci/reports/context-menu-repeat/
+            .ci/build/cmake/Testing/Temporary/failure-evidence/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
       - name: Test Windows
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_crash_capture.outcome == 'success' }}
         shell: bash
