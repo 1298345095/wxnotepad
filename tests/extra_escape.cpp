@@ -723,6 +723,16 @@ private:
                 const int choice = scenario < 2 ? wxID_CANCEL : scenario == 4 ? wxID_NO : wxID_YES;
                 NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, choice,
                                                         scenario == 3 ? TestFiles::Filename(path) : wxString{});
+#ifdef __WXGTK__
+                if (scenario == 3 && !GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(candidate->GetHandle())))) {
+                    // Closing immediately after an edit also has real document
+                    // notifications queued when native focus is requested.
+                    candidate->Editor()->Send(Scintilla::Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+                    candidate->Editor()->Send(Scintilla::Message::Undo);
+                    Require(TestEditor::Text(candidate->Editor()) == before.text,
+                            "queued native document notifications retain the original close-case bytes");
+                }
+#endif
                 candidate->SetTitle(wxString::Format("wxnotepad Escape candidate %d", scenario));
                 WindowActionKey(candidate, before.shift);
                 Await([&driver] { return driver.prompts == 1; },
