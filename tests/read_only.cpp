@@ -435,7 +435,7 @@ void NativeEditingKey(EditorFrame* frame, int key, const char* name) {
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native editing keys require a private display");
     bool received = false;
-    NativeKeys::KeyRelease release(key, received, nullptr);
+    NativeKeys::KeyReleaseObserver release(key, received, nullptr);
     {
         wxFFile request(focusFile, "wb");
         Require(request.Write(wxString("key:") + name), "request actual native editing key");
