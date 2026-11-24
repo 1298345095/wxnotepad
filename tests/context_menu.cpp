@@ -238,7 +238,19 @@ public:
         }
         wxString response;
         wxFFile file(directory_ + "/response", "rb");
-        Require(file.IsOpened() && file.ReadAll(&response), "independent clipboard peer responds before deadline");
+        const bool responded = file.IsOpened() && file.ReadAll(&response);
+#ifdef __WXMSW__
+        if (!responded) {
+            wxString stage;
+            wxFFile stageFile(directory_ + "/peer-stage", "rb");
+            if (stageFile.IsOpened()) stageFile.ReadAll(&stage, wxConvUTF8);
+            std::println(stderr, "Peer response read failed request={:?} stage={:?} peerAlive={}",
+                         command.utf8_string(), stage.utf8_string(), wxProcess::Exists(static_cast<int>(process_)));
+            NativeFailure::Capture(command == "quit" ? "context-clipboard-cleanup" : "context-clipboard",
+                                   {static_cast<long>(wxGetProcessId())});
+        }
+#endif
+        Require(responded, "independent clipboard peer responds before deadline");
         if (response == "failed" || response.Contains("unavailable")) {
             wxString stage;
             wxFFile stageFile(directory_ + "/peer-stage", "rb");
@@ -796,7 +808,7 @@ void CheckScrolledPlacement(EditorFrame* frame, Popup& popup) {
     popup.anchor.reset();
 }
 
-void Check(EditorFrame* frame) {
+void Check(EditorFrame* frame, bool pointerProbe) {
     auto* editor = frame->Editor();
     Focus(frame);
     TestEditor::UseFixedWidthFont(editor);
@@ -811,6 +823,10 @@ void Check(EditorFrame* frame) {
     const auto screen = editor->ClientToScreen(wxPoint(editor->GetClientSize().x - 40, editor->GetClientSize().y - 40));
     popup.Open(screen);
     TestEditor::RequireSelection(editor, 10, 6, "pointer popup preserves reversed selection outside pointer");
+    if (pointerProbe) {
+        std::puts("PASS: first native pointer popup preserves reversed selection");
+        return;
+    }
     popup.Open(wxDefaultPosition);
     TestEditor::RequireSelection(editor, 10, 6, "keyboard popup preserves caret and selection direction");
     Require(TestEditor::Text(frame) == "alpha beta\nnext line" && !editor->Send(CanUndo) && editor->Send(CanRedo),
@@ -979,6 +995,7 @@ public:
             argc == 3 && wxString(argv[1]) == "--localized"
                 ? (wxString(argv[2]) == "zh_CN" ? SimplifiedChineseLanguage : TraditionalChineseLanguage)
                 : EnglishLanguage;
+        const bool pointerProbe = argc == 2 && wxString(argv[1]) == "--pointer-probe";
         AppLocalization::Initialize(static_cast<uint16_t>(language));
         auto* frame = new EditorFrame;
         frame->SetTitle("wxnotepad context menu");
@@ -987,11 +1004,11 @@ public:
         // Private pointer coordinates are output-local under Weston.
         frame->ShowFullScreen(true);
 #endif
-        NativeKeys::AfterPresentation(frame, [this, frame, language](bool presented) {
+        NativeKeys::AfterPresentation(frame, [this, frame, language, pointerProbe](bool presented) {
             try {
                 Require(presented, "native compositor presents context-menu test editor");
                 if (language == EnglishLanguage) {
-                    Check(frame);
+                    Check(frame, pointerProbe);
                 } else {
                     Focus(frame);
                     TestEditor::ResetStream(frame->Editor(), "alpha beta", 10, 6);

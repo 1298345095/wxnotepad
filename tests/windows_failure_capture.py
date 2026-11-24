@@ -23,6 +23,9 @@ def capture(processes, destination, before_launch):
     user.IsIconic.argtypes = [wintypes.HWND]
     user.GetDpiForWindow.argtypes = [wintypes.HWND]
     user.GetForegroundWindow.restype = wintypes.HWND
+    user.GetClipboardOwner.restype = wintypes.HWND
+    user.GetOpenClipboardWindow.restype = wintypes.HWND
+    user.GetClipboardSequenceNumber.restype = wintypes.DWORD
     user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
     user.IsWindow.argtypes = [wintypes.HWND]
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -66,6 +69,9 @@ def capture(processes, destination, before_launch):
     foreground = user.GetForegroundWindow()
     foreground_identity = identity(foreground)
     before_foreground_identity = identity(before_launch.get('foreground'))
+    clipboard = {'owner': identity(user.GetClipboardOwner()),
+                 'opened_by': identity(user.GetOpenClipboardWindow()),
+                 'sequence': user.GetClipboardSequenceNumber()}
     records = []
 
     @callback
@@ -103,6 +109,7 @@ def capture(processes, destination, before_launch):
                                                         'before_helper_launch': before_launch,
                                                         'before_foreground_identity': before_foreground_identity,
                                                         'foreground_identity': foreground_identity,
+                                                        'clipboard': clipboard,
                                                         'window_metadata_timing': 'after helper process started',
                                                         'capture': 'desktop DC pixels within owned window bounds; overlapping windows may cover them',
                                                         'windows': records}, indent=2) + '\n',

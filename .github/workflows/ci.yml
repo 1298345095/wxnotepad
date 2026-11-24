@@ -200,6 +200,12 @@ jobs:
                           '--backend', 'windows', '--jobs', '1', '--cmake-dir', str(build),
                           '--report-dir', '.ci/reports/context-menu-prefix', '--tests', expression], check=True)
           PY
+      - name: Repeat Windows first-pointer delivery with native evidence
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/context-pointer-repeat `
+            --cwd .ci/build/cmake --timeout 60 --runs 100 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/context_menu.exe" --pointer-probe
       - name: Repeat Windows context-menu regression with native evidence
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
         shell: pwsh
@@ -213,6 +219,7 @@ jobs:
           name: context-menu-evidence-${{ matrix.artifact }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/context-menu-prefix/
+            .ci/reports/context-pointer-repeat/
             .ci/reports/context-menu-repeat/
             .ci/build/cmake/Testing/Temporary/failure-evidence/
           include-hidden-files: true

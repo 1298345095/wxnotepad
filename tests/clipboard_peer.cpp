@@ -526,7 +526,9 @@ private:
         } else if (command == "paste") {
             text_->Clear();
             pendingPaste_ = true;
+            RecordStage("pasting-native-text");
             text_->Paste();
+            RecordStage("native-paste-returned");
 #ifdef __WXMSW__
         } else if (command == "hold") {
             Respond(::OpenClipboard(static_cast<HWND>(frame_->GetHandle())) ? "held" : "failed");

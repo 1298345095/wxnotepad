@@ -58,11 +58,15 @@ Python path with its compiled value and launches the real capture helper against
 an owned hidden window. CMake normalizes path separators before embedding the
 Python executable in a C++ string literal.
 Windows reproduces the original configured test prefix through the context-menu
-case, then runs a bounded twenty-process context-menu probe with the case's
-sixty-second outer timeout. The probe stops on the first failure and preserves
-every completed verdict. Those reports and native failure evidence are uploaded
-immediately, before the complete registered suite runs. That suite still executes
-after a reproduction failure; later success cannot replace an earlier failure.
+case, then runs a hundred first-pointer processes and twenty complete context-menu
+processes with the case's sixty-second outer timeout. The pointer-only mode shares
+the original first native gesture and reversed-selection checks; the ordinary
+complete mode retains all clipboard and menu assertions. Each probe stops on its
+first failure and preserves every completed verdict. Those reports and native
+failure evidence are uploaded immediately, before the complete registered suite
+runs. That suite still executes after a reproduction failure; later success cannot
+replace an earlier failure. Missing clipboard-peer responses also retain their
+protocol stage and failure capture, with the failed read frozen before collection.
 
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
