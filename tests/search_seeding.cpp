@@ -59,9 +59,32 @@ void ClipboardGesture(EditorControl* editor, [[maybe_unused]] bool keepNativeQue
     wxString path;
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &path)) return;
     auto* frame = static_cast<EditorFrame*>(wxGetTopLevelParent(editor));
+#ifndef __WXMSW__
     // Native focus alone does not claim the mailbox. Wait for the driver ACK
     // before publishing the next gesture, using the existing focus deadline.
     NativeKeys::FocusEditor(frame, "wxnotepad", path);
+#else
+    const auto title = frame->GetTitle();
+    const auto focusTitle = wxString::Format("wxnotepad clipboard focus: editor [%lu]", wxGetProcessId());
+    frame->SetTitle(focusTitle);
+    {
+        wxFFile request(path, "wb");
+        request.Write("editor");
+    }
+    frame->Raise();
+    editor->SetFocus();
+    TestClock::StopWatch activation;
+    while ((!frame->IsActive() || !editor->HasFocus()) && activation.Time() < 3000) {
+        frame->SetTitle(focusTitle);
+        wxYield();
+        wxMilliSleep(10);
+    }
+    {
+        wxFFile request(path, "wb");
+    }
+    Require(frame->IsActive() && editor->HasFocus(), "private clipboard publisher must receive native focus");
+    frame->SetTitle(title);
+#endif
     bool received = false;
     wxEvtHandler nativeEvents;
     nativeEvents.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
