@@ -138,6 +138,9 @@ void WindowActionKey(EditorFrame* frame, bool shift = false, [[maybe_unused]] bo
         Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus),
                 "composition keys use the existing private driver");
     else {
+        // Document notifications update the frame title. Process those already
+        // queued before naming the exact native input target.
+        NativeKeys::DispatchFocusEvents(frame);
         const auto title = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
         frame->SetTitle(title);
         NativeKeys::FocusEditor(frame, title, focus);
