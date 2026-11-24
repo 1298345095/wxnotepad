@@ -530,7 +530,27 @@ private:
             text_->Clear();
             pendingPaste_ = true;
             RecordStage("pasting-native-text");
+#ifdef __WXMSW__
+            const auto openBeforePaste = ::GetOpenClipboardWindow();
+            ::SetLastError(ERROR_SUCCESS);
+#endif
             text_->Paste();
+#ifdef __WXMSW__
+            const auto pasteError = ::GetLastError();
+            const auto openAfterPaste = ::GetOpenClipboardWindow();
+            if (text_->GetValue().empty()) {
+                wxFFile diagnostic(directory_ + "/peer-paste", "wb");
+                diagnostic.Write(
+                    wxString::Format("[DEBUG-peer-paste] openedBefore=%p openedAfter=%p error=%lu owner=%p "
+                                     "unicode=%d foreground=%p peerActive=%d textFocus=%d",
+                                     static_cast<void*>(openBeforePaste), static_cast<void*>(openAfterPaste),
+                                     pasteError, static_cast<void*>(::GetClipboardOwner()),
+                                     ::IsClipboardFormatAvailable(CF_UNICODETEXT) != FALSE,
+                                     static_cast<void*>(::GetForegroundWindow()), frame_->IsActive(),
+                                     text_->HasFocus()),
+                    wxConvUTF8);
+            }
+#endif
             RecordStage("native-paste-returned");
 #ifdef __WXMSW__
         } else if (command == "hold") {
