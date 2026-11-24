@@ -162,8 +162,33 @@ void CheckPopup(EditorFrame* frame) {
     wxString focusFile;
     NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
     NativePaint::Complete(editor);
-    Require(editor->HasFocus() && editor->Send(Message::GetFocus),
-            "editor owns native focus after presentation settles");
+    // Freeze the assertion, preserving its short-circuited core query, before
+    // collecting any failure-only observations.
+    const bool wxHasFocus = editor->HasFocus();
+    const auto coreFocus = wxHasFocus ? editor->Send(Message::GetFocus) : 0;
+    const bool focusReady = wxHasFocus && coreFocus;
+    if (!focusReady) {
+        std::println(stderr,
+                     "[completion-focus] predicate mono_us={} ownedPid={} wx_has_focus={:d} "
+                     "core_focus_evaluated={:d} core_focus={}",
+                     g_get_monotonic_time(), wxGetProcessId(), wxHasFocus, wxHasFocus, coreFocus);
+        auto* frameWidget = GTK_WIDGET(frame->GetHandle());
+        auto* editorWidget = editor->GetConnectWidget();
+        std::println(stderr,
+                     "[completion-focus] end observation wx_has_focus={:d} core_focus={} wx_focus={} "
+                     "editor={} connect_widget={} gtk_focus_widget={} gtk_has_focus={:d} gtk_is_focus={:d} "
+                     "gtk_window_active={:d}",
+                     editor->HasFocus(), editor->Send(Message::GetFocus), static_cast<void*>(wxWindow::FindFocus()),
+                     static_cast<void*>(editor), static_cast<void*>(editorWidget),
+                     static_cast<void*>(gtk_window_get_focus(GTK_WINDOW(frameWidget))),
+                     gtk_widget_has_focus(editorWidget), gtk_widget_is_focus(editorWidget),
+                     gtk_window_is_active(GTK_WINDOW(frameWidget)));
+        std::fflush(stderr);
+        // FocusEditor returned with its ACK. This is a later postcondition,
+        // not an activation timeout; no original focus deadline applies here.
+        NativeKeys::ObserveFocusFailure(frame, frameWidget, focusFile, "completion-after-paint", {}, true, 0, 0);
+    }
+    Require(focusReady, "editor owns native focus after presentation settles");
 #endif
     CheckInitialPopup(editor);
     CheckPopupWorkArea(frame);
