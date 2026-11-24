@@ -727,7 +727,8 @@ private:
                 NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, choice,
                                                         scenario == 3 ? TestFiles::Filename(path) : wxString{});
 #ifdef __WXGTK__
-                if (scenario == 3 && !GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(candidate->GetHandle())))) {
+                if (scenario == 3 &&
+                    !GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(candidate->GetHandle())))) {
                     // Closing immediately after an edit also has real document
                     // notifications queued when native focus is requested.
                     candidate->Editor()->Send(Scintilla::Message::BeginUndoAction);

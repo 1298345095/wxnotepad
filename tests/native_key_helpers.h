@@ -296,8 +296,8 @@ inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxS
         "\tframe_title=%s\n",
         static_cast<long long>(failedAt), gesture, intent.BeforeFirst(':'), lastPending.BeforeFirst(':'), acknowledged,
         frame->IsActive(), editor->HasFocus(), wxGetProcessId(), surfaceId, failureRead, failurePending.empty(),
-        failurePending.BeforeFirst(':'), static_cast<long long>(g_get_monotonic_time()), deadline, intent,
-        lastPending, failurePending, frame->GetTitle());
+        failurePending.BeforeFirst(':'), static_cast<long long>(g_get_monotonic_time()), deadline, intent, lastPending,
+        failurePending, frame->GetTitle());
     bool written = false;
     {
         wxFFile marker(focusFile + ".failure.tmp", "wb");
