@@ -155,8 +155,8 @@ private:
             if (!text_->GetValue().empty()) {
                 pendingPaste_ = false;
                 Respond(text_->GetValue());
+                return;
             }
-            return;
         }
         const auto request = directory_ + "/request";
         if (!wxFileExists(request)) return;
@@ -166,6 +166,9 @@ private:
             wxFFile file(request, "rb");
             file.ReadAll(&command, wxConvUTF8);
         }
+        // A failed paste must remain failed, but must not strand the owned
+        // peer when its caller unwinds and asks it to quit.
+        if (pendingPaste_ && command != "quit") return;
         wxRemoveFile(request);
         RecordStage("request-claimed");
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste" ||

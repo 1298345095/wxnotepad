@@ -67,6 +67,12 @@ failure evidence are uploaded immediately, before the complete registered suite
 runs. That suite still executes after a reproduction failure; later success cannot
 replace an earlier failure. Missing clipboard-peer responses also retain their
 protocol stage and failure capture, with the failed read frozen before collection.
+The complete-menu repetitions use the registered CTest entry point, including
+its original timeout, and retain a separate report directory for each attempt.
+The clipboard peer also accepts shutdown while an empty native paste is pending;
+the failed paste is not answered with a successful result. The registered
+`native_windows_clipboard_peer_lifecycle` case checks this path with the real peer
+and verifies that it exits after acknowledging shutdown.
 
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use

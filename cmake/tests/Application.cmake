@@ -55,6 +55,12 @@ foreach(language zh_CN zh_TW)
     add_test(NAME original_editor_context_menu_${language} COMMAND context_menu --localized ${language})
     set_tests_properties(original_editor_context_menu_${language} PROPERTIES TIMEOUT 60)
 endforeach()
+if(WIN32)
+    add_test(NAME native_windows_clipboard_peer_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/clipboard_peer_lifecycle.py" "$<TARGET_FILE:clipboard_peer>"
+        --evidence "${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary/clipboard-peer-lifecycle")
+    set_tests_properties(native_windows_clipboard_peer_lifecycle PROPERTIES TIMEOUT 30)
+endif()
 add_editor_test(printing original_printing 90)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     pkg_check_modules(GTK_UNIX_PRINT REQUIRED gtk+-unix-print-3.0)
