@@ -216,7 +216,8 @@ private:
         Require(static_cast<unsigned>(editor->Send(Message::GetElementColour,
                                                    std::to_underlying(Scintilla::Element::WhiteSpace))) == 0x00ff0000 &&
                     static_cast<unsigned>(editor->Send(Message::GetElementColour,
-                                                       std::to_underlying(Scintilla::Element::WhiteSpaceBack))) == 0xff0000ff,
+                                                       std::to_underlying(Scintilla::Element::WhiteSpaceBack))) ==
+                        0xff0000ff,
                 "original alpha0 makes whitespace foreground transparent while its background remains opaque");
         TestEditor::ResetStream(editor, "a b");
         editor->Send(Message::SetViewWS, std::to_underlying(Scintilla::WhiteSpace::VisibleAlways));
@@ -224,24 +225,27 @@ private:
     }
     void Caret(EditorFrame* frame) {
         auto* editor = frame->Editor();
+        const auto colour = [editor](Scintilla::Element element) {
+            return static_cast<unsigned>(editor->Send(Message::GetElementColour, std::to_underlying(element)));
+        };
         auto fonts = editor->Fonts();
         fonts.codeStyle = "fore:#000000; back:#FFFFFF";
         fonts.globalStyles["Caret"] = "fore:#FFFFFF";
         editor->SetFontSettings(fonts);
         ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
-        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour, 14)) == 0xff000000 &&
-                    static_cast<unsigned>(editor->Send(Message::GetElementColour, 15)) == 0xff000000,
+        Require(colour(Scintilla::Element::Caret) == 0xff000000 &&
+                    colour(Scintilla::Element::CaretAdditional) == 0xff000000,
                 "white primary caret falls back to document foreground and absent additional inherits it");
         fonts.globalStyles["Caret"] = "fore:#000000; back:#FFFFFF";
         editor->SetFontSettings(fonts);
         ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
-        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour, 15)) == 0x00ffffff,
+        Require(colour(Scintilla::Element::CaretAdditional) == 0x00ffffff,
                 "original low-contrast additional caret retains parsed RGB without opaque alpha");
         fonts.globalStyles["Caret"] = "fore:#FFFFFF; back:#FF0000";
         editor->SetFontSettings(fonts);
         ApplySyntaxStyles(*editor, SyntaxLanguage::Cpp);
-        Require(static_cast<unsigned>(editor->Send(Message::GetElementColour, 14)) == 0xff000000 &&
-                    static_cast<unsigned>(editor->Send(Message::GetElementColour, 15)) == 0xff0000ff,
+        Require(colour(Scintilla::Element::Caret) == 0xff000000 &&
+                    colour(Scintilla::Element::CaretAdditional) == 0xff0000ff,
                 "contrasting additional caret becomes opaque independently of primary fallback");
         NativePaint::Complete(editor);
     }

@@ -39,6 +39,7 @@ constexpr std::string_view originalAssociatedExtensions =
     "xml;xpm;xrc;xsd;xsl;xslt;xul;yaml;yml;yrl;zig;zsh;";
 constexpr std::string_view originalConfigExtensions = "cfg;cnf;conf;htaccess;iface;po;prefs;prop;properties;te;";
 // Original association order, before applying FavoriteSchemes and per-scheme replacements.
+// clang-format off
 constexpr auto originalSyntaxAssociations = std::to_array<std::pair<int, std::string_view>>({
     {0, "txt;text;wtx;doc"},
     {197, "log;asc;map;bnf"},
@@ -130,3 +131,4 @@ constexpr auto originalSyntaxAssociations = std::to_array<std::pair<int, std::st
     {69, "yml;yaml;clang-format;clang-tidy;clangd;mir;apinotes;ifs;gyp;gypi;cff;winget"},
     {82, "zig"},
 });
+// clang-format on

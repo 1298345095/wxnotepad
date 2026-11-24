@@ -488,15 +488,17 @@ set_tests_properties(original_style_caret_contrast PROPERTIES TIMEOUT 60)
 add_test(NAME original_style_whitespace_alpha COMMAND style_themes whitespace)
 set_tests_properties(original_style_whitespace_alpha PROPERTIES TIMEOUT 60)
 
-add_gui_program(style_locale tests/style_locale.cpp app_shell)
-if(WIN32)
-    target_sources(style_locale PRIVATE tests/style_locale_directwrite.cpp tests/style_locale_windows_defaults.cpp)
-    target_include_directories(style_locale PRIVATE src/editor/platform
-        "${NOTEPAD4_SOURCE}/scintilla/win32" "${NOTEPAD4_SOURCE}/scintilla/src"
-        "${NOTEPAD4_SOURCE}/scintilla/lexlib" "${directwrite_generated}")
-    target_compile_definitions(style_locale PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
-elseif(UNIX AND NOT APPLE)
-    target_sources(style_locale PRIVATE tests/style_locale_gtk.cpp)
+if(WIN32 OR (UNIX AND NOT APPLE))
+    add_gui_program(style_locale tests/style_locale.cpp app_shell)
+    if(WIN32)
+        target_sources(style_locale PRIVATE tests/style_locale_directwrite.cpp tests/style_locale_windows_defaults.cpp)
+        target_include_directories(style_locale PRIVATE src/editor/platform
+            "${NOTEPAD4_SOURCE}/scintilla/win32" "${NOTEPAD4_SOURCE}/scintilla/src"
+            "${NOTEPAD4_SOURCE}/scintilla/lexlib" "${directwrite_generated}")
+        target_compile_definitions(style_locale PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
+    elseif(UNIX AND NOT APPLE)
+        target_sources(style_locale PRIVATE tests/style_locale_gtk.cpp)
+    endif()
+    add_test(NAME original_style_native_font_locale COMMAND style_locale)
+    set_tests_properties(original_style_native_font_locale PROPERTIES TIMEOUT 60)
 endif()
-add_test(NAME original_style_native_font_locale COMMAND style_locale)
-set_tests_properties(original_style_native_font_locale PROPERTIES TIMEOUT 60)

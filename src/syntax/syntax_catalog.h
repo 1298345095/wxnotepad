@@ -195,7 +195,7 @@ inline constexpr size_t FavoriteConfigCharacters = 127;
 std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
 std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration);
 SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions = {},
-                              const wxString& favoriteSchemes = {});
+                               const wxString& favoriteSchemes = {});
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options = {});

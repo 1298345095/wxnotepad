@@ -54,9 +54,9 @@ wxString FontLocale(const wxString& style) {
         }
     }
 #else
-    if (wxLocaleIdent::FromTag(locale).IsEmpty()) {
-        locale = wxUILocale::GetSystemLocaleId().GetTag();
-    }
+    // An absent/invalid override leaves GTK's native Pango system language in
+    // effect, including environments whose process locale is C/POSIX.
+    if (wxLocaleIdent::FromTag(locale).IsEmpty()) locale.clear();
 #endif
     return locale;
 }

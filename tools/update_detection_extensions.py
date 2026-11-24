@@ -47,10 +47,12 @@ def main():
     config = sorted(extension for extension, name in associations.items() if name == "lexConfig")
     lines.append('constexpr std::string_view originalConfigExtensions = "' + ';'.join(config) + ';";')
     lines.append('// Original association order, before applying FavoriteSchemes and per-scheme replacements.')
+    lines.append('// clang-format off')
     lines.append('constexpr auto originalSyntaxAssociations = std::to_array<std::pair<int, std::string_view>>({')
     for name in names[1:]:
         lines.append(f'    {{{identities[name]}, "' + ';'.join(lexers.get(name, [])) + '"},')
     lines.append('});')
+    lines.append('// clang-format on')
     target = Path(__file__).resolve().parents[1] / "src/syntax/generated/detection_extensions.h"
     target.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

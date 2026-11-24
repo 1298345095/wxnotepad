@@ -1333,7 +1333,8 @@ std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxE
     return result;
 }
 
-SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions, const wxString& favoriteSchemes) {
+SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions,
+                               const wxString& favoriteSchemes) {
     using enum SyntaxLanguage;
     const auto name = wxFileName(path).GetFullName();
     // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
@@ -1370,8 +1371,8 @@ SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& ext
     size_t favoriteIndex = 2;
     for (const int identity : OriginalFavoriteSchemeIds(favoriteSchemes)) {
         const auto first = associations.begin() + favoriteIndex;
-        const auto found = std::find_if(first, associations.end(),
-                                        [identity](const auto& item) { return item.first == identity; });
+        const auto found =
+            std::find_if(first, associations.end(), [identity](const auto& item) { return item.first == identity; });
         if (found != associations.end()) {
             std::rotate(first, found, found + 1);
             ++favoriteIndex;
@@ -1383,8 +1384,7 @@ SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& ext
                                         : wxString::FromUTF8(stockExtensions.data(), stockExtensions.size());
         wxStringTokenizer candidates(effective, "; \t\r\n");
         while (candidates.HasMoreTokens())
-            if (extension.CmpNoCase(candidates.GetNextToken()) == 0)
-                return language ? dialect(*language) : PlainText;
+            if (extension.CmpNoCase(candidates.GetNextToken()) == 0) return language ? dialect(*language) : PlainText;
     }
     // Even an original association whose lexer is not delivered precedes the
     // Makefile/Kbuild filename fallback (for example Makefile.rb or Kbuild.cfg).
@@ -1407,12 +1407,14 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
-        if (const auto language = LanguageForPath(underlying, options.extensions, options.favoriteSchemes); language != PlainText)
+        if (const auto language = LanguageForPath(underlying, options.extensions, options.favoriteSchemes);
+            language != PlainText)
             return DetectedSyntax{language};
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
-    const auto language = templateConfig ? PlainText : LanguageForPath(path, options.extensions, options.favoriteSchemes);
+    const auto language =
+        templateConfig ? PlainText : LanguageForPath(path, options.extensions, options.favoriteSchemes);
     if (language != PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return DetectedSyntax{SyntaxSettingsLanguage(language), DetectMarkupDocType(prefix).value_or(language)};

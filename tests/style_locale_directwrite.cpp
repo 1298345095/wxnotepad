@@ -5,8 +5,12 @@
 namespace {
 std::vector<std::string> locales;
 }
-void ClearNativeStyleLocales() { locales.clear(); }
-std::vector<std::string> NativeStyleLocales() { return locales; }
+void ClearNativeStyleLocales() {
+    locales.clear();
+}
+std::vector<std::string> NativeStyleLocales() {
+    return locales;
+}
 
 #define AllocateDirectWriteFont AllocateUnobservedDirectWriteFont
 #include "editor/platform/directwrite_surface.cpp"

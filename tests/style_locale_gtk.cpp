@@ -15,8 +15,12 @@ void ObservePangoShowLayout(cairo_t* cairo, PangoLayout* layout) {
     }
     pango_cairo_show_layout(cairo, layout);
 }
+} // namespace
+void ClearNativeStyleLocales() {
+    locales.clear();
 }
-void ClearNativeStyleLocales() { locales.clear(); }
-std::vector<std::string> NativeStyleLocales() { return locales; }
+std::vector<std::string> NativeStyleLocales() {
+    return locales;
+}
 #define pango_cairo_show_layout ObservePangoShowLayout
 #include "editor/platform/text_measurement_gtk.cpp"

@@ -319,8 +319,8 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
         std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; })) {
         cursorPositions.resize(characters.count + 1);
         pango_get_log_attrs(characters.text.data(), static_cast<int>(characters.text.size()), 0,
-                            font.data_->language ? font.data_->language : data_->language,
-                            cursorPositions.data(), static_cast<int>(cursorPositions.size()));
+                            font.data_->language ? font.data_->language : data_->language, cursorPositions.data(),
+                            static_cast<int>(cursorPositions.size()));
     }
     size_t character = 0;
     size_t cursorExtent = 0;
@@ -350,8 +350,8 @@ double TextMeasurement::WidthText(const MeasurementFont& font, std::string_view 
     return width;
 }
 
-void TextMeasurement::DrawText(wxDC& dc, const MeasurementFont& font, std::string_view text, bool utf8,
-                               int x, int y) const {
+void TextMeasurement::DrawText(wxDC& dc, const MeasurementFont& font, std::string_view text, bool utf8, int x,
+                               int y) const {
     auto* cairo = static_cast<cairo_t*>(dc.GetImpl()->GetCairoContext());
     if (!cairo || cairo_status(cairo) != CAIRO_STATUS_SUCCESS)
         throw NativeDrawingError("The native Cairo text drawing context is unavailable");
