@@ -27,9 +27,13 @@ void Require(bool condition, const char* message) {
 #ifdef __WXGTK__
 class PendingNativeActivity final : public wxEventFilter {
 public:
-    explicit PendingNativeActivity(EditorControl* editor)
-        : editor_(editor), source_(g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr)) {
-        Require(source_ != 0, "keep real native activity queued during the selection-limit shortcut");
+    explicit PendingNativeActivity(EditorControl* editor) : editor_(editor) {
+        // The X11 focus preparation uses finite dispatch. Wayland retains its
+        // existing compositor-transition drain and the full original scenario.
+        if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle())))) {
+            source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
+            Require(source_ != 0, "keep real native activity queued during the selection-limit shortcut");
+        }
         wxEvtHandler::AddFilter(this);
     }
     ~PendingNativeActivity() override {
@@ -49,7 +53,7 @@ public:
 
 private:
     EditorControl* editor_;
-    guint source_;
+    guint source_ = 0;
 };
 #endif
 
