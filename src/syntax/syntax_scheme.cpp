@@ -64,17 +64,6 @@ void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool
     editor.Send(Scintilla::Message::SetIndentationGuides, static_cast<uintptr_t>(std::to_underlying(mode)));
 }
 
-void ApplyLongLineColour(EditorControl& editor) {
-    // The original default style supplies a line foreground but no background.
-    const auto background = StyleSystemColour(wxSYS_COLOUR_3DLIGHT);
-    const auto colour = StyleColour(editor.Fonts().GlobalStyle("Long Line Marker"),
-                                    editor.Send(Scintilla::Message::GetEdgeMode) == 1 ? "fore" : "back",
-                                    editor.Send(Scintilla::Message::GetEdgeMode) == 1
-                                        ? Colour(0xFFC000)
-                                        : background.Red() | (background.Green() << 8U) | (background.Blue() << 16U));
-    editor.Send(Scintilla::Message::SetEdgeColour, colour);
-}
-
 void ApplySyntaxStyles(EditorControl& editor, SyntaxLanguage language) {
     ApplyFontSettings(editor, language);
     editor.Send(Scintilla::Message::StyleClearAll);

@@ -32,7 +32,7 @@ target_include_directories(notepad4_core PUBLIC
 target_compile_definitions(notepad4_core PUBLIC __WX__ BOOST_REGEX_STANDALONE NO_CXX11_REGEX NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
-# Core objects and their platform symbols share one archive to avoid static link-order cycles.
+# Core/platform objects and their style/catalog data share one self-contained runtime archive.
 add_library(editor_runtime STATIC
     src/editor/completion_selection.cpp
     src/editor/platform/latex_input.cpp
@@ -74,6 +74,10 @@ add_library(editor_runtime STATIC
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
     src/editor/editor_color_calltip.cpp
+    src/editor/font_settings.cpp
+    src/editor/style_profile_application.cpp
+    src/syntax/style_profile.cpp
+    src/syntax/syntax_catalog.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
     src/editor/platform/character_hex.cpp
@@ -98,9 +102,6 @@ add_library(editor_features STATIC
     src/editor/word_completion.cpp
     src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
-    src/editor/font_settings.cpp
-    src/editor/style_profile_application.cpp
-    src/syntax/style_profile.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -111,7 +112,6 @@ add_library(editor_features STATIC
     src/document/encoding/wx_conversion.cpp
     src/document/encoding/encoding_detection.cpp
     src/search/search_session.cpp
-    src/syntax/syntax_catalog.cpp
     src/syntax/syntax_scheme.cpp)
 # The GBK compatibility codec reuses the pinned Unicode conversion utilities.
 target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src")

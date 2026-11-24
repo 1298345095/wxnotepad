@@ -46,7 +46,7 @@ add_editor_test(chinese_encoding original_chinese_encoding 90)
 add_test(NAME original_chinese_encoding_native_keys COMMAND chinese_encoding)
 set_tests_properties(original_chinese_encoding_native_keys PROPERTIES TIMEOUT 90
     ENVIRONMENT "WXNOTEPAD_CHINESE_NATIVE_KEYS=1")
-add_gui_program(navigation_probe tests/navigation_probe.cpp editor_features)
+add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
 add_editor_test(editor_smoke editor_input_undo 30)
 add_gui_program(stream_drag tests/stream_drag.cpp app_shell)
 add_test(NAME native_file_drop COMMAND stream_drag --file-drop)
