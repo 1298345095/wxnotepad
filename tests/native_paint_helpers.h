@@ -54,7 +54,7 @@ inline void Complete(EditorControl* editor, const std::function<bool()>& settled
 #else
             wxYield();
 #endif
-            if (completion.completed < expected) wxMilliSleep(1);
+            if (completion.completed < expected || (settled && !settled())) wxMilliSleep(1);
         }
         if (completion.completed < expected) throw std::runtime_error("actual native editor paint must complete");
         if (settled && !settled()) throw std::runtime_error("actual native geometry must settle within paint deadline");
