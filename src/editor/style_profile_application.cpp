@@ -45,6 +45,16 @@ wxString FontSettings::TokenStyle(SyntaxLanguage language, const StyleDefinition
     return wxString::FromUTF8(definition.defaultValue);
 }
 
+void ApplyLongLineColour(EditorControl& editor) {
+    // Original default fore:#FFC000 in Scintilla's BGR representation.
+    constexpr unsigned DefaultLongLineForeground = 0x00c0ff;
+    const auto background = StyleSystemColour(wxSYS_COLOUR_3DLIGHT);
+    const bool line = editor.Send(GetEdgeMode) == std::to_underlying(Scintilla::EdgeVisualStyle::Line);
+    const auto colour = StyleColour(editor.Fonts().GlobalStyle("Long Line Marker"), line ? "fore" : "back",
+                                    line ? DefaultLongLineForeground : background.GetRGB());
+    editor.Send(SetEdgeColour, colour);
+}
+
 void ApplyStyleProfile(EditorControl& editor, SyntaxLanguage language) {
     const auto& profile = editor.Fonts();
     const auto global = [&](const char* key) { return profile.GlobalStyle(key); };
