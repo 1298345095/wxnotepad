@@ -4,6 +4,9 @@
 #include <print>
 #include <wx/log.h>
 #include <thread>
+#include <array>
+#include <algorithm>
+#include <vector>
 
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -92,6 +95,63 @@ void EarlyAcknowledgement(EditorFrame* frame) {
             "the GUI callback outlasts the wait after a driver acknowledgement within its original deadline");
     Require(frame->IsActive() && frame->Editor()->HasFocus(), "the owned editor retains actual native focus");
 }
+void PendingNativeAcknowledgement(EditorFrame* frame) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
+    auto* window = gtk_widget_get_window(widget);
+    const auto events = gdk_window_get_events(window);
+    struct Notifications {
+        std::array<GdkAtom, 2> properties{gdk_atom_intern_static_string("_WXNOTEPAD_FOCUS_ACK_FIRST"),
+                                          gdk_atom_intern_static_string("_WXNOTEPAD_FOCUS_ACK_SECOND")};
+        std::vector<GdkAtom> delivered;
+    } notifications;
+    gdk_window_set_events(window, static_cast<GdkEventMask>(events | GDK_PROPERTY_CHANGE_MASK));
+    const auto handler = g_signal_connect(
+        widget, "property-notify-event",
+        G_CALLBACK(+[](GtkWidget*, GdkEventProperty* event, gpointer data) -> gboolean {
+            auto* notifications = static_cast<Notifications*>(data);
+            if (std::ranges::find(notifications->properties, event->atom) != notifications->properties.end())
+                notifications->delivered.push_back(event->atom);
+            return FALSE;
+        }),
+        &notifications);
+    struct RestoreProperties {
+        GtkWidget* widget;
+        GdkWindow* window;
+        gulong handler;
+        Notifications& notifications;
+        GdkEventMask events;
+        ~RestoreProperties() {
+            g_signal_handler_disconnect(widget, handler);
+            for (const auto property : notifications.properties)
+                gdk_property_delete(window, property);
+            gdk_window_set_events(window, events);
+        }
+    } restore{widget, window, handler, notifications, events};
+    wxString focus;
+    const auto observed = std::make_shared<BusyObservation>();
+    NativeKeys::FocusEditor(
+        frame, frame->GetTitle(), focus, [observed, &focus, window, &notifications](const wxString& request) {
+            Require(request.StartsWith("focus-until:"), "native backlog preserves the active editor request");
+            const auto expiry = std::stoll(request.AfterFirst(':').ToStdString());
+            HoldGui(observed, focus, expiry);
+            // Ask the real server for two unrelated notifications after the GUI
+            // callback outlasts the original deadline. Focus itself is unchanged.
+            constexpr int PropertyFormatBits = 8;
+            constexpr unsigned char marker[] = "owned focus notification";
+            for (const auto property : notifications.properties)
+                gdk_property_change(window, property, GDK_SELECTION_TYPE_STRING, PropertyFormatBits,
+                                    GDK_PROP_MODE_REPLACE, marker, sizeof(marker));
+        });
+    Require(observed->entered && observed->completed && observed->acknowledgedBeforeExpiry,
+            "native backlog retains the original on-time ACK and late GUI callback");
+    Require(frame->IsActive() && frame->Editor()->HasFocus() && frame->Editor()->Send(Scintilla::Message::GetFocus),
+            "unrelated ready native notifications cannot reject acknowledged editor focus");
+    NativePaint::Complete(frame->Editor());
+    Require(notifications.delivered ==
+                std::vector<GdkAtom>(notifications.properties.begin(), notifications.properties.end()),
+            "owned native notifications retain their original delivery order");
+}
 void ExpiredAcknowledgement(EditorFrame* frame) {
     wxString focus;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus), "use the private input driver");
@@ -126,6 +186,7 @@ public:
             try {
                 Require(ready, "the private display presents the actual editor frame");
                 QueuedFocusAcknowledgement(frame);
+                PendingNativeAcknowledgement(frame);
                 EarlyAcknowledgement(frame);
                 ExpiredAcknowledgement(frame);
                 result_ = 0;

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <vector>
 #ifdef __WXGTK__
 #include <gdk/gdkwayland.h>
 #include <wayland-client-core.h>
@@ -368,9 +369,26 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
             // when the final ACK refresh follows an overlong GUI callback.
             DispatchFocusEvents(frame);
         }
-        while (gdk_events_pending() && Clock::now() < focusDeadline)
+        // Inspect ready native events without dispatching around wx's YieldFor
+        // filter. Replay the whole batch in order for the normal GTK handler;
+        // unrelated notifications need not leave the queue before focus is ready.
+        const auto pendingFocus = [&] {
+            using Event = std::unique_ptr<GdkEvent, decltype(&gdk_event_free)>;
+            std::vector<Event> events;
+            bool focusPending = false;
+            while (auto* event = gdk_display_get_event(gtk_widget_get_display(widget))) {
+                events.emplace_back(event, gdk_event_free);
+                focusPending |= event->type == GDK_FOCUS_CHANGE;
+            }
+            for (const auto& event : events)
+                gdk_display_put_event(gtk_widget_get_display(widget), event.get());
+            return focusPending;
+        };
+        nativeFocusSettled = !pendingFocus();
+        while (!nativeFocusSettled && Clock::now() < focusDeadline) {
             DispatchFocusEvents(frame);
-        nativeFocusSettled = !gdk_events_pending();
+            nativeFocusSettled = !pendingFocus();
+        }
     };
 #endif
     while (Clock::now() < focusDeadline) {
