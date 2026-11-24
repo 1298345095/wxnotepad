@@ -22,14 +22,16 @@ constexpr int BoldWeight = 700;
 constexpr int MinimumFontSize = 2 * Scintilla::FontSizeMultiplier;
 wxString Value(const wxString& style, const wxString& key) {
     const auto position = style.find(key + ':');
-    return position == wxString::npos ? wxString{} : style.Mid(position + key.length() + 1).BeforeFirst(';').Strip(wxString::both);
+    return position == wxString::npos ? wxString{}
+                                      : style.Mid(position + key.length() + 1).BeforeFirst(';').Strip(wxString::both);
 }
 std::optional<int> Integer(const wxString& text) {
     const auto bytes = text.utf8_string();
     char* end = nullptr;
     const long value = std::strtol(bytes.c_str(), &end, 10);
     if (end == bytes.c_str()) return std::nullopt;
-    return static_cast<int>(std::clamp(value, static_cast<long>(std::numeric_limits<int>::min()), static_cast<long>(std::numeric_limits<int>::max())));
+    return static_cast<int>(std::clamp(value, static_cast<long>(std::numeric_limits<int>::min()),
+                                       static_cast<long>(std::numeric_limits<int>::max())));
 }
 std::optional<unsigned> Colour(const wxString& text) {
     if (!text.StartsWith('#')) return std::nullopt;
@@ -111,7 +113,8 @@ void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxStr
          {std::pair{"fore", Message::StyleSetFore}, {"back", Message::StyleSetBack}}) {
         if (const auto colour = Colour(Value(style, attribute))) editor.Send(message, target, *colour);
     }
-    if (const auto charset = Integer(Value(style, "charset"))) editor.Send(Message::StyleSetCharacterSet, target, *charset);
+    if (const auto charset = Integer(Value(style, "charset")))
+        editor.Send(Message::StyleSetCharacterSet, target, *charset);
 }
 } // namespace
 
@@ -149,7 +152,8 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
     auto face = Family(style, settings, true);
     if (face.empty()) face = CodeFamily();
     wxFont font(wxFontInfo(11).FaceName(face));
-    font.SetFractionalPointSize(static_cast<double>(Size(style, BaseSize()).value_or(BaseSize())) / Scintilla::FontSizeMultiplier);
+    font.SetFractionalPointSize(static_cast<double>(Size(style, BaseSize()).value_or(BaseSize())) /
+                                Scintilla::FontSizeMultiplier);
     font.SetNumericWeight(Weight(style, NormalWeight));
     font.SetStyle(Attribute(style, "italic") ? wxFONTSTYLE_ITALIC : wxFONTSTYLE_NORMAL);
     font.SetUnderlined(Attribute(style, "underline"));
@@ -157,8 +161,9 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
     return font;
 }
 wxColour DefaultStyleForeground(const FontSettings& settings, bool code) {
-    const wxColour colour(Value(code ? settings.codeStyle : settings.textStyle, "fore"));
-    return colour.IsOk() ? colour : StyleSystemColour(wxSYS_COLOUR_WINDOWTEXT);
+    auto colour = StyleSystemColour(wxSYS_COLOUR_WINDOWTEXT);
+    colour.SetRGB(StyleColour(code ? settings.codeStyle : settings.textStyle, "fore", colour.GetRGB()));
+    return colour;
 }
 wxColour StyleSystemColour(wxSystemColour colour) {
 #ifdef __WXMSW__

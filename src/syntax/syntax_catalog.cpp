@@ -1328,7 +1328,8 @@ wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& ex
 std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions) {
     std::vector<wxString> result;
     wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n");
-    while (tokens.HasMoreTokens()) result.push_back(tokens.GetNextToken());
+    while (tokens.HasMoreTokens())
+        result.push_back(tokens.GetNextToken());
     return result;
 }
 
@@ -1399,7 +1400,8 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
-        if (const auto language = LanguageForPath(underlying, options.extensions); language != PlainText) return DetectedSyntax{language};
+        if (const auto language = LanguageForPath(underlying, options.extensions); language != PlainText)
+            return DetectedSyntax{language};
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }

@@ -22,7 +22,7 @@ struct SchemeFilters {
     std::vector<SaveFileType> types;
 };
 SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, const wxString& favorites, bool open,
-                               const SyntaxExtensions& extensions) {
+                                const SyntaxExtensions& extensions) {
     SchemeFilters result;
     const auto all = [&] {
         const wxString pattern = wxASCII_STR(wxFileSelectorDefaultWildcardStr);
@@ -59,7 +59,8 @@ SchemeFilters FileSchemeFilters(SyntaxLanguage current, const wxString& path, co
 
 OpenFileDialog::OpenFileDialog(wxWindow* parent, SyntaxLanguage current, const wxString& path,
                                const wxString& favorites, const SyntaxExtensions& extensions)
-    : wxFileDialog(parent, _("Open file"), {}, {}, FileSchemeFilters(current, path, favorites, true, extensions).wildcard,
+    : wxFileDialog(parent, _("Open file"), {}, {},
+                   FileSchemeFilters(current, path, favorites, true, extensions).wildcard,
                    wxFD_OPEN | wxFD_FILE_MUST_EXIST) {
 }
 

@@ -15,8 +15,10 @@ namespace NativeFonts {
 // Drive the platform font chooser itself, including its initial native values.
 class Chooser final : public wxModalDialogHook, public wxTimer {
 public:
-    Chooser(EditorFrame* frame, int expectedPoints, wxString family, bool cancel, wxColour colour = {}, bool styleChooser = false)
-        : frame_(frame), expectedPoints_(expectedPoints), family_(std::move(family)), cancel_(cancel), colour_(colour), styleChooser_(styleChooser) {
+    Chooser(EditorFrame* frame, int expectedPoints, wxString family, bool cancel, wxColour colour = {},
+            bool styleChooser = false)
+        : frame_(frame), expectedPoints_(expectedPoints), family_(std::move(family)), cancel_(cancel), colour_(colour),
+          styleChooser_(styleChooser) {
         Register();
     }
     ~Chooser() override { Unregister(); }
@@ -87,7 +89,10 @@ public:
     void Notify() override {
         try {
 #ifdef __WXMSW__
-            struct Target { HWND native = nullptr; bool style; } target{nullptr, styleChooser_};
+            struct Target {
+                HWND native = nullptr;
+                bool style;
+            } target{nullptr, styleChooser_};
             EnumThreadWindows(
                 GetCurrentThreadId(),
                 [](HWND window, LPARAM data) -> BOOL {
@@ -95,8 +100,10 @@ public:
                     GetWindowTextW(window, title, static_cast<int>(std::size(title)));
                     auto& target = *reinterpret_cast<Target*>(data);
                     if (target.style) {
-                        if (!GetDlgItem(window, cmb1) || !GetDlgItem(window, cmb2) || !GetDlgItem(window, cmb3)) return TRUE;
-                    } else if (wxString(title) != "Default Code Font" && wxString(title) != "Default Text Font") return TRUE;
+                        if (!GetDlgItem(window, cmb1) || !GetDlgItem(window, cmb2) || !GetDlgItem(window, cmb3))
+                            return TRUE;
+                    } else if (wxString(title) != "Default Code Font" && wxString(title) != "Default Text Font")
+                        return TRUE;
                     target.native = window;
                     return FALSE;
                 },

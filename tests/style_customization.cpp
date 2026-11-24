@@ -21,9 +21,11 @@ void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
 void SelectStyle(wxTreeCtrl& tree, const wxString& scheme, const wxString& style) {
-    Require(NativeDialogs::SelectTreeLabel(tree, wxGetTranslation(scheme)), "delivered scheme exists in native style tree");
+    Require(NativeDialogs::SelectTreeLabel(tree, wxGetTranslation(scheme)),
+            "delivered scheme exists in native style tree");
     wxTreeItemIdValue cookie;
-    for (auto item = tree.GetFirstChild(tree.GetSelection(), cookie); item.IsOk(); item = tree.GetNextChild(tree.GetSelection(), cookie)) {
+    for (auto item = tree.GetFirstChild(tree.GetSelection(), cookie); item.IsOk();
+         item = tree.GetNextChild(tree.GetSelection(), cookie)) {
         if (tree.GetItemText(item) == wxGetTranslation(style)) {
             tree.SelectItem(item);
             return;
@@ -42,7 +44,8 @@ public:
             auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || !dialog->IsModal() ||
                 (dialog->GetTitle() != wxGetTranslation("Customize Schemes - Default Theme") &&
-                 dialog->GetTitle() != wxGetTranslation("Customize Schemes - Dark Theme"))) continue;
+                 dialog->GetTitle() != wxGetTranslation("Customize Schemes - Dark Theme")))
+                continue;
             Stop();
             ++shown;
             try {
@@ -63,30 +66,38 @@ public:
     int shown = 0;
     void Notify() override {
 #ifdef __WXMSW__
-        EnumThreadWindows(GetCurrentThreadId(), [](HWND window, LPARAM data) -> BOOL {
-            auto& driver = *reinterpret_cast<SchemeFile*>(data);
-            wchar_t title[128]{};
-            GetWindowTextW(window, title, static_cast<int>(std::size(title)));
-            if (!IsWindowVisible(window) || wxString(title) != driver.title_ || NativeDialogs::FileTypes(window).empty()) return TRUE;
-            driver.Stop();
-            ++driver.shown;
-            NativeDialogs::ChooseFile(window, driver.path_);
-            return FALSE;
-        }, reinterpret_cast<LPARAM>(this));
+        EnumThreadWindows(
+            GetCurrentThreadId(),
+            [](HWND window, LPARAM data) -> BOOL {
+                auto& driver = *reinterpret_cast<SchemeFile*>(data);
+                wchar_t title[128]{};
+                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
+                if (!IsWindowVisible(window) || wxString(title) != driver.title_ ||
+                    NativeDialogs::FileTypes(window).empty())
+                    return TRUE;
+                driver.Stop();
+                ++driver.shown;
+                NativeDialogs::ChooseFile(window, driver.path_);
+                return FALSE;
+            },
+            reinterpret_cast<LPARAM>(this));
 #elif defined(__WXGTK__)
         GList* windows = gtk_window_list_toplevels();
         for (auto* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget) ||
-                wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) != title_) continue;
+                wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) != title_)
+                continue;
             if (path_.empty()) {
-                Stop(); ++shown;
+                Stop();
+                ++shown;
                 NativeDialogs::ChooseFile(widget, {});
             } else if (!selected_) {
                 NativeDialogs::ChooseFile(widget, path_);
                 selected_ = true;
             } else if (NativeDialogs::CanAcceptFile(widget, path_)) {
-                Stop(); ++shown;
+                Stop();
+                ++shown;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
             }
             break;
@@ -94,6 +105,7 @@ public:
         g_list_free(windows);
 #endif
     }
+
 private:
     wxString title_, path_;
     [[maybe_unused]] bool selected_ = false;
@@ -101,7 +113,10 @@ private:
 class ColourPicker final : public wxModalDialogHook, public wxTimer {
 public:
     ColourPicker(wxColour original, wxColour wanted, bool cancel, bool addPalette = false)
-        : original_(original), wanted_(wanted), cancel_(cancel), addPalette_(addPalette) { Register(); Start(30); }
+        : original_(original), wanted_(wanted), cancel_(cancel), addPalette_(addPalette) {
+        Register();
+        Start(30);
+    }
     ~ColourPicker() override { Unregister(); }
     bool shown = false;
     wxString error;
@@ -111,34 +126,51 @@ public:
     }
     void Notify() override {
 #ifdef __WXMSW__
-        EnumThreadWindows(GetCurrentThreadId(), [](HWND window, LPARAM data) -> BOOL {
-            if (!IsWindowVisible(window) || !GetDlgItem(window, 706) || !GetDlgItem(window, 707) || !GetDlgItem(window, 708)) return TRUE;
-            auto& choice = *reinterpret_cast<ColourPicker*>(data);
-            choice.Stop(); choice.shown = true;
-            const std::array<UINT, 3> initial{GetDlgItemInt(window, 706, nullptr, FALSE), GetDlgItemInt(window, 707, nullptr, FALSE), GetDlgItemInt(window, 708, nullptr, FALSE)};
-            if (initial != std::array<UINT, 3>{choice.original_.Red(), choice.original_.Green(), choice.original_.Blue()})
-                choice.error = "native color chooser initializes from selected raw style";
-            SetDlgItemInt(window, 706, choice.wanted_.Red(), FALSE);
-            SetDlgItemInt(window, 707, choice.wanted_.Green(), FALSE);
-            SetDlgItemInt(window, 708, choice.wanted_.Blue(), FALSE);
-            if (choice.addPalette_) SendMessageW(window, WM_COMMAND, MAKEWPARAM(712, BN_CLICKED), reinterpret_cast<LPARAM>(GetDlgItem(window, 712)));
-            SendMessageW(window, WM_COMMAND, choice.cancel_ ? IDCANCEL : IDOK, 0);
-            return FALSE;
-        }, reinterpret_cast<LPARAM>(this));
+        EnumThreadWindows(
+            GetCurrentThreadId(),
+            [](HWND window, LPARAM data) -> BOOL {
+                if (!IsWindowVisible(window) || !GetDlgItem(window, 706) || !GetDlgItem(window, 707) ||
+                    !GetDlgItem(window, 708))
+                    return TRUE;
+                auto& choice = *reinterpret_cast<ColourPicker*>(data);
+                choice.Stop();
+                choice.shown = true;
+                const std::array<UINT, 3> initial{GetDlgItemInt(window, 706, nullptr, FALSE),
+                                                  GetDlgItemInt(window, 707, nullptr, FALSE),
+                                                  GetDlgItemInt(window, 708, nullptr, FALSE)};
+                if (initial !=
+                    std::array<UINT, 3>{choice.original_.Red(), choice.original_.Green(), choice.original_.Blue()})
+                    choice.error = "native color chooser initializes from selected raw style";
+                SetDlgItemInt(window, 706, choice.wanted_.Red(), FALSE);
+                SetDlgItemInt(window, 707, choice.wanted_.Green(), FALSE);
+                SetDlgItemInt(window, 708, choice.wanted_.Blue(), FALSE);
+                if (choice.addPalette_)
+                    SendMessageW(window, WM_COMMAND, MAKEWPARAM(712, BN_CLICKED),
+                                 reinterpret_cast<LPARAM>(GetDlgItem(window, 712)));
+                SendMessageW(window, WM_COMMAND, choice.cancel_ ? IDCANCEL : IDOK, 0);
+                return FALSE;
+            },
+            reinterpret_cast<LPARAM>(this));
 #elif defined(__WXGTK__)
         if (!dialog_ || !gtk_widget_get_mapped(GTK_WIDGET(dialog_->GetHandle()))) return;
-        Stop(); shown = true;
+        Stop();
+        shown = true;
         GObject* selection = nullptr;
         g_object_get(dialog_->GetHandle(), "color-selection", &selection, nullptr);
         GdkRGBA* initial = nullptr;
         if (selection) g_object_get(selection, "current-rgba", &initial, nullptr);
-        if (!initial || wxColour(*initial) != original_) error = "native color chooser initializes from selected raw style";
+        if (!initial || wxColour(*initial) != original_)
+            error = "native color chooser initializes from selected raw style";
         if (initial) gdk_rgba_free(initial);
         const GdkRGBA wanted{wanted_.Red() / 255.0, wanted_.Green() / 255.0, wanted_.Blue() / 255.0, 1};
-        if (selection) { g_object_set(selection, "current-rgba", &wanted, nullptr); g_object_unref(selection); }
+        if (selection) {
+            g_object_set(selection, "current-rgba", &wanted, nullptr);
+            g_object_unref(selection);
+        }
         NativeDialogs::Respond(GTK_WIDGET(dialog_->GetHandle()), cancel_ ? GTK_RESPONSE_CANCEL : GTK_RESPONSE_OK);
 #endif
     }
+
 private:
     wxColour original_, wanted_;
     bool cancel_;
@@ -225,12 +257,29 @@ void Extensions(EditorFrame* frame) {
                 frame->Editor()->Send(Message::GetLexer) == SyntaxFor(SyntaxLanguage::Cpp).lexer,
             "accepted extension edits select the actual C/C++ lexer when opening a file");
 }
+void ImportCancelWithoutPreview(EditorFrame* frame, SettingsStore& settings) {
+    const auto path = TestFiles::TemporaryDirectory("inheritance-only.ini");
+    TestFiles::WriteBytes(path, "[C/C++ Source]\nUseDefaultCodeStyle=0\n");
+    const auto before = frame->Editor()->Send(Message::StyleGetSizeFractional, DefaultStyle);
+    Require(settings.values.fonts.Scheme(SyntaxLanguage::Cpp).useCode && before == 1750,
+            "prepare original no-Preview import with an active customized Code font");
+    Picker picker;
+    picker.action = [&path](wxDialog& dialog, wxTreeCtrl&, wxTextCtrl&) {
+        FileButton(dialog, "Import schemes", "Import Schemes", TestFiles::Filename(path));
+        NativeSearch::Click(&dialog, wxID_CANCEL);
+    };
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Customize Schemes..."));
+    Require(picker.error.empty(), picker.error.utf8_str());
+    Require(!settings.values.fonts.Scheme(SyntaxLanguage::Cpp).useCode &&
+                frame->Editor()->Send(Message::StyleGetSizeFractional, DefaultStyle) == before,
+            "import then Cancel without Preview retains the original rendered font and unbacked inheritance flag");
+}
 void ImportExport(EditorFrame* frame, SettingsStore& settings) {
     const auto imported = TestFiles::TemporaryDirectory("style-import.ini");
     const auto exported = TestFiles::TemporaryDirectory("style-export.ini");
     TestFiles::WriteBytes(imported, "[Global Styles]\nDefault Code Style=font:$(Code); size:21\n"
-        "[C/C++ Source]\nUseDefaultCodeStyle=0\nComment=fore:#AA5533\n"
-        "[File Extensions]\nC/C++ Source=import264\n[Custom Colors]\n01=#112233\n");
+                                    "[C/C++ Source]\nUseDefaultCodeStyle=0\nComment=fore:#AA5533\n"
+                                    "[File Extensions]\nC/C++ Source=import264\n[Custom Colors]\n01=#112233\n");
     const auto originalStyle = settings.values.fonts.codeStyle;
     const auto originalExtension = SyntaxExtensionsFor(SyntaxLanguage::Cpp, settings.values.schemeExtensions);
     Picker picker;
@@ -299,7 +348,8 @@ void InvalidInheritedSize(EditorFrame* frame) {
         edit.SetValue("");
         NativeSearch::Click(&dialog, wxID_APPLY);
         Require(frame->Editor()->Send(Message::StyleGetSizeFractional, SCE_C_COMMENT) == 1500 &&
-                    frame->Editor()->Send(Message::StyleGetFore, SCE_C_COMMENT) == frame->Editor()->Send(Message::StyleGetFore, DefaultStyle),
+                    frame->Editor()->Send(Message::StyleGetFore, SCE_C_COMMENT) ==
+                        frame->Editor()->Send(Message::StyleGetFore, DefaultStyle),
                 "explicit empty styles inherit the actual scheme font size and body color");
         SelectStyle(tree, "C/C++ Source", "Default");
         edit.SetValue("font:$(Code); size:15");
@@ -310,11 +360,14 @@ void InvalidInheritedSize(EditorFrame* frame) {
         std::array<char, 256> bodyFace{}, commentFace{};
         editor->Send(Message::StyleGetFont, DefaultStyle, reinterpret_cast<intptr_t>(bodyFace.data()));
         editor->Send(Message::StyleGetFont, SCE_C_COMMENT, reinterpret_cast<intptr_t>(commentFace.data()));
-        const auto base = DefaultStyleFont(editor->Fonts(), editor->Fonts().Scheme(SyntaxLanguage::Cpp).useCode).GetFractionalPointSize();
-        Require(std::string_view(bodyFace.data()) == commentFace.data() &&
-                    editor->Send(Message::StyleGetSizeFractional, SCE_C_COMMENT) == static_cast<int>(std::lround(base * 100)) + 150 &&
-                    editor->Send(Message::StyleGetFore, SCE_C_COMMENT) == editor->Send(Message::StyleGetFore, DefaultStyle),
-                "unavailable fonts fall back to Code while relative size and invalid color follow original inheritance");
+        const auto base = DefaultStyleFont(editor->Fonts(), editor->Fonts().Scheme(SyntaxLanguage::Cpp).useCode)
+                              .GetFractionalPointSize();
+        Require(
+            std::string_view(bodyFace.data()) == commentFace.data() &&
+                editor->Send(Message::StyleGetSizeFractional, SCE_C_COMMENT) ==
+                    static_cast<int>(std::lround(base * 100)) + 150 &&
+                editor->Send(Message::StyleGetFore, SCE_C_COMMENT) == editor->Send(Message::StyleGetFore, DefaultStyle),
+            "unavailable fonts fall back to Code while relative size and invalid color follow original inheritance");
         NativeSearch::Click(&dialog, wxID_CANCEL);
     };
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Customize Schemes..."));
@@ -331,12 +384,16 @@ void RelativeFontChooser(EditorFrame* frame) {
         NativeSearch::Click(&dialog, wxID_APPLY);
         Require(frame->Editor()->Send(Message::StyleGetSizeFractional, SCE_C_COMMENT) == 2000,
                 "relative token size renders against the selected global code base");
-        NativeFonts::Chooser chooser(frame, 20, DefaultStyleFont(frame->Editor()->Fonts(), true).GetFaceName(), true, {}, true);
-        NativeSearch::Click(&dialog, wxWindow::FindWindowByName("Style font", &dialog)->GetId());
-        chooser.Verify();
+        {
+            NativeFonts::Chooser chooser(frame, 20, DefaultStyleFont(frame->Editor()->Fonts(), true).GetFaceName(),
+                                         true, {}, true);
+            NativeSearch::Click(&dialog, wxWindow::FindWindowByName("Style font", &dialog)->GetId());
+            chooser.Verify();
+        }
         Require(edit.GetValue() == "size:+2; fore:#123456" && edit.HasFocus(),
                 "native font chooser Cancel preserves relative text and restores edit focus");
-        NativeFonts::Chooser accepted(frame, 20, DefaultStyleFont(frame->Editor()->Fonts(), true).GetFaceName(), false, {}, true);
+        NativeFonts::Chooser accepted(frame, 20, DefaultStyleFont(frame->Editor()->Fonts(), true).GetFaceName(), false,
+                                      {}, true);
         NativeSearch::Click(&dialog, wxWindow::FindWindowByName("Style font", &dialog)->GetId());
         accepted.Verify();
         Require(edit.GetValue().Contains("size:15") && edit.GetValue().Contains("fore:#123456") &&
@@ -355,13 +412,15 @@ void ColourChoosers(EditorFrame* frame, SettingsStore& settings) {
     Picker picker;
     picker.action = [&settings](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
         SelectStyle(tree, "C/C++ Source", "Comment");
-        edit.SetValue("size:+1; italic; fore:#123456");
+        edit.SetValue("size:+1; italic; fore:#123456junk");
         {
             ColourPicker colour(wxColour(0x12, 0x34, 0x56), wxColour(0x44, 0x55, 0x66), false);
             NativeSearch::Click(&dialog, wxWindow::FindWindowByName("Style foreground", &dialog)->GetId());
-            Require(colour.shown && colour.error.empty(), colour.error.empty() ? "native foreground chooser appeared" : colour.error.utf8_str().data());
+            Require(colour.shown && colour.error.empty(),
+                    colour.error.empty() ? "native foreground chooser appeared" : colour.error.utf8_str().data());
         }
-        Require(edit.GetValue().Contains("fore:#445566") && edit.GetValue().Contains("size:+1") && edit.GetValue().Contains("italic") && edit.HasFocus(),
+        Require(edit.GetValue().Contains("fore:#445566") && edit.GetValue().Contains("size:+1") &&
+                    edit.GetValue().Contains("italic") && edit.HasFocus(),
                 "native color acceptance retains other raw style attributes and returns edit focus");
         const auto accepted = edit.GetValue();
         {
@@ -371,7 +430,8 @@ void ColourChoosers(EditorFrame* frame, SettingsStore& settings) {
         }
         Require(edit.GetValue() == accepted, "native color Cancel retains the selected raw style");
 #ifdef __WXMSW__
-        Require(std::ranges::find(settings.values.fonts.customColours, 0x334455U) != settings.values.fonts.customColours.end(),
+        Require(std::ranges::find(settings.values.fonts.customColours, 0x334455U) !=
+                    settings.values.fonts.customColours.end(),
                 "original Windows custom-palette addition survives inner chooser Cancel");
 #endif
         NativeSearch::Click(&dialog, wxID_CANCEL);
@@ -427,7 +487,8 @@ void ResetAndPersistence(EditorFrame* frame, SettingsStore& settings) {
     Require(dark.error.empty(), dark.error.utf8_str());
     NativeSearch::Command(frame, save);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Default"));
-    Require(settings.values.fonts.codeStyle == code, "switching from edited Dark restores the independent Default profile");
+    Require(settings.values.fonts.codeStyle == code,
+            "switching from edited Dark restores the independent Default profile");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Dark"));
     Require(settings.values.fonts.codeStyle.Contains("size:22"), "switching back retains edited Dark profile");
     Picker darkReset;
@@ -443,13 +504,15 @@ void ResetAndPersistence(EditorFrame* frame, SettingsStore& settings) {
     NativeSearch::Command(frame, customize);
     Require(darkReset.error.empty(), darkReset.error.utf8_str());
     SettingsStore darkRestart(settings.Path());
-    Require(darkRestart.values.fonts.theme == StyleTheme::Dark && darkRestart.values.fonts.codeStyle.Contains("size:22"),
+    Require(darkRestart.values.fonts.theme == StyleTheme::Dark &&
+                darkRestart.values.fonts.codeStyle.Contains("size:22"),
             "saved selected Dark profile reopens through the ordinary SettingsStore lifecycle");
 }
 void LocalizedLayout(EditorFrame* frame) {
     Picker picker;
     picker.action = [](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
-        Require(wxDisplay(&dialog).GetClientArea().Contains(dialog.GetScreenRect()), "localized original style dialog fits native work area");
+        Require(wxDisplay(&dialog).GetClientArea().Contains(dialog.GetScreenRect()),
+                "localized original style dialog fits native work area");
         SelectStyle(tree, "C/C++ Source", "Comment");
         auto* defaults = wxWindow::FindWindowByName("Built-in default value", &dialog);
         auto* import = wxWindow::FindWindowByName("Import schemes", &dialog);
@@ -457,7 +520,8 @@ void LocalizedLayout(EditorFrame* frame) {
         auto* ok = dialog.FindWindow(wxID_OK);
         Require(defaults && import && font && ok, "localized native original controls are visible");
         for (auto* control : {static_cast<wxWindow*>(&tree), static_cast<wxWindow*>(&edit), defaults, import, font, ok})
-            Require(dialog.GetClientRect().Contains(control->GetRect()) && control->IsShown(), "localized controls fit inside the resizable dialog");
+            Require(dialog.GetClientRect().Contains(control->GetRect()) && control->IsShown(),
+                    "localized controls fit inside the resizable dialog");
         const auto client = dialog.GetClientSize();
         const auto treeSize = tree.GetSize();
         const auto editSize = edit.GetSize();
@@ -479,7 +543,8 @@ void LocalizedLayout(EditorFrame* frame) {
     frame->SetTitle("wxnotepad customize keyboard");
     NativeKeys::Shortcut(frame, WXK_F12, true, false, false, nullptr, "wxnotepad customize keyboard");
     Require(picker.error.empty(), picker.error.utf8_str());
-    Require(picker.shown == 1 && frame->Editor()->HasFocus(), "real Ctrl+F12 opens localized tree and native Enter returns editor focus");
+    Require(picker.shown == 1 && frame->Editor()->HasFocus(),
+            "real Ctrl+F12 opens localized tree and native Enter returns editor focus");
 }
 class CustomizeApp final : public wxApp {
 public:
@@ -488,7 +553,9 @@ public:
         const bool localized = wxGetEnv("WXNOTEPAD_CUSTOMIZE_LANGUAGE", &language);
         if (localized) AppLocalization::Initialize(static_cast<uint16_t>(wxAtoi(language)));
         path_ = TestFiles::TemporaryDirectory("style-customization.ini");
-        TestFiles::WriteBytes(path_, "[Settings]\nSaveSettings=0\n; keep this comment\n[Unavailable Scheme]\nUnknownStyle=fore:#112233\n");
+        TestFiles::WriteBytes(
+            path_,
+            "[Settings]\nSaveSettings=0\n; keep this comment\n[Unavailable Scheme]\nUnknownStyle=fore:#112233\n");
         settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(path_));
         auto* frame = new EditorFrame(settings_.get());
         frame->SetWindowStyleFlag(frame->GetWindowStyleFlag() | wxSTAY_ON_TOP);
@@ -496,7 +563,8 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame, localized](bool ready) {
             try {
                 Require(ready, "native customization parent is presented");
-                if (localized) LocalizedLayout(frame);
+                if (localized)
+                    LocalizedLayout(frame);
                 else {
 #ifdef __WXMSW__
                     wxString gdi;
@@ -504,6 +572,7 @@ public:
                         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Legacy GDI"));
 #endif
                     Transaction(frame, *settings_);
+                    ImportCancelWithoutPreview(frame, *settings_);
                     Extensions(frame);
                     ImportExport(frame, *settings_);
                     Grammar(frame);
@@ -524,6 +593,7 @@ public:
         wxApp::OnRun();
         return result_;
     }
+
 private:
     int result_ = 1;
     std::filesystem::path path_;

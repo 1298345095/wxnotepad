@@ -185,6 +185,15 @@ try:
     app = host.Original(sample, exe, desktop, desktop_name)
     try:
         snapshot(app, 'before')
+        inheritance = portable / 'inheritance-only.ini'
+        inheritance.write_text('[C/C++ Source]\nUseDefaultCodeStyle=0\n', encoding='utf-16')
+        user.PostMessageW(app.hwnd, 0x111, 40402, 0)
+        dlg = wait_dialog(app, 'Customize Schemes')
+        file_choice(app, dlg, 111, inheritance)
+        user.SendMessageW(dlg, 0x111, 2, 0)
+        snapshot(app, 'import-cancel-without-preview')
+        app.command(40401)
+        snapshot(app, 'restored-code-choice')
         user.PostMessageW(app.hwnd, 0x111, 40402, 0)
         dlg = wait_dialog(app, 'Customize Schemes')
         tree = user.GetDlgItem(dlg, 100)

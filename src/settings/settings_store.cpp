@@ -292,7 +292,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     for (const auto& scheme : SyntaxCatalog()) {
         if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
         if (const auto extension = FindValue(SyntaxSettingsSection(scheme.language), "File Extensions");
-            extension && !extension->empty()) values.schemeExtensions[scheme.language] = *extension;
+            extension && !extension->empty())
+            values.schemeExtensions[scheme.language] = *extension;
     }
     loadedExtensions_ = values.schemeExtensions;
 }
@@ -412,9 +413,12 @@ bool SettingsStore::ImportStyles(const wxString& path) {
             const auto key = wxString::FromUTF8(definition.key);
             const auto value = FindValue(key, "Global Styles");
             if (!value) continue;
-            if (key == "Default Code Style") values.fonts.codeStyle = value->Left(StyleProfileLimits::StyleCharacters);
-            else if (key == "Default Text Style") values.fonts.textStyle = value->Left(StyleProfileLimits::StyleCharacters);
-            else values.fonts.globalStyles[key] = value->Left(StyleProfileLimits::StyleCharacters);
+            if (key == "Default Code Style")
+                values.fonts.codeStyle = value->Left(StyleProfileLimits::StyleCharacters);
+            else if (key == "Default Text Style")
+                values.fonts.textStyle = value->Left(StyleProfileLimits::StyleCharacters);
+            else
+                values.fonts.globalStyles[key] = value->Left(StyleProfileLimits::StyleCharacters);
         }
         for (const auto& scheme : SyntaxCatalog()) {
             if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
@@ -427,8 +431,10 @@ bool SettingsStore::ImportStyles(const wxString& path) {
                 const auto key = wxString::FromUTF8(definition.key);
                 const auto value = FindValue(key, section);
                 if (!value) continue;
-                if (key == "Default") styles.defaultStyle = value->Left(StyleProfileLimits::StyleCharacters);
-                else styles.tokenStyles[key] = value->Left(StyleProfileLimits::StyleCharacters);
+                if (key == "Default")
+                    styles.defaultStyle = value->Left(StyleProfileLimits::StyleCharacters);
+                else
+                    styles.tokenStyles[key] = value->Left(StyleProfileLimits::StyleCharacters);
             }
         }
     }
@@ -451,13 +457,17 @@ bool SettingsStore::ExportStyles(const wxString& path) {
         for (const auto& scheme : SyntaxCatalog()) {
             if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
             const auto* section = SyntaxSettingsSection(scheme.language);
-            WriteString(section, SyntaxExtensionsFor(scheme.language, values.schemeExtensions), {}, "File Extensions", true);
-            WriteString("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode ? "1" : "0", {}, section, true);
+            WriteString(section, SyntaxExtensionsFor(scheme.language, values.schemeExtensions), {}, "File Extensions",
+                        true);
+            WriteString("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode ? "1" : "0", {}, section,
+                        true);
             for (const auto& definition : SyntaxStyleDefinitions(scheme.language))
-                WriteString(wxString::FromUTF8(definition.key), values.fonts.TokenStyle(scheme.language, definition), {}, section, true);
+                WriteString(wxString::FromUTF8(definition.key), values.fonts.TokenStyle(scheme.language, definition),
+                            {}, section, true);
         }
         for (size_t index = 0; index < values.fonts.customColours.size(); ++index)
-            WriteString(wxString::Format("%02zu", index + 1), wxString::Format("#%06X", values.fonts.customColours[index]), {}, "Custom Colors", true);
+            WriteString(wxString::Format("%02zu", index + 1),
+                        wxString::Format("#%06X", values.fonts.customColours[index]), {}, "Custom Colors", true);
         success = SaveLines();
     }
     path_ = originalPath;

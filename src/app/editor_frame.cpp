@@ -75,7 +75,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
                                                   settings->values.noHtmlGuess,
                                                   SyntaxFromOriginalSchemeId(settings->values.defaultScheme)
-                                                      .value_or(SyntaxLanguage::PlainText), settings->values.schemeExtensions}
+                                                      .value_or(SyntaxLanguage::PlainText),
+                                                  settings->values.schemeExtensions}
                          : SyntaxDetectionOptions{},
                 settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
@@ -544,7 +545,8 @@ void EditorFrame::ShowSyntaxScheme(bool favorite) {
     const auto language = ChooseSyntaxScheme(this, document_.Language(), preferences, favorite);
     document_.SetSyntaxDetectionOptions(
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
-         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText), preferences.schemeExtensions});
+         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
+         preferences.schemeExtensions});
     if (language) ChooseLanguage(*language);
 }
 
@@ -555,9 +557,11 @@ void EditorFrame::CustomizeStyles() {
         ApplySyntaxStyles(*editor_, document_.Language());
         UpdatePositionStatus();
     });
+    editor_->SetFontSettings(preferences.fonts);
     document_.SetSyntaxDetectionOptions(
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
-         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText), preferences.schemeExtensions});
+         SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
+         preferences.schemeExtensions});
     editor_->SetFocus();
 }
 
@@ -662,7 +666,8 @@ SaveResult EditorFrame::SaveCopy() {
         // the filename and adds the current scheme's default extension.
         wxFileName initial(directory);
         if (!initial.GetFullName().empty() && !initial.HasExt()) {
-            const auto extensions = SyntaxExtensionList(document_.Language(), (settings_ ? settings_->values : defaults_).schemeExtensions);
+            const auto extensions =
+                SyntaxExtensionList(document_.Language(), (settings_ ? settings_->values : defaults_).schemeExtensions);
             if (!extensions.empty()) initial.SetExt(extensions.front());
         }
         directory = initial.GetPath();

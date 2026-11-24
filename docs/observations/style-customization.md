@@ -17,6 +17,9 @@ The original does not back up `UseDefaultCodeStyle`. Import and Reset All can
 change this choice even when the dialog is subsequently cancelled. Reset All
 sets it to true for Text File and false for other schemes. The adaptation
 preserves this distinction when restoring the shared style profile.
+Cancel without Preview leaves the existing rendered styles in place. A retained
+inheritance choice becomes visible at the next style application; accepted edits
+to current/global style strings and any Preview trigger the original reapplication.
 
 In Default, Reset restores source defaults. In Dark, Reset reloads the selected
 style from the saved Dark profile, falling back to its source default when

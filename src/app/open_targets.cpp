@@ -348,7 +348,8 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
         SyntaxDetectionOptions detection;
         detection.extensions = (settings_ ? settings_->values : defaults_).schemeExtensions;
         const bool supported = location.present || name.GetFullName().StartsWith(".") || extension.empty() ||
-                               extension == "cgi" || extension == "fcgi" || DetectLanguage(*path, {}, detection).has_value();
+                               extension == "cgi" || extension == "fcgi" ||
+                               DetectLanguage(*path, {}, detection).has_value();
         if (supported) {
             std::vector<wxString> arguments{wxStandardPaths::Get().GetExecutablePath(), "--startup-file", *path};
             if (location.present) {
