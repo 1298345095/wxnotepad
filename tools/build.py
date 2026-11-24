@@ -90,6 +90,8 @@ def main():
                  f"-DCMAKE_TOOLCHAIN_FILE={args.vcpkg_root}/scripts/buildsystems/vcpkg.cmake",
                  f"-DPython3_EXECUTABLE={sys.executable}",
                  "-DVCPKG_MANIFEST_MODE=OFF"]
+    triplet = "x64-windows-static-md" if sys.platform == "win32" else "x64-linux"
+    configure += [f"-DVCPKG_TARGET_TRIPLET={triplet}", f"-DVCPKG_HOST_TRIPLET={triplet}"]
     if sys.platform == "win32":
         # Keep CMake's cached /showIncludes prefix consistent with later builds.
         os.environ["VSLANG"] = "1033"

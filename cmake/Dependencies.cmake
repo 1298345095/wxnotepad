@@ -1,4 +1,11 @@
+set(wxWidgets_USE_STATIC ON)
 find_package(wxWidgets 3.3.3 EXACT CONFIG REQUIRED)
+foreach(component wx::core wx::base)
+    get_target_property(component_type ${component} TYPE)
+    if(NOT component_type STREQUAL "STATIC_LIBRARY")
+        message(FATAL_ERROR "wxnotepad requires static wxWidgets libraries; select a static-library vcpkg triplet")
+    endif()
+endforeach()
 
 set(NOTEPAD4_SOURCE "" CACHE PATH "Pinned, patched source produced by tools/build.py")
 if(NOT EXISTS "${NOTEPAD4_SOURCE}/wxnotepad-source.json")

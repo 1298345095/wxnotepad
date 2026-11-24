@@ -187,7 +187,11 @@ utility cannot read that private directory; its system policy remains unchanged.
   builds; generated app and locked wxWidgets catalogs accompany every artifact.
   See [localization.md](localization.md) for maintenance and resource layout.
 - CI-only triplets build Release dependencies, avoiding unused Debug builds.
-  Normal development triplets and the existing local installations are unchanged.
+  Both use static third-party libraries and dynamic C/C++ runtimes. Windows
+  keeps `VCPKG_CRT_LINKAGE=dynamic` and MSVC `/MD`; normal Windows development
+  uses `x64-windows-static-md`. Existing dynamic SDKs need a fresh static install
+  and a new application build directory. Linux keeps its existing static
+  wxWidgets/GTK profile and dynamic native system interfaces, including D-Bus.
 - Windows uses the installed Visual Studio C++ developer shell and Ninja, matching
   vcpkg's toolchain selection rather than hard-coding a Visual Studio generator.
   CMake arguments cross the PowerShell boundary as a JSON array so drive-letter
@@ -472,8 +476,9 @@ bundled dependency notices. Artifact names include the run attempt so rerunning
 a failed job retains earlier evidence rather than overwriting it.
 
 The artifacts are development builds rather than the planned Windows ZIP release
-or Ubuntu installer. Windows DLLs are included beside the executable. Linux
-output includes non-system vcpkg shared libraries and a README describing its
+or Ubuntu installer. Windows application dependencies are statically linked;
+the Microsoft C/C++ runtime remains dynamic. Linux
+output includes the shared D-Bus interface required by its port and a README describing its
 Ubuntu 26.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
 
@@ -613,9 +618,12 @@ python -X utf8 .github/scripts/check_sdk.py --cmake-dir F:/native-build/cmake --
 The installation and triplet come from that build's CMake cache, and must agree
 with its selected wxWidgets configuration. Missing headers or core/base libraries
 fail rather than producing an empty successful inventory. wxSTC/Scintilla/Lexilla
-SDK artifacts fail on both platforms. Windows runtime output also rejects the
-removed JPEG/TIFF/WebP/PCRE2 libraries; the Linux GTK dependency profile is
-unchanged. Omitting `--artifact-dir` explicitly checks only the SDK and records
+SDK artifacts fail on both platforms. Windows runtime output rejects shared
+application dependencies while allowing dynamic Microsoft C/C++ runtime DLLs.
+Linux output likewise rejects shared application libraries; the forced-shared
+D-Bus interface and compiler runtimes remain allowed. The native SDK capability
+test also rejects a DLL wxWidgets build or a static MSVC runtime. The Linux GTK
+dependency profile is unchanged. Omitting `--artifact-dir` explicitly checks only the SDK and records
 `runtime_checked: false`.
 
 CI enables `WXNOTEPAD_VERIFY_TRIMMED_SDK=ON` for the compile-time trimming

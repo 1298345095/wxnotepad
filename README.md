@@ -332,11 +332,18 @@ repository root, provision dependencies with its overlay ports and a matching
 host triplet so the host-only gettext tools use the same native platform:
 
 ```text
-vcpkg install --triplet x64-windows --host-triplet x64-windows --overlay-ports=.github/ports --x-install-root=G:/vcpkg/installed
+vcpkg install --triplet x64-windows-static-md --host-triplet x64-windows-static-md --overlay-ports=.github/ports --x-install-root=G:/vcpkg/installed
 vcpkg install --triplet x64-linux --host-triplet x64-linux --overlay-ports=.github/ports --x-install-root=/home/ctrls/vcpkg/installed
 ```
 
 The overlays select GNU gettext 0.23.2 and the project's wxWidgets/GTK recipes.
+Windows uses static third-party libraries with the dynamic Microsoft C/C++
+runtime (`/MD`, or `/MDd` for Debug); `tools/build.py` selects
+`x64-windows-static-md`. Linux also links wxWidgets, GTK and application
+dependencies statically, while glibc, libstdc++, libgcc and native X11/Wayland/D-Bus
+interfaces remain dynamic. The D-Bus port requires a shared library, which is
+included with the Linux development output; other native interfaces resolve
+from the system. Static linking does not remove the system runtime requirement.
 Use them when updating an existing installation as well as creating a new one.
 The build entry point reuses an existing vcpkg installation and does not install
 packages. Adapt those example installation paths to `<vcpkg-root>/installed` on

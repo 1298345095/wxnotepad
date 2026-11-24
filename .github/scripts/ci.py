@@ -453,7 +453,7 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
     (destination / 'README.txt').write_text(
         'Development build output, not a release/install package.\n'
         'See build.json for the tested source and executable checksum.\n'
-        'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
+        'Windows: application dependencies are statically linked; the Microsoft C/C++ runtime remains dynamic.\n'
         'Linux: Ubuntu 26.04 x64 desktop libraries are required; run from this directory with\n'
         'GIO_LAUNCH_DESKTOP="$PWD/libexec/gio-launch-desktop" \\\n'
         'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'

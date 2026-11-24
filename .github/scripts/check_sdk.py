@@ -23,10 +23,19 @@ def inspect_runtime(artifact_directory, windows, report):
     runtime = sorted(path for path in artifact_directory.rglob('*') if path.is_file() and
                      (path.suffix.lower() in ('.exe', '.dll') or '.so' in path.suffixes or path == binary))
     report['runtime_file_count'] = len(runtime)
-    unused_windows = ('libwebp', 'webp', 'libjpeg', 'jpeg', 'turbojpeg',
-                      'libtiff', 'tiff', 'libpcre2', 'pcre2')
+    def shared_application_dependency(path):
+        name = path.name.lower()
+        if windows:
+            system_runtime = name.startswith(('vcruntime', 'msvcp', 'concrt', 'api-ms-win-crt-')) or name in (
+                'ucrtbase.dll', 'ucrtbased.dll')
+            return path.suffix.lower() == '.dll' and not system_runtime
+        # Native system libraries resolve from the host rather than this bundle.
+        # vcpkg forces the D-Bus interface library shared even in static triplets.
+        system_runtime = name.startswith(('libdbus-1.so', 'libstdc++.so', 'libgcc_s.so'))
+        return '.so' in path.suffixes and not system_runtime
+
     report['forbidden_runtime_artifacts'] = [str(path) for path in runtime if stc_artifact(path) or
-        (windows and path.name.lower().startswith(unused_windows))]
+                                            shared_application_dependency(path)]
 
 
 def inspect(cmake_directory, artifact_directory=None):
