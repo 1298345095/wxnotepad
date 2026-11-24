@@ -17,7 +17,7 @@ import tempfile
 import time
 import threading
 from collections import deque
-from weston_scene import mapped_toplevel, mapped_toplevel_position
+from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
@@ -298,7 +298,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                             timed_out = True
                             break
                         last_scene = scene
-                        matched = mapped_toplevel(scene, int(process), int(surface))
+                        matched = input_ready_toplevel(scene, int(process), int(surface))
                         if matched:
                             if time.monotonic() < deadline:
                                 if kind == "activate":
