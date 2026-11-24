@@ -78,6 +78,8 @@ public:
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
+    // Original EditURLEncodeSelection(false), without changing any selection or document state.
+    std::string UrlEncodedSelection();
     bool ConvertBase64(Base64Conversion command, const wxString& path = {}, bool defaultEncoding = false);
     void CopyAsRtf(bool nativeAnsi);
     NativeByteSnapshot RawNativeBytes() const;
@@ -161,6 +163,7 @@ public:
     void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
+    void ApplyStylePixelSettings();
     const CaretAppearance& GetCaretAppearance() const { return caretAppearance_; }
     void SetCaretAppearance(CaretAppearance appearance);
     OccurrenceMarking& Occurrences() { return *occurrences_; }

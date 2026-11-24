@@ -1,0 +1,7 @@
+Notepad4 dark style profile
+Source: https://github.com/zufuliu/notepad4
+Revision: 89b8b36e0ee2c23f73be922315f17261ccfbbe1a
+Original path: doc/Notepad4 DarkTheme.ini
+Original SHA-256: 1e7c0ad3bf6a4e4489e402e28f3f79664a2289c2a61424d935c2937fd287a93e
+The original UTF-16LE file is distributed without modification.
+Copyright and BSD 3-Clause license: licenses/Notepad4.txt.

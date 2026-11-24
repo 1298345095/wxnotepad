@@ -4,7 +4,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from weston_scene import mapped_toplevel, mapped_toplevel_position
+from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position
 
 
 def view(pid=42, surface=7, title="Save changes?", role="xdg_toplevel", marker=""):
@@ -67,6 +67,27 @@ class WestonScene(unittest.TestCase):
         self.assertTrue(mapped_toplevel(scene, 42, 8))
         self.assertTrue(mapped_toplevel(scene, 42, title="Save changes?"))
         self.assertFalse(mapped_toplevel(scene, 43, title="Save changes?"))
+
+    def test_native_preparation_waits_for_input_capturing_startup_fade(self):
+        curtain = ("\tView 0 (role (null), PID 0, surface ID 0, desktop shell fade surface, 0x123):\n"
+                   "\t\tposition: (0, 0) -> (1600, 1000)\n\t\t[not opaque]\n\t\talpha: 0.170898\n")
+        mapped = "Layer 3 (pos 0xb0000000):\n" + view()
+        fading = "Layer 0 (pos 0xffffffff):\n" + curtain + mapped
+        self.assertTrue(mapped_toplevel(fading, 42, 7))
+        self.assertFalse(input_ready_toplevel(fading, 42, 7))
+        self.assertTrue(input_ready_toplevel(mapped, 42, 7))
+        self.assertFalse(input_ready_toplevel(mapped, 43, 7))
+
+    def test_inactive_curtain_does_not_block_native_preparation(self):
+        curtain = ("\tView 0 (role (null), PID 0, surface ID 0, desktop shell fade surface, 0x123):\n"
+                   "\t\t[view is not mapped!]\n")
+        mapped = "Layer 3 (pos 0xb0000000):\n" + view()
+        self.assertTrue(input_ready_toplevel(curtain + mapped, 42, 7))
+        self.assertTrue(input_ready_toplevel("Layer 0 (pos 0xffffffff):\n" + curtain + mapped, 42, 7))
+
+    def test_client_title_is_not_a_compositor_fade_curtain(self):
+        scene = "Layer 3 (pos 0xb0000000):\n" + view(title="desktop shell fade surface")
+        self.assertTrue(input_ready_toplevel(scene, 42, 7))
 
 
 if __name__ == "__main__":

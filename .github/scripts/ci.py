@@ -416,6 +416,8 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
     destination = output_root / 'artifact'
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(executable, destination / executable.name)
+    shutil.copy2(source_root / 'resources/Notepad4 DarkTheme.ini-default', destination / 'Notepad4 DarkTheme.ini-default')
+    shutil.copy2(source_root / 'resources/Notepad4 DarkTheme.NOTICE.txt', destination / 'Notepad4 DarkTheme.NOTICE.txt')
     symbols = output_root / 'symbols'
     if windows:
         for library in directory.glob('*.dll'):

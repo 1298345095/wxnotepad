@@ -519,6 +519,25 @@ class Collector final {
             return AddCSharpSpecialWord(words, currentStyle, ch, previous);
         case SCLEX_KOTLIN:
             return AddKotlinSpecialWord(words, currentStyle, ch);
+        case SCLEX_AUTOHOTKEY:
+            if (ch == '#' && currentStyle == SCE_AHK_DEFAULT) {
+                constexpr size_t AutoHotkeyDirective = 1;
+                AddList(words, definition_, AutoHotkeyDirective);
+                return AddWordResult_Finish;
+            }
+            if (ch == '@' && (currentStyle == SCE_AHK_COMMENTLINE || currentStyle == SCE_AHK_COMMENTBLOCK)) {
+                constexpr size_t AutoHotkeyCompilerDirective = 2;
+                AddList(words, definition_, AutoHotkeyCompilerDirective);
+                return AddWordResult_Finish;
+            }
+            break;
+        case SCLEX_POWERSHELL:
+            if (ch == '$' || ch == '@') {
+                constexpr size_t PowerShellPredefinedVariable = 4;
+                AddList(words, definition_, PowerShellPredefinedVariable);
+                return AddWordResult_IgnoreLexer;
+            }
+            break;
         case SCLEX_BASH:
             if (ch == '$') {
                 AddList(words, definition_, 2);

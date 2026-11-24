@@ -11,6 +11,7 @@
 #include <wx/modalhook.h>
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <memory>
 #ifdef __WXMSW__
 #include "clipboard_read_error.h"
@@ -20,6 +21,68 @@ namespace {
 using enum Scintilla::Message;
 constexpr char PriorClipboardOffer[] = "owned previous offer";
 #ifdef __WXMSW__
+void ReportSeedFailure(const char* operation, DWORD error, HWND owner) {
+    const auto holder = ::GetOpenClipboardWindow();
+    DWORD holderProcess = 0;
+    if (holder) ::GetWindowThreadProcessId(holder, &holderProcess);
+    std::println(stderr, "Native prior-offer failure: api={} error={} owner={} openHolder={} holderProcess={}",
+                 operation, error, static_cast<void*>(owner), static_cast<void*>(holder), holderProcess);
+    std::fflush(stderr);
+}
+bool PublishPriorClipboard(HWND owner) {
+    // Match the original ScintillaWin/native clipboard acquisition rule.
+    constexpr int ClipboardOpenAttempts = 8;
+    constexpr DWORD FirstClipboardOpenDelayMilliseconds = 1;
+    bool opened = false;
+    for (int attempt = 0; attempt < ClipboardOpenAttempts; ++attempt) {
+        if (attempt) ::Sleep(FirstClipboardOpenDelayMilliseconds << (attempt - 1));
+        if (::OpenClipboard(owner)) {
+            opened = true;
+            break;
+        }
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("OpenClipboard", error, owner);
+    }
+    if (!opened) return false;
+    const auto value = wxString::FromUTF8(PriorClipboardOffer).ToStdWstring();
+    const auto memory = ::GlobalAlloc(GMEM_MOVEABLE, (value.size() + 1) * sizeof(wchar_t));
+    if (!memory) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("GlobalAlloc", error, owner);
+        ::CloseClipboard();
+        return false;
+    }
+    auto* bytes = ::GlobalLock(memory);
+    if (!bytes) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("GlobalLock", error, owner);
+        ::GlobalFree(memory);
+        ::CloseClipboard();
+        return false;
+    }
+    std::memcpy(bytes, value.c_str(), (value.size() + 1) * sizeof(wchar_t));
+    ::GlobalUnlock(memory);
+    if (!::EmptyClipboard()) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("EmptyClipboard", error, owner);
+        ::GlobalFree(memory);
+        ::CloseClipboard();
+        return false;
+    }
+    if (!::SetClipboardData(CF_UNICODETEXT, memory)) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("SetClipboardData", error, owner);
+        ::GlobalFree(memory);
+        ::CloseClipboard();
+        return false;
+    }
+    if (!::CloseClipboard()) {
+        const DWORD error = ::GetLastError();
+        ReportSeedFailure("CloseClipboard", error, owner);
+        return false;
+    }
+    return true;
+}
 struct ClipboardObservation {
     HWND owner = nullptr;
     HWND openHolder = nullptr;
@@ -269,17 +332,22 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const c
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
     Require(id != wxNOT_FOUND, "Edit Special exposes original Show Character Info");
     Progress("publish prior clipboard offer", fixture);
+#ifdef __WXMSW__
+    // As in clipboard_peer, publish literal owned bytes eagerly. OLE delayed
+    // rendering and Flush are setup work outside the Character Info command.
+    Require(PublishPriorClipboard(static_cast<HWND>(frame->GetHandle())),
+            "own a distinct materialized native clipboard offer before the command");
+    const auto seededClipboard = ObserveClipboard();
+    Require(seededClipboard.owner == static_cast<HWND>(frame->GetHandle()) &&
+                seededClipboard.ownerProcess == GetCurrentProcessId() && seededClipboard.unicodeAvailable,
+            "materialize the owned clipboard offer before the command");
+#else
     {
         wxClipboardLocker lock;
         if (!lock) throw TestEditor::Failure("open native clipboard for owned fixture");
         Require(wxTheClipboard->SetData(new wxTextDataObject(PriorClipboardOffer)),
                 "own a distinct native clipboard offer before the command");
     }
-#ifdef __WXMSW__
-    // Materialize our seed before testing Copy, so delayed rendering on this
-    // same GUI thread cannot become part of the command's clipboard write.
-    Require(wxTheClipboard->Flush(), "materialize the owned clipboard offer before the command");
-    const auto seededClipboard = ObserveClipboard();
 #endif
     Feedback feedback;
     Progress("dispatch menu command and accept native feedback", fixture);
@@ -394,7 +462,8 @@ void EncodedDocuments(EditorFrame* frame) {
         NativeSearch::Command(frame, wxID_UNDO);
     }
 #endif
-    std::filesystem::remove_all(directory);
+    // TemporaryRoot removes these files after wx cleanup has destroyed the
+    // frame and joined its file-watcher worker.
     std::puts("PASS: original UTF-8, explicit GBK/Windows-1252 and UTF-16 editor-byte interpretation and disk bytes");
 }
 class CharacterInformationApp final : public wxApp {

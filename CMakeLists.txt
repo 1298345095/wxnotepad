@@ -36,7 +36,18 @@ include(cmake/Targets.cmake)
 include(cmake/Platform.cmake)
 
 add_gui_program(wxnotepad src/app/main.cpp app_shell)
+add_custom_command(TARGET wxnotepad POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/Notepad4 DarkTheme.ini-default"
+        "$<TARGET_FILE_DIR:wxnotepad>/Notepad4 DarkTheme.ini-default"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/Notepad4 DarkTheme.NOTICE.txt"
+        "$<TARGET_FILE_DIR:wxnotepad>/Notepad4 DarkTheme.NOTICE.txt"
+    VERBATIM)
 include(cmake/Localization.cmake)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/Notepad4 DarkTheme.ini-default"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/Notepad4 DarkTheme.NOTICE.txt"
+    DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
 include(CTest)
 if(BUILD_TESTING)

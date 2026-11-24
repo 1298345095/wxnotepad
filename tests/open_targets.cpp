@@ -165,6 +165,13 @@ void Anchor(EditorFrame* frame) {
     editor->Send(Message::SetSavePoint);
     std::puts("PASS: native selection action, name/id anchor priority, source state and original menu availability");
 }
+std::string DesktopTargetBytes(const std::filesystem::path& marker) {
+#ifdef __WXMSW__
+    return NativePublishedFile::Read(marker);
+#else
+    return TestFiles::Bytes(marker);
+#endif
+}
 void DesktopTargetCase(EditorFrame* frame, const std::string& input, const std::string& expected, intptr_t caret = -1) {
     auto* editor = frame->Editor();
     const auto marker = Directory() / "desktop-received";
@@ -178,10 +185,10 @@ void DesktopTargetCase(EditorFrame* frame, const std::string& input, const std::
         wxMilliSleep(10);
     }
     Require(std::filesystem::exists(marker), "desktop association must receive the target through a real child");
-    if (TestFiles::Bytes(marker) != expected + "\n")
-        std::println(stderr, "desktop received [{}] expected [{}]", TestFiles::Bytes(marker).c_str(), expected.c_str());
-    Require(TestFiles::Bytes(marker) == expected + "\n",
-            "desktop association receives exact independently specified target");
+    const auto received = DesktopTargetBytes(marker);
+    if (received != expected + "\n")
+        std::println(stderr, "desktop received [{}] expected [{}]", received.c_str(), expected.c_str());
+    Require(received == expected + "\n", "desktop association receives exact independently specified target");
     Require(TestEditor::Text(frame) == input, "desktop action preserves source bytes");
     TestEditor::RequireSelection(editor, caret < 0 ? 0 : caret, caret < 0 ? static_cast<intptr_t>(input.size()) : caret,
                                  "desktop action preserves source selection");
@@ -281,6 +288,8 @@ void PublishedAcknowledgement() {
     Require(std::filesystem::exists(done), "published marker name must already be visible");
     Require(NativePublishedFile::Read(done) == "ok\n",
             "published acknowledgement must be readable before the rename handle closes");
+    Require(DesktopTargetBytes(done) == "ok\n",
+            "desktop target payload must be readable before the publication rename handle closes");
     std::puts("PASS: exact acknowledgement bytes while its publication DELETE handle remains open");
 }
 void WaitExplorerRequests(const std::filesystem::path& root, std::initializer_list<int> requests) {

@@ -189,8 +189,25 @@ void Geometry(EditorFrame* frame) {
             "native bookmark margin clicks preserve caret and selection direction");
     Require(bookmarkCount() == 0, "native margin repaint removes bookmark pixels");
     editor->Send(Message::GotoLine, 1);
+    const auto originalAscent = editor->Send(Message::GetExtraAscent);
+    const auto originalDescent = editor->Send(Message::GetExtraDescent);
+    const auto originalHeight = editor->Send(Message::TextHeight, 0);
+    editor->Send(Message::SetExtraAscent, originalAscent + 1);
+    Require(editor->Send(Message::GetMarginWidthN, 1) == originalHeight - 1,
+            "one extra ascent pixel updates the original text-height-minus-two bookmark width immediately");
+    editor->Send(Message::SetExtraDescent, originalDescent + 1);
+    Require(editor->Send(Message::GetMarginWidthN, 1) == originalHeight,
+            "one extra descent pixel also updates the original bookmark width immediately");
+    editor->Send(Message::SetExtraAscent, originalAscent);
+    editor->Send(Message::SetExtraDescent, originalDescent);
+    Require(editor->Send(Message::GetMarginWidthN, 1) == originalHeight - 2,
+            "restoring both extra-spacing values restores the original bookmark width");
     for (const int zoom : {50, 100, 150, 200}) {
         editor->Send(Message::SetZoom, zoom);
+        if (editor->Send(Message::GetMarginWidthN, 1) != editor->Send(Message::TextHeight, 0) - 2)
+            std::println(stderr, "bookmark zoom={} width={} textHeight={} ascent={} descent={}", zoom,
+                         editor->Send(Message::GetMarginWidthN, 1), editor->Send(Message::TextHeight, 0),
+                         editor->Send(Message::GetExtraAscent), editor->Send(Message::GetExtraDescent));
         Require(editor->Send(Message::GetMarginWidthN, 1) == editor->Send(Message::TextHeight, 0) - 2,
                 "bookmark margin follows independently measured native text height through zoom");
         Menu(frame, "Line Numbers");

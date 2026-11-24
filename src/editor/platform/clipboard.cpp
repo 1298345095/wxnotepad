@@ -13,6 +13,7 @@
 #include <windows.h>
 #elif defined(__WXGTK__)
 #include <gtk/gtk.h>
+#include <wx/evtloop.h>
 #endif
 
 #ifdef __WXMSW__
@@ -285,7 +286,40 @@ bool EditorClipboard::HasText() noexcept {
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
     if (!lock) return false;
+#ifdef __WXGTK__
+    struct Availability {
+        bool received = false;
+        bool text = false;
+    } result;
+    class ClipboardEventLoop final : public wxGUIEventLoop {
+    public:
+        explicit ClipboardEventLoop(const Availability& result) : result_(result) {}
+        bool Pending() const override { return !result_.received && wxGUIEventLoop::Pending(); }
+
+    private:
+        const Availability& result_;
+    };
+    gtk_clipboard_request_targets(
+        gtk_clipboard_get(GDK_SELECTION_CLIPBOARD),
+        +[](GtkClipboard*, GdkAtom* targets, gint count, gpointer context) {
+            auto& available = *static_cast<Availability*>(context);
+            available.text = targets && count > 0 && gtk_targets_include_text(targets, count);
+            available.received = true;
+        },
+        &result);
+    // Retain wxGTK's clipboard-only input/callback filtering. Stop when the
+    // actual response arrives even when unrelated native sources stay ready.
+    if (!result.received) {
+        ClipboardEventLoop loop(result);
+        const wxEventLoopActivator activate(&loop);
+        while (!result.received) {
+            loop.YieldFor(wxEVT_CATEGORY_CLIPBOARD);
+        }
+    }
+    return result.text;
+#else
     return wxTheClipboard->IsSupported(wxDF_UNICODETEXT);
+#endif
 #endif
 }
 

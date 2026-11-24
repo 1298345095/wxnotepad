@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include "app/localization.h"
 #include "app/native_launch.h"
+#include "app/desktop_launch.h"
 #include "settings/settings_store.h"
 #include "settings/environment_expansion.h"
 #include <wx/button.h>
@@ -18,13 +19,14 @@
 #include <wx/utils.h>
 #include <wx/log.h>
 #include <wx/display.h>
+#include <wx/cmdline.h>
+#include <wx/uri.h>
 #ifdef __WXMSW__
 #include <windows.h>
 #include <shellapi.h>
 #endif
 
 namespace {
-#ifdef __WXMSW__
 struct CommandParts {
     wxString program;
     wxString arguments;
@@ -51,7 +53,7 @@ CommandParts SplitProgram(wxString command) {
     return {command.Mid(programStart, end - programStart).Strip(wxString::both),
             command.Mid(end + 1).Strip(wxString::both)};
 }
-#else
+#ifndef __WXMSW__
 struct NativeCommand {
     std::vector<wxString> arguments;
     wxString error;
@@ -178,28 +180,33 @@ bool IsSelfAlias(const wxString& program) {
     return program.CmpNoCase("Notepad4") == 0 || program.CmpNoCase("Notepad4.exe") == 0 ||
            program.CmpNoCase("wxnotepad") == 0 || program.CmpNoCase("wxnotepad.exe") == 0;
 }
-bool LaunchCommand(wxDialog& dialog, const wxString& command, const wxString& directory, wxString& error) {
 #ifdef __WXMSW__
-    auto parts = SplitProgram(command);
+bool LaunchProgram(wxWindow& parent, CommandParts parts, const wxString& directory, wxString& error,
+                   wxDialog* runDialog = nullptr) {
     parts.arguments = ExpandWindowsEnvironment(parts.arguments);
-    const bool self = IsSelfAlias(parts.program);
+    const bool self = runDialog && IsSelfAlias(parts.program);
     if (self) parts.program = wxStandardPaths::Get().GetExecutablePath();
     SHELLEXECUTEINFOW launch{};
     launch.cbSize = sizeof(launch);
     launch.fMask = SEE_MASK_DOENVSUBST | SEE_MASK_FLAG_NO_UI;
-    launch.hwnd = static_cast<HWND>(dialog.GetHandle());
+    launch.hwnd = static_cast<HWND>(parent.GetHandle());
     launch.lpFile = parts.program.wc_str();
     launch.lpParameters = parts.arguments.wc_str();
     launch.lpDirectory = directory.wc_str();
     launch.nShow = SW_SHOWNORMAL;
+    if (!runDialog || self) launch.fMask |= SEE_MASK_NOZONECHECKS;
     if (self) {
         // Original quick-exit branch closes before launching the current binary.
-        launch.fMask |= SEE_MASK_NOZONECHECKS;
-        dialog.EndModal(wxID_OK);
+        runDialog->EndModal(wxID_OK);
     }
     const bool launched = ShellExecuteExW(&launch) != FALSE;
     if (!launched) error = wxSysErrorMsg();
     return launched || self;
+}
+#endif
+bool LaunchCommand(wxDialog& dialog, const wxString& command, const wxString& directory, wxString& error) {
+#ifdef __WXMSW__
+    return LaunchProgram(dialog, SplitProgram(command), directory, error, &dialog);
 #else
     auto parsed = ParseNativeCommand(command);
     if (!parsed.error.empty()) {
@@ -217,6 +224,25 @@ bool LaunchCommand(wxDialog& dialog, const wxString& command, const wxString& di
 #endif
 }
 } // namespace
+
+bool EditorFrame::LaunchSelectionCommand(const wxString& command, const wxString& directory, wxString& error) {
+    auto parts = SplitProgram(command);
+#ifdef __WXMSW__
+    // ShellExecute uses the existing executable/association dispatch for both
+    // configured programs and URI targets, retaining the original raw parameters.
+    return LaunchProgram(*this, std::move(parts), directory, error);
+#else
+    parts.program = ExpandWindowsEnvironment(parts.program);
+    parts.arguments = ExpandWindowsEnvironment(parts.arguments);
+    if (!wxURI(parts.program).GetScheme().empty()) return LaunchDesktopTarget(this, parts.program, directory, error);
+    // These are original Notepad4 templates: apostrophes/$HOME are literal.
+    // The toolkit supplies Windows argument splitting; Run keeps its native grammar.
+    const auto parameters = wxCmdLineParser::ConvertStringToArgs(parts.arguments, wxCMD_LINE_SPLIT_DOS);
+    std::vector<wxString> arguments{parts.program};
+    arguments.insert(arguments.end(), parameters.begin(), parameters.end());
+    return NativeLaunch::SpawnArguments(arguments, directory, error);
+#endif
+}
 
 void EditorFrame::AppendRunCommand(wxMenu* tools) {
     const int id = wxWindow::NewControlId();

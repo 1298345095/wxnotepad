@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/font_settings.h"
 #include "editor/display_units.h"
 #include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
@@ -9,6 +10,7 @@
 #include <wx/wupdlock.h>
 #include <wx/settings.h>
 #include <cmath>
+#include <algorithm>
 #include <type_traits>
 #include <utility>
 #ifdef __WXGTK__
@@ -131,8 +133,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         core_->DpiChanged();
         bookmarkMarginWidthDirty_ = true;
         UpdateBookmarkMargin();
-        SetCurrentLineHighlightMode(lineHighlightMode_);
-        ApplyCaretAppearance();
+        ApplyStylePixelSettings();
         Refresh(false);
         event.Skip();
     });
@@ -252,14 +253,42 @@ void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
     // Original Styles.cpp::Style_HighlightCurrentLine and stlDefault.cpp.
     // One rounding step preserves ScaleStylePixel's DPI * zoom scaling.
     const bool outline = mode == LineHighlightMode::OutlineFrame;
-    const int width =
-        outline
-            ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) /
-                                                       (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale))))
-            : 0;
+    const auto style = Fonts().GlobalStyle("Current Line");
+    if (StyleProperty(style, outline ? "fore" : "back").empty()) {
+        Send(Message::ResetElementColour, element);
+        return;
+    }
+    const int frameSize = std::max(1, StyleInteger(style, "size", 2));
+    const int width = outline ? std::max(1, static_cast<int>(std::lround(
+                                                static_cast<double>(frameSize) * GetDPI().y * Send(Message::GetZoom) /
+                                                (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale))))
+                              : 0;
     Send(Message::SetCaretLineFrame, width);
     Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(std::to_underlying(Scintilla::Layer::UnderText)));
-    Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
+    const auto alpha = std::clamp(StyleInteger(style, outline ? "outline" : "alpha", 255), 0, 255);
+    Send(Message::SetElementColour, element,
+         StyleColour(style, outline ? "fore" : "back", outline ? 0x00C3C0C2 : 0x0000FFFF) |
+             (static_cast<unsigned>(alpha) << 24U));
+}
+
+void EditorControl::ApplyStylePixelSettings() {
+    constexpr int StrokeWidthHundredthsPerPixel = 100;
+    const double scale = static_cast<double>(GetDPI().y * Send(Message::GetZoom)) /
+                         (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale);
+    const auto whitespace = Fonts().GlobalStyle("Whitespace");
+    Send(Message::SetWhitespaceSize,
+         std::max(1, static_cast<int>(std::lround(StyleInteger(whitespace, "size", 0) * scale))));
+    const int spacing = static_cast<int>(
+        std::lround(std::abs(StyleInteger(Fonts().GlobalStyle("Extra Line Spacing"), "size", 0)) * scale));
+    Send(Message::SetExtraAscent, spacing - spacing / 2);
+    Send(Message::SetExtraDescent, spacing / 2);
+    for (auto id = std::to_underlying(Scintilla::MarkerOutline::FolderEnd);
+         id <= std::to_underlying(Scintilla::MarkerOutline::FolderOpen); ++id)
+        Send(Message::MarkerSetStrokeWidth, id,
+             std::max(StrokeWidthHundredthsPerPixel,
+                      static_cast<int>(std::lround(StrokeWidthHundredthsPerPixel * scale))));
+    SetCurrentLineHighlightMode(lineHighlightMode_);
+    ApplyCaretAppearance();
 }
 
 void EditorControl::Copy() {
@@ -470,7 +499,8 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
         message == Message::StyleSetItalic || message == Message::StyleSetWeight || message == Message::SetZoom ||
-        message == Message::SetTechnology) {
+        message == Message::SetTechnology || message == Message::SetExtraAscent ||
+        message == Message::SetExtraDescent) {
         lineNumberWidthDirty_ = true;
         bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;
@@ -479,7 +509,7 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     UpdateBookmarkMargin();
     if (message == Message::FoldAll) core_->RepairFoldSelection();
     if (message == Message::SetZoom || message == Message::ZoomIn || message == Message::ZoomOut)
-        ApplyCaretAppearance();
+        ApplyStylePixelSettings();
     core_->SelectionRevision();
     return result;
 }
@@ -521,8 +551,11 @@ void EditorControl::SetBookmarkMarginVisible(bool visible) {
     Send(Message::MarkerDefine, EditorMarker::Bookmark,
          static_cast<intptr_t>(std::to_underlying(visible ? Scintilla::MarkerSymbol::VerticalBookmark
                                                           : Scintilla::MarkerSymbol::Background)));
-    Send(Message::MarkerSetBackTranslucent, EditorMarker::Bookmark, visible ? 0xFF408040 : 0x2800FF00);
-    if (visible) Send(Message::MarkerSetForeTranslucent, EditorMarker::Bookmark, 0xFF408040);
+    const auto style = Fonts().GlobalStyle("Bookmark");
+    const auto colour = StyleColour(style, visible ? "fore" : "back", visible ? 0x00408040 : 0x0000ff00);
+    const auto alpha = visible ? 255 : std::clamp(StyleInteger(style, "alpha", 40), 0, 255);
+    Send(Message::MarkerSetBackTranslucent, EditorMarker::Bookmark, colour | (static_cast<unsigned>(alpha) << 24U));
+    if (visible) Send(Message::MarkerSetForeTranslucent, EditorMarker::Bookmark, 0xff000000U | colour);
     Send(Message::MarkerSetLayer, EditorMarker::Bookmark,
          static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
     bookmarkMarginWidthDirty_ = true;

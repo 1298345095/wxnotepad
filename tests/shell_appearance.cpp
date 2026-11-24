@@ -7,6 +7,7 @@
 #include "file_helpers.h"
 #include "editor/occurrence_marking.h"
 #include "editor/editor_ids.h"
+#include "syntax/syntax_scheme.h"
 #include <wx/toolbar.h>
 #include <wx/statusbr.h>
 #include <memory>
@@ -84,19 +85,46 @@ void NativeSelectionColours(EditorControl* editor) {
         Require(colour == native, "default selected text uses the native highlight foreground/background pair");
     }
 }
-void NativeFoldMargin(EditorControl* editor) {
+void OriginalProfileSelectionColours(EditorControl* editor) {
+    using enum Scintilla::Message;
+    for (const auto element : {Scintilla::Element::SelectionText, Scintilla::Element::SelectionAdditionalText,
+                               Scintilla::Element::SelectionSecondaryText, Scintilla::Element::SelectionInactiveText}) {
+        Require(!editor->Send(GetElementIsSet, std::to_underlying(element)) &&
+                    editor->Send(GetElementColour, std::to_underlying(element)) == 0,
+                "original profile leaves all four selected-text foreground overrides unset");
+    }
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+    const uint32_t native = background.Red() | (background.Green() << 8U) | (background.Blue() << 16U);
+    constexpr unsigned OriginalSelectionAlpha = 95;
+    constexpr unsigned OriginalAdditionalSelectionAlpha = 50;
+    Require(
+        static_cast<uint32_t>(editor->Send(GetElementColour, std::to_underlying(Scintilla::Element::SelectionBack))) ==
+            (native | (OriginalSelectionAlpha << 24U)),
+        "original profile applies native highlight with alpha95 to the primary selection");
+    for (const auto element : {Scintilla::Element::SelectionAdditionalBack, Scintilla::Element::SelectionSecondaryBack,
+                               Scintilla::Element::SelectionInactiveBack})
+        Require(static_cast<uint32_t>(editor->Send(GetElementColour, std::to_underlying(element))) ==
+                    (native | (OriginalAdditionalSelectionAlpha << 24U)),
+                "original profile applies native highlight with alpha50 to additional selections");
+    Require(editor->Send(GetSelectionLayer) == std::to_underlying(Scintilla::Layer::OverText) &&
+                editor->Send(GetSelEOLFilled),
+            "original selection remains over text and fills the selected EOL");
+}
+std::vector<wxColour> FoldMarginPixels(EditorControl* editor) {
     using enum Scintilla::Message;
     int left = 0;
     for (int margin = 0; margin < EditorMargin::Folding; ++margin)
         left += static_cast<int>(editor->Send(GetMarginWidthN, margin));
     const auto width = editor->Send(GetMarginWidthN, EditorMargin::Folding);
     Require(width >= 2, "default folding margin is visible");
+    return NativePaint::Read(editor, wxRect(left + static_cast<int>(width) / 2, editor->GetClientSize().y / 2, 2, 2));
+}
+void NativeFoldMargin(EditorControl* editor) {
     // wxSTC's native chrome pattern is used without fold-color overrides.
     const auto chrome = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
     const auto highlight = wxSystemSettings::GetColour(wxSYS_COLOUR_3DHIGHLIGHT);
     const auto fill = highlight == *wxWHITE ? chrome : highlight;
-    const auto pixels =
-        NativePaint::Read(editor, wxRect(left + static_cast<int>(width) / 2, editor->GetClientSize().y / 2, 2, 2));
+    const auto pixels = FoldMarginPixels(editor);
     Require(std::count(pixels.begin(), pixels.end(), fill) >= 2 &&
                 std::count(pixels.begin(), pixels.end(), highlight) >= 2,
             "painted folding margin follows the native wxSTC chrome colors");
@@ -180,8 +208,23 @@ void DumpStatusLayout(wxStatusBar* status, const char* stage) {
 void CheckDocumentStatus(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    NativeSelectionColours(editor);
+    {
+        wxFrame nativeHost(nullptr, wxID_ANY, "Native unprofiled editor palette");
+        EditorControl nativeEditor(&nativeHost);
+        NativeSelectionColours(&nativeEditor);
+    }
+    OriginalProfileSelectionColours(editor);
+    editor->Send(SetFoldMarginColour, 0);
+    editor->Send(SetFoldMarginHiColour, 0);
+    NativePaint::Complete(editor);
     NativeFoldMargin(editor);
+    ApplySyntaxStyles(*editor, SyntaxLanguage::PlainText);
+    const auto pixels = FoldMarginPixels(editor);
+    wxColour background;
+    background.SetRGB(
+        static_cast<unsigned>(editor->Send(StyleGetBack, std::to_underlying(Scintilla::StylesCommon::Default))));
+    Require(std::count(pixels.begin(), pixels.end(), background) == 4,
+            "original profile paints all fold-margin pixels uniformly with the document background");
     for (const auto [text, size] : {std::pair{"", "0 bytes"}, std::pair{"a", "1 byte"}, std::pair{"ab", "2 bytes"}}) {
         editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
         NativePaint::Complete(editor);
@@ -360,6 +403,7 @@ void CheckToolbarLayout(EditorFrame* frame) {
                                                    command("View", "Zoom Out"),
                                                    wxID_SEPARATOR,
                                                    command("Scheme", "Syntax Scheme..."),
+                                                   command("Scheme", "Customize Schemes..."),
                                                    wxID_SEPARATOR,
                                                    wxID_EXIT});
     Require(toolbar->GetToolsCount() == expectedOrder.size(), "default toolbar retains original delivered groups");

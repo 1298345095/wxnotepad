@@ -57,6 +57,7 @@ public:
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
     bool NewWindow();
+    bool OpenInNewWindow();
     bool OpenSelection(bool containingFolder = false);
     bool OpenContainingFolder();
     void AppendOpenTargetCommands(wxMenu* menu);
@@ -147,6 +148,9 @@ private:
     void AppendDocumentTools(wxMenu* tools);
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();
+    void RunSelectionAction(SelectionAction action);
+    bool HandleSelectionActionKey(const wxKeyEvent& event);
+    bool LaunchSelectionCommand(const wxString& command, const wxString& directory, wxString& error);
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);
@@ -228,6 +232,7 @@ private:
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     void ShowSyntaxScheme(bool favorite = false);
+    void CustomizeStyles();
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const DocumentLoad::Intent& intent);

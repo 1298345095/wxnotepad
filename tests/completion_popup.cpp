@@ -162,8 +162,14 @@ void CheckPopup(EditorFrame* frame) {
     wxString focusFile;
     NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
     NativePaint::Complete(editor);
-    Require(editor->HasFocus() && editor->Send(Message::GetFocus),
-            "editor owns native focus after presentation settles");
+    const bool focusReady = editor->HasFocus() && editor->Send(Message::GetFocus);
+    if (!focusReady) {
+        // The helper already acknowledged; retain the later postcondition's
+        // native history without treating it as a new activation timeout.
+        NativeKeys::ObserveFocusFailure(frame, GTK_WIDGET(frame->GetHandle()), focusFile, "completion-after-paint", {},
+                                        true, 0, 0);
+    }
+    Require(focusReady, "editor owns native focus after presentation settles");
 #endif
     CheckInitialPopup(editor);
     CheckPopupWorkArea(frame);

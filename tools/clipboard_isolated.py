@@ -17,13 +17,15 @@ import tempfile
 import time
 import threading
 from collections import deque
-from weston_scene import mapped_toplevel, mapped_toplevel_position
+from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
 FAILURE_HISTORY_EVENTS = 256
 FOCUS_UNTIL_PREFIX = "focus-until:"
+FRONT_UNTIL_PREFIX = "front-until:"
 KEY_DELAY_PREFIX = "key-delay:"
+X11_WINDOW_PREFIX = "x11-window:"
 
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
@@ -65,22 +67,35 @@ def acknowledge(focus, deadline_us=None):
     return True
 
 
-def focus_owned_window(focus, title, deadline_us=None):
+def focus_owned_window(focus, title, deadline_us=None, *, raise_window=False):
     # Reject expired requests before native input; acknowledge rechecks after
     # X11's synchronous focus call and immediately before publishing the claim.
     if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
         driver_trace(focus, "driver.expired")
         return True
     if backend == "x11":
-        windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
-        if not windows:
+        if title.startswith(X11_WINDOW_PREFIX):
+            # A title may change while native document notifications settle.
+            # Resolve the exact owned XID, retaining the native mapping check.
+            target = title[len(X11_WINDOW_PREFIX):]
+            candidates = xdo("search", "--onlyvisible", "--class", ".").splitlines()
+            windows = [target] if target in candidates else []
+        else:
+            windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
+        if not windows and not title.startswith(X11_WINDOW_PREFIX):
             # GTK omits legacy WM_NAME for some non-Latin titles. xdotool's
             # search then misses the visible window although getwindowname
             # reads its UTF-8 _NET_WM_NAME correctly.
             candidates = xdo("search", "--onlyvisible", "--class", ".").splitlines()
             windows = [window for window in candidates if re.search(title, xdo("getwindowname", window))]
+        driver_trace(focus, "driver.focus-search", f"title={title};windows={','.join(windows)}")
         if not windows:
             return False
+        if deadline_us is not None and time.monotonic_ns() // 1000 >= deadline_us:
+            driver_trace(focus, "driver.expired")
+            return True
+        if raise_window:
+            xdo("windowraise", windows[0])
         xdo("windowfocus", "--sync", windows[0])
     if not acknowledge(focus, deadline_us):
         driver_trace(focus, "driver.expired")
@@ -226,7 +241,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:", "pointer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:", "pointer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -292,7 +307,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                             timed_out = True
                             break
                         last_scene = scene
-                        matched = mapped_toplevel(scene, int(process), int(surface))
+                        matched = input_ready_toplevel(scene, int(process), int(surface))
                         if matched:
                             if time.monotonic() < deadline:
                                 if kind == "activate":
@@ -383,13 +398,14 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         pending.replace(phase)
                     wait_drag_state(".drag-ended", "end")
                     acknowledge(focus)
-                elif request.startswith(("focus:", FOCUS_UNTIL_PREFIX)):
-                    if request.startswith(FOCUS_UNTIL_PREFIX):
+                elif request.startswith(("focus:", FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX)):
+                    if request.startswith((FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX)):
                         _, expiry, title = request.split(":", 2)
                         deadline_us = int(expiry)
                     else:
                         deadline_us, title = None, request[6:]
-                    if not focus_owned_window(focus, title, deadline_us):
+                    if not focus_owned_window(focus, title, deadline_us,
+                                              raise_window=request.startswith(FRONT_UNTIL_PREFIX)):
                         time.sleep(.03)
                         continue
                 elif request.startswith("tree-drag:"):

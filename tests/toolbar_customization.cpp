@@ -12,6 +12,7 @@
 #include <wx/display.h>
 #include <wx/statusbr.h>
 #include <wx/treectrl.h>
+#include <wx/textctrl.h>
 #include <array>
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
@@ -81,11 +82,34 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
                 frame->Editor()->GetSize() == editorSize,
             "size rebuilding retains hidden bars and the editor's native geometry");
     NativeKeys::Shortcut(frame, WXK_F11, false);
-    NativePaint::Complete(frame->Editor());
+#ifdef __WXGTK__
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame->GetHandle())))) {
+        // wxGTK's legacy X11 fullscreen first requests screen size + 1px.
+        // Its cached frame size can lag the final native allocation even after
+        // editor paints. Observe both at the requested bounds before comparing
+        // the toolbar rebuild, within the existing paint deadline.
+        const auto bounds = wxDisplay(frame).GetGeometry();
+        NativePaint::Complete(frame->Editor(),
+                              [&] { return frame->GetRect() == bounds && nativeClient() == bounds.GetSize(); });
+    } else
+#endif
+        NativePaint::Complete(frame->Editor());
     const auto fullscreen = frame->GetRect();
     NativeSearch::Command(frame, large);
     NativePaint::Complete(frame->Editor());
-    Require(frame->GetRect() == fullscreen && !frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown(),
+    const auto rebuilt = frame->GetRect();
+    const bool toolbarShown = frame->GetToolBar()->IsShown();
+    const bool statusShown = frame->GetStatusBar()->IsShown();
+    if (rebuilt != fullscreen || toolbarShown || statusShown) {
+        const auto native = nativeClient();
+        std::println(stderr,
+                     "Toolbar rebuild geometry: before={},{},{}x{} after={},{},{}x{} native={}x{} fullscreen={} "
+                     "toolbarShown={} statusShown={}",
+                     fullscreen.x, fullscreen.y, fullscreen.width, fullscreen.height, rebuilt.x, rebuilt.y,
+                     rebuilt.width, rebuilt.height, native.x, native.y, frame->IsFullScreen(), toolbarShown,
+                     statusShown);
+    }
+    Require(rebuilt == fullscreen && !toolbarShown && !statusShown,
             "toolbar rebuilding preserves fullscreen geometry and hidden bars");
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativePaint::Complete(frame->Editor());
@@ -133,7 +157,7 @@ void KeyboardClick(wxButton* button) {
     } while (std::chrono::steady_clock::now() < focusDeadline);
     Require(focused, "physical keyboard targets the owned active customization button");
     bool released = false;
-    NativeKeys::KeyRelease observer(' ', released, nullptr);
+    NativeKeys::KeyReleaseObserver observer(' ', released, nullptr);
     {
         wxFFile request(focusFile, "wb");
         Require(request.IsOpened() && request.Write("key:space"), "native Space request is published");
@@ -257,6 +281,31 @@ void SchemeToolbarCancel(EditorFrame* frame, const wxString& settingsPath) {
                 after.values.autoSelect == before.values.autoSelect,
             "toolbar chooser Cancel discards temporary default and automatic-selection preferences");
 }
+void ConfigureSchemesToolbarCancel(EditorFrame* frame) {
+    const int command = frame->GetMenuBar()->FindMenuItem(_("Sche&me"), _("&Customize Schemes...\tCtrl+F12"));
+    Require(command != wxNOT_FOUND, "delivered Customize Schemes menu command exists");
+    const auto* tool = frame->GetToolBar()->FindById(command);
+    Require(tool && tool->GetLabel() == wxMenuItem::GetLabelText(_("&Customize Schemes...\tCtrl+F12")) &&
+                tool->GetShortHelp() == wxStripMenuCodes(_("&Customize Schemes...\tCtrl+F12"), wxStrip_Mnemonics),
+            "original toolbar identity16 shares the delivered Ctrl+F12 menu command, label and tooltip");
+    const auto fonts = frame->Editor()->Fonts();
+    const auto metadata = StatusMetadata(frame);
+    ToolbarDialogDriver driver(
+        [](wxDialog* dialog) {
+            auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Scheme styles", dialog), wxTreeCtrl);
+            auto* edit = wxDynamicCast(wxWindow::FindWindowByName("Style settings", dialog), wxTextCtrl);
+            Require(tree && edit && NativeDialogs::SelectTreeLabel(*tree, wxGetTranslation("Default Text Style")),
+                    "toolbar identity16 opens the actual shared style customization dialog");
+            edit->SetValue("size:22; fore:#123456");
+            NativeSearch::Click(dialog, wxID_CANCEL);
+        },
+        _("Customize Schemes - Default Theme"));
+    ActivateToolbar(frame, command);
+    if (driver.failure) std::rethrow_exception(driver.failure);
+    Require(driver.opened && frame->Editor()->HasFocus() && StatusMetadata(frame) == metadata &&
+                frame->Editor()->Fonts() == fonts,
+            "native toolbar style Cancel discards edited styles and preserves scheme, profile and editor focus");
+}
 void AddAndRemove(EditorFrame* frame) {
     ToolbarDialogDriver driver([frame](wxDialog* dialog) {
         auto* available = wxDynamicCast(wxWindow::FindWindowByName("Available toolbar buttons", dialog), wxListBox);
@@ -308,6 +357,8 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
     };
     SchemeToolbarCancel(frame, settingsPath);
     unchanged();
+    ConfigureSchemesToolbarCancel(frame);
+    unchanged();
     for (int cycle = 0; cycle < 3; ++cycle) {
         NativeSearch::Command(frame, AppearanceCommand(frame, "Use Lar&ge Toolbar"));
         unchanged();
@@ -357,7 +408,8 @@ void ReorderResetAndHistory(EditorFrame* frame, const wxString& settingsPath) {
         click("Reset toolbar buttons");
         NativeSearch::Command(frame, AppearanceCommand(frame, "Save Settings &Now"));
         SettingsStore reset(settingsPath);
-        Require(reset.values.toolbarButtons == "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 0 17",
+        Require(reset.values.toolbarButtons ==
+                    "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 16 0 17",
                 "Reset restores the pinned projected default stable identities and separators");
         current->SetSelection(current->FindString(wxMenuItem::GetLabelText(_("&Undo\tCtrl+Z"))));
         while (current->GetSelection() > 0)
@@ -387,8 +439,8 @@ struct ConfigurationCase {
 const auto ConfigurationCases = std::to_array<ConfigurationCase>(
     {{"malformed", "8 0 5 junk 9", "8 0 5"},
      {"clamped", "-1 999 0 4", "0 27 0 4"},
-     {"unsupported", "3 0 22 8 0 16 999", "0 8 0 27"},
-     {"invalid", "junk 8", "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 0 17"},
+     {"unsupported", "3 0 22 8 0 16 999", "0 8 0 16 27"},
+     {"invalid", "junk 8", "1 27 2 0 4 18 19 0 5 6 0 7 8 9 20 0 10 11 0 12 0 24 0 13 14 0 15 16 0 17"},
      {"duplicate", "8 8 0 4", "8 8 0 4"},
      {"bounded",
       "12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 "

@@ -137,6 +137,10 @@ msgstr "自动(&A)"
 msgid "&Available toolbar buttons:"
 msgstr "可用工具栏按钮(&A)："
 
+#: src/app/dialogs/style_customization.cpp
+msgid "&Back..."
+msgstr "背景(&B)..."
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Base64"
 msgstr "&Base64"
@@ -230,9 +234,17 @@ msgstr "当前块(&C)\tAlt+C"
 msgid "&Current toolbar buttons:"
 msgstr "当前工具栏按钮(&C)："
 
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+msgid "&Customize Schemes...\tCtrl+F12"
+msgstr "自定义语法高亮(&C)...\tCtrl+F12"
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Decode"
 msgstr "解码(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Default"
+msgstr "默认(&D)"
 
 #. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
 #: src/app/editor_frame_commands.cpp
@@ -341,6 +353,10 @@ msgstr "查找全部(&F)"
 msgid "&Find...\tCtrl+F"
 msgstr "查找(&F)...\tCtrl+F"
 
+#: src/app/dialogs/style_customization.cpp
+msgid "&Font..."
+msgstr "字体(&F)..."
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Goto"
 msgstr "跳转(&G)"
@@ -362,6 +378,10 @@ msgstr "半页(&H)"
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "&Highlight current subline"
 msgstr "高亮显示当前子行(&H)"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "&Import..."
+msgstr "导入(&I)..."
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INDENT.
 #: src/app/editor_frame_commands.cpp
@@ -547,6 +567,10 @@ msgstr "粘贴(&P)\tCtrl+V"
 msgid "&Prefix text to lines:"
 msgstr "每行前缀文本(&P):"
 
+#: src/app/dialogs/style_customization.cpp
+msgid "&Preview"
+msgstr "预览(&P)"
+
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
 msgid "&Print...\tCtrl+P"
@@ -586,6 +610,7 @@ msgstr "移除重复行(&R)。"
 msgid "&Replace"
 msgstr "替换(&R)"
 
+#: src/app/dialogs/style_customization.cpp
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Reset"
 msgstr "重置(&R)"
@@ -828,6 +853,10 @@ msgstr "ALM — 阿拉伯字母标记(&B)"
 msgid "ASP JavaScript"
 msgstr "ASP JavaScript"
 
+#: src/syntax/generated/style_profiles.h
+msgid "ASP Tag"
+msgstr "ASP 标记"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "ASP VBScript"
 msgstr "ASP VBScript"
@@ -848,6 +877,10 @@ msgstr "ASS — 启用对称交换(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Action on &Selection"
 msgstr "对选中内容执行操作(&S)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Alias"
+msgstr "别名"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ALIGN.
 #: src/app/editor_frame_commands.cpp
@@ -871,9 +904,17 @@ msgstr "所有文件 (%s)"
 msgid "All files (*)|*"
 msgstr "所有文件 (*)|*"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Anchor"
+msgstr "锚点"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Angle brackets <>"
 msgstr "尖括号 <>"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Annotation"
+msgstr "注解"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Appea&rance"
@@ -898,6 +939,22 @@ msgstr "作为 &OEM\tCtrl+Shift+O"
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
 msgstr "作为 UTF-&8\tShift+F8"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Assignment"
+msgstr "赋值"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Associated file&name extensions:"
+msgstr "关联的文件扩展名(&N):"
+
+#: src/syntax/generated/style_profiles.h
+msgid "At Rule"
+msgstr "At 规则"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Attribute"
+msgstr "属性"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Auto &Completion Settings..."
@@ -927,6 +984,10 @@ msgstr "自动闭合 HTML 和 XML 标签"
 #: src/app/editor_frame_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自动收缩水平滚动条"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr "AutoHotkey 脚本"
 
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
@@ -960,6 +1021,7 @@ msgid "Backspace at Indentation Deletes up to Tab Stop"
 msgstr "退格键在缩进处删除到制表位"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/syntax/generated/style_profiles.h
 msgid "Backticks"
 msgstr "反引号"
 
@@ -977,6 +1039,18 @@ msgstr "备份间隔（秒）"
 msgid "Bash"
 msgstr "Bash"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Basic Function"
+msgstr "基本函数"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
+msgstr "批处理文件"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bit Field"
+msgstr "位域"
+
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Black on white"
@@ -990,6 +1064,10 @@ msgstr "块状(插入模式)(&I)"
 msgid "Block (&OVR Mode)"
 msgstr "块状(覆盖模式)(&O)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Block Quote"
+msgstr "引用块"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Boo&kmark matched line"
 msgstr "为匹配的行添加书签(&K)"
@@ -998,6 +1076,10 @@ msgstr "为匹配的行添加书签(&K)"
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
 msgstr "书签(&K)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bookmark"
+msgstr "书签"
 
 #. TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1017,6 +1099,26 @@ msgstr "边界"
 #, c++-format
 msgid "Braces {}"
 msgstr "花括号 {}"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bracket Argument"
+msgstr "括号参数"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Built-in Constant"
+msgstr "内置常量"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Built-in Function"
+msgstr "内置函数"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Built-in default value:"
+msgstr "内置默认值:"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Bytes"
+msgstr "字节串"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "C Shell"
@@ -1044,6 +1146,10 @@ msgstr "C/C++"
 msgid "C/C++ Source"
 msgstr "C/C++ 源代码"
 
+#: src/syntax/generated/style_profiles.h
+msgid "CDATA"
+msgstr "CDATA"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "CMake"
 msgstr "CMake"
@@ -1070,6 +1176,14 @@ msgstr[0] "CR: %llu 行。"
 msgid "CSS Style Sheet"
 msgstr "CSS 样式表"
 
+#: src/syntax/generated/style_profiles.h
+msgid "CallTip"
+msgstr "调用提示"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Caret"
+msgstr "光标"
+
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Case &insensitive."
 msgstr "不区分大小写(&I)。"
@@ -1092,6 +1206,10 @@ msgstr "修改历史标记(&H)"
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Change &background color."
 msgstr "改变背景色(&B)。"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Change History Marker"
+msgstr "修改历史标记"
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE help; distinguish the disk attribute from F10 editor protection.
 #: src/app/editor_frame_commands.cpp
@@ -1137,6 +1255,14 @@ msgstr "选择要打开的现有文件。"
 msgid "Choose program"
 msgstr "选择程序"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Citation"
+msgstr "引文"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Class"
+msgstr "类"
+
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr "经典 &Mac OS (CR)"
@@ -1163,6 +1289,18 @@ msgstr "点击此处选择默认编码(&S)。"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Close"
 msgstr "关闭"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Cmdlet"
+msgstr "Cmdlet"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Code Block"
+msgstr "代码块"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Code Folding"
+msgstr "代码折叠"
 
 #: src/app/dialogs/document_dialogs.cpp
 #, c-format
@@ -1198,6 +1336,14 @@ msgstr "段落切分(&W)..."
 msgid "Column Wrap"
 msgstr "段落切分"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Command"
+msgstr "命令"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Comment"
+msgstr "注释"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Comments"
 msgstr "注释"
@@ -1224,6 +1370,10 @@ msgstr "压缩空白(&W)\tAlt+W"
 msgid "Con&vert"
 msgstr "转换(&V)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Constant"
+msgstr "常量"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Continuation &indent:"
 msgstr "续行缩进(&I)："
@@ -1237,6 +1387,10 @@ msgstr "连续编号(从 0 开始)。"
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Continuous number."
 msgstr "连续编号。"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Control Character"
+msgstr "控制字符"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Copy to Clipboard submenu.
 #: src/app/editor_frame_commands.cpp
@@ -1265,6 +1419,11 @@ msgstr "复制选中文本作为查找文本"
 #: src/app/editor_frame_commands.cpp
 msgid "Copy as &RTF"
 msgstr "复制为富文本(&R)"
+
+#: src/app/dialogs/style_customization.cpp
+#, c-format
+msgid "Could not access %s"
+msgstr "无法访问 %s"
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
 #: src/document/document_session.cpp
@@ -1306,6 +1465,14 @@ msgstr "无法确定文件大小。"
 msgid "Could not execute document"
 msgstr "无法执行文档"
 
+#: src/app/dialogs/style_customization.cpp
+msgid "Could not export schemes"
+msgstr "无法导出语法高亮设置"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Could not import schemes"
+msgstr "无法导入语法高亮设置"
+
 #. TRANSLATORS: Linux IDM_FILE_LAUNCH/OPENWITH error loading a native .desktop entry; no parameters.
 #. TRANSLATORS: Linux IDM_FILE_OPENWITH error loading a native .desktop program entry; no parameters.
 #: src/app/desktop_launch.cpp src/app/document_tools.cpp
@@ -1327,7 +1494,7 @@ msgid "Could not open new window"
 msgstr "无法打开新窗口"
 
 #: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
-#: src/app/open_targets.cpp
+#: src/app/open_targets.cpp src/app/selection_actions.cpp
 msgid "Could not open target"
 msgstr "无法打开目标"
 
@@ -1339,6 +1506,10 @@ msgstr "无法打开所在文件夹。"
 #: src/document/document_session.cpp
 msgid "Could not open the destination for writing."
 msgstr "无法打开目标文件以写入。"
+
+#: src/app/new_window.cpp
+msgid "Could not open the document in a new window."
+msgstr "无法在新窗口中打开文档。"
 
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
@@ -1390,7 +1561,7 @@ msgid "Could not restart wxnotepad."
 msgstr "无法重新启动 wxnotepad。"
 
 #. TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
-#: src/app/run_command.cpp
+#: src/app/run_command.cpp src/app/selection_actions.cpp
 #, c-format
 msgid "Could not run command: %s"
 msgstr "无法运行命令：%s"
@@ -1447,6 +1618,10 @@ msgstr "当前级别(&L)"
 msgid "Current Date &Time"
 msgstr "当前日期和时间(&T)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Current Line"
+msgstr "当前行"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Current encoding"
 msgstr "当前编码"
@@ -1456,9 +1631,25 @@ msgstr "当前编码"
 msgid "Current screen color (WYSIWYG)"
 msgstr "当前屏幕颜色（所见即所得）"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Custom Action &1\tCtrl+Shift+1"
+msgstr "自定义动作 &1\tCtrl+Shift+1"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Custom Action &2\tCtrl+Shift+2"
+msgstr "自定义动作 &2\tCtrl+Shift+2"
+
 #: src/app/editor_frame_toolbar.cpp
 msgid "Customi&ze Toolbar..."
 msgstr "自定义工具栏(&Z)..."
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Customize Schemes - Dark Theme"
+msgstr "自定义语法高亮 - 暗色主题"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Customize Schemes - Default Theme"
+msgstr "自定义语法高亮 - 默认主题"
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Customize Toolbar"
@@ -1474,8 +1665,24 @@ msgid "DTD"
 msgstr "DTD"
 
 #: src/app/editor_frame_commands.cpp
+msgid "Dar&k"
+msgstr "深色(&K)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "DateTime"
+msgstr "日期时间"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Decode as &Hex"
 msgstr "解码为 Hex(&H)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Decorator"
+msgstr "装饰器"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Default"
+msgstr "默认样式"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Default &Code Font...\tAlt+F12"
@@ -1489,6 +1696,10 @@ msgstr "默认文本字体(&T)..."
 msgid "Default Code Font"
 msgstr "默认代码字体"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Default Code Style"
+msgstr "默认代码样式"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
 msgstr "默认编码"
@@ -1496,6 +1707,14 @@ msgstr "默认编码"
 #: src/app/editor_frame.cpp
 msgid "Default Text Font"
 msgstr "默认文本字体"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Default Text Style"
+msgstr "默认文本样式"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Default Value"
+msgstr "默认值"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default encoding"
@@ -1505,9 +1724,46 @@ msgstr "默认编码"
 msgid "Default line ending mode"
 msgstr "默认换行模式"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Definition List"
+msgstr "定义列表"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Delimiter"
+msgstr "分隔符"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Delimiter Row"
+msgstr "分隔行"
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Detect Indentation"
 msgstr "自动检查制表符和缩进设置"
+
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
+msgstr "Diff 文件"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Directive"
+msgstr "指令"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Display Math"
+msgstr "独立公式"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Doc Comment"
+msgstr "文档注释"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Doc Comment Tag"
+msgstr "文档注释标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Document"
+msgstr "文档"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_DLN.
 #: src/app/dialogs/modify_lines_dialog.cpp
@@ -1522,6 +1778,10 @@ msgstr "不排序(&S)。"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Don't parse encoding &tags."
 msgstr "不解析编码标记(&T)。"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Double Quoted String"
+msgstr "双引号字符串"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Double quotes"
@@ -1539,6 +1799,18 @@ msgstr "退出(&X)\tAlt+F4"
 #: src/app/editor_frame_commands.cpp
 msgid "E&xit wxnotepad"
 msgstr "退出 wxnotepad(&X)"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "E&xport..."
+msgstr "导出(&X)..."
+
+#: src/syntax/generated/style_profiles.h
+msgid "Emoji"
+msgstr "表情符号"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Emphasis"
+msgstr "强调"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Enable &Multiple Selection"
@@ -1577,6 +1849,10 @@ msgstr "仅在英文输入法模式下触发自动完成"
 msgid "Enter"
 msgstr "回车键"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Enumeration"
+msgstr "枚举"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ESCAPECCHARS.
 #: src/app/editor_frame_commands.cpp
 msgid "Esca&pe C Chars\tCtrl+Alt+E"
@@ -1586,20 +1862,36 @@ msgstr "转义 C 字符(&P)\tCtrl+Alt+E"
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr "转义 HTML/XML 字符(&M)\tAlt+Shift+X"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Escape Sequence"
+msgstr "转义序列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Example List"
+msgstr "示例列表"
+
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
 #: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "执行文档(&D)\tCtrl+L"
 
+#: src/app/dialogs/style_customization.cpp
+msgid "Export Schemes"
+msgstr "导出语法高亮设置"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Extra Esc &Key Function"
 msgstr "Esc 键特别功能(&K)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Extra Line Spacing"
+msgstr "额外行间距"
 
 #: src/editor/special_insert.h
 msgid "FSI — &First strong isolate"
 msgstr "FSI — 首个强方向隔离符(&F)"
 
-#: src/app/dialogs/scheme_chooser.cpp
+#: src/app/dialogs/scheme_chooser.cpp src/app/dialogs/style_customization.cpp
 msgid "Favorite Schemes"
 msgstr "常用语法高亮"
 
@@ -1700,6 +1992,14 @@ msgstr "用于执行自动完成的按键(使用 Esc 键取消)"
 msgid "Fnd %s%s"
 msgstr "匹配 %s%s"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Fold Ellipsis"
+msgstr "代码折叠省略号"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Folding Marker"
+msgstr "代码折叠标志"
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
@@ -1708,6 +2008,18 @@ msgstr "页脚："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "For wrapped line"
 msgstr "对换行的文本"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "For&e..."
+msgstr "颜色(&E)..."
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Specifier"
+msgstr "格式说明符"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Formatted String"
+msgstr "格式化字符串"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name"
@@ -1728,6 +2040,14 @@ msgstr "完整路径名称(&P)\tCtrl+Shift+F9"
 msgid "Full Scree&n Mode"
 msgstr "全屏模式(&N)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Function"
+msgstr "函数"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Function Definition"
+msgstr "函数定义"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "GitHub GFM"
 msgstr "GitHub GFM"
@@ -1739,6 +2059,10 @@ msgstr "GitLab GLFM"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Global"
 msgstr "全局设置"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Global Styles"
+msgstr "全局样式"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Go"
@@ -1814,6 +2138,74 @@ msgstr "按文件类型分组(&T)。"
 msgid "HSS Style Sheet"
 msgstr "HSS 样式表"
 
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Attribute"
+msgstr "HTML 属性"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Comment"
+msgstr "HTML 注释"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Element Text"
+msgstr "HTML 元素文本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Entity"
+msgstr "HTML 实体"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Other Tag"
+msgstr "HTML 其他标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML String"
+msgstr "HTML 字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Tag"
+msgstr "HTML 标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Unknown Attribute"
+msgstr "HTML 未知属性"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Unknown Tag"
+msgstr "HTML 未知标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HTML Value"
+msgstr "HTML 值"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Hard Line Break"
+msgstr "硬换行"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 1"
+msgstr "一级标题"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 2"
+msgstr "二级标题"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 3"
+msgstr "三级标题"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 4"
+msgstr "四级标题"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 5"
+msgstr "五级标题"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Header 6"
+msgstr "六级标题"
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Header:"
@@ -1822,6 +2214,22 @@ msgstr "页眉："
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Headers and Footers"
 msgstr "页眉和页脚"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Delimiter)"
+msgstr "Here-doc（分隔符）"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Single Quoted)"
+msgstr "Here-doc（单引号）"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Heredoc String"
+msgstr "Heredoc 字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Hex String"
+msgstr "十六进制字符串"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_HEX2CHAR.
 #: src/app/editor_frame_commands.cpp
@@ -1845,6 +2253,18 @@ msgstr "高亮当前行(&U)"
 msgid "Highlight Current &Block"
 msgstr "高亮当前代码块(&B)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Horizontal Rule"
+msgstr "水平分隔线"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotKey"
+msgstr "热键"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotString"
+msgstr "热字串"
+
 #: src/app/editor_frame_commands.cpp
 msgid "I&nsert"
 msgstr "插入(&N)"
@@ -1853,9 +2273,25 @@ msgstr "插入(&N)"
 msgid "IAFS — Inhibit Arabic form s&haping"
 msgstr "IAFS — 禁用阿拉伯字形塑形(&I)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "IME Indicator"
+msgstr "输入法指示"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "INI Files (*.ini)|*.ini|All Files (*)|*"
+msgstr "INI 文件 (*.ini)|*.ini|所有文件 (*)|*"
+
 #: src/editor/special_insert.h
 msgid "ISS — Inhibit s&ymmetric swapping"
 msgstr "ISS — 禁用对称交换(&Y)"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Import Schemes"
+msgstr "导入语法高亮设置"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Important"
+msgstr "重要"
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "In &Selection"
@@ -1880,9 +2316,26 @@ msgstr "换行符不一致"
 msgid "Indentation &Guides\tCtrl+Shift+G"
 msgstr "缩进指示(&G)\tCtrl+Shift+G"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Indentation Guide"
+msgstr "缩进指示"
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Indentation Width (0–256):"
 msgstr "缩进尺寸 (0–256):"
+
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
+msgstr "Ini 配置文件"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Inline Code"
+msgstr "行内代码"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Inline Math"
+msgstr "行内公式"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDD_ENCLOSESELECTION / IDC_MODIFY_LINE_TIP2.
 #: src/app/dialogs/enclose_selection_dialog.cpp
@@ -1902,6 +2355,14 @@ msgstr "插入 HTML/XML 标签"
 #: src/app/editor_frame_commands.cpp
 msgid "Insert Tabs as &Spaces"
 msgstr "插入制表符为空格(&S)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Instruction"
+msgstr "指令"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Interface"
+msgstr "接口"
 
 #: src/app/dialogs/find_replace_dialog.cpp src/app/editor_frame.cpp
 msgid "Invalid regular expression"
@@ -1951,6 +2412,14 @@ msgstr "段落合并(&P)\tCtrl+Shift+J"
 msgid "Justify (&Paragraph mode)."
 msgstr "两端对齐(段落模式)(&P)。"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Key"
+msgstr "键"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Keyword"
+msgstr "关键字"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Kotlin Source"
 msgstr "Kotlin 源代码"
@@ -1980,6 +2449,10 @@ msgstr "LRO — 开始从左到右覆盖(&O)"
 #: src/editor/special_insert.h
 msgid "LS — L&ine Separator"
 msgstr "LS — 行分隔符(&C)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Label"
+msgstr "标签"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
@@ -2016,6 +2489,10 @@ msgstr "级别 &%d\tAlt+%d"
 msgid "Level 1&0"
 msgstr "级别 1&0"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Lifetime"
+msgstr "生命周期"
+
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Limit for long lines"
 msgstr "长行限定"
@@ -2029,6 +2506,14 @@ msgstr "行"
 msgid "Line &Numbers\tCtrl+Shift+N"
 msgstr "行号(&N)\tCtrl+Shift+N"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Line Addition"
+msgstr "新增行"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Line Change"
+msgstr "变更行"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Line Endin&gs"
 msgstr "换行符(&G)"
@@ -2036,6 +2521,10 @@ msgstr "换行符(&G)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Line Endings"
 msgstr "换行符"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Line Removal"
+msgstr "删除行"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Line Selection &Mode"
@@ -2057,6 +2546,14 @@ msgstr "竖线(宽度 &3)"
 msgid "Line ending conversion"
 msgstr "换行符转换"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Link"
+msgstr "链接"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Link Text"
+msgstr "链接文本"
+
 #: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
@@ -2072,6 +2569,10 @@ msgstr "行 %s / %s"
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Logical &number comparison."
 msgstr "逻辑数字比较(&N)。"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Long Line Marker"
+msgstr "长行标记"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Long Line Settings..."
@@ -2090,6 +2591,27 @@ msgstr "Lua"
 msgid "Lua Script"
 msgstr "Lua 脚本"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Macro"
+msgstr "宏"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Magic Constant"
+msgstr "魔术常量"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Magic Method"
+msgstr "魔术方法"
+
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
+msgstr "Makefile"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Margin and Line Number"
+msgstr "边界与行号"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr "点击边栏选择可视子行(&S)"
@@ -2107,6 +2629,10 @@ msgstr "页边距（毫米）"
 #: src/app/editor_frame_commands.cpp
 msgid "Mark &Occurrences"
 msgstr "标记匹配选中(&K)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Mark Occurrences"
+msgstr "标记匹配选中"
 
 #. TRANSLATORS: Original Scheme/Markdown family and dialect order.
 #: src/syntax/syntax_catalog.cpp
@@ -2134,6 +2660,14 @@ msgstr "匹配大小写(&C)"
 msgid "Match found"
 msgstr "找到匹配"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Matching Brace"
+msgstr "配对的括号"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Matching Brace Error"
+msgstr "孤立的括号"
+
 #: src/app/dialogs/recent_files_dialog.cpp
 msgid "Maximum recent &files:"
 msgstr "最大文件数(&F):"
@@ -2151,6 +2685,22 @@ msgstr "合并空行\tAlt+B"
 #: src/app/editor_frame_commands.cpp
 msgid "Merge Duplicate Lines"
 msgstr "合并重复行"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Metadata"
+msgstr "元数据"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Metamethod"
+msgstr "元方法"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Method"
+msgstr "方法"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Method Definition"
+msgstr "方法定义"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Micro&second (us)"
@@ -2242,6 +2792,14 @@ msgstr "无"
 msgid "Normal"
 msgstr "正常"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Nowdoc String"
+msgstr "Nowdoc 字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Number"
+msgstr "数字"
+
 #. TRANSLATORS: IDM_FILE_OPENWITH menu command; choose a program for the current document.
 #: src/app/document_tools.cpp
 msgid "O&pen Document With..."
@@ -2274,6 +2832,11 @@ msgstr "以指定编码打开(&A)"
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "Open &Folder"
 msgstr "打开文件夹(&F)"
+
+#. TRANSLATORS: IDM_FILE_NEWWINDOW2 opens the current disk document in another process.
+#: src/app/document_tools.cpp
+msgid "Open &in New Window\tAlt+0"
+msgstr "在新窗口中打开(&I)\tAlt+0"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
@@ -2319,6 +2882,23 @@ msgstr "打开文档方式"
 msgid "Open file"
 msgstr "打开文件"
 
+#: src/app/new_window.cpp
+msgid "Open in New Window failed"
+msgstr "在新窗口中打开失败"
+
+#. TRANSLATORS: Selection action status help; the command receives the selected text.
+#: src/app/editor_frame_commands.cpp
+msgid "Open the selected text using this action's command."
+msgstr "使用此动作的命令打开所选文本。"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Operator"
+msgstr "运算符"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Ordered List"
+msgstr "有序列表"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Other Sett&ings"
 msgstr "其他设置(&O)"
@@ -2335,6 +2915,10 @@ msgstr "PDF — 结束方向格式(&D)"
 #: src/editor/special_insert.h
 msgid "PDI — Po&p directional isolate"
 msgstr "PDI — 结束方向隔离(&P)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "PHP Tag"
+msgstr "PHP 标记"
 
 #: src/editor/special_insert.h
 msgid "PS — Para&graph Separator"
@@ -2374,14 +2958,46 @@ msgstr "纸张"
 msgid "Paper and &Orientation..."
 msgstr "纸张和方向(&O)..."
 
+#: src/syntax/generated/style_profiles.h
+msgid "Parameter"
+msgstr "参数"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Parameter Expansion"
+msgstr "参数展开"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Parentheses ()"
 msgstr "圆括号 ()"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Parsing Error"
+msgstr "解析错误"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Placeholder"
+msgstr "占位符"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
 msgstr "纯文本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Position Setting"
+msgstr "位置设置"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
+msgstr "PowerShell 脚本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Predefined Variable"
+msgstr "预定义变量"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Preprocessor"
+msgstr "预处理器"
 
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Preview"
@@ -2432,9 +3048,21 @@ msgstr "打印缩放（%d%% 至 %d%%）："
 msgid "Programs (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|All files (*.*)|*.*"
 msgstr "程序 (*.exe;*.com;*.bat;*.cmd)|*.exe;*.com;*.bat;*.cmd|所有文件 (*.*)|*.*"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Property"
+msgstr "属性"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr "Property List"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Pseudo Class"
+msgstr "伪类"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Pseudo Element"
+msgstr "伪元素"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Punctuation"
@@ -2474,6 +3102,14 @@ msgstr "RLO — 开始从右到左覆盖(&V)"
 msgid "RS — Record Separator (&Block separator)"
 msgstr "RS — 记录分隔符(块分隔符)(&K)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Raw Bytes"
+msgstr "原始字节串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Raw String"
+msgstr "原始字符串"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDS_FIND_WRAPRE (adapted to 文档末尾).
 #: src/app/editor_frame.cpp
 msgid "Reached the beginning of the document, restarting search at the end."
@@ -2510,6 +3146,18 @@ msgstr "最近文件"
 #: src/app/editor_frame.cpp
 msgid "Recoding requires reloading file from disk, unsaved changes will be lost!"
 msgstr "重新编码需要从磁盘重新加载文件，未保存的修改将会丢失！"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Record"
+msgstr "记录"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Regex"
+msgstr "正则表达式"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Register"
+msgstr "寄存器"
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Regular &expression"
@@ -2575,6 +3223,14 @@ msgstr "替换为(&H):"
 msgid "Replace with"
 msgstr "替换为"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Reserved Word"
+msgstr "保留字"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Reset All"
+msgstr "重置所有"
+
 #: src/app/new_window.cpp
 msgid "Restart failed"
 msgstr "重新启动失败"
@@ -2626,6 +3282,10 @@ msgstr "交换(&W)\tCtrl+K"
 #: src/syntax/syntax_catalog.cpp
 msgid "SCSS Style Sheet"
 msgstr "SCSS 样式表"
+
+#: src/syntax/generated/style_profiles.h
+msgid "SGML"
+msgstr "SGML"
 
 #: src/editor/special_insert.h
 msgid "SHY — Soft &hyphen"
@@ -2709,7 +3369,7 @@ msgstr "重新启动前保存对 %s 的修改？"
 #. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
 #. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
 #. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
-#: src/app/document_tools.cpp src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/new_window.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr "运行工具前保存对 %s 的更改吗？"
@@ -2732,6 +3392,10 @@ msgstr "请先保存文档，再更改文件权限。"
 msgid "Save with Original Time"
 msgstr "以原始时间戳保存"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Scalar $var"
+msgstr "标量 $var"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Scan document words inside"
 msgstr "自动完成时在以下内容中搜索单词"
@@ -2752,6 +3416,10 @@ msgstr "语法高亮(&M)"
 msgid "Scheme"
 msgstr "语法高亮"
 
+#: src/app/dialogs/style_customization.cpp
+msgid "Scheme styles"
+msgstr "语法高亮样式"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_SHEBANG.
 #: src/app/editor_frame_commands.cpp
 msgid "Script She&bang Line"
@@ -2761,9 +3429,26 @@ msgstr "脚本 Shebang 行(&B)"
 msgid "Scroll Past &Last Line"
 msgstr "滚动超出末行(&L)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Search on &Wikipedia"
+msgstr "在维基百科中搜索(&W)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Search with &Bing"
+msgstr "使用 Bing 搜索(&B)"
+
+#. TRANSLATORS: CMD_ONLINE_SEARCH_GOOGLE/BING/WIKI and CMD_CUSTOM_ACTION1/2, in original menu order.
+#: src/app/editor_frame_commands.cpp
+msgid "Search with &Google"
+msgstr "使用 Google 搜索(&G)"
+
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
 msgstr "搜索已循环"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Section"
+msgstr "节"
 
 #. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
 #: src/app/editor_frame_status.cpp
@@ -2812,6 +3497,16 @@ msgstr "选择当前代码块中的行(&C)\tAlt+Shift+]"
 msgid "Select Scheme"
 msgstr "选择语法高亮"
 
+#: src/app/dialogs/style_customization.cpp
+msgid ""
+"Select a scheme to edit its filename extensions, or select a style.\n"
+"font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
+"Preview applies the settings to the document. Cancel restores the original styles."
+msgstr ""
+"选择语法高亮以编辑文件扩展名，或选择要编辑的样式。\n"
+"font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
+"预览将设置应用到文档。取消将恢复原来的样式。"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
 msgstr "选择和编辑选项(&E)"
@@ -2848,6 +3543,14 @@ msgstr "选择到下一个(&X)\tCtrl+Alt+F2"
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Selected Text"
+msgstr "选中文本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Send Key"
+msgstr "发送按键"
 
 #: src/app/editor_frame_toolbar.cpp
 msgid "Separator"
@@ -2938,6 +3641,10 @@ msgstr "简体中文 (GB18030)"
 msgid "Simplified Chinese (GBK, GB2312)"
 msgstr "简体中文 (GBK, GB2312)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Single Quoted String"
+msgstr "单引号字符串"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Single quotes"
 msgstr "单引号"
@@ -2960,6 +3667,10 @@ msgstr "降序排序(&D)。"
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort Lines"
 msgstr "行排序"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Source and Destination"
+msgstr "源文件和目标文件"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Source encoding"
@@ -2986,8 +3697,20 @@ msgid "Square brackets []"
 msgstr "方括号 []"
 
 #: src/app/editor_frame_commands.cpp
+msgid "St&yle Theme"
+msgstr "样式主题(&Y)"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Standard &Encode"
 msgstr "标准编码(&E)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Strikethrough"
+msgstr "删除线"
+
+#: src/syntax/generated/style_profiles.h
+msgid "String"
+msgstr "字符串"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
@@ -3012,6 +3735,30 @@ msgstr "移除行尾空白(&T)\tAlt+T"
 #: src/app/editor_frame_commands.cpp
 msgid "Strip Leading Blan&ks"
 msgstr "移除前导空白(&K)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Strong"
+msgstr "加粗"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Structure"
+msgstr "结构体"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Style &settings:"
+msgstr "样式设置(&S):"
+
+#: src/app/dialogs/style_customization.cpp
+msgid "Style settings"
+msgstr "样式设置"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Subscript"
+msgstr "下标"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Superscript"
+msgstr "上标"
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Switch to Find"
@@ -3092,9 +3839,49 @@ msgstr "使用制表符缩进\tCtrl+Alt+T"
 msgid "Tabify Selection\tCtrl+Shift+T"
 msgstr "空格转制表符\tCtrl+Shift+T"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Table"
+msgstr "表格"
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tabs as Spaces"
 msgstr "插入制表符为空格"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag"
+msgstr "标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag Attribute"
+msgstr "标记属性"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag Class"
+msgstr "标记类"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Tag Id"
+msgstr "标记 ID"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Target"
+msgstr "目标"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Task List"
+msgstr "任务列表"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Task Marker"
+msgstr "任务标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Template Literal"
+msgstr "模板字面量"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Text Block"
+msgstr "文本块"
 
 #. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
 #: src/syntax/syntax_catalog.cpp
@@ -3265,6 +4052,10 @@ msgstr "上："
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
 msgstr "繁体中文 (Big5, Big5-HKSCS)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Trait"
+msgstr "特征"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Transform &backslashes"
 msgstr "转义反斜线(&T)"
@@ -3283,6 +4074,26 @@ msgstr "三重双引号(&D)\tCtrl+6"
 #: src/app/editor_frame_commands.cpp
 msgid "Triple &Single Quotes\tCtrl+3"
 msgstr "三重单引号(&S)\tCtrl+3"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Triple Quoted Bytes"
+msgstr "三引号字节串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Triple Quoted Formatted String"
+msgstr "三引号格式化字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Triple Quoted String"
+msgstr "三引号字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Type"
+msgstr "类型"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Type Keyword"
+msgstr "类型关键字"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "TypeScript"
@@ -3340,6 +4151,10 @@ msgstr "Unicode"
 msgid "Unicode &Control Character"
 msgstr "Unicode 控制字符(&C)"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Union"
+msgstr "联合体"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_TIMESTAMP.
 #: src/app/editor_frame_commands.cpp
 msgid "Unix Timesta&mp"
@@ -3348,6 +4163,22 @@ msgstr "Unix 时间戳(&M)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Unix/macOS (LF)"
 msgstr "Unix/macOS (LF)"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unknown Property"
+msgstr "未知属性"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unknown Pseudo Class"
+msgstr "未知伪类"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unknown Pseudo Element"
+msgstr "未知伪元素"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Unordered List"
+msgstr "无序列表"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTTABS2.
 #: src/app/editor_frame_commands.cpp
@@ -3385,6 +4216,42 @@ msgstr "使用大工具栏(&G)"
 msgid "Use Scheme Tab Settings"
 msgstr "使用文件类型设置"
 
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Comment"
+msgstr "VBS 注释"
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Default"
+msgstr "VBS 默认样式"
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Keyword"
+msgstr "VBS 关键字"
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Number"
+msgstr "VBS 数字"
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS Operator"
+msgstr "VBS 运算符"
+
+#: src/syntax/generated/style_profiles.h
+msgid "VBS String"
+msgstr "VBS 字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Value"
+msgstr "值"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Variable"
+msgstr "变量"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Verbatim String"
+msgstr "逐字字符串"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Visible rows"
 msgstr "显示项目数"
@@ -3408,6 +4275,7 @@ msgid "Western European"
 msgstr "西欧"
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
+#: src/syntax/generated/style_profiles.h
 msgid "Whitespace"
 msgstr "按空白"
 
@@ -3476,13 +4344,49 @@ msgstr "续行缩进 2 级"
 msgid "Wrap indent same as first subline"
 msgstr "续行缩进与首个子行相同"
 
+#: src/syntax/generated/style_profiles.h
+msgid "XML Attribute"
+msgstr "XML 属性"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Comment"
+msgstr "XML 注释"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "XML Document"
 msgstr "XML 文档"
 
+#: src/syntax/generated/style_profiles.h
+msgid "XML Element Text"
+msgstr "XML 元素文本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Entity"
+msgstr "XML 实体"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Identifier"
+msgstr "XML 标识符"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Other Tag"
+msgstr "XML 其他标记"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "XML Schema"
 msgstr "XML Schema"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML String"
+msgstr "XML 字符串"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Tag"
+msgstr "XML 标记"
+
+#: src/syntax/generated/style_profiles.h
+msgid "XML Value"
+msgstr "XML 值"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "XSLT"
@@ -3545,6 +4449,12 @@ msgstr "缩放级别"
 #, c-format
 msgid "Zoom level (%d%% to %d%%):"
 msgstr "缩放级别 (%d%% 到 %d%%):"
+
+#. TRANSLATORS: Original IDS_WIKI_SEARCH_URL default; preserve the literal %s placeholder.
+#: src/app/selection_actions.cpp
+#, c-format
+msgid "https://en.wikipedia.org/wiki/Special:Search?search=%s"
+msgstr "https://zh.wikipedia.org/wiki/Special:Search?search=%s"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"

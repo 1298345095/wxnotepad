@@ -1,6 +1,7 @@
 #include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "app/editor_frame.h"
+#include "app/dialogs/search_feedback_dialog.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -202,7 +203,7 @@ public:
     void Notify() override {
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
-            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != title) continue;
+            if (!dialog || !dialog->IsShown() || !dialog->IsModal() || dialog->GetTitle() != title) continue;
             PrepareResponse();
             NativeSearch::Click(dialog, accept ? wxID_YES : wxID_NO);
             return;
@@ -245,6 +246,35 @@ private:
         }
     }
 };
+#ifdef __WXMSW__
+void HiddenModalObservation(EditorFrame* frame) {
+    SearchFeedbackDialog dialog(frame, "Hidden modal observation", "Observe an answered encoding prompt.", true, false,
+                                "Encoding Conversion", true);
+    ConversionPrompt driver;
+    driver.accept = true;
+    bool observed = false;
+    bool hiddenModal = false;
+    driver.onPrompt = [&] {
+        wxTheApp->CallAfter([&] {
+            observed = true;
+            hiddenModal =
+                dialog.IsModal() && !dialog.IsShown() && !IsWindowVisible(static_cast<HWND>(dialog.GetHandle()));
+            // NativeSearch::Click yields after the real EndModal/Hide, before
+            // ShowModal unwinds. Re-observe that exact native lifetime boundary.
+            if (hiddenModal) driver.Notify();
+        });
+    };
+    const auto choice = dialog.Choose();
+    driver.Stop();
+    Require(observed && hiddenModal && !dialog.IsModal(),
+            "real answered native prompt is hidden while modal until ShowModal unwinds");
+    if (!choice.accepted || driver.shown != 1)
+        std::println(stderr, "Hidden modal observation: accepted={:d} shown={:d}", choice.accepted, driver.shown);
+    Require(choice.accepted && driver.shown == 1,
+            "hidden answered native dialog must not be counted as a second visible prompt");
+    std::puts("PASS: native conversion observer ignores the same answered hidden modal before ShowModal returns");
+}
+#endif
 void AnsiTransition(EditorFrame* frame) {
     using enum Scintilla::Message;
     const auto native = NativeEncodingChoice();
@@ -509,6 +539,9 @@ public:
         auto run = [this, frame, native](bool ready) {
             try {
                 Require(ready, "encoding fixture is presented on the private display");
+#ifdef __WXMSW__
+                HiddenModalObservation(frame);
+#endif
                 FormatOnly(frame);
                 Picker(frame, native);
                 BigEndian(frame, native);

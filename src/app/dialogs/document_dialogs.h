@@ -20,13 +20,14 @@ struct SaveFileLocation {
 class OpenFileDialog final : public wxFileDialog {
 public:
     explicit OpenFileDialog(wxWindow* parent, SyntaxLanguage current = SyntaxLanguage::PlainText,
-                            const wxString& path = {}, const wxString& favorites = {});
+                            const wxString& path = {}, const wxString& favorites = {},
+                            const SyntaxExtensions& extensions = {});
     std::optional<wxString> Choose();
 };
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
                                              const wxString& path, const SaveFileLocation& initial = {},
-                                             const wxString& favorites = {});
+                                             const wxString& favorites = {}, const SyntaxExtensions& extensions = {});
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial);
 std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optional<EncodingChoice> initial,
                                                     bool defaultSelection = false);

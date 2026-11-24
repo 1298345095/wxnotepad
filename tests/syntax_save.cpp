@@ -10,6 +10,7 @@
 #include <wx/statusbr.h>
 #include <wx/timer.h>
 #include "native_dialog_helpers.h"
+#include "native_key_helpers.h"
 #include <algorithm>
 #include <array>
 #include <cstdio>
@@ -212,7 +213,21 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         const bool reachability = wxGetenv("WXNOTEPAD_BASE_FILTER_REACHABILITY") != nullptr;
-        CallAfter([this, frame, reachability] { RunScenarios(frame, reachability); });
+        CallAfter([this, frame, reachability] {
+            if (!reachability) {
+                RunScenarios(frame, false);
+                return;
+            }
+            NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
+                if (!ready) {
+                    DiagnosticPrint::Print(stderr, "FAIL: reachability frame is natively presented\n");
+                    frame->Destroy();
+                    ExitMainLoop();
+                    return;
+                }
+                RunScenarios(frame, true);
+            });
+        });
         return true;
     }
     int OnRun() override {

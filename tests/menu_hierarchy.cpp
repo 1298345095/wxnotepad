@@ -175,13 +175,15 @@ void CheckMenu(EditorFrame* frame) {
            "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
-    Order(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Open Document With...",
-                            "Run Command...", "Action on Selection", "Base64"});
+    Order(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Open in New Window", "Execute Document",
+                            "Open Document With...", "Run Command...", "Action on Selection", "Base64"});
     Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
     auto* schemes = bar->GetMenu(4);
     Order(schemes, {"Syntax Scheme...",
+                    "Customize Schemes...",
                     "Favorite Schemes...",
                     "Use Default Code Style",
+                    "Style Theme",
                     "Automatic",
                     "Text File",
                     "CSS Style Sheet",
@@ -190,20 +192,27 @@ void CheckMenu(EditorFrame* frame) {
                     "Markdown",
                     "Shell Script",
                     "XML Document",
+                    "AutoHotkey Script",
+                    "Batch File",
                     "C/C++",
                     "C# Source",
                     "CMake",
+                    "Diff File",
                     "Go",
+                    "Ini Config File",
                     "Java Source",
                     "JSON",
                     "Kotlin Source",
                     "Lua",
+                    "Makefile",
+                    "PowerShell Script",
                     "Python",
                     "Rust",
                     "SQL Query",
                     "TOML",
                     "YAML"});
-    Groups(schemes, {"Syntax Scheme...", "Use Default Code Style", "Automatic", "C/C++"});
+    Groups(schemes, {"Syntax Scheme...", "Use Default Code Style", "Automatic", "AutoHotkey Script"});
+    Order(Submenu(schemes, "Style Theme"), {"Default", "Dark"});
     Order(Submenu(schemes, "Text File"), {"Plain Text"});
     Order(Submenu(schemes, "CSS Style Sheet"),
           {"CSS Style Sheet", "SCSS Style Sheet", "Less Style Sheet", "HSS Style Sheet"});

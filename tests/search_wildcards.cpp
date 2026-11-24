@@ -28,6 +28,11 @@ public:
                         // These scenarios inspect editor state and dialog feedback directly.
                     },
                     [](wxKeyEvent& event) { event.Skip(); }, 0);
+                // Wayland can stop frame callbacks for a fully covered owner.
+                // Keep real editor paint area outside the modeless dialog.
+                constexpr int EditorPaintMarginDip = 32;
+                frame->SetClientSize(dialog->GetSize() +
+                                     frame->FromDIP(wxSize(EditorPaintMarginDip, EditorPaintMarginDip)));
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a.c abc a+c"));
                 editor->Send(Message::SetSel, 0, 0);
                 NativePaint::Complete(editor);

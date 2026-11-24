@@ -58,7 +58,7 @@ void NativeKey(wxWindow* window, int key, const char* name, [[maybe_unused]] boo
     }
     bool localReleased = false;
     bool& released = externalRelease ? *externalRelease : localReleased;
-    NativeKeys::KeyRelease observer(key, released, nullptr);
+    NativeKeys::KeyReleaseObserver observer(key, released, nullptr);
     {
         wxFFile file(path, "wb");
         file.Write(wxString("key:") + name);

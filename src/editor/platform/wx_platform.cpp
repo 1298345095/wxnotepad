@@ -52,12 +52,21 @@ class WxFont final : public Font {
 public:
     wxFont font;
     MeasurementFont measurement;
+#ifdef __WXGTK__
+    bool languageSpecific;
+#endif
     explicit WxFont(const FontParameters& p)
         : font(wxFontInfo(p.size)
                    .FaceName(wxString::FromUTF8(p.faceName))
                    .Weight(static_cast<wxFontWeight>(std::to_underlying(p.weight)))
                    .Italic(p.italic)),
-          measurement(font) {}
+          measurement(font, p.localeName)
+#ifdef __WXGTK__
+          ,
+          languageSpecific(p.localeName[0] != '\0')
+#endif
+    {
+    }
 };
 std::shared_ptr<Font> Font::Allocate(const FontParameters& p) {
 #ifdef __WXMSW__
@@ -301,6 +310,13 @@ public:
         FontSet(f);
         dc_->SetTextForeground(Color(fore));
         dc_->SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
+#ifdef __WXGTK__
+        if (const auto* font = static_cast<const WxFont*>(f); font->languageSpecific) {
+            measurement_->DrawText(*dc_, font->measurement, text, utf8_, static_cast<int>(r.left),
+                                   static_cast<int>(base - Metrics(f).ascent));
+            return;
+        }
+#endif
         dc_->DrawText(String(text), r.left, base - Metrics(f).ascent);
     }
     void SCICALL DrawTextNoClip(PRectangle r, const Font* f, XYPOSITION base, std::string_view text, ColourRGBA fore,

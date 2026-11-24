@@ -2,6 +2,7 @@
 #include <SciLexer.h>
 #include <wx/filename.h>
 #include <wx/translation.h>
+#include <wx/tokenzr.h>
 #include <array>
 #include <cstdlib>
 #include <algorithm>
@@ -12,6 +13,9 @@ namespace {
 #include "syntax/generated/java_scheme_data.h"
 #include "syntax/generated/csharp_scheme_data.h"
 #include "syntax/generated/kotlin_scheme_data.h"
+#include "syntax/generated/batch_scheme_data.h"
+#include "syntax/generated/powershell_scheme_data.h"
+#include "syntax/generated/autohotkey_scheme_data.h"
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
 #include "syntax/generated/bash_scheme_data.h"
@@ -29,6 +33,9 @@ namespace {
 #include "syntax/generated/cmake_scheme_data.h"
 #include "syntax/generated/css_scheme_data.h"
 #include "syntax/generated/sql_scheme_data.h"
+#include "syntax/generated/ini_scheme_data.h"
+#include "syntax/generated/make_scheme_data.h"
+#include "syntax/generated/diff_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
 constexpr auto textExtensions = std::to_array<const char*>({"txt"});
@@ -145,6 +152,57 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      {SyntaxMenuFamily::TextFile, 0},
      // TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
      wxTRANSLATE("Text File")},
+    {wxTRANSLATE("AutoHotkey Script"),
+     autohotkeyExtensions,
+     autohotkeyLists,
+     autohotkeyStyles,
+     {},
+     SCLEX_AUTOHOTKEY,
+     SyntaxLanguage::AutoHotkey,
+     true,
+     ";",
+     "/*",
+     "*/",
+     SCE_AHK_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     autohotkeyOriginal,
+     {SyntaxMenuFamily::Standalone, 0}},
+    {wxTRANSLATE("Batch File"),
+     batchExtensions,
+     batchLists,
+     batchStyles,
+     {},
+     SCLEX_BATCH,
+     SyntaxLanguage::Batch,
+     true,
+     "@rem ",
+     nullptr,
+     nullptr,
+     SCE_BAT_COMMENT,
+     false,
+     false,
+     nullptr,
+     batchOriginal,
+     {SyntaxMenuFamily::Standalone, 0}},
+    {wxTRANSLATE("PowerShell Script"),
+     powershellExtensions,
+     powershellLists,
+     powershellStyles,
+     {},
+     SCLEX_POWERSHELL,
+     SyntaxLanguage::PowerShell,
+     true,
+     "#",
+     "<#",
+     "#>",
+     SCE_POWERSHELL_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     powershellOriginal,
+     {SyntaxMenuFamily::Standalone, 76}},
     {wxTRANSLATE("C/C++"),
      cppExtensions,
      cppLists,
@@ -852,6 +910,60 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      sqlOriginal,
      {SyntaxMenuFamily::Standalone, 100}},
+    // TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+    {wxTRANSLATE("Ini Config File"),
+     iniExtensions,
+     iniLists,
+     iniStyles,
+     {},
+     SCLEX_PROPERTIES,
+     SyntaxLanguage::Ini,
+     true,
+     ";",
+     nullptr,
+     nullptr,
+     SCE_PROPS_COMMENT,
+     false,
+     false,
+     nullptr,
+     iniOriginal,
+     {SyntaxMenuFamily::Standalone, 35}},
+    // TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+    {wxTRANSLATE("Makefile"),
+     makeExtensions,
+     makeLists,
+     makeStyles,
+     {},
+     SCLEX_MAKEFILE,
+     SyntaxLanguage::Makefile,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_MAKE_COMMENT,
+     false,
+     false,
+     nullptr,
+     makeOriginal,
+     {SyntaxMenuFamily::Standalone, 75}},
+    // TRANSLATORS: Original NP2LEX_DIFF scheme title.
+    {wxTRANSLATE("Diff File"),
+     diffExtensions,
+     diffLists,
+     diffStyles,
+     {},
+     SCLEX_DIFF,
+     SyntaxLanguage::Diff,
+     true,
+     nullptr,
+     nullptr,
+     nullptr,
+     SCE_DIFF_COMMENT,
+     false,
+     false,
+     nullptr,
+     diffOriginal,
+     {SyntaxMenuFamily::Standalone, 25}},
 });
 
 bool Space(char ch) {
@@ -964,6 +1076,69 @@ FilenameMatch OriginalFilenameMatch(const wxString& path) {
         if (name.CmpNoCase(exact) == 0) return Associated;
     }
     return Unknown;
+}
+
+bool OriginalCppPreprocessor(std::string_view text) {
+    if (text.empty() || text.front() < 'a' || text.front() > 'z') return false;
+    const auto length = text.find_first_not_of("abcdefghijklmnopqrstuvwxyz_");
+    if (length < text.size()) {
+        const auto next = text[length];
+        if ((next >= 'A' && next <= 'Z') || (next >= '0' && next <= '9')) return false;
+    }
+    std::string keyword = " ";
+    keyword.append(text.substr(0, length));
+    keyword += ' ';
+    constexpr size_t CppPreprocessorKeywordGroup = 2;
+    return std::string_view(cppKeywords[CppPreprocessorKeywordGroup]).find(keyword) != std::string_view::npos;
+}
+
+// The INI outcome of pinned Styles.cpp::Style_AutoDetect. Preserve its column-0
+// brackets and C++/sharp-comment/JSON/YAML priorities without adding guesses for
+// those other schemes to the existing detector.
+bool SniffIniContent(std::string_view text, bool dotFile) {
+    text = text.substr(0, SyntaxDetectionLimits::DocTypeBytes);
+    const bool shebang = text.starts_with("#!");
+    bool maybeIni = false;
+    bool maybeJson = false;
+    bool notJson = false;
+    const auto character = [text](size_t position) { return position < text.size() ? text[position] : '\0'; };
+    size_t position = 0;
+    while (position < text.size()) {
+        if (text[position] == '[') {
+            maybeIni = true;
+        } else if (text.substr(position).starts_with("---") && Space(character(position + 3))) {
+            position += 3;
+            while (character(position) == ' ' || character(position) == '\t')
+                ++position;
+            const auto next = character(position);
+            if (Space(next) || next == '#' || next == '%') return false;
+        } else {
+            while (character(position) == ' ' || character(position) == '\t')
+                ++position;
+            const auto next = character(position);
+            if (next == '#') {
+                if (!(position == 0 && shebang)) {
+                    ++position;
+                    while (character(position) == ' ' || character(position) == '\t')
+                        ++position;
+                    if (!(shebang || dotFile) || !OriginalCppPreprocessor(text.substr(position))) return false;
+                }
+            } else if (next == '/') {
+                if (character(position + 1) == '/' || character(position + 1) == '*') return false;
+            } else if (next == '{' || next == '}' || next == '[') {
+                maybeJson = true;
+            } else if (next == '"') {
+                maybeJson |= maybeIni;
+            } else {
+                notJson |= next != '\0';
+            }
+        }
+        position = text.find_first_of("\r\n", position);
+        if (position == std::string_view::npos) break;
+        while (character(position) == '\r' || character(position) == '\n')
+            ++position;
+    }
+    return maybeIni && !(maybeJson && !notJson);
 }
 
 bool MarkupNameStart(unsigned char ch) {
@@ -1090,6 +1265,12 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return csharpSettingsSection;
     case Kotlin:
         return kotlinSettingsSection;
+    case Batch:
+        return batchSettingsSection;
+    case PowerShell:
+        return powershellSettingsSection;
+    case AutoHotkey:
+        return autohotkeySettingsSection;
     case Python:
         return "Python Script";
     case Json:
@@ -1122,12 +1303,38 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return cssSettingsSection;
     case Sql:
         return sqlSettingsSection;
+    case Ini:
+        return iniSettingsSection;
+    case Makefile:
+        return makeSettingsSection;
+    case Diff:
+        return diffSettingsSection;
     default:
         return "Text File";
     }
 }
 
-SyntaxLanguage LanguageForPath(const wxString& path) {
+wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& extensions) {
+    const auto canonical = SyntaxSettingsLanguage(language);
+    if (const auto found = extensions.find(canonical); found != extensions.end()) return found->second;
+    wxString result;
+    for (const auto* extension : SyntaxFor(canonical).extensions) {
+        if (!result.empty()) result += "; ";
+        result += wxString::FromUTF8(extension);
+    }
+    return result;
+}
+
+std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions) {
+    std::vector<wxString> result;
+    wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n", wxTOKEN_STRTOK);
+    while (tokens.HasMoreTokens())
+        result.push_back(tokens.GetNextToken());
+    return result;
+}
+
+SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions,
+                               const wxString& favoriteSchemes) {
     using enum SyntaxLanguage;
     const auto name = wxFileName(path).GetFullName();
     // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
@@ -1140,15 +1347,59 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
         const auto ch = extension[index].GetValue();
         if (ch >= 'A' && ch <= 'Z') extension[index] = ch + ('a' - 'A');
     }
+    // Original MySQL settings use the generic Config scheme and remain eligible
+    // for shebang/XML sniffing, rather than the Ini Config File association.
+    const auto lowerName = name.Lower();
+    if (lowerName.StartsWith("my") && (extension == "ini" || extension == "cnf")) return PlainText;
     // Dialect-specific associations precede their canonical scheme's full list.
-    if (extension == "asp") return AspVb;
-    if (extension == "aspx") return AspxCs;
-    for (size_t index = std::size(definitions); index-- > 0;) {
-        const auto& definition = definitions[index];
-        for (const auto* candidate : definition.extensions) {
-            if (extension == candidate) return definition.language;
+    const auto dialect = [&](SyntaxLanguage language) {
+        if (language == Html && extension == "asp") return AspVb;
+        if (language == Html && extension == "aspx") return AspxCs;
+        // Keep delivered dialect identities when their canonical association
+        // retains the suffix; custom suffixes use the canonical scheme.
+        for (size_t index = std::size(definitions); index-- > 0;) {
+            const auto& definition = definitions[index];
+            if (SyntaxSettingsLanguage(definition.language) != language) continue;
+            for (const auto* candidate : definition.extensions)
+                if (extension == candidate) return definition.language;
+        }
+        return language;
+    };
+    auto associations = originalSyntaxAssociations;
+    // Styles.cpp::Style_SetFavoriteSchemes keeps both text schemes fixed, then
+    // moves each configured favorite ahead of the remaining original schemes.
+    size_t favoriteIndex = 2;
+    for (const int identity : OriginalFavoriteSchemeIds(favoriteSchemes)) {
+        const auto first = associations.begin() + favoriteIndex;
+        const auto found =
+            std::find_if(first, associations.end(), [identity](const auto& item) { return item.first == identity; });
+        if (found != associations.end()) {
+            std::rotate(first, found, found + 1);
+            ++favoriteIndex;
         }
     }
+    for (const auto& [identity, stockExtensions] : associations) {
+        const auto language = SyntaxFromOriginalSchemeId(identity);
+        auto effective = language ? SyntaxExtensionsFor(*language, extensions)
+                                  : wxString::FromUTF8(stockExtensions.data(), stockExtensions.size());
+        if (language && !extensions.contains(*language)) {
+            // Delivered dialects share the original canonical association slot.
+            // An explicit replacement still replaces that whole scheme's list.
+            for (const auto& definition : definitions) {
+                if (definition.language == *language || SyntaxSettingsLanguage(definition.language) != *language)
+                    continue;
+                for (const auto* candidate : definition.extensions)
+                    effective += ";" + wxString::FromUTF8(candidate);
+            }
+        }
+        wxStringTokenizer candidates(effective, "; \t\r\n", wxTOKEN_STRTOK);
+        while (candidates.HasMoreTokens())
+            if (extension.CmpNoCase(candidates.GetNextToken()) == 0) return language ? dialect(*language) : PlainText;
+    }
+    // Even an original association whose lexer is not delivered precedes the
+    // Makefile/Kbuild filename fallback (for example Makefile.rb or Kbuild.cfg).
+    if (!extension.empty() && OriginalFilenameMatch("file." + extension) != FilenameMatch::Unknown) return PlainText;
+    if (lowerName.StartsWith("makefile") || lowerName.StartsWith("kbuild")) return Makefile;
     for (const auto* build : {"mozconfig", "apkbuild", "pkgbuild"}) {
         if (name.CmpNoCase(build) == 0) return Bash;
     }
@@ -1166,11 +1417,14 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
-        if (const auto language = LanguageForPath(underlying); language != PlainText) return DetectedSyntax{language};
+        if (const auto language = LanguageForPath(underlying, options.extensions, options.favoriteSchemes);
+            language != PlainText)
+            return DetectedSyntax{language};
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
-    const auto language = templateConfig ? PlainText : LanguageForPath(path);
+    const auto language =
+        templateConfig ? PlainText : LanguageForPath(path, options.extensions, options.favoriteSchemes);
     if (language != PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return DetectedSyntax{SyntaxSettingsLanguage(language), DetectMarkupDocType(prefix).value_or(language)};
@@ -1190,6 +1444,8 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
         return DetectedSyntax{*markup, dialect};
     }
     if (interpreter) return DetectedSyntax{*interpreter};
+    if (match == FilenameMatch::Unknown && SniffIniContent(prefix, wxFileName(path).GetFullName().StartsWith(".")))
+        return DetectedSyntax{Ini};
     return match == FilenameMatch::Config ? std::optional{DetectedSyntax{PlainText}} : std::nullopt;
 }
 

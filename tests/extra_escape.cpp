@@ -7,17 +7,115 @@
 #include "file_command_driver.h"
 #include <wx/weakref.h>
 #include <memory>
+#include <string_view>
+#include <thread>
 #ifdef __WXMSW__
 #include <imm.h>
 #endif
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
+#include <gdk/gdkx.h>
+#undef None
 #endif
 
 namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+#ifdef __WXGTK__
+void DelayedX11Activation(EditorFrame* frame) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
+    wxString focus;
+    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus), "use the owned private X11 input mailbox");
+    frame->Hide();
+    wxYield();
+    gdk_display_sync(gtk_widget_get_display(widget));
+    Require(!gtk_widget_get_mapped(widget) && !frame->IsActive(), "owned X11 activation begins genuinely unmapped");
+    struct Observation {
+        bool cancelled = false;
+        bool unacknowledged = false;
+        bool unmapped = false;
+        bool shown = false;
+    };
+    auto observed = std::make_shared<Observation>();
+    std::jthread mapping([frame, focus, observed](std::stop_token stop) {
+        while (!stop.stop_requested()) {
+            wxString pending;
+            wxFFile file(focus, "rb");
+            if (file.IsOpened() && file.ReadAll(&pending) && !pending.empty()) {
+                constexpr auto MappingDelay = std::chrono::milliseconds(250);
+                std::this_thread::sleep_for(MappingDelay);
+                wxTheApp->CallAfter([frame, focus, observed] {
+                    if (observed->cancelled) return;
+                    wxString pending;
+                    wxFFile file(focus, "rb");
+                    observed->unacknowledged = file.IsOpened() && file.ReadAll(&pending) && !pending.empty();
+                    observed->unmapped = !gtk_widget_get_mapped(GTK_WIDGET(frame->GetHandle()));
+                    frame->Show();
+                    observed->shown = true;
+                });
+                return;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
+    try {
+        NativeKeys::FocusEditor(frame, "wxnotepad", focus);
+    } catch (...) {
+        observed->cancelled = true;
+        throw;
+    }
+    mapping.request_stop();
+    mapping.join();
+    Require(observed->shown && observed->unmapped && observed->unacknowledged && gtk_widget_get_mapped(widget) &&
+                frame->IsActive() && frame->Editor()->HasFocus(),
+            "owned X11 activation waits for mapping and acknowledges only actual native editor focus");
+    std::puts("PASS: pending inactive X11 activation survives native mapping within the original focus budget");
+}
+void RejectedX11Activation(EditorFrame* frame) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
+    wxString focus;
+    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus), "use the owned private X11 input mailbox");
+    const auto read = [](const wxString& path) {
+        wxString pending;
+        wxFFile file(path, "rb");
+        Require(file.IsOpened() && file.ReadAll(&pending), "read the actual private X11 focus protocol");
+        return pending;
+    };
+    frame->Hide();
+    wxYield();
+    bool rejected = false;
+    try {
+        NativeKeys::FocusEditor(frame, wxString::Format("wxnotepad absent X11 target %lu", wxGetProcessId()), focus);
+    } catch (const std::runtime_error& error) {
+        rejected = std::string_view(error.what()) == "private native input must activate the owned editor";
+    }
+    Require(rejected && !read(focus).empty() && !gtk_widget_get_mapped(widget) && !frame->IsActive(),
+            "a permanently absent X11 target fails the original focus budget without acknowledgement");
+    frame->Show();
+    NativeKeys::FocusEditor(frame, "wxnotepad", focus);
+    const auto identity = wxString::Format("%lu", wxGetProcessId());
+    const auto expired = "trace:" + identity + ":front-until:0:wxnotepad";
+    {
+        wxFFile file(focus, "wb");
+        Require(file.IsOpened() && file.Write(expired) && file.Close(), "publish an expired real X11 activation");
+    }
+    const auto observed = [&] {
+        return wxFileExists(focus + ".diagnostics") &&
+               read(focus + ".diagnostics").Contains("\tevent=driver.expired\tgesture=" + identity + "\t");
+    };
+    const auto until = std::chrono::steady_clock::now() + NativeKeys::FocusAcknowledgementTimeout;
+    while (!observed() && std::chrono::steady_clock::now() < until) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(observed() && read(focus) == expired && frame->IsActive() && frame->Editor()->HasFocus(),
+            "an expired activation of a visible X11 target remains rejected and unacknowledged");
+    std::puts("PASS: missing and expired X11 activation requests remain failures without false acknowledgements");
+}
+#endif
 template <typename Predicate> void Await(Predicate ready, const char* message) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
     do {
@@ -42,9 +140,17 @@ void WindowActionKey(EditorFrame* frame, bool shift = false, [[maybe_unused]] bo
         Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus),
                 "composition keys use the existing private driver");
     else {
-        const auto title = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
-        frame->SetTitle(title);
-        NativeKeys::FocusEditor(frame, title, focus);
+        auto* widget = GTK_WIDGET(frame->GetHandle());
+        wxString target;
+        if (GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget))) {
+            // Document notifications can change the title during activation.
+            // Keep targeting this owned native window throughout the handshake.
+            target = wxString::Format("x11-window:%lu", gdk_x11_window_get_xid(gtk_widget_get_window(widget)));
+        } else {
+            target = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
+            frame->SetTitle(target);
+        }
+        NativeKeys::FocusEditor(frame, target, focus);
     }
     {
         wxFFile request(focus, "wb");
@@ -517,6 +623,10 @@ public:
                     status_ = 0;
                     return;
                 }
+#ifdef __WXGTK__
+                DelayedX11Activation(frame);
+                RejectedX11Activation(frame);
+#endif
                 CheckMenu(frame);
                 CheckComposition(frame);
 #ifdef __WXMSW__
@@ -623,6 +733,19 @@ private:
                 const int choice = scenario < 2 ? wxID_CANCEL : scenario == 4 ? wxID_NO : wxID_YES;
                 NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, choice,
                                                         scenario == 3 ? TestFiles::Filename(path) : wxString{});
+#ifdef __WXGTK__
+                if (scenario == 3 &&
+                    !GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(candidate->GetHandle())))) {
+                    // Closing immediately after an edit also has real document
+                    // notifications queued when native focus is requested.
+                    candidate->Editor()->Send(Scintilla::Message::BeginUndoAction);
+                    candidate->Editor()->Send(Scintilla::Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+                    candidate->Editor()->Send(Scintilla::Message::EndUndoAction);
+                    candidate->Editor()->Send(Scintilla::Message::Undo);
+                    Require(TestEditor::Text(candidate->Editor()) == before.text,
+                            "queued native document notifications retain the original close-case bytes");
+                }
+#endif
                 candidate->SetTitle(wxString::Format("wxnotepad Escape candidate %d", scenario));
                 WindowActionKey(candidate, before.shift);
                 Await([&driver] { return driver.prompts == 1; },
