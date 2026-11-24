@@ -61,7 +61,7 @@ public:
         wxString focusFile;
         NativeKeys::FocusEditor(frame_, "wxnotepad", focusFile);
         bool received = false;
-        NativeKeys::KeyRelease observer(WXK_F12, received, nullptr);
+        NativeKeys::KeyReleaseObserver observer(WXK_F12, received, nullptr);
         {
             wxFFile request(focusFile, "wb");
             if (!request.Write(NativeTrace::Request("key:alt+F12")))

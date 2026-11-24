@@ -16,6 +16,7 @@
 #include <gdk/gdkwayland.h>
 #include <gdk/gdkx.h>
 #include <X11/extensions/XInput2.h>
+#undef BadAlloc
 #undef None
 #undef Status
 #include <wayland-client-core.h>
