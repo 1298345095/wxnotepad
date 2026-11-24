@@ -4,6 +4,7 @@
 #include "syntax/style_profile.h"
 #include <wx/font.h>
 #include <wx/colour.h>
+#include <wx/settings.h>
 #include <array>
 #include <map>
 #include <utility>
@@ -35,6 +36,7 @@ struct FontSettings {
 };
 wxFont DefaultStyleFont(const FontSettings& settings, bool code);
 wxColour DefaultStyleForeground(const FontSettings& settings, bool code);
+wxColour StyleSystemColour(wxSystemColour colour);
 wxString MergeChosenFont(const wxString& style, const wxFont& font);
 void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language);
 wxString StyleProperty(const wxString& style, const wxString& key);
