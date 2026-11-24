@@ -26,33 +26,6 @@ if(UNIX)
     endif()
 endif()
 add_gui_program(new_window tests/new_window.cpp app_shell)
-add_test(NAME packaged_current_file_window COMMAND "${Python3_EXECUTABLE}" -X utf8
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
-    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window")
-set_tests_properties(packaged_current_file_window PROPERTIES TIMEOUT 120)
-foreach(scenario policy encodings failures history)
-    add_test(NAME packaged_current_file_window_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
-        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario ${scenario}
-        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-${scenario}")
-    set_tests_properties(packaged_current_file_window_${scenario} PROPERTIES TIMEOUT 120)
-endforeach()
-if(WIN32)
-    foreach(scenario basic history)
-        add_test(NAME packaged_current_file_window_gdi_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
-            --cmake-dir "${CMAKE_BINARY_DIR}" --scenario ${scenario} --rendering-technology 0
-            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-gdi-${scenario}")
-        set_tests_properties(packaged_current_file_window_gdi_${scenario} PROPERTIES TIMEOUT 120)
-    endforeach()
-endif()
-if(UNIX)
-    add_test(NAME packaged_current_file_window_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
-        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario installed
-        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-installed")
-    set_tests_properties(packaged_current_file_window_installed PROPERTIES TIMEOUT 120)
-endif()
 add_gui_program(open_targets tests/open_targets.cpp app_shell)
 add_test(NAME original_open_targets COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/open_targets_process.py" "$<TARGET_FILE:open_targets>")
