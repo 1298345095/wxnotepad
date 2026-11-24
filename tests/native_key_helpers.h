@@ -268,10 +268,10 @@ inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& fo
 
 inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxString& focusFile,
                                 const wxString& intent, const wxString& lastPending, bool acknowledged,
-                                unsigned int surfaceId) {
+                                unsigned int surfaceId, long long deadline) {
     const auto failedAt = g_get_monotonic_time();
     auto* editor = frame->Editor();
-    if (!surfaceId) {
+    if (!surfaceId && GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) {
         auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
         if (surface) surfaceId = wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface));
     }
@@ -292,10 +292,12 @@ inline void ObserveFocusFailure(EditorFrame* frame, GtkWidget* widget, const wxS
         "mono_us=%lld\tevent=driver.wait-failure\tgesture=%llu\trequest_kind=%s\tpending_kind=%s"
         "\tacknowledged=%d\tframeActive=%d\teditorFocus=%d\townedPid=%lu\townedSurface=%u"
         "\tfailure_pending_read=%d\tfailure_pending_empty=%d\tfailure_pending_kind=%s"
-        "\tpending_read_mono_us=%lld\n",
+        "\tpending_read_mono_us=%lld\tdeadline_mono_us=%lld\tintent=%s\tlast_pending=%s\tfailure_pending=%s"
+        "\tframe_title=%s\n",
         static_cast<long long>(failedAt), gesture, intent.BeforeFirst(':'), lastPending.BeforeFirst(':'), acknowledged,
         frame->IsActive(), editor->HasFocus(), wxGetProcessId(), surfaceId, failureRead, failurePending.empty(),
-        failurePending.BeforeFirst(':'), static_cast<long long>(g_get_monotonic_time()));
+        failurePending.BeforeFirst(':'), static_cast<long long>(g_get_monotonic_time()), deadline, intent, lastPending,
+        failurePending, frame->GetTitle());
     bool written = false;
     {
         wxFFile marker(focusFile + ".failure.tmp", "wb");
@@ -365,9 +367,7 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
 #endif
     if (!acknowledged || !frame->IsActive() || !editor->HasFocus()) {
 #ifdef __WXGTK__
-        if (wayland) {
-            ObserveFocusFailure(frame, widget, focusFile, intent, lastPending, acknowledged, surfaceId);
-        }
+        ObserveFocusFailure(frame, widget, focusFile, intent, lastPending, acknowledged, surfaceId, expiry);
 #endif
         throw std::runtime_error("private native input must activate the owned editor");
     }

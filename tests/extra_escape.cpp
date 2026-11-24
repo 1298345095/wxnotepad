@@ -14,6 +14,8 @@
 #endif
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
+#include <gdk/gdkx.h>
+#undef None
 #endif
 
 namespace {
@@ -138,9 +140,17 @@ void WindowActionKey(EditorFrame* frame, bool shift = false, [[maybe_unused]] bo
         Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus),
                 "composition keys use the existing private driver");
     else {
-        const auto title = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
-        frame->SetTitle(title);
-        NativeKeys::FocusEditor(frame, title, focus);
+        auto* widget = GTK_WIDGET(frame->GetHandle());
+        wxString target;
+        if (GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget))) {
+            // Document notifications can change the title during activation.
+            // Keep targeting this owned native window throughout the handshake.
+            target = wxString::Format("x11-window:%lu", gdk_x11_window_get_xid(gtk_widget_get_window(widget)));
+        } else {
+            target = wxString::Format("wxnotepad Escape target %p", static_cast<void*>(frame));
+            frame->SetTitle(target);
+        }
+        NativeKeys::FocusEditor(frame, target, focus);
     }
     {
         wxFFile request(focus, "wb");
@@ -723,6 +733,19 @@ private:
                 const int choice = scenario < 2 ? wxID_CANCEL : scenario == 4 ? wxID_NO : wxID_YES;
                 NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, choice,
                                                         scenario == 3 ? TestFiles::Filename(path) : wxString{});
+#ifdef __WXGTK__
+                if (scenario == 3 &&
+                    !GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(candidate->GetHandle())))) {
+                    // Closing immediately after an edit also has real document
+                    // notifications queued when native focus is requested.
+                    candidate->Editor()->Send(Scintilla::Message::BeginUndoAction);
+                    candidate->Editor()->Send(Scintilla::Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+                    candidate->Editor()->Send(Scintilla::Message::EndUndoAction);
+                    candidate->Editor()->Send(Scintilla::Message::Undo);
+                    Require(TestEditor::Text(candidate->Editor()) == before.text,
+                            "queued native document notifications retain the original close-case bytes");
+                }
+#endif
                 candidate->SetTitle(wxString::Format("wxnotepad Escape candidate %d", scenario));
                 WindowActionKey(candidate, before.shift);
                 Await([&driver] { return driver.prompts == 1; },
