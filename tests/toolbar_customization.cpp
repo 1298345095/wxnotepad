@@ -84,8 +84,19 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativePaint::Complete(frame->Editor());
     const auto fullscreen = frame->GetRect();
+    const auto fullscreenNative = nativeClient();
     NativeSearch::Command(frame, large);
     NativePaint::Complete(frame->Editor());
+    if (frame->GetRect() != fullscreen || frame->GetToolBar()->IsShown() || frame->GetStatusBar()->IsShown()) {
+        const auto current = frame->GetRect();
+        const auto native = nativeClient();
+        std::println(stderr,
+                     "[DEBUG-toolbar-fullscreen] snapshot={},{},{}x{} native={}x{} current={},{},{}x{} native={}x{} "
+                     "fullscreen={} toolbarShown={} statusShown={}",
+                     fullscreen.x, fullscreen.y, fullscreen.width, fullscreen.height, fullscreenNative.x,
+                     fullscreenNative.y, current.x, current.y, current.width, current.height, native.x, native.y,
+                     frame->IsFullScreen(), frame->GetToolBar()->IsShown(), frame->GetStatusBar()->IsShown());
+    }
     Require(frame->GetRect() == fullscreen && !frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown(),
             "toolbar rebuilding preserves fullscreen geometry and hidden bars");
     NativeKeys::Shortcut(frame, WXK_F11, false);
