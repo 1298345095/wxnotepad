@@ -75,19 +75,18 @@ wxString ConfigurationPath() {
     }
     return path;
 }
-wxString ParseDateTimeFormat(wxString value) {
+wxString ParseOriginalIniString(wxString value, size_t maxUtf16Units) {
     value.Trim().Trim(false);
     if (value.length() >= 2 &&
         ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'"))))
         value = value.Mid(1, value.length() - 2);
-    // IniGetString's original WCHAR[256] reserves one UTF-16 unit for NUL.
-    constexpr size_t MaxDateTimeFormatUtf16Units = 255;
+    // IniGetString's original WCHAR buffers reserve one UTF-16 unit for NUL.
     wxString truncated;
     size_t units = 0;
     for (const wxUniChar character : value) {
-        if (units == MaxDateTimeFormatUtf16Units) break;
+        if (units == maxUtf16Units) break;
         const size_t count = character.GetValue() >= 0x10000 ? 2 : 1;
-        if (units + count > MaxDateTimeFormatUtf16Units) {
+        if (units + count > maxUtf16Units) {
             truncated += wxUniChar(0xfffd);
             break;
         }
@@ -575,7 +574,26 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString&
 
 wxString SettingsStore::ReadDateTimeFormat(const wxString& key) const {
     const auto value = FindValue(key, "Settings2", KeyCase::Insensitive);
-    return value ? ParseDateTimeFormat(*value) : wxString{};
+    constexpr size_t MaxDateTimeFormatUtf16Units = 255;
+    return value ? ParseOriginalIniString(*value, MaxDateTimeFormatUtf16Units) : wxString{};
+}
+
+wxString SettingsStore::SelectionActionTemplate(SelectionAction action) {
+    constexpr std::array keys{"GoogleSearchUrl", "BingSearchUrl", "WikiSearchUrl", "CustomAction1", "CustomAction2"};
+    const wxString key(keys[std::to_underlying(action)]);
+    // EditSelectionAction reads these fields at invocation, using WCHAR[MAX_PATH * 2].
+    constexpr size_t TemplateUtf16Capacity = 520;
+#ifdef __WXMSW__
+    std::array<wchar_t, TemplateUtf16Capacity> value{};
+    GetPrivateProfileStringW(L"Settings2", key.wc_str(), L"", value.data(), static_cast<DWORD>(value.size()),
+                             path_.wc_str());
+    return wxString(value.data());
+#else
+    const wxLogNull noGuiLog;
+    if (!LoadLines()) return {};
+    const auto value = FindValue(key, "Settings2", KeyCase::Insensitive);
+    return value ? ParseOriginalIniString(*value, TemplateUtf16Capacity - 1) : wxString{};
+#endif
 }
 
 int SettingsStore::ReadInt(const wxString& key, int fallback, const wxString& sectionName) const {

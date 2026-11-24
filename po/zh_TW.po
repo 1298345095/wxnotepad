@@ -1587,7 +1587,7 @@ msgid "Could not open new window"
 msgstr "無法開啟新視窗"
 
 #: src/app/editor_frame_commands.cpp src/app/explorer_selections.cpp
-#: src/app/open_targets.cpp
+#: src/app/open_targets.cpp src/app/selection_actions.cpp
 msgid "Could not open target"
 msgstr "無法開啟目標"
 
@@ -1654,7 +1654,7 @@ msgid "Could not restart wxnotepad."
 msgstr "無法重新啟動 wxnotepad。"
 
 #. TRANSLATORS: IDD_RUN launch failure; %s is the native or command-parser error.
-#: src/app/run_command.cpp
+#: src/app/run_command.cpp src/app/selection_actions.cpp
 #, c-format
 msgid "Could not run command: %s"
 msgstr "無法執行命令：%s"
@@ -1723,6 +1723,14 @@ msgstr "目前編碼"
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Current screen color (WYSIWYG)"
 msgstr "目前螢幕色彩（所見即所得）"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Custom Action &1\tCtrl+Shift+1"
+msgstr "自訂動作 &1\tCtrl+Shift+1"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Custom Action &2\tCtrl+Shift+2"
+msgstr "自訂動作 &2\tCtrl+Shift+2"
 
 #: src/app/editor_frame_toolbar.cpp
 msgid "Customi&ze Toolbar..."
@@ -3013,6 +3021,11 @@ msgstr "開啟檔案"
 msgid "Open in New Window failed"
 msgstr "在新視窗中開啟失敗"
 
+#. TRANSLATORS: Selection action status help; the command receives the selected text.
+#: src/app/editor_frame_commands.cpp
+msgid "Open the selected text using this action's command."
+msgstr "使用此動作的命令開啟所選文字。"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Operator"
 msgstr "運算子"
@@ -3575,6 +3588,19 @@ msgstr "腳本 She&bang 行"
 #: src/app/editor_frame_commands.cpp
 msgid "Scroll Past &Last Line"
 msgstr "捲動超出最後一行(&L)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Search on &Wikipedia"
+msgstr "在維基百科中搜尋(&W)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Search with &Bing"
+msgstr "使用 &Bing 搜尋"
+
+#. TRANSLATORS: CMD_ONLINE_SEARCH_GOOGLE/BING/WIKI and CMD_CUSTOM_ACTION1/2, in original menu order.
+#: src/app/editor_frame_commands.cpp
+msgid "Search with &Google"
+msgstr "使用 &Google 搜尋"
 
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
@@ -4607,6 +4633,12 @@ msgstr "縮放比例"
 #, c-format
 msgid "Zoom level (%d%% to %d%%):"
 msgstr "縮放比例（%d%% 至 %d%%）："
+
+#. TRANSLATORS: Original IDS_WIKI_SEARCH_URL default; preserve the literal %s placeholder.
+#: src/app/selection_actions.cpp
+#, c-format
+msgid "https://en.wikipedia.org/wiki/Special:Search?search=%s"
+msgstr "https://zh.wikipedia.org/wiki/Special:Search?search=%s"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "m4"

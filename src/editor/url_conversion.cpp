@@ -149,6 +149,20 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
 #endif
 } // namespace
 
+std::string EditorControl::UrlEncodedSelection() {
+    using Scintilla::Message;
+    const auto length = Send(Message::GetSelText);
+    if (!length) return {};
+    std::string text(static_cast<size_t>(length) + 1, '\0');
+    Send(Message::GetSelText, 0, reinterpret_cast<intptr_t>(text.data()));
+    text.resize(static_cast<size_t>(length));
+    auto input = std::string_view(text);
+    const auto first = input.find_first_not_of(trimSet);
+    if (first == std::string_view::npos) return {};
+    input = input.substr(first, input.find_last_not_of(trimSet) - first + 1);
+    return Convert(input, UrlConversion::Encode, static_cast<size_t>(length));
+}
+
 bool EditorControl::ConvertUrl(UrlConversion command) {
     using Scintilla::Message;
     // Original 89b8b36 EditURLEncode/EditURLDecode and EditReplaceMainSelection.

@@ -26,6 +26,7 @@ struct OriginalTabs {
 };
 
 enum class TitlePathNameFormat { NameOnly = 0, NameFirst = 1, FullPath = 2 };
+enum class SelectionAction : unsigned char { Google, Bing, Wikipedia, Custom1, Custom2 };
 
 // Defaults and INI names follow Notepad4 89b8b36, Notepad4.cpp::LoadSettings.
 struct OriginalSettings {
