@@ -86,7 +86,7 @@ selection and the native targets built for it.
 | Scenario | Registered cases | Build scope |
 | --- | --- | --- |
 | `prefix` | Original order through `original_editor_context_menu` (currently 43 cases) | Fourteen inspected predecessor targets and their existing dependencies |
-| `clipboard` | Complete `original_editor_context_menu` and `native_windows_clipboard_peer_lifecycle` | `context_menu`, including its `clipboard_peer` dependency |
+| `clipboard` | Complete `original_editor_context_menu`, repeated without interleaving other cases | `context_menu`, including its `clipboard_peer` dependency |
 
 The prefix target list is explicit because CTest omits command paths for unbuilt
 executables. Update `PREFIX_TARGETS` when a new predecessor requires another
@@ -99,24 +99,27 @@ python -X utf8 .github/scripts/windows_context_investigation.py run --scenario p
 
 Use the `plan` action to inspect the selection without compiling or opening test
 windows. Use `--scenario clipboard` for iterations confined to the clipboard peer.
+The peer-shutdown regression remains in the ordinary full suite and can be
+selected separately through `ci.py test` when that behavior changes; it does not
+alter clipboard state between the reproduction's complete-menu processes.
 An applicable earlier full-suite result remains evidence for unchanged code;
 run related cases during diagnosis, then the complete required checks on the
 final proposed fix.
 
-The separate **Windows investigation** workflow runs on pushes to
-`codex/windows-context-investigation-*`, using the same Windows 2025 runner,
+The separate **Windows investigation** workflow is manually dispatched, using
+the same Windows 2025 runner,
 pinned SDK, compiler cache and display conditions. Its default is three prefix
 attempts, with the original independent reference controls run first. It builds
 only the selected native targets and does not run Linux, coverage, packaging or
 the complete Windows suite. Keep investigation branches without a pull request
-so their pushes do not trigger the ordinary PR workflows. Transfer final changes
-to the repair PR once ready for complete validation.
+so their pushes do not trigger the ordinary PR workflows. Pushes alone do not
+start the investigation either. Transfer final changes to the repair PR once
+ready for complete validation.
 
-After its first branch-push run registers the workflow, it can also be dispatched
-against that branch, for example:
+Dispatch the registered workflow against an investigation branch, for example:
 
 ```text
-gh workflow run windows-investigation.yml --ref codex/windows-context-investigation-2026-11-24 -f scenario=clipboard -f runs=3
+gh workflow run windows-investigation.yml --ref codex/windows-context-investigation-2026-11-24 -f scenario=clipboard -f runs=20
 ```
 
 Its **Windows context investigation** check is separate from required merge

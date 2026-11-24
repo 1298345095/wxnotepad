@@ -20,7 +20,7 @@ class WindowsInvestigation(unittest.TestCase):
         self.build = self.directory / 'build'
         self.events = self.directory / 'events.txt'
 
-    def configure(self, *, unbuilt=False, peer=True, fail=False):
+    def configure(self, *, unbuilt=False, context=True, fail=False):
         script = self.directory / 'event.py'
         script.write_text(
             'import os,sys; from pathlib import Path\n'
@@ -28,10 +28,10 @@ class WindowsInvestigation(unittest.TestCase):
             'if sys.argv[2] == "original_editor_context_menu":\n'
             ' assert os.environ["WXNOTEPAD_INVESTIGATION_CONTRACT"] == "retained"\n'
             ' if sys.argv[3] == "fail": raise SystemExit(7)\n', encoding='utf-8')
-        cases = ['before', investigation.CONTEXT_CASE]
-        if peer:
-            cases.append(investigation.PEER_CASE)
-        cases.append('after')
+        cases = ['before']
+        if context:
+            cases.append(investigation.CONTEXT_CASE)
+        cases += ['native_windows_clipboard_peer_lifecycle', 'after']
         source = 'cmake_minimum_required(VERSION 3.25)\nproject(Investigation NONE)\nenable_testing()\n'
         for name in cases:
             if unbuilt and name == investigation.CONTEXT_CASE:
@@ -40,8 +40,9 @@ class WindowsInvestigation(unittest.TestCase):
                 command = (f'"{Path(sys.executable).as_posix()}" "{script.as_posix()}" '
                            f'"{self.events.as_posix()}" "{name}" "{"fail" if fail else "pass"}"')
             source += f'add_test(NAME {name} COMMAND {command})\n'
-        source += ('set_tests_properties(original_editor_context_menu PROPERTIES TIMEOUT 60 '
-                   'ENVIRONMENT "WXNOTEPAD_INVESTIGATION_CONTRACT=retained")\n')
+        if context:
+            source += ('set_tests_properties(original_editor_context_menu PROPERTIES TIMEOUT 60 '
+                       'ENVIRONMENT "WXNOTEPAD_INVESTIGATION_CONTRACT=retained")\n')
         (self.directory / 'CMakeLists.txt').write_text(source, encoding='utf-8')
         subprocess.run(['cmake', '-S', self.directory, '-B', self.build, '-G', 'Ninja'],
                        check=True, capture_output=True)
@@ -64,15 +65,16 @@ class WindowsInvestigation(unittest.TestCase):
         context = next(case for case in listing['tests'] if case['name'] == investigation.CONTEXT_CASE)
         self.assertIn({'name': 'TIMEOUT', 'value': 60.0}, context['properties'])
 
-    def test_clipboard_selects_both_real_registered_cases_only(self):
+    def test_clipboard_repeats_original_case_without_interleaving_other_tests(self):
         self.configure()
         self.assertEqual(investigation.plan(self.build, 'clipboard')['tests'],
-                         [investigation.CONTEXT_CASE, investigation.PEER_CASE])
+                         [investigation.CONTEXT_CASE])
 
-    def test_missing_peer_cannot_silently_shrink_clipboard_investigation(self):
-        self.configure(peer=False)
-        with self.assertRaisesRegex(SystemExit, investigation.PEER_CASE):
-            investigation.plan(self.build, 'clipboard')
+    def test_missing_context_cannot_silently_shrink_investigation(self):
+        self.configure(context=False)
+        for scenario in ('prefix', 'clipboard'):
+            with self.subTest(scenario=scenario), self.assertRaisesRegex(SystemExit, investigation.CONTEXT_CASE):
+                investigation.plan(self.build, scenario)
 
     def test_zero_attempts_cannot_report_an_empty_success(self):
         reports = self.directory / 'reports'

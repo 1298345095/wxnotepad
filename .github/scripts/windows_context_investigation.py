@@ -9,7 +9,6 @@ import subprocess
 import ci
 
 CONTEXT_CASE = 'original_editor_context_menu'
-PEER_CASE = 'native_windows_clipboard_peer_lifecycle'
 # CTest omits an unbuilt executable's command from its JSON listing. Keep the
 # inspected predecessor targets explicit so cold investigations can build them.
 PREFIX_TARGETS = (
@@ -32,9 +31,7 @@ def plan(cmake_dir, scenario):
         selected = cases[:names.index(CONTEXT_CASE) + 1]
         targets = PREFIX_TARGETS
     else:
-        if PEER_CASE not in names:
-            raise SystemExit(f'Required registered test is missing: {PEER_CASE}')
-        selected = [case for case in cases if case['name'] in (CONTEXT_CASE, PEER_CASE)]
+        selected = [cases[names.index(CONTEXT_CASE)]]
         targets = ('context_menu',)  # Includes its existing clipboard_peer dependency.
     return {'cmake_dir': str(cmake_dir), 'scenario': scenario,
             'tests': [case['name'] for case in selected], 'targets': list(targets)}

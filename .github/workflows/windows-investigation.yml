@@ -1,12 +1,10 @@
 name: Windows investigation
 
 on:
-  push:
-    branches: ['codex/windows-context-investigation-*']
   workflow_dispatch:
     inputs:
       scenario:
-        description: Original predecessor sequence, or complete menu and peer lifecycle only
+        description: Original predecessor sequence, or complete context-menu case only
         type: choice
         options: [prefix, clipboard]
         default: prefix
