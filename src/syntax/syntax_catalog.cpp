@@ -1327,13 +1327,14 @@ wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& ex
 
 std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions) {
     std::vector<wxString> result;
-    wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n");
+    wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n", wxTOKEN_STRTOK);
     while (tokens.HasMoreTokens())
         result.push_back(tokens.GetNextToken());
     return result;
 }
 
-SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions) {
+SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions,
+                               const wxString& favoriteSchemes) {
     using enum SyntaxLanguage;
     const auto name = wxFileName(path).GetFullName();
     // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
@@ -1364,20 +1365,26 @@ SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& ext
         }
         return language;
     };
-    for (const auto& [language, value] : extensions) {
-        for (const auto& candidate : SyntaxExtensionList(language, extensions))
-            if (extension.CmpNoCase(candidate) == 0) return dialect(language);
-    }
-    if (!extensions.contains(Html)) {
-        if (extension == "asp") return AspVb;
-        if (extension == "aspx") return AspxCs;
-    }
-    for (size_t index = std::size(definitions); index-- > 0;) {
-        const auto& definition = definitions[index];
-        if (extensions.contains(SyntaxSettingsLanguage(definition.language))) continue;
-        for (const auto* candidate : definition.extensions) {
-            if (extension == candidate) return definition.language;
+    auto associations = originalSyntaxAssociations;
+    // Styles.cpp::Style_SetFavoriteSchemes keeps both text schemes fixed, then
+    // moves each configured favorite ahead of the remaining original schemes.
+    size_t favoriteIndex = 2;
+    for (const int identity : OriginalFavoriteSchemeIds(favoriteSchemes)) {
+        const auto first = associations.begin() + favoriteIndex;
+        const auto found =
+            std::find_if(first, associations.end(), [identity](const auto& item) { return item.first == identity; });
+        if (found != associations.end()) {
+            std::rotate(first, found, found + 1);
+            ++favoriteIndex;
         }
+    }
+    for (const auto& [identity, stockExtensions] : associations) {
+        const auto language = SyntaxFromOriginalSchemeId(identity);
+        const auto effective = language ? SyntaxExtensionsFor(*language, extensions)
+                                        : wxString::FromUTF8(stockExtensions.data(), stockExtensions.size());
+        wxStringTokenizer candidates(effective, "; \t\r\n", wxTOKEN_STRTOK);
+        while (candidates.HasMoreTokens())
+            if (extension.CmpNoCase(candidates.GetNextToken()) == 0) return language ? dialect(*language) : PlainText;
     }
     // Even an original association whose lexer is not delivered precedes the
     // Makefile/Kbuild filename fallback (for example Makefile.rb or Kbuild.cfg).
@@ -1400,12 +1407,14 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
-        if (const auto language = LanguageForPath(underlying, options.extensions); language != PlainText)
+        if (const auto language = LanguageForPath(underlying, options.extensions, options.favoriteSchemes);
+            language != PlainText)
             return DetectedSyntax{language};
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
-    const auto language = templateConfig ? PlainText : LanguageForPath(path, options.extensions);
+    const auto language =
+        templateConfig ? PlainText : LanguageForPath(path, options.extensions, options.favoriteSchemes);
     if (language != PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return DetectedSyntax{SyntaxSettingsLanguage(language), DetectMarkupDocType(prefix).value_or(language)};

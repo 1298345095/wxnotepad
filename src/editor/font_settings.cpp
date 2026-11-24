@@ -4,6 +4,7 @@
 #include <wx/fontenum.h>
 #include <wx/settings.h>
 #include <wx/tokenzr.h>
+#include <wx/uilocale.h>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -32,6 +33,33 @@ std::optional<int> Integer(const wxString& text) {
     if (end == bytes.c_str()) return std::nullopt;
     return static_cast<int>(std::clamp(value, static_cast<long>(std::numeric_limits<int>::min()),
                                        static_cast<long>(std::numeric_limits<int>::max())));
+}
+wxString FontLocale(const wxString& style) {
+    auto locale = Value(style, "locale");
+#ifdef __WXMSW__
+    if (locale.empty() || !IsValidLocaleName(locale.wc_str())) {
+        // Styles.cpp::Style_SetFontLocaleName: prefer a CJK system locale when
+        // the current user's locale isn't CJK, retaining the user's choice otherwise.
+        wchar_t user[LOCALE_NAME_MAX_LENGTH]{};
+        GetUserDefaultLocaleName(user, LOCALE_NAME_MAX_LENGTH);
+        locale = user;
+        const auto cjk = [](const wxString& name) {
+            const auto language = name.Left(2).Lower();
+            return language == "zh" || language == "ja" || language == "ko";
+        };
+        if (!cjk(locale)) {
+            wchar_t system[LOCALE_NAME_MAX_LENGTH]{};
+            GetSystemDefaultLocaleName(system, LOCALE_NAME_MAX_LENGTH);
+            if (cjk(system)) locale = system;
+        }
+    }
+#else
+    // An absent/invalid override leaves GTK's native Pango system language in
+    // effect, including environments whose process locale is C/POSIX.
+    const auto* language = wxUILocale::FindLanguageInfo(wxLocaleIdent::FromTag(locale));
+    if (!language || locale.CmpNoCase(language->LocaleTag) != 0) locale.clear();
+#endif
+    return locale;
 }
 std::optional<unsigned> Colour(const wxString& text) {
     if (!text.StartsWith('#')) return std::nullopt;
@@ -221,6 +249,8 @@ void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language) {
     const auto& scheme = settings.Scheme(language);
     const auto& style = scheme.useCode ? settings.codeStyle : settings.textStyle;
     const auto font = DefaultStyleFont(settings, scheme.useCode);
+    const auto locale = FontLocale(style).utf8_string();
+    editor.Send(Message::SetFontLocale, 0, reinterpret_cast<intptr_t>(locale.c_str()));
     editor.Send(Message::StyleResetDefault);
     const auto family = font.GetFaceName();
     const auto face = family.ToUTF8();

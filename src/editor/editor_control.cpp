@@ -272,6 +272,7 @@ void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
 }
 
 void EditorControl::ApplyStylePixelSettings() {
+    constexpr int StrokeWidthHundredthsPerPixel = 100;
     const double scale = static_cast<double>(GetDPI().y * Send(Message::GetZoom)) /
                          (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale);
     const auto whitespace = Fonts().GlobalStyle("Whitespace");
@@ -283,7 +284,9 @@ void EditorControl::ApplyStylePixelSettings() {
     Send(Message::SetExtraDescent, spacing / 2);
     for (auto id = std::to_underlying(Scintilla::MarkerOutline::FolderEnd);
          id <= std::to_underlying(Scintilla::MarkerOutline::FolderOpen); ++id)
-        Send(Message::MarkerSetStrokeWidth, id, std::max(100, static_cast<int>(std::lround(100 * scale))));
+        Send(Message::MarkerSetStrokeWidth, id,
+             std::max(StrokeWidthHundredthsPerPixel,
+                      static_cast<int>(std::lround(StrokeWidthHundredthsPerPixel * scale))));
     SetCurrentLineHighlightMode(lineHighlightMode_);
     ApplyCaretAppearance();
 }

@@ -76,7 +76,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                                   settings->values.noHtmlGuess,
                                                   SyntaxFromOriginalSchemeId(settings->values.defaultScheme)
                                                       .value_or(SyntaxLanguage::PlainText),
-                                                  settings->values.schemeExtensions}
+                                                  settings->values.schemeExtensions, settings->values.favoriteSchemes}
                          : SyntaxDetectionOptions{},
                 settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
@@ -546,7 +546,7 @@ void EditorFrame::ShowSyntaxScheme(bool favorite) {
     document_.SetSyntaxDetectionOptions(
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
          SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
-         preferences.schemeExtensions});
+         preferences.schemeExtensions, preferences.favoriteSchemes});
     if (language) ChooseLanguage(*language);
 }
 
@@ -561,7 +561,7 @@ void EditorFrame::CustomizeStyles() {
     document_.SetSyntaxDetectionOptions(
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
          SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
-         preferences.schemeExtensions});
+         preferences.schemeExtensions, preferences.favoriteSchemes});
     editor_->SetFocus();
 }
 

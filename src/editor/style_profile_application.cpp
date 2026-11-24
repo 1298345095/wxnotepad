@@ -13,6 +13,18 @@ constexpr auto DefaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::De
 unsigned SystemColour(wxSystemColour colour) {
     return StyleSystemColour(colour).GetRGB();
 }
+bool VerifyContrast(unsigned foreground, unsigned background) {
+    // Pinned Helpers.cpp::VerifyContrast, including its asymmetric green weights.
+    constexpr int ContrastThreshold = 400;
+    const int r1 = foreground & 0xff;
+    const int g1 = (foreground >> 8U) & 0xff;
+    const int b1 = (foreground >> 16U) & 0xff;
+    const int r2 = background & 0xff;
+    const int g2 = (background >> 8U) & 0xff;
+    const int b2 = (background >> 16U) & 0xff;
+    return std::abs((3 * r1 + 5 * g1 + b1) - (3 * r2 + 6 * g2 + b2)) >= ContrastThreshold ||
+           std::abs(r1 - r2) + std::abs(g1 - g2) + std::abs(b1 - b2) >= ContrastThreshold;
+}
 void Indicator(EditorControl& editor, uintptr_t id, const wxString& text, unsigned fallback, int alpha, int outline) {
     editor.Send(IndicSetStyle, id, std::to_underlying(Scintilla::IndicatorStyle::RoundBox));
     editor.Send(IndicSetFore, id, StyleColour(text, "fore", fallback));
@@ -97,19 +109,26 @@ void ApplyStyleProfile(EditorControl& editor, SyntaxLanguage language) {
     editor.Send(SetElementColour, std::to_underlying(Scintilla::Element::ListSelectedBack),
                 0xff000000U | selectionBack);
     const auto caret = global("Caret");
-    editor.Send(SetElementColour, std::to_underlying(Scintilla::Element::Caret),
-                0xff000000U | StyleColour(caret, "fore", foreground));
-    editor.Send(SetElementColour, std::to_underlying(Scintilla::Element::CaretAdditional),
-                0xff000000U | StyleColour(caret, "back", foreground));
+    auto caretColour = StyleColour(caret, "fore", SystemColour(wxSYS_COLOUR_WINDOWTEXT));
+    if (!VerifyContrast(caretColour, background)) caretColour = foreground;
+    caretColour |= 0xff000000U;
+    editor.Send(SetElementColour, std::to_underlying(Scintilla::Element::Caret), caretColour);
+    // The original inherits the primary caret when back is absent. An explicit
+    // low-contrast additional colour keeps its parsed RGB without opaque alpha.
+    caretColour = StyleColour(caret, "back", caretColour);
+    if (VerifyContrast(caretColour, background)) caretColour |= 0xff000000U;
+    editor.Send(SetElementColour, std::to_underlying(Scintilla::Element::CaretAdditional), caretColour);
     const auto whitespace = global("Whitespace");
     for (const auto& [element, key] :
          {std::pair{Scintilla::Element::WhiteSpace, "fore"}, std::pair{Scintilla::Element::WhiteSpaceBack, "back"}}) {
+        const auto alpha = element == Scintilla::Element::WhiteSpace
+                               ? std::clamp(StyleInteger(whitespace, "alpha", 255), 0, 255)
+                               : 255;
         if (StyleProperty(whitespace, key).empty())
             editor.Send(ResetElementColour, std::to_underlying(element));
         else
             editor.Send(SetElementColour, std::to_underlying(element),
-                        StyleColour(whitespace, key, foreground) |
-                            (static_cast<unsigned>(std::clamp(StyleInteger(whitespace, "alpha", 255), 0, 255)) << 24U));
+                        StyleColour(whitespace, key, foreground) | (static_cast<unsigned>(alpha) << 24U));
     }
     const auto ime = StyleColour(global("IME Indicator"), "fore", 0x00108010);
     for (int id = std::to_underlying(Scintilla::IndicatorNumbers::Ime);

@@ -328,23 +328,11 @@ add_test(NAME original_scheme_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
 set_tests_properties(original_scheme_settings_lifecycle PROPERTIES TIMEOUT 90)
 
 add_editor_test(syntax_css_sql original_css_sql_schemes 90)
-add_test(NAME original_ini_content_detection COMMAND "${Python3_EXECUTABLE}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_detection_process.py" "$<TARGET_FILE:wxnotepad>")
-set_tests_properties(original_ini_content_detection PROPERTIES TIMEOUT 90)
 target_compile_definitions(syntax_css_sql PRIVATE
     "CSS_SQL_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_reference.tsv\""
     "CSS_SQL_COMPLETION_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_completion_reference.tsv\""
     "CSS_SQL_TYPING_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/css_sql_typing_reference.tsv\"")
 foreach(language IN ITEMS en zh_CN zh_TW)
-    add_test(NAME original_build_patch_process_${language} COMMAND "${Python3_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
-    set_tests_properties(original_build_patch_process_${language} PROPERTIES TIMEOUT 120)
-    if(WIN32)
-        add_test(NAME original_build_patch_process_gdi_${language} COMMAND "${Python3_EXECUTABLE}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>"
-            --language "${language}" --gdi)
-        set_tests_properties(original_build_patch_process_gdi_${language} PROPERTIES TIMEOUT 120)
-    endif()
     add_test(NAME original_css_sql_process_${language} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/css_sql_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
     set_tests_properties(original_css_sql_process_${language} PROPERTIES TIMEOUT 120)
@@ -452,4 +440,65 @@ if(UNIX)
         --cmake-dir "${CMAKE_BINARY_DIR}" --scenario installed
         --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-installed")
     set_tests_properties(packaged_current_file_window_installed PROPERTIES TIMEOUT 120)
+endif()
+
+add_gui_program(selection_actions tests/selection_actions.cpp app_shell)
+add_dependencies(selection_actions run_command_child wxnotepad_catalogs)
+add_test(NAME original_selection_actions COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_actions_process.py" "$<TARGET_FILE:selection_actions>")
+set_tests_properties(original_selection_actions PROPERTIES TIMEOUT 90)
+if(WIN32)
+    add_test(NAME original_selection_actions_gdi COMMAND selection_actions --gdi)
+    set_tests_properties(original_selection_actions_gdi PROPERTIES TIMEOUT 90)
+endif()
+
+add_editor_test(syntax_build_patch original_ini_make_diff_schemes 90)
+target_compile_definitions(syntax_build_patch PRIVATE
+    "BUILD_PATCH_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_reference.tsv\""
+    "BUILD_PATCH_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_operations_reference.tsv\""
+    "BUILD_PATCH_POLICIES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_policies_reference.tsv\""
+    "BUILD_PATCH_COMPLETIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/build_patch_completions_reference.tsv\"")
+if(WIN32)
+    add_test(NAME original_ini_make_diff_schemes_gdi COMMAND syntax_build_patch)
+    set_tests_properties(original_ini_make_diff_schemes_gdi PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_BUILD_PATCH_GDI=1")
+endif()
+
+add_test(NAME original_ini_content_detection COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_detection_process.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_ini_content_detection PROPERTIES TIMEOUT 90)
+foreach(language IN ITEMS en zh_CN zh_TW)
+    add_test(NAME original_build_patch_process_${language} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>" --language "${language}")
+    set_tests_properties(original_build_patch_process_${language} PROPERTIES TIMEOUT 120)
+    if(WIN32)
+        add_test(NAME original_build_patch_process_gdi_${language} COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_patch_process.py" "$<TARGET_FILE:wxnotepad>"
+            --language "${language}" --gdi)
+        set_tests_properties(original_build_patch_process_gdi_${language} PROPERTIES TIMEOUT 120)
+    endif()
+endforeach()
+
+add_test(NAME original_style_extension_precedence COMMAND style_themes associations)
+set_tests_properties(original_style_extension_precedence PROPERTIES TIMEOUT 60)
+
+add_test(NAME original_style_caret_contrast COMMAND style_themes caret)
+set_tests_properties(original_style_caret_contrast PROPERTIES TIMEOUT 60)
+
+add_test(NAME original_style_whitespace_alpha COMMAND style_themes whitespace)
+set_tests_properties(original_style_whitespace_alpha PROPERTIES TIMEOUT 60)
+
+if(WIN32 OR (UNIX AND NOT APPLE))
+    add_gui_program(style_locale tests/style_locale.cpp app_shell)
+    if(WIN32)
+        target_sources(style_locale PRIVATE tests/style_locale_directwrite.cpp tests/style_locale_windows_defaults.cpp)
+        target_include_directories(style_locale PRIVATE src/editor/platform
+            "${NOTEPAD4_SOURCE}/scintilla/win32" "${NOTEPAD4_SOURCE}/scintilla/src"
+            "${NOTEPAD4_SOURCE}/scintilla/lexlib" "${directwrite_generated}")
+        target_compile_definitions(style_locale PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
+    elseif(UNIX AND NOT APPLE)
+        target_sources(style_locale PRIVATE tests/style_locale_gtk.cpp)
+    endif()
+    add_test(NAME original_style_native_font_locale COMMAND style_locale)
+    set_tests_properties(original_style_native_font_locale PROPERTIES TIMEOUT 60)
 endif()
