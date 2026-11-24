@@ -81,13 +81,41 @@ void RebuildVisibilityAndFullscreen(EditorFrame* frame) {
     Require(!frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown() &&
                 frame->Editor()->GetSize() == editorSize,
             "size rebuilding retains hidden bars and the editor's native geometry");
+    struct Geometry {
+        const char* stage;
+        wxRect frame;
+        wxSize native;
+        bool fullscreen;
+        bool toolbarShown;
+        bool statusShown;
+    };
+    const auto observe = [&](const char* stage) {
+        return Geometry{stage,
+                        frame->GetRect(),
+                        nativeClient(),
+                        frame->IsFullScreen(),
+                        frame->GetToolBar()->IsShown(),
+                        frame->GetStatusBar()->IsShown()};
+    };
     NativeKeys::Shortcut(frame, WXK_F11, false);
+    const auto delivered = observe("F11 key release");
     NativePaint::Complete(frame->Editor());
     const auto fullscreen = frame->GetRect();
+    const auto entered = observe("fullscreen paint complete");
     NativeSearch::Command(frame, large);
+    const auto rebuilt = observe("toolbar command complete");
     NativePaint::Complete(frame->Editor());
-    Require(frame->GetRect() == fullscreen && !frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown(),
-            "toolbar rebuilding preserves fullscreen geometry and hidden bars");
+    const bool preserved =
+        frame->GetRect() == fullscreen && !frame->GetToolBar()->IsShown() && !frame->GetStatusBar()->IsShown();
+    if (!preserved) {
+        for (const auto& value : {delivered, entered, rebuilt, observe("toolbar paint complete")})
+            std::println(stderr,
+                         "Toolbar fullscreen geometry: stage={} frame={},{},{}x{} native={}x{} fullscreen={} "
+                         "toolbarShown={} statusShown={}",
+                         value.stage, value.frame.x, value.frame.y, value.frame.width, value.frame.height,
+                         value.native.x, value.native.y, value.fullscreen, value.toolbarShown, value.statusShown);
+    }
+    Require(preserved, "toolbar rebuilding preserves fullscreen geometry and hidden bars");
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativePaint::Complete(frame->Editor());
     Require(frame->GetRect() == window, "returning from full screen restores native window placement");
