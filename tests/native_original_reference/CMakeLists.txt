@@ -23,6 +23,19 @@ target_link_libraries(native_original_viewport PRIVATE
     user32 gdi32 imm32 shlwapi ole32 oleaut32 shell32 comctl32 uxtheme advapi32 uuid)
 target_link_options(native_original_viewport PRIVATE /MANIFEST:NO)
 
+if(NOTEPAD4_SELECTION_ACTIONS)
+    add_executable(native_original_selection_actions ${original_sources} selection_actions.cpp)
+    target_include_directories(native_original_selection_actions PRIVATE
+        "${NOTEPAD4_SELECTION_ACTIONS}" "${NOTEPAD4_SOURCE}/scintilla/include"
+        "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+    target_compile_definitions(native_original_selection_actions PRIVATE
+        UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00 NOMINMAX WIN32_LEAN_AND_MEAN
+        BOOST_REGEX_STANDALONE NO_CXX11_REGEX _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS)
+    target_compile_options(native_original_selection_actions PRIVATE /utf-8 /GR- /Zc:char8_t-)
+    target_link_libraries(native_original_selection_actions PRIVATE
+        user32 gdi32 imm32 shlwapi ole32 oleaut32 shell32 comctl32 uxtheme advapi32 uuid)
+endif()
+
 # Compile the pinned helper verbatim, independently of application adapters.
 if(NOTEPAD4_OPEN_FOLDER)
     get_filename_component(original_folder_directory "${NOTEPAD4_OPEN_FOLDER}" DIRECTORY)

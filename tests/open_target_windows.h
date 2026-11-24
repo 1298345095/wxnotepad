@@ -90,6 +90,16 @@ public:
         if (FAILED(result) || std::wstring(selected) != RecorderCommand())
             throw std::runtime_error("mailto must already resolve to this exact owned recorder");
     }
+    static void RequireWebHandlers() {
+        for (const auto* scheme : {L"http", L"https"}) {
+            wchar_t selected[32768]{};
+            DWORD length = std::size(selected);
+            const auto result =
+                AssocQueryStringW(ASSOCF_IS_PROTOCOL, ASSOCSTR_COMMAND, scheme, L"open", selected, &length);
+            if (FAILED(result) || std::wstring(selected) != RecorderCommand())
+                throw std::runtime_error("HTTP/HTTPS must already resolve to this exact owned recorder");
+        }
+    }
     void RequireStandardHandlers() const {
         for (const auto* scheme : {L"http", L"https", L"mailto"}) {
             wchar_t selected[32768]{};
