@@ -118,4 +118,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
     if (guides != 0) ApplyIndentationGuides(editor, language, true, guides == 1);
     editor.SetCurrentLineHighlightMode(editor.GetCurrentLineHighlightMode());
     editor.Send(Message::ClearDocumentStyle);
+    // The pinned core clears style bytes without rewinding its styled extent.
+    // Original Styles.cpp::Style_SetLexer restarts lazy styling after a change.
+    editor.Send(Message::StartStyling, 0);
 }

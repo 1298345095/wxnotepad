@@ -241,6 +241,14 @@ void ProcessObserver::Publish() {
     constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
     frame_->Editor()->Send(StyleGetFont, defaultStyle, reinterpret_cast<intptr_t>(font.data()));
     contents += "font_name\t" + wxString::FromUTF8(font.data()) + "\n";
+    const auto caretStyle = frame_->Editor()->Send(GetStyleIndexAt, frame_->Editor()->Send(GetCurrentPos));
+    contents +=
+        wxString::Format("lexer\t%lld\nstyle_at_caret\t%lld\nstyle_foreground_at_caret\t%lld\n"
+                         "style_background_at_caret\t%lld\nstyled_to\t%lld\n",
+                         static_cast<long long>(frame_->Editor()->Send(GetLexer)), static_cast<long long>(caretStyle),
+                         static_cast<long long>(frame_->Editor()->Send(StyleGetFore, caretStyle)),
+                         static_cast<long long>(frame_->Editor()->Send(StyleGetBack, caretStyle)),
+                         static_cast<long long>(frame_->Editor()->Send(GetEndStyled)));
     contents += wxString::Format("font_size_fractional\t%lld\nline_height\t%lld\ntoolbar_shown\t%d\n",
                                  static_cast<long long>(frame_->Editor()->Send(StyleGetSizeFractional, defaultStyle)),
                                  static_cast<long long>(frame_->Editor()->Send(TextHeight, 0)),
