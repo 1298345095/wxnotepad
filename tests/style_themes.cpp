@@ -1,6 +1,7 @@
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
+#include "syntax/syntax_scheme.h"
 #include <wx/ffile.h>
 #include <wx/filename.h>
 #include <SciLexer.h>
@@ -98,6 +99,11 @@ public:
 #else
                 constexpr unsigned defaultBackground = 0xffffff;
 #endif
+                std::println("Default: fore={:x} back={:x} nativeFore={:x} nativeBack={:x}",
+                             editor->Send(Message::StyleGetFore, DefaultStyle),
+                             editor->Send(Message::StyleGetBack, DefaultStyle),
+                             wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT).GetRGB(),
+                             wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW).GetRGB());
                 Require(editor->Send(Message::StyleGetBack, DefaultStyle) == defaultBackground && bar->IsChecked(light),
                         "Default restores its profile independently of system theme");
                 Pixels(frame, "default", defaultBackground);
@@ -123,6 +129,16 @@ public:
                 Require(editor->Send(Message::StyleGetBack, SCE_PY_COMMENTLINE) == 0x1e1e1e &&
                             editor->Send(Message::StyleGetFore, SCE_PY_COMMENTLINE) == 0x608060,
                         "subsequent scheme changes retain Dark while using that scheme's original token defaults");
+                auto customized = editor->Fonts();
+                customized.codeStyle = "font:$(Code); fore:#123456; back:#456789";
+                customized.Scheme(SyntaxLanguage::Python).useCode = true;
+                editor->SetFontSettings(customized);
+                ApplySyntaxStyles(*editor, SyntaxLanguage::Python);
+                Require(editor->Send(Message::StyleGetFore, DefaultStyle) == 0x563412 &&
+                            editor->Send(Message::StyleGetBack, DefaultStyle) == 0x896745 &&
+                            editor->Send(Message::StyleGetBack, SCE_PY_COMMENTLINE) == 0x896745,
+                        "explicit custom colours override native fallbacks and remain inherited by token styles");
+                Pixels(frame, "custom", 0x896745);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::println(stderr, "style themes: {}", error.what());
