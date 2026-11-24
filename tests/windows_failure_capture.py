@@ -23,6 +23,35 @@ def capture(processes, destination, before_launch):
     user.IsIconic.argtypes = [wintypes.HWND]
     user.GetDpiForWindow.argtypes = [wintypes.HWND]
     user.GetForegroundWindow.restype = wintypes.HWND
+    user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user.IsWindow.argtypes = [wintypes.HWND]
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
+                                                ctypes.POINTER(wintypes.DWORD)]
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+
+    def identity(window):
+        if not window:
+            return None
+        process = wintypes.DWORD()
+        thread = user.GetWindowThreadProcessId(window, ctypes.byref(process))
+        name = ctypes.create_unicode_buffer(128)
+        user.GetClassNameW(window, name, len(name))
+        record = {'window': window, 'exists': bool(user.IsWindow(window)), 'pid': process.value,
+                  'thread': thread, 'class': name.value, 'process_image': None}
+        process_query_limited_information = 0x1000
+        handle = kernel.OpenProcess(process_query_limited_information, False, process.value)
+        if handle:
+            try:
+                image = ctypes.create_unicode_buffer(32768)
+                size = wintypes.DWORD(len(image))
+                if kernel.QueryFullProcessImageNameW(handle, 0, image, ctypes.byref(size)):
+                    record['process_image'] = image.value
+            finally:
+                kernel.CloseHandle(handle)
+        return record
 
     class GuiThreadInfo(ctypes.Structure):
         _fields_ = [('size', wintypes.DWORD), ('flags', wintypes.DWORD),
@@ -35,6 +64,8 @@ def capture(processes, destination, before_launch):
     callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
     foreground = user.GetForegroundWindow()
+    foreground_identity = identity(foreground)
+    before_foreground_identity = identity(before_launch.get('foreground'))
     records = []
 
     @callback
@@ -70,6 +101,8 @@ def capture(processes, destination, before_launch):
         raise ctypes.WinError(ctypes.get_last_error())
     (destination / 'windows.json').write_text(json.dumps({'owned_processes': processes,
                                                         'before_helper_launch': before_launch,
+                                                        'before_foreground_identity': before_foreground_identity,
+                                                        'foreground_identity': foreground_identity,
                                                         'window_metadata_timing': 'after helper process started',
                                                         'capture': 'desktop DC pixels within owned window bounds; overlapping windows may cover them',
                                                         'windows': records}, indent=2) + '\n',

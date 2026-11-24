@@ -51,6 +51,12 @@ foreground/active/focus handles recorded before launching the capture helper are
 the failure snapshot; the separately labelled window metadata is collected after
 helper startup. The helper does not disable or activate the test windows, repaint
 them, or pump their events.
+Foreground metadata includes the native window class, process ID and process
+image so a competing window can be identified without capturing its pixels.
+The Windows `native_windows_failure_capture` regression compares the configured
+Python path with its compiled value and launches the real capture helper against
+an owned hidden window. CMake normalizes path separators before embedding the
+Python executable in a C++ string literal.
 
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use

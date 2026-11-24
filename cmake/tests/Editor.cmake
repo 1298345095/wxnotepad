@@ -189,9 +189,13 @@ if(WIN32)
 endif()
 add_editor_test(word_wrap word_wrap_view 60)
 if(WIN32)
-    foreach(target IN ITEMS clipboard_smoke word_wrap context_menu)
+    file(TO_CMAKE_PATH "${Python3_EXECUTABLE}" native_failure_python)
+    add_gui_program(windows_failure_capture_launch tests/windows_failure_capture_launch.cpp wx::core wx::base)
+    add_test(NAME native_windows_failure_capture COMMAND windows_failure_capture_launch "${Python3_EXECUTABLE}")
+    set_tests_properties(native_windows_failure_capture PROPERTIES TIMEOUT 30)
+    foreach(target IN ITEMS clipboard_smoke word_wrap context_menu windows_failure_capture_launch)
         target_compile_definitions(${target} PRIVATE
-            "NATIVE_FAILURE_PYTHON=\"${Python3_EXECUTABLE}\""
+            "NATIVE_FAILURE_PYTHON=\"${native_failure_python}\""
             "NATIVE_FAILURE_SCRIPT=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_failure_capture.py\"")
     endforeach()
 endif()
