@@ -139,7 +139,8 @@ void Geometry(EditorFrame* frame) {
     editor->Send(SetMarginRight, 0, 0);
     const std::string row(80, 'x');
     const std::string viewport(41, 'x');
-    const int width = static_cast<int>(editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>(viewport.c_str())));
+    const int width = static_cast<int>(editor->Send(TextWidth, std::to_underlying(Scintilla::StylesCommon::Default),
+                                                    reinterpret_cast<intptr_t>(viewport.c_str())));
     text.clear();
     for (int line = 0; line < 100; ++line)
         text += row + "\n";

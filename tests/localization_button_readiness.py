@@ -173,7 +173,10 @@ def main():
         input_mode = sys.argv[1:] == ['--input']
         if input_mode:
             (root / 'input-mode').touch()
-        child = subprocess.Popen([sys.executable, __file__, '--publisher', str(root)])
+        # Windows venv python.exe redirects to a different process; the native
+        # PID observer must own the stdlib-only publisher's actual process.
+        publisher_python = Path(sys.base_prefix) / 'python.exe' if sys.platform == 'win32' else sys.executable
+        child = subprocess.Popen([publisher_python, __file__, '--publisher', str(root)])
         try:
             dialogs = Dialogs()
             window = dialogs.wait(child, TITLE)

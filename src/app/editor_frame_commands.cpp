@@ -1228,12 +1228,12 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
             ShowSyntaxScheme();
         },
         selectScheme);
-    const int favoriteSchemes = wxWindow::NewControlId();
-    languages->Append(favoriteSchemes, _("&Favorite Schemes..."));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(true); }, favoriteSchemes);
     const int customize = wxWindow::NewControlId();
     languages->Append(customize, _("&Customize Schemes...\tCtrl+F12"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { CustomizeStyles(); }, customize);
+    const int favoriteSchemes = wxWindow::NewControlId();
+    languages->Append(favoriteSchemes, _("&Favorite Schemes..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowSyntaxScheme(true); }, favoriteSchemes);
     languages->AppendSeparator();
     const int useCode = wxWindow::NewControlId();
     languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));

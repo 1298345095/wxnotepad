@@ -45,6 +45,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
     editor->Send(SetSavePoint);
     constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
     const auto fontSize = editor->Send(StyleGetSizeFractional, defaultStyle);
+    Require(fontSize == 12 * Scintilla::FontSizeMultiplier, "Markdown fixture retains its explicit 12pt body font");
     const char* text = "# First\nbody\n## Second\nneedle\n";
     for (const auto& dialect : dialects) {
         const auto path = TestFiles::TemporaryDirectory("workflow.md");
@@ -67,10 +68,19 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                     editor->Send(StyleGetFore, SCE_H_TAG) == 0x008064,
                 "Markdown installs original line flags, emphasis, headings, links and embedded HTML attributes");
         for (int style = 0; style <= SCE_MARKDOWN_HARD_LINE_BREAK; ++style) {
-            const auto expectedSize = style == std::to_underlying(Scintilla::StylesCommon::FoldDisplayText)
-                                          ? fontSize - 2 * Scintilla::FontSizeMultiplier
-                                          : fontSize;
-            Require(editor->Send(StyleGetSizeFractional, style) == expectedSize,
+            // Independent pinned stlDefault.cpp global roles: margin/Fold -2pt,
+            // control characters -1pt; all other Markdown styles inherit 12pt.
+            const int offset = style == std::to_underlying(Scintilla::StylesCommon::LineNumber) ||
+                                       style == std::to_underlying(Scintilla::StylesCommon::FoldDisplayText)
+                                   ? 2
+                               : style == std::to_underlying(Scintilla::StylesCommon::ControlChar) ? 1
+                                                                                                   : 0;
+            const auto expectedSize = fontSize - offset * Scintilla::FontSizeMultiplier;
+            const auto actualSize = editor->Send(StyleGetSizeFractional, style);
+            if (actualSize != expectedSize)
+                std::println(stderr, "Markdown dialect={} style={} expectedSize={} actualSize={} bodySize={}",
+                             dialect.name, style, expectedSize, actualSize, fontSize);
+            Require(actualSize == expectedSize,
                     "Markdown styles retain the base font and the original smaller Fold Ellipsis font");
         }
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&

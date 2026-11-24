@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include "native_paint_helpers.h"
 #include "native_dialog_helpers.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
@@ -540,6 +541,9 @@ void LocalizedLayout(EditorFrame* frame) {
         tree.SetFocus();
         NativeTreeInput::Enter(dialog);
     };
+    // Complete queued startup paint/title updates before publishing the unique
+    // native focus target used by the unchanged shortcut acknowledgement guard.
+    NativePaint::Complete(frame->Editor());
     frame->SetTitle("wxnotepad customize keyboard");
     NativeKeys::Shortcut(frame, WXK_F12, true, false, false, nullptr, "wxnotepad customize keyboard");
     Require(picker.error.empty(), picker.error.utf8_str());

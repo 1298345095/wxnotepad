@@ -499,7 +499,8 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
         message == Message::StyleSetItalic || message == Message::StyleSetWeight || message == Message::SetZoom ||
-        message == Message::SetTechnology) {
+        message == Message::SetTechnology || message == Message::SetExtraAscent ||
+        message == Message::SetExtraDescent) {
         lineNumberWidthDirty_ = true;
         bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;
