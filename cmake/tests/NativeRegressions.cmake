@@ -143,6 +143,11 @@ endif()
 
 add_editor_test(bar_visibility original_bar_visibility 60)
 add_editor_test(observer_acknowledgement native_observer_unchanged_acknowledgement 45)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+    # Fail at the original 45-second guard; allow the core collector to retain the native hang stack.
+    set_tests_properties(native_observer_unchanged_acknowledgement PROPERTIES
+        TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+endif()
 add_editor_test(file_change_monitor native_file_watcher_lifetime 30)
 add_test(NAME original_bar_visibility_lifecycle COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/bar_visibility_process.py" "$<TARGET_FILE:bar_visibility>")
