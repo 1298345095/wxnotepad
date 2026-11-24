@@ -32,6 +32,21 @@ void ReportStage(const char* stage) {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+#ifdef __WXGTK__
+class PendingNativeActivity final {
+public:
+    explicit PendingNativeActivity(bool keepQueued)
+        : source_(keepQueued ? g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr) : 0) {
+        Require(!keepQueued || source_ != 0, "keep real native activity queued during the clipboard gesture wait");
+    }
+    ~PendingNativeActivity() {
+        if (source_) g_source_remove(source_);
+    }
+
+private:
+    guint source_;
+};
+#endif
 bool Focused(wxWindow* window) {
     TestClock::StopWatch clock;
     while (wxWindow::FindFocus() != window && clock.Time() < 2000) {
@@ -40,7 +55,7 @@ bool Focused(wxWindow* window) {
     }
     return wxWindow::FindFocus() == window;
 }
-void ClipboardGesture(EditorControl* editor) {
+void ClipboardGesture(EditorControl* editor, [[maybe_unused]] bool keepNativeQueuePending = false) {
     wxString path;
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &path)) return;
     auto* frame = wxDynamicCast(wxGetTopLevelParent(editor), wxFrame);
@@ -75,10 +90,20 @@ void ClipboardGesture(EditorControl* editor) {
         wxFFile request(path, "wb");
         request.Write("gesture");
     }
-    TestClock::StopWatch clock;
-    while (!received && clock.Time() < 3000) {
-        wxYield();
-        wxMilliSleep(10);
+    {
+#ifdef __WXGTK__
+        const PendingNativeActivity activity(keepNativeQueuePending);
+#endif
+        TestClock::StopWatch clock;
+        while (!received && clock.Time() < 3000) {
+#ifdef __WXGTK__
+            wxTheApp->ProcessPendingEvents();
+            gtk_main_iteration_do(FALSE);
+#else
+            wxYield();
+#endif
+            wxMilliSleep(10);
+        }
     }
     editor->PopEventHandler(false);
     Require(received, "private native gesture must precede Wayland clipboard publication");
@@ -139,7 +164,7 @@ void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* quer
     ReportStage("over-limit SetSel complete");
     if (!selectionOnly_) {
         ReportStage("fallback clipboard gesture begin");
-        ClipboardGesture(editor);
+        ClipboardGesture(editor, /* keepNativeQueuePending */ true);
         ReportStage("fallback clipboard gesture complete; Open begin");
         Require(wxTheClipboard->Open(), "test must publish selection-limit fallback");
         ReportStage("fallback clipboard Open complete; SetData begin");
