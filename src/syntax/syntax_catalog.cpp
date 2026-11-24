@@ -1327,7 +1327,7 @@ wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& ex
 
 std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions) {
     std::vector<wxString> result;
-    wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n");
+    wxStringTokenizer tokens(SyntaxExtensionsFor(language, extensions), "; \t\r\n", wxTOKEN_STRTOK);
     while (tokens.HasMoreTokens())
         result.push_back(tokens.GetNextToken());
     return result;
@@ -1382,7 +1382,7 @@ SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& ext
         const auto language = SyntaxFromOriginalSchemeId(identity);
         const auto effective = language ? SyntaxExtensionsFor(*language, extensions)
                                         : wxString::FromUTF8(stockExtensions.data(), stockExtensions.size());
-        wxStringTokenizer candidates(effective, "; \t\r\n");
+        wxStringTokenizer candidates(effective, "; \t\r\n", wxTOKEN_STRTOK);
         while (candidates.HasMoreTokens())
             if (extension.CmpNoCase(candidates.GetNextToken()) == 0) return language ? dialect(*language) : PlainText;
     }

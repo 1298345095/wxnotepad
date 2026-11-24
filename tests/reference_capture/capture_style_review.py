@@ -39,6 +39,7 @@ cases = {
     'whitespace-alpha0': '[Global Styles]\nWhitespace=fore:#0000FF; back:#FF0000; alpha:0\n',
     'locale-ja': '[Global Styles]\nDefault Code Style=locale:ja-JP\n',
     'locale-invalid': '[Global Styles]\nDefault Code Style=locale:invalid-locale-name\n',
+    'locale-invalid-known-language': '[Global Styles]\nDefault Code Style=locale:en-invalid-name\n',
 }
 try:
     for name, settings in cases.items():

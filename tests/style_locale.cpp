@@ -2,6 +2,7 @@
 #include "native_paint_helpers.h"
 #include "syntax/syntax_scheme.h"
 #include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 
