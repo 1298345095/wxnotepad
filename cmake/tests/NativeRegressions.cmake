@@ -425,3 +425,31 @@ if(WIN32)
     add_test(NAME original_style_customization_gdi COMMAND style_customization)
     set_tests_properties(original_style_customization_gdi PROPERTIES TIMEOUT 90 ENVIRONMENT "WXNOTEPAD_CUSTOMIZE_GDI=1")
 endif()
+
+add_test(NAME packaged_current_file_window COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window")
+set_tests_properties(packaged_current_file_window PROPERTIES TIMEOUT 120)
+foreach(scenario policy encodings failures history)
+    add_test(NAME packaged_current_file_window_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario ${scenario}
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-${scenario}")
+    set_tests_properties(packaged_current_file_window_${scenario} PROPERTIES TIMEOUT 120)
+endforeach()
+if(WIN32)
+    foreach(scenario basic history)
+        add_test(NAME packaged_current_file_window_gdi_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
+            --cmake-dir "${CMAKE_BINARY_DIR}" --scenario ${scenario} --rendering-technology 0
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-gdi-${scenario}")
+        set_tests_properties(packaged_current_file_window_gdi_${scenario} PROPERTIES TIMEOUT 120)
+    endforeach()
+endif()
+if(UNIX)
+    add_test(NAME packaged_current_file_window_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_file_window_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario installed
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/current-file-window-installed")
+    set_tests_properties(packaged_current_file_window_installed PROPERTIES TIMEOUT 120)
+endif()
