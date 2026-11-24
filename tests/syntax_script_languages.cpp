@@ -144,7 +144,7 @@ void Operations(EditorFrame* frame) {
         std::array<std::string, RedoCaretColumn + 1> fields;
         for (auto& field : fields)
             std::getline(row, field, '\t');
-        std::println(stderr, "script operation {} {} {}", fields[0].c_str(), fields[1].c_str(), fields[2].c_str());
+        std::println(stderr, "script operation {:?} {:?} {:?}", fields[0], fields[1], fields[2]);
         editor->Send(AutoCCancel);
         Choose(frame, fields[0].c_str());
         const auto before = TestLanguages::Unhex(fields[2]);
