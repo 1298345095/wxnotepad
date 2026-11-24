@@ -17,19 +17,6 @@ constexpr unsigned int Colour(unsigned int rgb) {
     return ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU);
 }
 
-void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
-    for (const auto& style : styles) {
-        using enum Scintilla::Message;
-        editor.Send(StyleSetFore, style.id, Colour(style.foreground));
-        editor.Send(StyleSetBack, style.id, Colour(style.background));
-        if (style.bold) editor.Send(StyleSetBold, style.id, true);
-        if (style.italic) editor.Send(StyleSetItalic, style.id, true);
-        if (style.eolFilled) editor.Send(StyleSetEOLFilled, style.id, true);
-        if (style.underline) editor.Send(StyleSetUnderline, style.id, true);
-        if (style.strike) editor.Send(StyleSetStrike, style.id, true);
-        if (style.overline) editor.Send(StyleSetOverline, style.id, true);
-    }
-}
 void InstallFolding(EditorControl& editor, bool fold) {
     using enum Scintilla::MarkerSymbol;
     using enum Scintilla::Message;
@@ -79,11 +66,19 @@ void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool
 
 void ApplyLongLineColour(EditorControl& editor) {
     // The original default style supplies a line foreground but no background.
-    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT);
-    const auto colour = editor.Send(Scintilla::Message::GetEdgeMode) == 1
-                            ? Colour(0xFFC000)
-                            : background.Red() | (background.Green() << 8U) | (background.Blue() << 16U);
+    const auto background = StyleSystemColour(wxSYS_COLOUR_3DLIGHT);
+    const auto colour = StyleColour(editor.Fonts().GlobalStyle("Long Line Marker"),
+                                    editor.Send(Scintilla::Message::GetEdgeMode) == 1 ? "fore" : "back",
+                                    editor.Send(Scintilla::Message::GetEdgeMode) == 1
+                                        ? Colour(0xFFC000)
+                                        : background.Red() | (background.Green() << 8U) | (background.Blue() << 16U));
     editor.Send(Scintilla::Message::SetEdgeColour, colour);
+}
+
+void ApplySyntaxStyles(EditorControl& editor, SyntaxLanguage language) {
+    ApplyFontSettings(editor, language);
+    editor.Send(Scintilla::Message::StyleClearAll);
+    ApplyStyleProfile(editor, language);
 }
 
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
@@ -103,40 +98,6 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
         editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(""));
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
-    ApplyFontSettings(editor, language);
-    editor.Send(Message::StyleClearAll);
-    // ClearStyles uses native chrome for the margin background. Pair it with
-    // native chrome text even when document styles explicitly choose colors.
-    const auto marginText = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT);
-    editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
-                marginText.Red() | (marginText.Green() << 8U) | (marginText.Blue() << 16U));
-    // Notepad4 89b8b36 stlDefault.cpp / Styles.cpp Fold Ellipsis:
-    // size:-2 uses the selected global base, before scheme style overrides.
-    constexpr auto foldDisplay = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::FoldDisplayText));
-    const auto baseFont = DefaultStyleFont(editor.Fonts(), editor.Fonts().Scheme(language).useCode);
-    const auto baseSize = std::lround(baseFont.GetFractionalPointSize() * Scintilla::FontSizeMultiplier);
-    constexpr int foldSizeReduction = 2 * Scintilla::FontSizeMultiplier;
-    constexpr int minimumFontSize = 2 * Scintilla::FontSizeMultiplier;
-    editor.Send(Message::StyleSetSizeFractional, foldDisplay,
-                std::max<long>(minimumFontSize, baseSize - foldSizeReduction));
-    editor.Send(Message::StyleSetWeight, foldDisplay, std::to_underlying(Scintilla::FontWeight::Bold));
-    editor.Send(Message::StyleSetFore, foldDisplay, Colour(0x808080));
-    // The original Fold Ellipsis always names $(Code), including text schemes.
-    const auto codeFamily = DefaultStyleFont(editor.Fonts(), true).GetFaceName();
-    const auto codeName = codeFamily.ToUTF8();
-    editor.Send(Message::StyleSetFont, foldDisplay, reinterpret_cast<intptr_t>(codeName.data()));
-    // Original stlDefault.cpp / Styles.cpp: brace feedback uses independent
-    // translucent overlays, preserving the current font and DPI settings.
-    editor.Send(Message::BraceHighlightIndicator, 1, EditorIndicator::BraceMatch);
-    editor.Send(Message::BraceBadLightIndicator, 1, EditorIndicator::BraceError);
-    for (const auto [indicator, colour] :
-         {std::pair{EditorIndicator::BraceMatch, 0x02EA0A}, std::pair{EditorIndicator::BraceError, 0xFF0000}}) {
-        editor.Send(Message::IndicSetStyle, indicator,
-                    static_cast<intptr_t>(std::to_underlying(Scintilla::IndicatorStyle::RoundBox)));
-        editor.Send(Message::IndicSetFore, indicator, Colour(colour));
-        editor.Send(Message::IndicSetAlpha, indicator, 50);
-        editor.Send(Message::IndicSetOutlineAlpha, indicator, 200);
-    }
     // Style_SetLexer keeps the selected family even when a canonical menu
     // choice sniffs a dialect from the other family. Only HTML dialects alter
     // HTML options; XML keeps its own options for a conflicting ASP/HTML header.
@@ -152,21 +113,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
         if (list.attributes & SyntaxKeywordAttribute::NoLexer) continue;
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
-    InstallStyles(editor, definition.styles);
-    if (definition.lexer == SCLEX_MARKDOWN) {
-        // Styles.cpp::Style_SetLexer copies global link styles and the HTML
-        // table through SCE_H_QUESTION, without HTML's VBScript styles.
-        for (const auto style : {SCE_MARKDOWN_PLAIN_LINK, SCE_MARKDOWN_PAREN_LINK, SCE_MARKDOWN_ANGLE_LINK})
-            editor.Send(Message::StyleSetFore, style, Colour(0x648000));
-        for (const auto& style : SyntaxFor(SyntaxLanguage::Html).styles) {
-            InstallStyles(editor, {&style, 1});
-            if (style.id == SCE_H_QUESTION) break;
-        }
-    }
-    if (definition.lexer == SCLEX_HTML) InstallStyles(editor, MarkupEmbeddedStyles());
-    editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::IndentGuide)),
-                Colour(0xFF8000));
-    ApplyLongLineColour(editor);
+    ApplySyntaxStyles(editor, language);
     const auto guides = editor.Send(Message::GetIndentationGuides);
     if (guides != 0) ApplyIndentationGuides(editor, language, true, guides == 1);
     editor.SetCurrentLineHighlightMode(editor.GetCurrentLineHighlightMode());

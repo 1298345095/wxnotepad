@@ -52,6 +52,8 @@ class DistributionBundle(unittest.TestCase):
 
     def check_contents(self, executable, triplet):
         destination = self.work / 'artifact'
+        self.assertEqual((destination / 'Notepad4 DarkTheme.ini-default').read_bytes(),
+                         (ROOT / 'resources/Notepad4 DarkTheme.ini-default').read_bytes())
         for relative, content in self.catalogs.items():
             self.assertEqual((destination / 'locale' / relative).read_bytes(), content)
         self.assertFalse((destination / 'locale/en').exists())

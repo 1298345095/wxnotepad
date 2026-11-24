@@ -272,6 +272,10 @@ msgstr "目前工具列按鈕(&C)："
 msgid "&Decode"
 msgstr "解碼(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default"
+msgstr "預設(&D)"
+
 #. TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
 #: src/app/editor_frame_commands.cpp
 msgid "&Default Encoding\tCtrl+Alt+F"
@@ -1005,6 +1009,10 @@ msgstr "自動補上 HTML 與 XML 結束標籤"
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自動縮短水平捲軸"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr "AutoHotkey 指令碼"
+
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "AutoSave Settings"
@@ -1056,6 +1064,10 @@ msgstr "備份間隔（秒）"
 #: src/syntax/syntax_catalog.cpp
 msgid "Bash"
 msgstr "Bash"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
+msgstr "批次檔案"
 
 #. TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -1433,6 +1445,10 @@ msgstr "無法開啟所在資料夾。"
 msgid "Could not open the destination for writing."
 msgstr "無法開啟目的檔案進行寫入。"
 
+#: src/app/new_window.cpp
+msgid "Could not open the document in a new window."
+msgstr "無法在新視窗中開啟文件。"
+
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
 msgstr "無法開啟檔案進行讀取。"
@@ -1575,6 +1591,10 @@ msgid "DTD"
 msgstr "DTD"
 
 #: src/app/editor_frame_commands.cpp
+msgid "Dar&k"
+msgstr "深色(&K)"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Decode as &Hex"
 msgstr "解碼為 Hex(&H)"
 
@@ -1613,6 +1633,11 @@ msgstr "預設換行模式"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Detect Indentation"
 msgstr "偵測縮排"
+
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
+msgstr "Diff 檔案"
 
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Document line number."
@@ -2007,6 +2032,11 @@ msgstr "縮排參考線(&G)\tCtrl+Shift+G"
 msgid "Indentation Width (0–256):"
 msgstr "縮排長度（0–256）："
 
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
+msgstr "Ini 設定檔案"
+
 # Original Notepad4 zh-Hant: IDD_ENCLOSESELECTION (after selection label); adapted where needed.
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Insert &after selection:"
@@ -2222,6 +2252,11 @@ msgstr "Lua"
 msgid "Lua Script"
 msgstr "Lua 指令碼"
 
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
+msgstr "Makefile"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr "按一下邊欄選取視覺子行(&S)"
@@ -2415,6 +2450,11 @@ msgstr "以指定編碼開啟(&A)"
 msgid "Open &Folder"
 msgstr "開啟資料夾(&F)"
 
+#. TRANSLATORS: IDM_FILE_NEWWINDOW2 opens the current disk document in another process.
+#: src/app/document_tools.cpp
+msgid "Open &in New Window\tAlt+0"
+msgstr "在新視窗中開啟(&I)\tAlt+0"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING/IDC_ASCIIASUTF8; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open 7-bit &ASCII files in UTF-8 mode."
@@ -2461,6 +2501,10 @@ msgstr "開啟文件方式"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Open file"
 msgstr "開啟檔案"
+
+#: src/app/new_window.cpp
+msgid "Open in New Window failed"
+msgstr "在新視窗中開啟失敗"
 
 #. TRANSLATORS: Selection action status help; the command receives the selected text.
 #: src/app/editor_frame_commands.cpp
@@ -2531,6 +2575,10 @@ msgstr "圓括號 ()"
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
 msgstr "純文字"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
+msgstr "PowerShell 指令碼"
 
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Preview"
@@ -2879,7 +2927,7 @@ msgstr "重新啟動前是否儲存對 %s 的變更？"
 #. TRANSLATORS: IDM_FILE_LAUNCH save confirmation; %s is the document name.
 #. TRANSLATORS: IDM_FILE_OPENWITH save confirmation; %s is the document name.
 #. TRANSLATORS: SaveBeforeRunningTools confirmation shared with IDM_FILE_LAUNCH/OPENWITH; %s is the document name.
-#: src/app/document_tools.cpp src/app/run_command.cpp
+#: src/app/document_tools.cpp src/app/new_window.cpp src/app/run_command.cpp
 #, c-format
 msgid "Save changes to %s before running tools?"
 msgstr "執行工具前儲存對 %s 的變更嗎？"
@@ -3176,6 +3224,10 @@ msgstr "特殊(&I)"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Square brackets []"
 msgstr "方括號 []"
+
+#: src/app/editor_frame_commands.cpp
+msgid "St&yle Theme"
+msgstr "樣式佈景主題(&Y)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Standard &Encode"

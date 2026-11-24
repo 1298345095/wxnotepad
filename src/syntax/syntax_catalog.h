@@ -51,6 +51,12 @@ enum class SyntaxLanguage : uint8_t {
     Java,
     CSharp,
     Kotlin,
+    Batch,
+    PowerShell,
+    AutoHotkey,
+    Ini,
+    Makefile,
+    Diff,
     Count
 };
 namespace SyntaxDetectionLimits {

@@ -1252,6 +1252,35 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
             event.Check((settings_ ? settings_->values : defaults_).fonts.Scheme(document_.Language()).useCode);
         },
         useCode);
+    auto* themes = new wxMenu;
+    for (const auto& [theme, label] :
+         {std::pair{StyleTheme::Default, _("&Default")}, std::pair{StyleTheme::Dark, _("Dar&k")}}) {
+        const int id = wxWindow::NewControlId();
+        themes->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, theme](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                if (preferences.fonts.theme == theme) return;
+                if (!settings_) return;
+                const bool saved = settings_->SwitchStyleTheme(theme);
+                editor_->SetFontSettings(preferences.fonts);
+                ApplySyntaxStyles(*editor_, document_.Language());
+                UpdatePositionStatus();
+                UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                if (!saved)
+                    wxMessageBox(wxString::Format(_("Could not write %s"), settings_->Path()),
+                                 _("Could not save settings"), wxOK | wxICON_ERROR, this);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, theme](wxUpdateUIEvent& event) {
+                event.Check((settings_ ? settings_->values : defaults_).fonts.theme == theme);
+            },
+            id);
+    }
+    languages->AppendSubMenu(themes, _("St&yle Theme"));
     languages->AppendSeparator();
     const auto addLanguage = [this](wxMenu* menu, const wxString& label, std::optional<SyntaxLanguage> language) {
         const int id = wxWindow::NewControlId();

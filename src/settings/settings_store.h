@@ -11,6 +11,8 @@ public:
     OriginalSettings values;
     const wxString& Path() const { return path_; }
     bool Save(bool explicitSave);
+    bool SwitchStyleTheme(StyleTheme theme);
+    wxString DarkProfilePath() const;
     bool SaveUILanguage(int language);
     int OriginalRunCommandWidth(int screenWidth, int screenHeight) const;
     wxString SelectionActionTemplate(SelectionAction action);
@@ -24,6 +26,11 @@ public:
 private:
     wxString path_;
     std::vector<wxString> lines_;
+    FontSettings loadedFonts_;
+    FontSettings LoadStyleProfile(StyleTheme theme);
+    void WriteStyleProfile();
+    bool SaveStyleProfile();
+    wxString ReadStyle(const char* key, const char* fallback, const char* section) const;
     int recentFileCapacity_ = OriginalSettingLimits::MinRecentFiles;
     bool LoadLines();
     enum class KeyCase { Exact, Insensitive };

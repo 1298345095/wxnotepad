@@ -9,8 +9,8 @@ untitled document: the chosen program starts without a document argument.
 SaveBeforeRunningTools uses the existing Save/Discard/Cancel decision before
 launching Execute or showing Open With. Discard leaves dirty editor contents
 alone and launches the disk file. A cancelled or failed required save stops
-before the chooser or launch. The same persisted preference governs Restart;
-New Window retains its empty-window behavior.
+before the chooser or launch. The same persisted preference governs Restart and
+Tools → Open in New Window; File → New Window retains its empty-window behavior.
 
 The original Open With chooser lists entries in a configurable directory.
 Browsing changes OpenWithDir immediately, even when the program chooser is

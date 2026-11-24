@@ -136,6 +136,17 @@ wxString ObserveMetadata(EditorFrame* frame) {
     return status->GetStatusText(StatusField::Encoding) + " | " + status->GetStatusText(StatusField::Scheme) +
            " | EOL: " + eol;
 }
+wxString ObserveFoldHeaders(EditorControl& editor) {
+    using enum Scintilla::Message;
+    wxString state;
+    for (Scintilla::Line line = 0; line < editor.Send(GetLineCount); ++line) {
+        if (editor.Send(GetFoldLevel, static_cast<uintptr_t>(line)) &
+            std::to_underlying(Scintilla::FoldLevel::HeaderFlag))
+            state += wxString::Format("%lld:%d;", static_cast<long long>(line),
+                                      editor.Send(GetFoldExpanded, static_cast<uintptr_t>(line)) != 0);
+    }
+    return state;
+}
 } // namespace
 
 void ProcessObserver::Publish() {
@@ -223,6 +234,9 @@ void ProcessObserver::Publish() {
     contents += wxString::Format("selection_start\t%lld\nselection_end\t%lld\n",
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionStart)),
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionEnd)));
+    contents += wxString::Format("can_undo\t%d\ncan_redo\t%d\n", frame_->Editor()->Send(CanUndo) != 0,
+                                 frame_->Editor()->Send(CanRedo) != 0);
+    contents += "fold_headers\t" + ObserveFoldHeaders(*frame_->Editor()) + "\n";
     std::array<char, 256> font{};
     constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
     frame_->Editor()->Send(StyleGetFont, defaultStyle, reinterpret_cast<intptr_t>(font.data()));

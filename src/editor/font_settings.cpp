@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -70,32 +73,54 @@ wxString Family(const wxString& style, const FontSettings& settings, bool global
         return global ? CodeFamily() : DefaultStyleFont(settings, true).GetFaceName();
     return face;
 }
-void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxString& style, int base) {
+void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxString& style, int base,
+                uintptr_t target = DefaultStyle) {
     if (!Value(style, "font").empty()) {
         const auto family = Family(style, settings, false);
         const auto face = family.ToUTF8();
-        editor.Send(Message::StyleSetFont, DefaultStyle, reinterpret_cast<intptr_t>(face.data()));
+        editor.Send(Message::StyleSetFont, target, reinterpret_cast<intptr_t>(face.data()));
     }
-    if (!Value(style, "size").empty()) editor.Send(Message::StyleSetSizeFractional, DefaultStyle, Size(style, base));
-    editor.Send(Message::StyleSetWeight, DefaultStyle,
-                Weight(style, static_cast<int>(editor.Send(Message::StyleGetWeight, DefaultStyle))));
+    if (!Value(style, "size").empty()) editor.Send(Message::StyleSetSizeFractional, target, Size(style, base));
+    editor.Send(Message::StyleSetWeight, target,
+                Weight(style, static_cast<int>(editor.Send(Message::StyleGetWeight, target))));
     for (const auto& [attribute, message] : {std::pair{"italic", Message::StyleSetItalic},
                                              {"underline", Message::StyleSetUnderline},
                                              {"strike", Message::StyleSetStrike},
                                              {"overline", Message::StyleSetOverline},
                                              {"eolfilled", Message::StyleSetEOLFilled}})
-        if (Attribute(style, attribute)) editor.Send(message, DefaultStyle, true);
+        if (Attribute(style, attribute)) editor.Send(message, target, true);
     for (const auto& [attribute, message] :
          {std::pair{"fore", Message::StyleSetFore}, {"back", Message::StyleSetBack}}) {
         auto value = Value(style, attribute);
         unsigned long rgb;
         if (value.StartsWith('#') && value.Mid(1).ToULong(&rgb, 16))
-            editor.Send(message, DefaultStyle, ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU));
+            editor.Send(message, target, ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU));
     }
     long charset;
-    if (Value(style, "charset").ToLong(&charset)) editor.Send(Message::StyleSetCharacterSet, DefaultStyle, charset);
+    if (Value(style, "charset").ToLong(&charset)) editor.Send(Message::StyleSetCharacterSet, target, charset);
 }
 } // namespace
+
+wxString StyleProperty(const wxString& style, const wxString& key) {
+    return Value(style, key);
+}
+bool StyleAttribute(const wxString& style, const wxString& attribute) {
+    return Attribute(style, attribute);
+}
+int StyleInteger(const wxString& style, const wxString& key, int fallback) {
+    long value;
+    return Value(style, key).ToLong(&value) ? static_cast<int>(value) : fallback;
+}
+unsigned StyleColour(const wxString& style, const wxString& key, unsigned fallback) {
+    auto value = Value(style, key);
+    unsigned long rgb;
+    return value.StartsWith('#') && value.Mid(1).ToULong(&rgb, 16)
+               ? ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU)
+               : fallback;
+}
+void ApplyStyleText(EditorControl& editor, int id, const wxString& style, int baseSize) {
+    ApplyStyle(editor, editor.Fonts(), style, baseSize, static_cast<uintptr_t>(id));
+}
 
 SchemeFontStyle& FontSettings::Scheme(SyntaxLanguage language) {
     return schemes[static_cast<size_t>(std::to_underlying(SyntaxSettingsLanguage(language)))];
@@ -124,7 +149,17 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
 }
 wxColour DefaultStyleForeground(const FontSettings& settings, bool code) {
     const wxColour colour(Value(code ? settings.codeStyle : settings.textStyle, "fore"));
-    return colour.IsOk() ? colour : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    return colour.IsOk() ? colour : StyleSystemColour(wxSYS_COLOUR_WINDOWTEXT);
+}
+wxColour StyleSystemColour(wxSystemColour colour) {
+#ifdef __WXMSW__
+    // Original Styles.cpp uses GetSysColor, including high contrast. wxMSW's
+    // dark-mode GetColour override belongs to the application chrome palette.
+    const auto rgb = ::GetSysColor(colour);
+    return wxColour(GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+#else
+    return wxSystemSettings::GetColour(colour);
+#endif
 }
 wxString MergeChosenFont(const wxString& style, const wxFont& font) {
     // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SelectFont (BSD-3-Clause).
@@ -165,8 +200,8 @@ void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language) {
     editor.Send(Message::StyleSetItalic, DefaultStyle, font.GetStyle() != wxFONTSTYLE_NORMAL);
     editor.Send(Message::StyleSetUnderline, DefaultStyle, font.GetUnderlined());
     editor.Send(Message::StyleSetStrike, DefaultStyle, font.GetStrikethrough());
-    const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+    const auto foreground = StyleSystemColour(wxSYS_COLOUR_WINDOWTEXT);
+    const auto background = StyleSystemColour(wxSYS_COLOUR_WINDOW);
     editor.Send(Message::StyleSetFore, DefaultStyle,
                 foreground.Red() | (foreground.Green() << 8U) | (foreground.Blue() << 16U));
     editor.Send(Message::StyleSetBack, DefaultStyle,
