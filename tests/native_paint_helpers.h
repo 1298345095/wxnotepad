@@ -16,7 +16,7 @@
 #endif
 
 namespace NativePaint {
-inline void Complete(EditorControl* editor) {
+inline void Complete(EditorControl* editor, const std::function<bool()>& settled = {}) {
     class Completion final : public wxEvtHandler {
     public:
         explicit Completion(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
@@ -38,7 +38,8 @@ inline void Complete(EditorControl* editor) {
         const auto expected = completion.completed + 1;
         editor->Refresh(false);
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-        while (completion.completed < expected && std::chrono::steady_clock::now() < deadline) {
+        while ((completion.completed < expected || (settled && !settled())) &&
+               std::chrono::steady_clock::now() < deadline) {
             editor->Update();
 #ifdef __WXGTK__
             if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle())))) {
@@ -53,9 +54,10 @@ inline void Complete(EditorControl* editor) {
 #else
             wxYield();
 #endif
-            if (completion.completed < expected) wxMilliSleep(1);
+            if (completion.completed < expected || (settled && !settled())) wxMilliSleep(1);
         }
         if (completion.completed < expected) throw std::runtime_error("actual native editor paint must complete");
+        if (settled && !settled()) throw std::runtime_error("actual native geometry must settle within paint deadline");
     }
 }
 inline void Observe(wxWindow* editor, const std::function<void(wxDC&)>& sample) {
