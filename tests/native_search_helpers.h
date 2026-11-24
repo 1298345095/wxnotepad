@@ -16,10 +16,28 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#ifdef __WXGTK__
+#include <gdk/gdkwayland.h>
+#endif
 
 // Native operations target only widgets owned by each independent search test.
 // Test cases and expected document bytes remain in their own GUI processes.
 namespace NativeSearch {
+inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
+#ifdef __WXGTK__
+    // Wayland operations also settle compositor surface transitions. Preserve
+    // their existing drain while X11 returns between native iterations.
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(window->GetHandle())))) {
+        wxYield();
+        return;
+    }
+    gtk_main_iteration_do(FALSE);
+    wxTheApp->ProcessPendingEvents();
+    wxTheApp->ProcessIdle();
+#else
+    wxYield();
+#endif
+}
 inline void Click(wxWindow* dialog, int id);
 // Document-result fixtures accept feedback at the native modal boundary. The
 // search_wrap fixture separately drives the real choices and suppression state.
@@ -110,7 +128,7 @@ inline void Click(wxWindow* dialog, int id) {
 #elif defined(__WXGTK__)
     gtk_button_clicked(GTK_BUTTON(button->GetHandle()));
 #endif
-    wxYield();
+    DispatchEvents(dialog);
 }
 inline void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* message) {
     const auto actualStart = editor->Send(Scintilla::Message::GetSelectionStart);

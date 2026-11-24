@@ -25,7 +25,7 @@ void Require(bool condition, const char* message) {
 }
 
 #ifdef __WXGTK__
-class PendingNativeActivity final : public wxEventFilter {
+class PendingNativeActivity final : public wxEvtHandler, public wxEventFilter {
 public:
     explicit PendingNativeActivity(EditorControl* editor) : editor_(editor) {
         // The X11 focus preparation uses finite dispatch. Wayland retains its
@@ -47,6 +47,18 @@ public:
             static_cast<wxKeyEvent&>(event).GetKeyCode() == WXK_F3) {
             g_source_remove(source_);
             source_ = 0;
+            observedPress_ = true;
+        }
+        if (observedPress_ && !observedRelease_ && event.GetEventType() == wxEVT_KEY_UP &&
+            event.GetEventObject() == editor_ && static_cast<wxKeyEvent&>(event).GetKeyCode() == WXK_F3) {
+            observedRelease_ = true;
+            // wxYield services queued wx callbacks after its native drain.
+            // Start this work there, after the key-up drain has returned, so
+            // only the shortcut's final dispatch sees the new ready source.
+            CallAfter([this] {
+                source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
+                Require(source_ != 0, "keep real native activity queued after the actual shortcut release");
+            });
         }
         return Event_Skip;
     }
@@ -54,6 +66,8 @@ public:
 private:
     EditorControl* editor_;
     guint source_ = 0;
+    bool observedPress_ = false;
+    bool observedRelease_ = false;
 };
 #endif
 

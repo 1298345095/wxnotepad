@@ -11,6 +11,7 @@
 #include <wx/modalhook.h>
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <memory>
 #ifdef __WXMSW__
 #include "clipboard_read_error.h"
@@ -20,6 +21,25 @@ namespace {
 using enum Scintilla::Message;
 constexpr char PriorClipboardOffer[] = "owned previous offer";
 #ifdef __WXMSW__
+bool PublishPriorClipboard(HWND owner) {
+    if (!::OpenClipboard(owner)) return false;
+    const auto value = wxString::FromUTF8(PriorClipboardOffer).ToStdWstring();
+    const auto memory = ::GlobalAlloc(GMEM_MOVEABLE, (value.size() + 1) * sizeof(wchar_t));
+    auto* bytes = memory ? ::GlobalLock(memory) : nullptr;
+    if (!bytes) {
+        if (memory) ::GlobalFree(memory);
+        ::CloseClipboard();
+        return false;
+    }
+    std::memcpy(bytes, value.c_str(), (value.size() + 1) * sizeof(wchar_t));
+    ::GlobalUnlock(memory);
+    if (!::EmptyClipboard() || !::SetClipboardData(CF_UNICODETEXT, memory)) {
+        ::GlobalFree(memory);
+        ::CloseClipboard();
+        return false;
+    }
+    return ::CloseClipboard() != 0;
+}
 struct ClipboardObservation {
     HWND owner = nullptr;
     HWND openHolder = nullptr;
@@ -269,17 +289,22 @@ void DisplayCharacterInfo(EditorFrame* frame, std::string_view captured, const c
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
     Require(id != wxNOT_FOUND, "Edit Special exposes original Show Character Info");
     Progress("publish prior clipboard offer", fixture);
+#ifdef __WXMSW__
+    // As in clipboard_peer, publish literal owned bytes eagerly. OLE delayed
+    // rendering and Flush are setup work outside the Character Info command.
+    Require(PublishPriorClipboard(static_cast<HWND>(frame->GetHandle())),
+            "own a distinct materialized native clipboard offer before the command");
+    const auto seededClipboard = ObserveClipboard();
+    Require(seededClipboard.owner == static_cast<HWND>(frame->GetHandle()) &&
+                seededClipboard.ownerProcess == GetCurrentProcessId() && seededClipboard.unicodeAvailable,
+            "materialize the owned clipboard offer before the command");
+#else
     {
         wxClipboardLocker lock;
         if (!lock) throw TestEditor::Failure("open native clipboard for owned fixture");
         Require(wxTheClipboard->SetData(new wxTextDataObject(PriorClipboardOffer)),
                 "own a distinct native clipboard offer before the command");
     }
-#ifdef __WXMSW__
-    // Materialize our seed before testing Copy, so delayed rendering on this
-    // same GUI thread cannot become part of the command's clipboard write.
-    Require(wxTheClipboard->Flush(), "materialize the owned clipboard offer before the command");
-    const auto seededClipboard = ObserveClipboard();
 #endif
     Feedback feedback;
     Progress("dispatch menu command and accept native feedback", fixture);

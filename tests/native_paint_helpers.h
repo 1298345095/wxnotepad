@@ -11,6 +11,7 @@
 #ifdef __WXGTK__
 #include <wx/graphics.h>
 #include <cairo.h>
+#include <gdk/gdkwayland.h>
 #endif
 
 namespace NativePaint {
@@ -38,7 +39,19 @@ inline void Complete(EditorControl* editor) {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         while (completion.completed < expected && std::chrono::steady_clock::now() < deadline) {
             editor->Update();
+#ifdef __WXGTK__
+            if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle())))) {
+                wxYield();
+            } else {
+                // Wait for the real paint callback, rather than an empty X11
+                // queue. Ready work must not hide this paint deadline.
+                gtk_main_iteration_do(FALSE);
+                wxTheApp->ProcessPendingEvents();
+                wxTheApp->ProcessIdle();
+            }
+#else
             wxYield();
+#endif
             if (completion.completed < expected) wxMilliSleep(1);
         }
         if (completion.completed < expected) throw std::runtime_error("actual native editor paint must complete");

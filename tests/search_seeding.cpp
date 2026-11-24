@@ -154,7 +154,13 @@ void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* quer
     Require(queryBytes.size() == 1024 * 1024 && utf8Suffix && queryBytes == boundary,
             "selection limit must include exactly one MiB of UTF-8 bytes");
     ReportStage("boundary query validated; Cancel begin");
-    NativeSearch::Click(dialog, wxID_CANCEL);
+    {
+#ifdef __WXGTK__
+        const PendingNativeActivity activity(
+            !GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle()))));
+#endif
+        NativeSearch::Click(dialog, wxID_CANCEL);
+    }
     ReportStage("boundary Cancel complete");
     const std::string tooLong = boundary + "!";
     ReportStage("over-limit SetText begin");
