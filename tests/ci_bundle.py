@@ -42,6 +42,11 @@ class LinuxBundle(unittest.TestCase):
             licenses = root / 'licenses'
             licenses.mkdir()
             (licenses / 'fixture.txt').write_text('Fixture license\n', encoding='utf-8')
+            resources = root / 'resources'
+            resources.mkdir()
+            profile_files = ('Notepad4 DarkTheme.ini-default', 'Notepad4 DarkTheme.NOTICE.txt')
+            for name in profile_files:
+                shutil.copy2(ROOT / 'resources' / name, resources / name)
             notice = installed / 'x64-linux-ci/share/probe/copyright'
             notice.parent.mkdir(parents=True)
             notice.write_text('Library license\n', encoding='utf-8')
@@ -80,6 +85,8 @@ class LinuxBundle(unittest.TestCase):
             distributed = CI.bundle(cmake, executable, work)
             artifact = work / 'artifact'
             self.assertEqual(distributed, artifact / 'wxnotepad')
+            for name in profile_files:
+                self.assertEqual((artifact / name).read_bytes(), (ROOT / 'resources' / name).read_bytes())
             self.assertTrue((work / 'reports/runtime-libraries.txt').is_file())
             self.assertEqual(executable.read_bytes(), original_bytes)
             self.assertEqual(library.read_bytes(), original_library_bytes)

@@ -1013,6 +1013,10 @@ msgstr "作為 &OEM\tCtrl+Shift+O"
 msgid "As &UTF-8\tShift+F8"
 msgstr "作為 &UTF-8\tShift+F8"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Assignment"
+msgstr "指派"
+
 #: src/app/dialogs/style_customization.cpp
 msgid "Associated file&name extensions:"
 msgstr "關聯的檔案副檔名(&N):"
@@ -1057,6 +1061,10 @@ msgstr "自動補上 HTML 與 XML 結束標籤"
 #: src/app/editor_frame_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自動縮短水平捲軸"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr "AutoHotkey 指令碼"
 
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
@@ -1114,6 +1122,10 @@ msgstr "Bash"
 #: src/syntax/generated/style_profiles.h
 msgid "Basic Function"
 msgstr "基本函式"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
+msgstr "批次檔案"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Bit Field"
@@ -1369,6 +1381,10 @@ msgstr "點選此處選擇預設編碼(&S)。"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Close"
 msgstr "關閉"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Cmdlet"
+msgstr "Cmdlet"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Code Block"
@@ -1782,6 +1798,10 @@ msgstr "預設文字字型"
 msgid "Default Text Style"
 msgstr "預設文字樣式"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Default Value"
+msgstr "預設值"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default encoding"
@@ -1808,6 +1828,11 @@ msgstr "分隔列"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Detect Indentation"
 msgstr "偵測縮排"
+
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
+msgstr "Diff 檔案"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Directive"
@@ -2336,6 +2361,14 @@ msgstr "突顯目前區塊(&B)"
 msgid "Horizontal Rule"
 msgstr "水平分隔線"
 
+#: src/syntax/generated/style_profiles.h
+msgid "HotKey"
+msgstr "快速鍵"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotString"
+msgstr "熱字串"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Edit/Insert submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "I&nsert"
@@ -2397,6 +2430,11 @@ msgstr "縮排輔助線"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Indentation Width (0–256):"
 msgstr "縮排長度（0–256）："
+
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
+msgstr "Ini 設定檔案"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Inline Code"
@@ -2582,6 +2620,10 @@ msgstr "行號(&N)\tCtrl+Shift+N"
 msgid "Line Addition"
 msgstr "新增列"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Line Change"
+msgstr "變更列"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/File/Line Endings submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Line Endin&gs"
@@ -2676,6 +2718,11 @@ msgstr "魔術常數"
 #: src/syntax/generated/style_profiles.h
 msgid "Magic Method"
 msgstr "魔術方法"
+
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
+msgstr "Makefile"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Margin and Line Number"
@@ -3058,6 +3105,14 @@ msgstr "預留位置"
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
 msgstr "純文字"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Position Setting"
+msgstr "位置設定"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
+msgstr "PowerShell 指令碼"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Predefined Variable"
@@ -3525,6 +3580,10 @@ msgstr "捲動超出最後一行(&L)"
 msgid "Search wrapped"
 msgstr "循環搜尋"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Section"
+msgstr "區段"
+
 #. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
 #: src/app/editor_frame_status.cpp
 #, c-format
@@ -3578,7 +3637,10 @@ msgid ""
 "Select a scheme to edit its filename extensions, or select a style.\n"
 "font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
 "Preview applies the settings to the document. Cancel restores the original styles."
-msgstr "選取語法高亮以編輯檔案副檔名，或選取要編輯的樣式。\nfont:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n預覽將設定套用至文件。取消將還原原來的樣式。"
+msgstr ""
+"選取語法高亮以編輯檔案副檔名，或選取要編輯的樣式。\n"
+"font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
+"預覽將設定套用至文件。取消將還原原來的樣式。"
 
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings/Select and Edit Options submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -3621,6 +3683,10 @@ msgstr "選擇到上一個(&S)\tCtrl+Alt+Shift+F2"
 #: src/syntax/generated/style_profiles.h
 msgid "Selected Text"
 msgstr "選取的文字"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Send Key"
+msgstr "傳送按鍵"
 
 #: src/app/editor_frame_toolbar.cpp
 msgid "Separator"
@@ -3740,6 +3806,10 @@ msgstr "遞減排序(&D)。"
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort Lines"
 msgstr "行排序"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Source and Destination"
+msgstr "來源檔案與目的檔案"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Source encoding"
@@ -3937,6 +4007,10 @@ msgstr "標記類別"
 #: src/syntax/generated/style_profiles.h
 msgid "Tag Id"
 msgstr "標記 ID"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Target"
+msgstr "目標"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Task List"

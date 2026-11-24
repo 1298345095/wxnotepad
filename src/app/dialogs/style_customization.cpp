@@ -232,14 +232,21 @@ private:
         data.SetColour(foreground.IsOk() ? foreground : DefaultStyleForeground(settings_.fonts, settings_.fonts.Scheme(current_).useCode));
         data.EnableEffects(true);
         wxFontDialog dialog(this, data);
-        if (dialog.ShowModal() == wxID_OK) edit_->SetValue(MergeChosenFont(edit_->GetValue(), dialog.GetFontData().GetChosenFont()));
+        if (dialog.ShowModal() == wxID_OK) {
+            auto chosen = dialog.GetFontData().GetChosenFont();
+#ifdef __WXGTK__
+            chosen.SetUnderlined(initial.GetUnderlined());
+            chosen.SetStrikethrough(initial.GetStrikethrough());
+#endif
+            edit_->SetValue(MergeChosenFont(edit_->GetValue(), chosen));
+        }
         edit_->SetFocus();
     }
     void ChooseColour(bool fore) {
         const wxString key = fore ? "fore" : "back";
         wxColourData data;
         auto initial = wxColour(StyleProperty(edit_->GetValue(), key));
-        data.SetColour(initial.IsOk() ? initial : wxSystemSettings::GetColour(fore ? wxSYS_COLOUR_WINDOWTEXT : wxSYS_COLOUR_WINDOW));
+        data.SetColour(initial.IsOk() ? initial : StyleSystemColour(fore ? wxSYS_COLOUR_WINDOWTEXT : wxSYS_COLOUR_WINDOW));
         data.SetChooseFull(true);
         for (size_t index = 0; index < settings_.fonts.customColours.size(); ++index)
             data.SetCustomColour(static_cast<int>(index), wxColour(wxString::Format("#%06X", settings_.fonts.customColours[index])));

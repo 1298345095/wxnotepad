@@ -705,7 +705,9 @@ OpenResult EditorFrame::LoadFile(const DocumentLoad::Intent& intent) {
         RecordRecentFile();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
-            ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
+            ConfirmLineEndingConversion(result.lineEndings,
+                                        document_.Language() == SyntaxLanguage::Diff ||
+                                            (result.unknownLanguage && document_.IsDefaultEncoding()));
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
     UpdateDocumentState();

@@ -863,6 +863,10 @@ msgstr ""
 msgid "As &UTF-8\tShift+F8"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Assignment"
+msgstr ""
+
 #: src/app/dialogs/style_customization.cpp
 msgid "Associated file&name extensions:"
 msgstr ""
@@ -901,6 +905,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
 msgstr ""
 
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
@@ -954,6 +962,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Basic Function"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -1192,6 +1204,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Close"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Cmdlet"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -1591,6 +1607,10 @@ msgstr ""
 msgid "Default Text Style"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Default Value"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default encoding"
 msgstr ""
@@ -1613,6 +1633,11 @@ msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Detect Indentation"
+msgstr ""
+
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2102,6 +2127,14 @@ msgstr ""
 msgid "Horizontal Rule"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "HotKey"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotString"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "I&nsert"
 msgstr ""
@@ -2156,6 +2189,11 @@ msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Indentation Width (0–256):"
+msgstr ""
+
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2334,6 +2372,10 @@ msgstr ""
 msgid "Line Addition"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Line Change"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Line Endin&gs"
 msgstr ""
@@ -2420,6 +2462,11 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Magic Method"
+msgstr ""
+
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2780,6 +2827,14 @@ msgstr ""
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Position Setting"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -3209,6 +3264,10 @@ msgstr ""
 msgid "Search wrapped"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Section"
+msgstr ""
+
 #. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
 #: src/app/editor_frame_status.cpp
 #, c-format
@@ -3295,6 +3354,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Selected Text"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Send Key"
 msgstr ""
 
 #: src/app/editor_frame_toolbar.cpp
@@ -3402,6 +3465,10 @@ msgstr ""
 
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort Lines"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Source and Destination"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -3583,6 +3650,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Tag Id"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Target"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h

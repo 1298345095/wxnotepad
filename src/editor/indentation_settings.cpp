@@ -87,9 +87,15 @@ void IndentationSettings::Reset(EditorControl& editor, SyntaxLanguage language) 
 
 void IndentationSettings::Load(EditorControl& editor, SyntaxLanguage language, const OriginalFileVariables& variables) {
     SetFileSettings(std::nullopt);
+    fileTabIndents_ = variables.tabIndents;
+    // Pinned Notepad4.cpp::FileLoad clears FV_MaskHasFileTabSettings for Diff,
+    // including explicit file widths/spaces; FV_TABINDENTS remains independent.
+    if (language == SyntaxLanguage::Diff) {
+        Apply(editor, language);
+        return;
+    }
     if (variables.tabWidth.has_value()) fileWidths_ = OriginalTabs{*variables.tabWidth, *variables.indentWidth};
     fileSpaces_ = variables.tabsAsSpaces;
-    fileTabIndents_ = variables.tabIndents;
     if (preferences_.detectIndentation && !(fileWidths_.has_value() && fileSpaces_.has_value())) {
         const auto length = editor.Send(Scintilla::Message::GetLength);
         const auto* bytes = reinterpret_cast<const char*>(editor.Send(Scintilla::Message::GetRangePointer, 0, length));

@@ -10,6 +10,9 @@
 #include <charconv>
 #include <cstdlib>
 #include <optional>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -155,7 +158,17 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
 }
 wxColour DefaultStyleForeground(const FontSettings& settings, bool code) {
     const wxColour colour(Value(code ? settings.codeStyle : settings.textStyle, "fore"));
-    return colour.IsOk() ? colour : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    return colour.IsOk() ? colour : StyleSystemColour(wxSYS_COLOUR_WINDOWTEXT);
+}
+wxColour StyleSystemColour(wxSystemColour colour) {
+#ifdef __WXMSW__
+    // Original Styles.cpp uses GetSysColor, including high contrast. wxMSW's
+    // dark-mode GetColour override belongs to the application chrome palette.
+    const auto rgb = ::GetSysColor(colour);
+    return wxColour(GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+#else
+    return wxSystemSettings::GetColour(colour);
+#endif
 }
 wxFont StyleFont(const FontSettings& settings, const wxString& style, bool code, bool globalBase) {
     auto font = DefaultStyleFont(settings, code);
@@ -207,8 +220,8 @@ void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language) {
     editor.Send(Message::StyleSetItalic, DefaultStyle, font.GetStyle() != wxFONTSTYLE_NORMAL);
     editor.Send(Message::StyleSetUnderline, DefaultStyle, font.GetUnderlined());
     editor.Send(Message::StyleSetStrike, DefaultStyle, font.GetStrikethrough());
-    const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+    const auto foreground = StyleSystemColour(wxSYS_COLOUR_WINDOWTEXT);
+    const auto background = StyleSystemColour(wxSYS_COLOUR_WINDOW);
     editor.Send(Message::StyleSetFore, DefaultStyle,
                 foreground.Red() | (foreground.Green() << 8U) | (foreground.Blue() << 16U));
     editor.Send(Message::StyleSetBack, DefaultStyle,

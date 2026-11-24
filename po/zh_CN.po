@@ -940,6 +940,10 @@ msgstr "作为 &OEM\tCtrl+Shift+O"
 msgid "As &UTF-8\tShift+F8"
 msgstr "作为 UTF-&8\tShift+F8"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Assignment"
+msgstr "赋值"
+
 #: src/app/dialogs/style_customization.cpp
 msgid "Associated file&name extensions:"
 msgstr "关联的文件扩展名(&N):"
@@ -980,6 +984,10 @@ msgstr "自动闭合 HTML 和 XML 标签"
 #: src/app/editor_frame_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自动收缩水平滚动条"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "AutoHotkey Script"
+msgstr "AutoHotkey 脚本"
 
 #. TRANSLATORS: IDD_AUTOSAVE title; this dialog configures periodic backup copies.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
@@ -1034,6 +1042,10 @@ msgstr "Bash"
 #: src/syntax/generated/style_profiles.h
 msgid "Basic Function"
 msgstr "基本函数"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Batch File"
+msgstr "批处理文件"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Bit Field"
@@ -1277,6 +1289,10 @@ msgstr "点击此处选择默认编码(&S)。"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Close"
 msgstr "关闭"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Cmdlet"
+msgstr "Cmdlet"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Code Block"
@@ -1688,6 +1704,10 @@ msgstr "默认文本字体"
 msgid "Default Text Style"
 msgstr "默认文本样式"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Default Value"
+msgstr "默认值"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default encoding"
 msgstr "默认编码"
@@ -1711,6 +1731,11 @@ msgstr "分隔行"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Detect Indentation"
 msgstr "自动检查制表符和缩进设置"
+
+#. TRANSLATORS: Original NP2LEX_DIFF scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Diff File"
+msgstr "Diff 文件"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Directive"
@@ -2224,6 +2249,14 @@ msgstr "高亮当前代码块(&B)"
 msgid "Horizontal Rule"
 msgstr "水平分隔线"
 
+#: src/syntax/generated/style_profiles.h
+msgid "HotKey"
+msgstr "热键"
+
+#: src/syntax/generated/style_profiles.h
+msgid "HotString"
+msgstr "热字串"
+
 #: src/app/editor_frame_commands.cpp
 msgid "I&nsert"
 msgstr "插入(&N)"
@@ -2282,6 +2315,11 @@ msgstr "缩进指示"
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Indentation Width (0–256):"
 msgstr "缩进尺寸 (0–256):"
+
+#. TRANSLATORS: Original NP2LEX_INI scheme title; persistence uses its English key.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ini Config File"
+msgstr "Ini 配置文件"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Inline Code"
@@ -2464,6 +2502,10 @@ msgstr "行号(&N)\tCtrl+Shift+N"
 msgid "Line Addition"
 msgstr "新增行"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Line Change"
+msgstr "变更行"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Line Endin&gs"
 msgstr "换行符(&G)"
@@ -2552,6 +2594,11 @@ msgstr "魔术常量"
 #: src/syntax/generated/style_profiles.h
 msgid "Magic Method"
 msgstr "魔术方法"
+
+#. TRANSLATORS: Original NP2LEX_MAKEFILE scheme title.
+#: src/syntax/syntax_catalog.cpp
+msgid "Makefile"
+msgstr "Makefile"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Margin and Line Number"
@@ -2922,6 +2969,14 @@ msgstr "占位符"
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
 msgstr "纯文本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Position Setting"
+msgstr "位置设置"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "PowerShell Script"
+msgstr "PowerShell 脚本"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Predefined Variable"
@@ -3365,6 +3420,10 @@ msgstr "滚动超出末行(&L)"
 msgid "Search wrapped"
 msgstr "搜索已循环"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Section"
+msgstr "节"
+
 #. TRANSLATORS: IDS_STATUSITEM_FORMAT; selected Unicode characters / bytes; rectangular counts use "--".
 #: src/app/editor_frame_status.cpp
 #, c-format
@@ -3417,7 +3476,10 @@ msgid ""
 "Select a scheme to edit its filename extensions, or select a style.\n"
 "font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
 "Preview applies the settings to the document. Cancel restores the original styles."
-msgstr "选择语法高亮以编辑文件扩展名，或选择要编辑的样式。\nfont:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n预览将设置应用到文档。取消将恢复原来的样式。"
+msgstr ""
+"选择语法高亮以编辑文件扩展名，或选择要编辑的样式。\n"
+"font:$(Code); size:+1; bold; italic; fore:#008000; back:#FFFFFF\n"
+"预览将设置应用到文档。取消将恢复原来的样式。"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Select and &Edit Options"
@@ -3459,6 +3521,10 @@ msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
 #: src/syntax/generated/style_profiles.h
 msgid "Selected Text"
 msgstr "选中文本"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Send Key"
+msgstr "发送按键"
 
 #: src/app/editor_frame_toolbar.cpp
 msgid "Separator"
@@ -3575,6 +3641,10 @@ msgstr "降序排序(&D)。"
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort Lines"
 msgstr "行排序"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Source and Destination"
+msgstr "源文件和目标文件"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Source encoding"
@@ -3766,6 +3836,10 @@ msgstr "标记类"
 #: src/syntax/generated/style_profiles.h
 msgid "Tag Id"
 msgstr "标记 ID"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Target"
+msgstr "目标"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Task List"
