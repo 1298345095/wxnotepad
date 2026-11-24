@@ -5,7 +5,6 @@
 #include <wx/settings.h>
 #include <wx/tokenzr.h>
 #include <wx/uilocale.h>
-#include <wx/intl.h>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -55,9 +54,8 @@ wxString FontLocale(const wxString& style) {
         }
     }
 #else
-    if (locale.empty() || !wxLocale::FindLanguageInfo(locale)) {
-        locale = wxUILocale::GetSystemLocaleId().GetName();
-        locale.Replace("_", "-");
+    if (wxLocaleIdent::FromTag(locale).IsEmpty()) {
+        locale = wxUILocale::GetSystemLocaleId().GetTag();
     }
 #endif
     return locale;
