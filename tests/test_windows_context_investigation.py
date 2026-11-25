@@ -164,6 +164,35 @@ class WindowsInvestigation(unittest.TestCase):
         self.assertEqual(selected['tests'], plain['tests'])
         self.assertEqual(selected['targets'], plain['targets'])
 
+    def test_ci_prelude_and_swap_keep_distinct_fresh_reports(self):
+        self.configure()
+        reports = self.directory / 'ci-prelude'
+        with mock.patch.object(investigation.ci, 'WINDOWS', True), \
+                mock.patch.object(investigation.ci, 'require_windows_test_desktop'), \
+                mock.patch.object(investigation.ci, 'probe', return_value=0) as pointer, \
+                mock.patch.dict(os.environ, WXNOTEPAD_INVESTIGATION_CONTRACT='retained'):
+            investigation.run(investigation.plan(self.build, 'ci-swap-prefix'), reports, 1)
+        self.assertEqual(pointer.call_args.args[2:4], (60, 100))
+        events = self.events.read_text().splitlines()
+        self.assertEqual(events.count(investigation.CONTEXT_CASE), 22)
+        self.assertEqual(events[-1], investigation.SWAP_CASE)
+        for path in ('warmup/prefix/run-001', 'warmup/menu/run-020', 'tests'):
+            suite = ET.parse(reports / 'run-001' / path / 'windows-tests.xml').getroot()
+            self.assertEqual(suite.get('failures'), '0')
+
+    def test_ci_prelude_pointer_failure_stops_before_swap_without_retry(self):
+        self.configure()
+        reports = self.directory / 'ci-prelude-failure'
+        with mock.patch.object(investigation.ci, 'WINDOWS', True), \
+                mock.patch.object(investigation.ci, 'require_windows_test_desktop'), \
+                mock.patch.object(investigation.ci, 'probe', return_value=17), \
+                mock.patch.dict(os.environ, WXNOTEPAD_INVESTIGATION_CONTRACT='retained'):
+            with self.assertRaisesRegex(SystemExit, '17'):
+                investigation.run(investigation.plan(self.build, 'ci-swap-prefix'), reports, 3)
+        self.assertEqual(self.events.read_text().splitlines(), ['before', investigation.CONTEXT_CASE])
+        self.assertFalse((reports / 'run-001/tests').exists())
+        self.assertFalse((reports / 'run-002').exists())
+
     def test_zero_attempts_cannot_report_an_empty_success(self):
         reports = self.directory / 'reports'
         result = self.execute(reports, 0)

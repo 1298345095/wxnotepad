@@ -67,10 +67,12 @@ def run(selection, reports, runs):
     expression = '^(' + '|'.join(re.escape(name) for name in selection['tests']) + ')$'
     for attempt in range(1, runs + 1):
         print(f'Investigation {attempt}/{runs}: {len(selection["tests"])} registered cases', flush=True)
+        attempt_reports = reports / f'run-{attempt:03}'
         if selection['scenario'] == 'ci-swap-prefix':
-            warm_context(Path(selection['cmake_dir']), reports / f'run-{attempt:03}' / 'warmup')
+            warm_context(Path(selection['cmake_dir']), attempt_reports / 'warmup')
+            attempt_reports /= 'tests'
         ci.test('windows', Path(selection['cmake_dir']), expression, 1,
-                report_directory=reports / f'run-{attempt:03}')
+                report_directory=attempt_reports)
 
 
 def warm_context(cmake_dir, reports):
