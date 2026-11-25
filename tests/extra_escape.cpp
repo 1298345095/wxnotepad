@@ -23,14 +23,28 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 #ifdef __WXGTK__
+void SettleX11Frame(EditorFrame* frame, bool presented) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    gdk_display_sync(gtk_widget_get_display(widget));
+    const auto deadline = std::chrono::steady_clock::now() + NativeKeys::FocusAcknowledgementTimeout;
+    do {
+        NativeSearch::DispatchEvents(frame);
+        if ((gtk_widget_get_mapped(widget) != FALSE) == presented && frame->IsActive() == presented) return;
+        wxMilliSleep(10);
+    } while (std::chrono::steady_clock::now() < deadline);
+}
 void DelayedX11Activation(EditorFrame* frame) {
     auto* widget = GTK_WIDGET(frame->GetHandle());
     if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
     wxString focus;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus), "use the owned private X11 input mailbox");
+    // X11 Show() can defer mapping until WM frame extents arrive. Hiding before
+    // that first map completes can leave a late map notification after Hide().
+    SettleX11Frame(frame, true);
+    Require(gtk_widget_get_mapped(widget) && frame->IsActive(),
+            "owned X11 activation starts from a fully presented active frame");
     frame->Hide();
-    wxYield();
-    gdk_display_sync(gtk_widget_get_display(widget));
+    SettleX11Frame(frame, false);
     Require(!gtk_widget_get_mapped(widget) && !frame->IsActive(), "owned X11 activation begins genuinely unmapped");
     struct Observation {
         bool cancelled = false;
@@ -39,19 +53,14 @@ void DelayedX11Activation(EditorFrame* frame) {
         bool shown = false;
     };
     auto observed = std::make_shared<Observation>();
-    std::println(stderr, "[DEBUG-x11-map] waiting start_us={}", g_get_monotonic_time());
     std::jthread mapping([frame, focus, observed](std::stop_token stop) {
-        std::println(stderr, "[DEBUG-x11-map] worker start_us={}", g_get_monotonic_time());
         while (!stop.stop_requested()) {
             wxString pending;
             wxFFile file(focus, "rb");
             if (file.IsOpened() && file.ReadAll(&pending) && !pending.empty()) {
-                std::println(stderr, "[DEBUG-x11-map] pending seen_us={}", g_get_monotonic_time());
                 constexpr auto MappingDelay = std::chrono::milliseconds(250);
                 std::this_thread::sleep_for(MappingDelay);
                 wxTheApp->CallAfter([frame, focus, observed] {
-                    std::println(stderr, "[DEBUG-x11-map] callback start_us={} cancelled={:d}", g_get_monotonic_time(),
-                                 observed->cancelled);
                     if (observed->cancelled) return;
                     wxString pending;
                     wxFFile file(focus, "rb");
@@ -59,10 +68,7 @@ void DelayedX11Activation(EditorFrame* frame) {
                     observed->unmapped = !gtk_widget_get_mapped(GTK_WIDGET(frame->GetHandle()));
                     frame->Show();
                     observed->shown = true;
-                    std::println(stderr, "[DEBUG-x11-map] show complete_us={} mapped={:d}", g_get_monotonic_time(),
-                                 gtk_widget_get_mapped(GTK_WIDGET(frame->GetHandle())));
                 });
-                std::println(stderr, "[DEBUG-x11-map] callback queued_us={}", g_get_monotonic_time());
                 return;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
