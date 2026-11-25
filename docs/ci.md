@@ -74,6 +74,16 @@ the failed paste is not answered with a successful result. The registered
 `native_windows_clipboard_peer_lifecycle` case checks this path with the real peer
 and verifies that it exits after acknowledging shutdown.
 
+On Windows the stock clipboard peer reserves clipboard access immediately before
+its single native EDIT paste, after wx's capacity preflight, using the remainder
+of its existing three-second activation budget. The control uses its platform
+maximum text length so a busy optional length probe cannot truncate fixture data.
+The lifecycle case also holds the clipboard in a foreign process for 250 ms and
+checks an exact Unicode payload above 64 KiB. The original empty-paste shutdown
+checks and 30-second case guard remain. IPC readers wait for readable UTF-8
+responses within their original five-second deadline, including transient Windows
+sharing violations; the document and clipboard result assertions are unchanged.
+
 ### Focused Windows investigations
 
 During diagnosis, use `windows_context_investigation.py` against a configured

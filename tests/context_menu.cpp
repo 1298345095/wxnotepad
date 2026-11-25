@@ -6,6 +6,7 @@
 #include "editor_test_helpers.h"
 #include "native_key_helpers.h"
 #include "file_helpers.h"
+#include "clipboard_peer_response.h"
 #include "native_paint_helpers.h"
 #include "windows_failure_capture.h"
 #include <wx/wx.h>
@@ -232,13 +233,8 @@ public:
         }
         Require(wxRenameFile(directory_ + "/request.tmp", directory_ + "/request", true), "publish clipboard request");
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-        while (!wxFileExists(directory_ + "/response") && std::chrono::steady_clock::now() < deadline) {
-            wxYield();
-            wxMilliSleep(10);
-        }
-        wxString response;
-        wxFFile file(directory_ + "/response", "rb");
-        const bool responded = file.IsOpened() && file.ReadAll(&response);
+        const auto received = ClipboardPeerResponse::Wait(directory_ + "/response", deadline);
+        const bool responded = received.has_value();
 #ifdef __WXMSW__
         if (!responded) {
             wxString stage;
@@ -247,10 +243,11 @@ public:
             std::println(stderr, "Peer response read failed request={:?} stage={:?} peerAlive={}",
                          command.utf8_string(), stage.utf8_string(), wxProcess::Exists(static_cast<int>(process_)));
             NativeFailure::Capture(command == "quit" ? "context-clipboard-cleanup" : "context-clipboard",
-                                   {static_cast<long>(wxGetProcessId())});
+                                   {static_cast<long>(wxGetProcessId()), process_});
         }
 #endif
         Require(responded, "independent clipboard peer responds before deadline");
+        wxString response = *received;
         if (response == "failed" || response.Contains("unavailable")) {
             wxString stage;
             wxFFile stageFile(directory_ + "/peer-stage", "rb");
@@ -776,6 +773,15 @@ void CheckClipboardCommands(EditorFrame* frame, Popup& popup, const wxPoint& scr
     };
     popup.Open(wxDefaultPosition);
     popup.inspect = {};
+#ifdef __WXMSW__
+    constexpr size_t LargeClipboardCharacters = 64 * 1024;
+    const std::string large(LargeClipboardCharacters, 'x');
+    TestEditor::ResetStream(editor, large.c_str(), 0, large.size());
+    popup.action = wxID_COPY;
+    popup.Open(wxDefaultPosition);
+    Require(peer.Request("paste") == wxString::FromUTF8(large),
+            "stock native Paste retains all copied text beyond its default EDIT capacity");
+#endif
 }
 
 void CheckScrolledPlacement(EditorFrame* frame, Popup& popup) {

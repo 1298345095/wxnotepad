@@ -5,6 +5,7 @@
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
+#include "clipboard_peer_response.h"
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
@@ -104,11 +105,8 @@ public:
         }
         Require(wxRenameFile(directory_ + "/request.tmp", directory_ + "/request", true), "publish peer request");
         const auto responseDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-        while (!wxFileExists(directory_ + "/response") && std::chrono::steady_clock::now() < responseDeadline) {
-            wxYield();
-            wxMilliSleep(10);
-        }
-        if (!wxFileExists(directory_ + "/response")) {
+        const auto received = ClipboardPeerResponse::Wait(directory_ + "/response", responseDeadline);
+        if (!received) {
             wxString stage;
             wxFFile file(directory_ + "/peer-stage", "rb");
             if (file.IsOpened()) file.ReadAll(&stage, wxConvUTF8);
@@ -123,10 +121,9 @@ public:
                 bounds.height, dpi.x, dpi.y);
             throw std::runtime_error("independent peer response timeout: " + command.ToStdString());
         }
-        wxString response;
-        wxFFile file(directory_ + "/response", "rb");
-        Require(file.ReadAll(&response, wxConvUTF8), "read owned peer response");
-        if (response == "failed" || response == "native focus unavailable" || response == "native gesture unavailable")
+        wxString response = *received;
+        if (response == "failed" || response == "native focus unavailable" ||
+            response == "native gesture unavailable" || response == "native clipboard unavailable")
             throw std::runtime_error("independent peer " + command.ToStdString() + ": " + response.ToStdString());
         if (command == "copy") SettleClipboard();
         if (command == "paste") response.Replace("\r\n", "\n");
