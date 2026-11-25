@@ -1,5 +1,6 @@
 """A pending native paste must not prevent the owned peer from shutting down."""
 import argparse
+import ctypes
 from pathlib import Path
 import subprocess
 import tempfile
@@ -17,10 +18,16 @@ def check(executable, evidence):
                                    stdout=log, stderr=subprocess.STDOUT)
         try:
             def wait_file(name, expected):
+                expected_values = (expected,) if isinstance(expected, str) else expected
                 deadline = time.monotonic() + RESPONSE_TIMEOUT_SECONDS
                 while time.monotonic() < deadline:
                     path = directory / name
-                    if path.exists() and path.read_text(encoding='utf-8') == expected:
+                    try:
+                        received = path.read_text(encoding='utf-8') if path.exists() else None
+                    except PermissionError:
+                        # A published response can briefly be held by another Windows reader.
+                        received = None
+                    if received in expected_values:
                         return
                     assert process.poll() is None, ('Peer exited before response', process.returncode, name)
                     time.sleep(.01)
@@ -35,6 +42,28 @@ def check(executable, evidence):
 
             request('ready')
             wait_file('response', 'ready')
+            sample = 'x' * (64 * 1024) + '\n中文'
+            (directory / 'offer.txt').write_text(sample, encoding='utf-8')
+            request('utility-offer')
+            wait_file('response', 'ready')
+            user = ctypes.WinDLL('user32', use_last_error=True)
+            user.OpenClipboard.argtypes = [ctypes.c_void_p]
+            user.OpenClipboard.restype = ctypes.c_int
+            user.CloseClipboard.argtypes = []
+            user.CloseClipboard.restype = ctypes.c_int
+            access_deadline = time.monotonic() + RESPONSE_TIMEOUT_SECONDS
+            while not user.OpenClipboard(None):
+                assert time.monotonic() < access_deadline, 'Parent must acquire the clipboard for native contention'
+                time.sleep(.01)
+            try:
+                request('paste')
+                wait_file('peer-stage', ('pasting-native-text', 'native-paste-returned'))
+                time.sleep(.25)
+                assert not (directory / 'response').exists(), 'Paste must not report text while another process holds it'
+            finally:
+                assert user.CloseClipboard(), 'Parent releases its owned clipboard lock'
+            wait_file('response', sample)
+            print('PASS: one stock native Paste waits for foreign clipboard release and transfers exact text', flush=True)
             request('utility-empty')
             wait_file('response', 'ready')
             request('paste')

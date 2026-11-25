@@ -89,6 +89,9 @@ public:
             new ObservedPeerText(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
         observed->observationDirectory = directory_;
         text_ = observed;
+        // Preserve the unlimited fixture text when wx's optional length probe
+        // encounters a clipboard held by another process.
+        text_->SetMaxLength(0);
 #else
         text_ = new wxTextCtrl(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
 #endif
