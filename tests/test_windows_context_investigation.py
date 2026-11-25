@@ -1,5 +1,6 @@
 """Keep focused investigations cold-buildable, scoped and fail-preserving."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -92,6 +93,19 @@ class WindowsInvestigation(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn('--hide-terminal is only valid for run', result.stderr)
         self.assertFalse(reports.exists())
+
+    def test_foreground_policy_cannot_change_during_planning_or_on_local_host(self):
+        for action in ('plan', 'run'):
+            with self.subTest(action=action):
+                reports = self.directory / action
+                result = subprocess.run([sys.executable, '-X', 'utf8',
+                                         ROOT / '.github/scripts/windows_context_investigation.py', action,
+                                         '--zero-foreground-timeout', '--report-dir', reports],
+                                        env={key: value for key, value in os.environ.items() if key != 'GITHUB_ACTIONS'},
+                                        capture_output=True, text=True, encoding='utf-8')
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('--zero-foreground-timeout is only valid for run on GitHub Actions', result.stderr)
+                self.assertFalse(reports.exists())
 
     @unittest.skipUnless(sys.platform == 'win32', 'Canonical Windows desktop runner')
     def test_repetitions_use_real_ctest_and_reject_existing_evidence(self):

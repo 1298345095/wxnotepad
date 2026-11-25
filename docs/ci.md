@@ -133,6 +133,16 @@ the observed Cascadia class; it keeps their processes running and records the
 before/after visibility and process state in `terminal-isolation.json`. The same
 registered cases, gestures, response deadlines and assertions still run.
 
+The separate `zero_foreground_timeout` input is an opt-in hosted experiment.
+It reads the Windows foreground lock timeout, attempts to set it to zero for
+that desktop session, verifies the effective value, and restores the original
+setting in the runner's `finally` block. `foreground-timeout.json` retains the
+setter, readback and restoration results. It does not persist the setting in
+the user profile, and the CLI rejects this option outside GitHub Actions.
+An already-zero value or rejected setter cannot establish that foreground lock
+caused a test failure. This does not change test deadlines or assertions. See
+[the primary-source research](observations/windows-ci-foreground.md).
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims

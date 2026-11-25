@@ -1,5 +1,6 @@
 """Run focused Windows context-menu investigations through registered CTest cases."""
 import argparse
+from contextlib import contextmanager, nullcontext
 import json
 import os
 from pathlib import Path
@@ -48,6 +49,56 @@ def run(selection, reports, runs):
         print(f'Investigation {attempt}/{runs}: {len(selection["tests"])} registered cases', flush=True)
         ci.test('windows', Path(selection['cmake_dir']), expression, 1,
                 report_directory=reports / f'run-{attempt:03}')
+
+
+@contextmanager
+def zero_foreground_timeout(reports):
+    """Change only the hosted desktop session, restoring its original setting."""
+    import ctypes
+    from ctypes import wintypes
+
+    user = ctypes.WinDLL('user32', use_last_error=True)
+    user.SystemParametersInfoW.argtypes = [wintypes.UINT, wintypes.UINT, wintypes.LPVOID, wintypes.UINT]
+    get_foreground_lock_timeout = 0x2000
+    set_foreground_lock_timeout = 0x2001
+
+    def current_timeout():
+        value = wintypes.DWORD()
+        if not user.SystemParametersInfoW(get_foreground_lock_timeout, 0, ctypes.byref(value), 0):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return value.value
+
+    original = current_timeout()
+    record = {'original_milliseconds': original, 'requested_milliseconds': 0}
+    destination = reports / 'foreground-timeout.json'
+
+    def publish():
+        destination.write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')
+
+    ctypes.set_last_error(0)
+    changed = bool(user.SystemParametersInfoW(set_foreground_lock_timeout, 0, None, 0))
+    record.update(set_succeeded=changed, set_error=ctypes.get_last_error())
+    publish()
+    if not changed:
+        raise SystemExit('Foreground timeout setup was rejected; inspect foreground-timeout.json')
+    try:
+        effective = current_timeout()
+        record['effective_milliseconds'] = effective
+        publish()
+        if effective != 0:
+            raise SystemExit('Foreground timeout setup did not take effect; inspect foreground-timeout.json')
+        print(f'Foreground lock timeout: {original}ms -> {effective}ms (session only)', flush=True)
+        yield
+    finally:
+        ctypes.set_last_error(0)
+        restored = bool(user.SystemParametersInfoW(set_foreground_lock_timeout, 0,
+                                                  ctypes.c_void_p(original), 0))
+        record.update(restore_succeeded=restored, restore_error=ctypes.get_last_error())
+        publish()
+        record['restored_milliseconds'] = current_timeout()
+        publish()
+        if not restored or record['restored_milliseconds'] != original:
+            raise SystemExit('Foreground timeout restoration failed; inspect foreground-timeout.json')
 
 
 def hide_terminal_windows(reports):
@@ -121,11 +172,15 @@ def main():
     parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     parser.add_argument('--hide-terminal', action='store_true', help='Hide CI Terminal windows without ending processes')
+    parser.add_argument('--zero-foreground-timeout', action='store_true',
+                        help='Temporarily disable the hosted desktop foreground lock timeout')
     arguments = parser.parse_args()
     if arguments.runs < 1 or arguments.jobs < 1:
         parser.error('--runs and --jobs must be positive')
     if arguments.hide_terminal and arguments.action != 'run':
         parser.error('--hide-terminal is only valid for run')
+    if arguments.zero_foreground_timeout and (arguments.action != 'run' or os.environ.get('GITHUB_ACTIONS') != 'true'):
+        parser.error('--zero-foreground-timeout is only valid for run on GitHub Actions')
     if arguments.action != 'plan' and not ci.WINDOWS:
         parser.error('Native Windows investigations must run on Windows')
     selection = plan(arguments.cmake_dir, arguments.scenario)
@@ -136,9 +191,11 @@ def main():
     if arguments.action == 'build':
         build(selection, reports, arguments.jobs)
     elif arguments.action == 'run':
-        if arguments.hide_terminal:
-            hide_terminal_windows(reports)
-        run(selection, reports, arguments.runs)
+        policy = zero_foreground_timeout(reports) if arguments.zero_foreground_timeout else nullcontext()
+        with policy:
+            if arguments.hide_terminal:
+                hide_terminal_windows(reports)
+            run(selection, reports, arguments.runs)
 
 
 if __name__ == '__main__':

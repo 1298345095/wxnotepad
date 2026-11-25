@@ -16,6 +16,10 @@ on:
         description: Hide the CI runner Terminal windows without ending their processes
         type: boolean
         default: false
+      zero_foreground_timeout:
+        description: Temporarily set the isolated runner desktop foreground lock timeout to zero
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -36,6 +40,7 @@ jobs:
       INVESTIGATION_SCENARIO: ${{ inputs.scenario || 'prefix' }}
       INVESTIGATION_RUNS: ${{ inputs.runs }}
       HIDE_RUNNER_TERMINAL: ${{ inputs.hide_terminal }}
+      ZERO_FOREGROUND_TIMEOUT: ${{ inputs.zero_foreground_timeout }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -97,6 +102,7 @@ jobs:
           set -euo pipefail
           investigation_options=()
           if [[ "$HIDE_RUNNER_TERMINAL" == true ]]; then investigation_options+=(--hide-terminal); fi
+          if [[ "$ZERO_FOREGROUND_TIMEOUT" == true ]]; then investigation_options+=(--zero-foreground-timeout); fi
           python -X utf8 .github/scripts/windows_context_investigation.py run \
             --scenario "$INVESTIGATION_SCENARIO" --runs "${INVESTIGATION_RUNS:-3}" \
             --report-dir .ci/reports/investigation-runs "${investigation_options[@]}"
