@@ -6,6 +6,7 @@
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "clipboard_peer_response.h"
+#include "native_focus_helpers.h"
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
@@ -80,7 +81,11 @@ public:
         Require(wxMkdir(directory_), "create owned peer IPC directory");
         wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
         executable.SetName("clipboard_peer");
-        process_ = wxExecute("\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"", wxEXEC_ASYNC);
+        wxString launch = "\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"";
+#ifdef __WXMSW__
+        launch += wxString::Format(" %lu", wxGetProcessId());
+#endif
+        process_ = wxExecute(launch, wxEXEC_ASYNC);
         Require(process_ > 0, "launch independent native text clipboard peer");
     }
     Peer(const Peer&) = delete;
@@ -98,6 +103,10 @@ public:
         wxFileName::Rmdir(directory_, wxPATH_RMDIR_RECURSIVE);
     }
     wxString Request(const wxString& command) {
+#ifdef __WXMSW__
+        const bool peerGrant =
+            NativeFocus::GrantTo(static_cast<HWND>(frame_->GetHandle()), static_cast<DWORD>(process_));
+#endif
         if (wxFileExists(directory_ + "/response")) wxRemoveFile(directory_ + "/response");
         {
             wxFFile file(directory_ + "/request.tmp", "wb");
@@ -167,9 +176,17 @@ public:
         if (!acknowledged || !HasNativeFocus()) {
 #ifdef __WXMSW__
             std::println(stderr,
-                         "Clipboard activation: accepted={:d} before={} afterRaise={} afterFocus={} foreground={}",
-                         accepted, static_cast<void*>(beforeRaise), static_cast<void*>(afterRaise),
+                         "Clipboard activation: peerGrant={:d} accepted={:d} before={} afterRaise={} afterFocus={} "
+                         "foreground={}",
+                         peerGrant, accepted, static_cast<void*>(beforeRaise), static_cast<void*>(afterRaise),
                          static_cast<void*>(afterFocus), static_cast<void*>(GetForegroundWindow()));
+            wxString receipt;
+            wxFFile handoff(directory_ + "/peer-foreground", "rb");
+            if (handoff.IsOpened() && handoff.ReadAll(&receipt, wxConvUTF8))
+                std::println(stderr, "Peer foreground grant: {}", receipt.utf8_string());
+            DWORD foregroundTimeout = 0;
+            if (SystemParametersInfoW(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &foregroundTimeout, 0))
+                std::println(stderr, "Foreground lock timeout at failure: {} ms", foregroundTimeout);
 #endif
             throw std::runtime_error("editor must receive actual native focus after peer command: " +
                                      command.ToStdString());

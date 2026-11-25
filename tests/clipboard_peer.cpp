@@ -10,6 +10,7 @@
 #include <cstring>
 #include <memory>
 #include <string_view>
+#include "native_focus_helpers.h"
 #ifdef __WXMSW__
 #include <richedit.h>
 class NativePasteReservation final {
@@ -71,7 +72,14 @@ class PeerApp final : public wxApp {
 public:
     bool OnInit() override {
         wxLog::SetActiveTarget(new wxLogStderr);
+#ifdef __WXMSW__
+        if (argc != 2 && argc != 3) return false;
+        if (argc == 3 && (!wxString(argv[2]).ToULong(&foregroundRecipient_) || foregroundRecipient_ == 0 ||
+                          foregroundRecipient_ == ASFW_ANY))
+            return false;
+#else
         if (argc != 2) return false;
+#endif
         directory_ = argv[1];
         RecordStage("starting");
         frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad clipboard test peer");
@@ -122,6 +130,9 @@ private:
     std::chrono::steady_clock::time_point activationStarted_;
     bool gestureRequested_ = false;
     bool gestureReceived_ = false;
+#ifdef __WXMSW__
+    DWORD foregroundRecipient_ = 0;
+#endif
 #ifdef __WXGTK__
     std::chrono::steady_clock::time_point renderReadyAt_;
 #endif
@@ -132,6 +143,17 @@ private:
         if (file.IsOpened()) file.Write(wxString::FromUTF8(stage), wxConvUTF8);
     }
     void Respond(const wxString& value) {
+#ifdef __WXMSW__
+        if (foregroundRecipient_) {
+            const bool granted = NativeFocus::GrantTo(static_cast<HWND>(frame_->GetHandle()), foregroundRecipient_);
+            wxFFile receipt(directory_ + "/peer-foreground", "wb");
+            if (receipt.IsOpened())
+                receipt.Write(wxString::Format("sender=%lu recipient=%lu granted=%d foreground=%p",
+                                               GetCurrentProcessId(), foregroundRecipient_, granted,
+                                               static_cast<void*>(GetForegroundWindow())),
+                              wxConvUTF8);
+        }
+#endif
         RecordStage("writing-response");
         {
             wxFFile file(directory_ + "/response.tmp", "wb");

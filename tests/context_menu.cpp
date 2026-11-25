@@ -7,6 +7,7 @@
 #include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "clipboard_peer_response.h"
+#include "native_focus_helpers.h"
 #include "native_paint_helpers.h"
 #include "windows_failure_capture.h"
 #include <wx/wx.h>
@@ -213,7 +214,11 @@ public:
         Require(wxMkdir(directory_), "create owned clipboard peer IPC directory");
         wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
         executable.SetName("clipboard_peer");
-        process_ = wxExecute("\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"", wxEXEC_ASYNC);
+        wxString launch = "\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"";
+#ifdef __WXMSW__
+        launch += wxString::Format(" %lu", wxGetProcessId());
+#endif
+        process_ = wxExecute(launch, wxEXEC_ASYNC);
         Require(process_ > 0, "launch independent stock-widget clipboard peer");
         Require(Request("ready") == "ready", "clipboard peer maps its native window");
     }
@@ -226,6 +231,9 @@ public:
         }
     }
     wxString Request(const wxString& command) {
+#ifdef __WXMSW__
+        NativeFocus::GrantTo(static_cast<HWND>(frame_->GetHandle()), static_cast<DWORD>(process_));
+#endif
         if (wxFileExists(directory_ + "/response")) wxRemoveFile(directory_ + "/response");
         {
             wxFFile file(directory_ + "/request.tmp", "wb");
