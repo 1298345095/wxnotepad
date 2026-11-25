@@ -24,7 +24,7 @@ class WindowsInvestigation(unittest.TestCase):
         self.build = self.directory / 'build'
         self.events = self.directory / 'events.txt'
 
-    def configure(self, *, unbuilt=False, context=True, swap=True, fail=False):
+    def configure(self, *, unbuilt=False, context=True, swap=True, search=True, fail=False):
         script = self.directory / 'event.py'
         script.write_text(
             'import os,sys; from pathlib import Path\n'
@@ -39,6 +39,8 @@ class WindowsInvestigation(unittest.TestCase):
         if swap:
             cases += [investigation.SWAP_CASE, 'after-swap']
         cases += [investigation.FOCUS_CASE]
+        if search:
+            cases.append(investigation.SEARCH_CASE)
         source = 'cmake_minimum_required(VERSION 3.25)\nproject(Investigation NONE)\nenable_testing()\n'
         for name in cases:
             if unbuilt and name == investigation.CONTEXT_CASE:
@@ -50,6 +52,8 @@ class WindowsInvestigation(unittest.TestCase):
         if context:
             source += ('set_tests_properties(original_editor_context_menu PROPERTIES TIMEOUT 60 '
                        'ENVIRONMENT "WXNOTEPAD_INVESTIGATION_CONTRACT=retained")\n')
+        if search:
+            source += 'set_tests_properties(original_search_continuation PROPERTIES TIMEOUT 60)\n'
         if swap:
             source += 'set_tests_properties(original_clipboard_swap PROPERTIES TIMEOUT 180)\n'
             for target, event, dependency in (('clipboard_peer', 'peer-built', ''),
@@ -148,6 +152,21 @@ class WindowsInvestigation(unittest.TestCase):
         selected = investigation.plan(self.build, 'focus-transfer')
         self.assertEqual(selected['tests'], [investigation.FOCUS_CASE])
         self.assertEqual(selected['targets'], ['clipboard_smoke'])
+
+    def test_search_preserves_its_original_registered_case_and_timeout(self):
+        self.configure()
+        selected = investigation.plan(self.build, 'search')
+        self.assertEqual(selected['tests'], [investigation.SEARCH_CASE])
+        self.assertEqual(selected['targets'], ['search_continuation'])
+        listing = json.loads(subprocess.check_output(
+            ['ctest', '--test-dir', str(self.build), '--show-only=json-v1']))
+        case = next(case for case in listing['tests'] if case['name'] == investigation.SEARCH_CASE)
+        self.assertIn({'name': 'TIMEOUT', 'value': 60.0}, case['properties'])
+
+    def test_missing_search_does_not_run_a_different_case(self):
+        self.configure(search=False)
+        with self.assertRaisesRegex(SystemExit, investigation.SEARCH_CASE):
+            investigation.plan(self.build, 'search')
 
     def test_swap_prefix_keeps_all_registered_predecessors_in_order(self):
         self.configure()

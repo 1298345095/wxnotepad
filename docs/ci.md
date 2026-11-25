@@ -91,6 +91,7 @@ selection and the native targets built for it.
 | `swap-prefix` | Original registered order through `original_clipboard_swap` (currently 87 cases) | Thirty-nine inspected predecessor targets and their existing dependencies |
 | `ci-swap-prefix` | Full CI's original prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
 | `focus-transfer` | One hundred native Ctrl+K exchanges, validating Unicode bytes, reversed selection and both real foreground handoffs | `clipboard_smoke` and its existing peer dependency |
+| `search` | Original 13-scenario search-continuation case, retaining its 60-second timeout | `search_continuation`; hosted investigation keeps optimized debug symbols and WER crash dumps |
 
 On Windows, `focus-transfer` uses the existing keyboard-state and native
 accelerator translation path; it does not insert physical keys with `SendInput`.

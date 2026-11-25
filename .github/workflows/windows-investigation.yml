@@ -6,7 +6,7 @@ on:
       scenario:
         description: Registered predecessor sequence, complete context-menu case, or clipboard Swap
         type: choice
-        options: [prefix, clipboard, swap, swap-prefix, ci-swap-prefix, focus-transfer]
+        options: [prefix, clipboard, swap, swap-prefix, ci-swap-prefix, focus-transfer, search]
         default: prefix
       runs:
         description: Serial attempts; stop on the first failing attempt
@@ -65,6 +65,15 @@ jobs:
       - name: Configure
         shell: bash
         run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
+      - name: Retain search crash symbols with release optimization
+        if: env.INVESTIGATION_SCENARIO == 'search'
+        shell: pwsh
+        run: |
+          $arguments = @('-S', '.', '-B', '.ci/build/cmake',
+            '-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /Z7',
+            '-DCMAKE_EXE_LINKER_FLAGS_RELEASE=/INCREMENTAL:NO /DEBUG:FULL /OPT:REF /OPT:ICF')
+          & .github/scripts/msvc.ps1 -CMakeArgumentsJson (ConvertTo-Json -Compress $arguments)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build selected native targets
         shell: bash
         run: |
@@ -83,6 +92,20 @@ jobs:
           if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
             throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
           }
+      - name: Capture search continuation crashes
+        if: env.INVESTIGATION_SCENARIO == 'search'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dumpDirectory = Join-Path $env:GITHUB_WORKSPACE '.ci/reports/windows-dumps'
+          New-Item -ItemType Directory -Path $dumpDirectory -Force | Out-Null
+          $dumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\search_continuation.exe'
+          New-Item -Path $dumpKey -Force | Out-Null
+          New-ItemProperty -Path $dumpKey -Name DumpFolder -Value $dumpDirectory -PropertyType ExpandString -Force | Out-Null
+          New-ItemProperty -Path $dumpKey -Name DumpType -Value 2 -PropertyType DWord -Force | Out-Null
+          New-ItemProperty -Path $dumpKey -Name DumpCount -Value 3 -PropertyType DWord -Force | Out-Null
+          Get-ItemProperty -Path $dumpKey | Select-Object PSChildName, DumpFolder, DumpType, DumpCount |
+            ConvertTo-Json | Set-Content .ci/reports/search-crash-capture.json
       - name: Preserve the original reference-control predecessors
         if: env.INVESTIGATION_SCENARIO == 'prefix' || env.INVESTIGATION_SCENARIO == 'swap-prefix' || env.INVESTIGATION_SCENARIO == 'ci-swap-prefix'
         shell: bash
@@ -114,6 +137,9 @@ jobs:
           path: |
             .ci/reports/
             .ci/build/cmake/Testing/Temporary/
+            .ci/build/cmake/search_continuation.exe
+            .ci/build/cmake/search_continuation.pdb
+            .ci/build/cmake/*.dll
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
