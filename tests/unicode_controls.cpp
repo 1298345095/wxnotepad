@@ -10,6 +10,7 @@
 #include <tuple>
 #include <cstdio>
 #include <exception>
+#include <optional>
 #include <print>
 #include <stdexcept>
 #ifdef __WXGTK__
@@ -88,10 +89,11 @@ void Table(EditorFrame* frame, int command) {
 }
 class GeometryDiagnostics {
 public:
-    explicit GeometryDiagnostics(EditorFrame* frame) : frame_(frame) {}
+    GeometryDiagnostics(EditorFrame* frame, bool minimal) : frame_(frame), minimal_(minimal) {}
     ~GeometryDiagnostics() {
         const bool failed = std::uncaught_exceptions() != 0;
-        std::fprintf(stderr, "[DEBUG-unicode-275] outcome=%s samples=%zu", failed ? "fail" : "pass", count_);
+        std::fprintf(stderr, "[DEBUG-unicode-275] outcome=%s mode=%s samples=%zu", failed ? "fail" : "pass",
+                     minimal_ ? "minimal" : "full", count_);
         for (size_t index = 0; index < count_; ++index) {
             const auto& sample = samples_[index];
             if (sample.rows >= 0)
@@ -156,38 +158,41 @@ private:
     }
 #endif
     EditorFrame* frame_;
+    bool minimal_;
     // Fixed storage and delayed output keep diagnostics out of the event loop.
     std::array<Sample, 10> samples_{};
     size_t count_ = 0;
 };
-void Geometry(EditorFrame* frame, int command) {
+void Geometry(EditorFrame* frame, int command, bool minimal) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    GeometryDiagnostics diagnostics(frame);
+    GeometryDiagnostics diagnostics(frame, minimal);
     diagnostics.Observe("before-resize");
     frame->SetSize(360, 300);
     diagnostics.Observe("resize-requested");
-    TestEditor::ResetStream(editor,
-                            "A\xe2\x81\xa0"
-                            "B",
-                            5, 5);
-    NativeFold::Paint(editor);
-    diagnostics.Observe("resize-painted");
-    const int left = static_cast<int>(editor->Send(PointXFromPosition, 0, 1));
-    const int right = static_cast<int>(editor->Send(PointXFromPosition, 0, 4));
-    const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, 1));
-    const int height = static_cast<int>(editor->Send(TextHeight, 0));
-    Require(right > left + 2, "visible WJ has an on-screen representation box");
-    const wxRect area(left, top, right - left, height);
-    const auto visible = NativePaint::Read(editor, area);
-    Require(editor->Send(PositionFromPointClose, left + 1, top + height / 2) == 1 &&
-                editor->Send(PositionFromPointClose, right - 1, top + height / 2) == 4,
-            "hit-testing the representation returns character boundaries, never a UTF-8 continuation byte");
-    NativeSearch::Command(frame, command);
-    NativeFold::Paint(editor);
-    Require(NativePaint::Read(editor, area) != visible,
-            "the named representation changes actual native widget pixels when hidden");
-    NativeSearch::Command(frame, command);
+    if (!minimal) {
+        TestEditor::ResetStream(editor,
+                                "A\xe2\x81\xa0"
+                                "B",
+                                5, 5);
+        NativeFold::Paint(editor);
+        diagnostics.Observe("resize-painted");
+        const int left = static_cast<int>(editor->Send(PointXFromPosition, 0, 1));
+        const int right = static_cast<int>(editor->Send(PointXFromPosition, 0, 4));
+        const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, 1));
+        const int height = static_cast<int>(editor->Send(TextHeight, 0));
+        Require(right > left + 2, "visible WJ has an on-screen representation box");
+        const wxRect area(left, top, right - left, height);
+        const auto visible = NativePaint::Read(editor, area);
+        Require(editor->Send(PositionFromPointClose, left + 1, top + height / 2) == 1 &&
+                    editor->Send(PositionFromPointClose, right - 1, top + height / 2) == 4,
+                "hit-testing the representation returns character boundaries, never a UTF-8 continuation byte");
+        NativeSearch::Command(frame, command);
+        NativeFold::Paint(editor);
+        Require(NativePaint::Read(editor, area) != visible,
+                "the named representation changes actual native widget pixels when hidden");
+        NativeSearch::Command(frame, command);
+    }
     std::string line;
     for (int repeat = 0; repeat < 80; ++repeat)
         line += "a\xe2\x81\xa0"
@@ -201,18 +206,22 @@ void Geometry(EditorFrame* frame, int command) {
         NativeFold::Paint(editor);
         const auto visibleRows = editor->Send(WrapCount, 0);
         diagnostics.Observe("visible", visibleRows);
-        const auto before = DocumentState(frame);
+        const auto before = minimal ? std::nullopt : std::optional{DocumentState(frame)};
         NativeSearch::Command(frame, command);
         NativeFold::Paint(editor);
         const auto hiddenRows = editor->Send(WrapCount, 0);
         diagnostics.Observe("hidden", hiddenRows);
-        Require(visibleRows > hiddenRows && DocumentState(frame) == before,
+        Require(visibleRows > hiddenRows && (minimal || DocumentState(frame) == *before),
                 "representation widths reflow wrapped rows at normal and enlarged zoom without changing the document");
         NativeSearch::Command(frame, command);
         NativeFold::Paint(editor);
         const auto restoredRows = editor->Send(WrapCount, 0);
         diagnostics.Observe("restored", restoredRows);
         Require(restoredRows == visibleRows, "showing names restores the original wrapped layout");
+    }
+    if (minimal) {
+        std::puts("PASS: minimal native representation wrapping restores both original row counts");
+        return;
     }
     NativeSearch::Command(frame, wrap);
     editor->Send(SetZoom, 100);
@@ -343,6 +352,8 @@ void Lifecycle(EditorFrame* frame, int command) {
 class UnicodeControlsApp final : public wxApp {
 public:
     bool OnInit() override {
+        wxString mode;
+        const bool minimal = wxGetEnv("WXNOTEPAD_UNICODE_MINIMAL", &mode) && mode == "1";
 #ifdef __WXMSW__
         if (wxGetenv("WXNOTEPAD_UNICODE_DPI96"))
             Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,
@@ -360,7 +371,7 @@ public:
             Require(frame->Editor()->GetDPI().y == 96, "the complementary native representation fixture uses 96 DPI");
 #endif
         frame->Show();
-        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
+        NativeKeys::AfterPresentation(frame, [this, frame, minimal](bool presented) {
             try {
                 Require(presented, "the owned native editor is presented before representation painting");
                 auto* menu = frame->GetMenuBar();
@@ -373,9 +384,9 @@ public:
                 NativeSearch::Command(frame, id);
                 Require(item->IsChecked(), "native menu enables the representation preference");
                 std::puts("PASS: original native Unicode control display command and default");
-                Table(frame, id);
-                Geometry(frame, id);
-                Lifecycle(frame, id);
+                if (!minimal) Table(frame, id);
+                Geometry(frame, id, minimal);
+                if (!minimal) Lifecycle(frame, id);
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 result_ = 1;

@@ -12,17 +12,16 @@ import ci
 
 ROOT = ci.ROOT
 BUILD = ROOT / '.ci/build/cmake'
-REPORTS = ROOT / '.ci/reports/unicode-warm-investigation'
+REPORTS = ROOT / '.ci/reports/unicode-minimal-investigation'
 SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
 PHASES = {
-    'warm-single': {
-        'tests': ['original_unicode_controls'], 'runs': 200, 'timeout': 90,
+    'full-control': {
+        'tests': ['original_unicode_controls'], 'runs': 10, 'timeout': 90,
     },
-    'prefix': {
-        'tests': ['cpp_highlighting', 'json_highlighting', 'manual_language_choice',
-                  'fold_all_commands', 'line_number_view', 'original_unicode_controls'],
-        'runs': 30, 'timeout': 390,
+    'minimal': {
+        'tests': ['original_unicode_controls'], 'runs': 500, 'timeout': 90,
+        'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1'},
     },
 }
 
@@ -59,6 +58,7 @@ def session(phase, number, helper):
         (directory / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
         environment = dict(os.environ, GIO_LAUNCH_DESKTOP=str(helper),
                            WXNOTEPAD_DISPLAY_LOG_DIR=str(directory / 'display'))
+        environment.update(selected.get('environment', {}))
         isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     'x11', sys.executable, SCRIPT, '--session', directory]
@@ -90,7 +90,7 @@ def main():
     results = []
     summary_path = REPORTS / 'summary.json'
     for phase in PHASES:
-        # Finish all four warm-single sessions before opening the prefix sessions.
+        # Finish the full control before opening the reduced reproduction sessions.
         # Failure in one session is retained while the others finish independently.
         with ThreadPoolExecutor(max_workers=SESSIONS) as workers:
             pending = [workers.submit(session, phase, number, helper) for number in range(1, SESSIONS + 1)]
