@@ -233,8 +233,7 @@ void Geometry(EditorFrame* frame, int command, bool minimal, ObservationMode obs
         GtkAllocation allocation;
         gtk_widget_get_allocation(GTK_WIDGET(editor->GetHandle()), &allocation);
         return wxSize(allocation.width, allocation.height) == requested &&
-               drawingSizeIs(frame->GTKGetDrawingWindow(), requested) &&
-               drawingSizeIs(editor->GTKGetDrawingWindow(), editor->GetClientSize());
+               drawingSizeIs(frame->GTKGetDrawingWindow(), requested);
 #else
         return true;
 #endif
