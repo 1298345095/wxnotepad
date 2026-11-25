@@ -5,6 +5,7 @@
 #include <wx/filename.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
+#include <wx/weakref.h>
 #include <array>
 #include <cstdio>
 #include <print>
@@ -486,8 +487,14 @@ class ContinuationApp final : public wxApp {
     int result_ = 1;
     size_t next_ = 0;
     std::unique_ptr<SettingsStore> settings_;
+    wxWeakRef<EditorFrame> previousFrame_;
 
     void Next() {
+        if (previousFrame_) {
+            std::fputs("FAIL: the previous search window must be destroyed before replacing its settings\n", stderr);
+            ExitMainLoop();
+            return;
+        }
         if (next_ == scenarios.size()) {
             result_ = 0;
             ExitMainLoop();
@@ -506,6 +513,7 @@ class ContinuationApp final : public wxApp {
             settings_->values.recentReplace = {"fox"};
         }
         auto* frame = new EditorFrame(settings_.get());
+        previousFrame_ = frame;
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame, scenario, path](bool ready) {
             try {
@@ -528,7 +536,12 @@ class ContinuationApp final : public wxApp {
                     frame->Hide();
                     frame->Destroy();
                 }
-                CallAfter([this] { Next(); });
+                // Destroy() defers the actual deletion to idle. Keep its settings
+                // alive until that window can no longer translate native input.
+                frame->Bind(wxEVT_DESTROY, [this, frame](wxWindowDestroyEvent& event) {
+                    if (event.GetEventObject() == frame) CallAfter([this] { Next(); });
+                    event.Skip();
+                });
             } catch (const std::exception& error) {
                 std::println(stderr, "Search continuation scenario: {:d}/{:d}", next_, scenarios.size());
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());

@@ -14,6 +14,7 @@ from report_paths import report_path
 CONTEXT_CASE = 'original_editor_context_menu'
 SWAP_CASE = 'original_clipboard_swap'
 FOCUS_CASE = 'native_windows_clipboard_focus_transfer'
+SEARCH_CASE = 'original_search_continuation'
 # CTest omits an unbuilt executable's command from its JSON listing. Keep the
 # inspected predecessor targets explicit so cold investigations can build them.
 PREFIX_TARGETS = (
@@ -38,8 +39,14 @@ def plan(cmake_dir, scenario):
         ['ctest', '--test-dir', str(cmake_dir), '-C', 'Release', '--show-only=json-v1'],
         text=True, encoding='utf-8'))['tests']
     names = [case['name'] for case in cases]
-    required = (FOCUS_CASE if scenario == 'focus-transfer' else
-                SWAP_CASE if scenario in ('swap', 'swap-prefix', 'ci-swap-prefix') else CONTEXT_CASE)
+    if scenario == 'focus-transfer':
+        required = FOCUS_CASE
+    elif scenario == 'search':
+        required = SEARCH_CASE
+    elif scenario in ('swap', 'swap-prefix', 'ci-swap-prefix'):
+        required = SWAP_CASE
+    else:
+        required = CONTEXT_CASE
     if required not in names:
         raise SystemExit(f'Required registered test is missing: {required}')
     if scenario == 'prefix':
@@ -51,6 +58,9 @@ def plan(cmake_dir, scenario):
     elif scenario == 'clipboard':
         selected = [cases[names.index(CONTEXT_CASE)]]
         targets = ('context_menu',)  # Includes its existing clipboard_peer dependency.
+    elif scenario == 'search':
+        selected = [cases[names.index(SEARCH_CASE)]]
+        targets = ('search_continuation',)
     else:
         selected = [cases[names.index(required)]]
         targets = ('clipboard_smoke',)  # Includes its existing clipboard_peer dependency.
@@ -151,7 +161,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('plan', 'build', 'run'))
     parser.add_argument('--scenario',
-                        choices=('prefix', 'clipboard', 'swap', 'swap-prefix', 'ci-swap-prefix', 'focus-transfer'),
+                        choices=('prefix', 'clipboard', 'swap', 'swap-prefix', 'ci-swap-prefix', 'focus-transfer', 'search'),
                         default='prefix')
     parser.add_argument('--cmake-dir', type=Path, default=ci.BUILD / 'cmake')
     parser.add_argument('--report-dir', type=Path, required=True)

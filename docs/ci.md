@@ -91,11 +91,21 @@ selection and the native targets built for it.
 | `swap-prefix` | Original registered order through `original_clipboard_swap` (currently 87 cases) | Thirty-nine inspected predecessor targets and their existing dependencies |
 | `ci-swap-prefix` | Full CI's original prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
 | `focus-transfer` | One hundred native Ctrl+K exchanges, validating Unicode bytes, reversed selection and both real foreground handoffs | `clipboard_smoke` and its existing peer dependency |
+| `search` | Original 13-scenario search-continuation case, retaining its 60-second timeout | `search_continuation`; hosted investigation keeps optimized debug symbols and WER crash dumps |
 
 On Windows, `focus-transfer` uses the existing keyboard-state and native
 accelerator translation path; it does not insert physical keys with `SendInput`.
 Both clipboard endpoints additionally require their top-level HWND to equal
 `GetForegroundWindow()`. The original first-pointer probe still uses `SendInput`.
+
+The workflow-only `escape-x11` scenario builds `extra_escape` and repeats its
+original registered case in four independent X11 sessions, matching the failing
+hosted run's concurrency. `runs` is the attempt count per session. Each attempt
+retains fresh reports; the first failure stops new attempts while already-running
+cases finish and retain their own verdicts. Presentation setup observes actual
+GTK mapping and focus before hiding the frame. The original 250 ms delayed map,
+3 s activation deadline, 60 s case timeout, and all input/result assertions remain.
+This fixture sends wx logs to captured stderr instead of opening modal log dialogs.
 
 The prefix target list is explicit because CTest omits command paths for unbuilt
 executables. Update `PREFIX_TARGETS` when a new predecessor requires another
@@ -123,12 +133,13 @@ An applicable earlier full-suite result remains evidence for unchanged code;
 run related cases during diagnosis, then the complete required checks on the
 final proposed fix.
 
-The separate **Windows investigation** workflow is manually dispatched, using
-the same Windows 2025 runner,
-pinned SDK, compiler cache and display conditions. Its default is three prefix
+The separate **Native investigation** workflow is manually dispatched. Its
+Windows scenarios use the same Windows 2025 runner, pinned SDK, compiler cache
+and display conditions. Its default is three prefix
 attempts, with the original independent reference controls run first. It builds
-only the selected native targets and does not run Linux, coverage, packaging or
-the complete Windows suite. Keep investigation branches without a pull request
+only the selected native targets; `escape-x11` instead uses Ubuntu 26.04 and the
+private X11 sessions described above. Neither job runs coverage, packaging or a
+complete platform suite. Keep investigation branches without a pull request
 so their pushes do not trigger the ordinary PR workflows. Pushes alone do not
 start the investigation either. Transfer final changes to the repair PR once
 ready for complete validation.
