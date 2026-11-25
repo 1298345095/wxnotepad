@@ -11,6 +11,7 @@
 #include <wx/translation.h>
 #include <algorithm>
 #include <array>
+#include <utility>
 #ifdef __WXGTK__
 #include <wx/control.h>
 #include <wx/dc.h>
@@ -188,6 +189,16 @@ wxString DocumentSize(intptr_t bytes) {
     }
     return wxString::Format("%.2f %s", size, units[unit]);
 }
+AppCommand EolCommand(Scintilla::EndOfLine mode) {
+    if (mode == Scintilla::EndOfLine::CrLf) return AppCommand::EolCrLf;
+    if (mode == Scintilla::EndOfLine::Lf) return AppCommand::EolLf;
+    return AppCommand::EolCr;
+}
+AppCommand NextEolCommand(Scintilla::EndOfLine mode) {
+    if (mode == Scintilla::EndOfLine::CrLf) return AppCommand::EolLf;
+    if (mode == Scintilla::EndOfLine::Lf) return AppCommand::EolCr;
+    return AppCommand::EolCrLf;
+}
 } // namespace
 
 void EditorFrame::UpdatePositionStatus() {
@@ -329,17 +340,17 @@ void EditorFrame::CreatePositionStatus() {
         int id = wxNOT_FOUND;
         switch (StatusFieldAtPoint(*status, event.GetPosition())) {
         case StatusField::Line:
-            id = AppCommand::GoToLine;
+            id = std::to_underlying(AppCommand::GoToLine);
             break;
         case StatusField::Matches:
             id = wxID_FIND;
             break;
         case StatusField::Encoding:
-            id = AppCommand::ChooseEncoding;
+            id = std::to_underlying(AppCommand::ChooseEncoding);
             break;
         case StatusField::Scheme: {
-            wxMenu* scheme = nullptr;
-            if (GetMenuBar()->FindItem(AppCommand::SyntaxScheme, &scheme)) PopupMenu(scheme);
+            if (wxMenu* scheme = nullptr; GetMenuBar()->FindItem(std::to_underlying(AppCommand::SyntaxScheme), &scheme))
+                PopupMenu(scheme);
             break;
         }
         case StatusField::Overtype:
@@ -348,9 +359,7 @@ void EditorFrame::CreatePositionStatus() {
             break;
         case StatusField::Eol: {
             const auto mode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-            id = mode == Scintilla::EndOfLine::CrLf ? AppCommand::EolLf
-                 : mode == Scintilla::EndOfLine::Lf ? AppCommand::EolCr
-                                                    : AppCommand::EolCrLf;
+            id = std::to_underlying(NextEolCommand(mode));
             break;
         }
         default:
@@ -365,13 +374,11 @@ void EditorFrame::CreatePositionStatus() {
     status->Bind(wxEVT_LEFT_UP, [this, status](wxMouseEvent& event) {
         wxRect rectangle;
         if (status->GetFieldRect(StatusField::Zoom, rectangle) && rectangle.Contains(event.GetPosition())) {
-            wxCommandEvent command(wxEVT_MENU, AppCommand::ZoomLevel);
+            wxCommandEvent command(wxEVT_MENU, std::to_underlying(AppCommand::ZoomLevel));
             GetEventHandler()->ProcessEvent(command);
         } else if (status->GetFieldRect(StatusField::Eol, rectangle) && rectangle.Contains(event.GetPosition())) {
             const auto mode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-            const int id = mode == Scintilla::EndOfLine::CrLf ? AppCommand::EolCrLf
-                           : mode == Scintilla::EndOfLine::Lf ? AppCommand::EolLf
-                                                              : AppCommand::EolCr;
+            const int id = std::to_underlying(EolCommand(mode));
             wxCommandEvent command(wxEVT_MENU, id);
             GetEventHandler()->ProcessEvent(command);
         }

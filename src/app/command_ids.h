@@ -4,8 +4,7 @@
 
 // Commands shared by menus, toolbar buttons and status fields use an identity
 // independent of their translated label, accelerator or menu position.
-namespace AppCommand {
-enum : int {
+enum class AppCommand : int {
     NewWindow = wxID_HIGHEST + 1,
     SaveCopy,
     WordWrap,
@@ -22,4 +21,3 @@ enum : int {
     EolLf,
     EolCr
 };
-} // namespace AppCommand
