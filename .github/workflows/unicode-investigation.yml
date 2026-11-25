@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   reproduce:
-    name: Compare original and settled Unicode viewport assertions
+    name: Verify viewport invalidation and cleaned regression fixtures
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:
@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cmake --build .ci/build/cmake --parallel --target unicode_controls 2>&1 | tee .ci/reports/unicode-build.log
+          cmake --build .ci/build/cmake --parallel --target unicode_controls unicode_controls_clean 2>&1 | tee .ci/reports/unicode-build.log
       - name: Repeat original registered assertion with retained observations
         shell: bash
         run: python -X utf8 .github/scripts/unicode_investigation.py

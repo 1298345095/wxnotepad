@@ -16,13 +16,25 @@ REPORTS = ROOT / '.ci/reports/unicode-settled-investigation'
 SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
 PHASES = {
-    'core-normal': {
-        'tests': ['original_unicode_controls'], 'runs': 3, 'timeout': 90,
+    'fixed-observed-normal': {
+        'tests': ['original_unicode_controls'], 'runs': 5, 'timeout': 90,
         'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
     },
-    'core-scale2': {
-        'tests': ['original_unicode_controls_scale2'], 'runs': 3, 'timeout': 90,
+    'fixed-observed-scale2': {
+        'tests': ['original_unicode_controls_scale2'], 'runs': 25, 'timeout': 90,
         'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
+    },
+    'clean-normal': {
+        'tests': ['investigation_unicode_clean'], 'runs': 10, 'timeout': 90,
+    },
+    'clean-scale2': {
+        'tests': ['investigation_unicode_clean_scale2'], 'runs': 25, 'timeout': 90,
+    },
+    'clean-wayland': {
+        'tests': ['investigation_unicode_clean'], 'runs': 6, 'timeout': 90, 'backend': 'wayland',
+    },
+    'clean-wayland-scale2': {
+        'tests': ['investigation_unicode_clean_scale2'], 'runs': 6, 'timeout': 90, 'backend': 'wayland',
     },
 }
 

@@ -164,3 +164,9 @@ add_editor_test(replace_regex replace_regular_expression 30)
 add_editor_test(replace_all_regex replace_all_regular_expression 30)
 add_editor_test(replace_selection replace_in_selection 30)
 add_editor_test(search_backslashes original_search_backslashes 30)
+
+# Temporary comparison target for the cleaned regression fixture.
+add_editor_test(unicode_controls_clean investigation_unicode_clean 60)
+add_test(NAME investigation_unicode_clean_scale2 COMMAND unicode_controls_clean)
+set_tests_properties(investigation_unicode_clean_scale2 PROPERTIES TIMEOUT 60
+    ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
