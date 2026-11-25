@@ -12,16 +12,33 @@ import ci
 
 ROOT = ci.ROOT
 BUILD = ROOT / '.ci/build/cmake'
-REPORTS = ROOT / '.ci/reports/unicode-minimal-investigation'
+REPORTS = ROOT / '.ci/reports/unicode-settled-investigation'
 SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
 PHASES = {
-    'full-control': {
-        'tests': ['original_unicode_controls'], 'runs': 10, 'timeout': 90,
+    'red-none': {
+        'tests': ['original_unicode_controls'], 'runs': 1, 'timeout': 90,
+        'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1', 'WXNOTEPAD_UNICODE_OBSERVATION': 'none'},
     },
-    'minimal': {
-        'tests': ['original_unicode_controls'], 'runs': 500, 'timeout': 90,
+    'red-cached': {
+        'tests': ['original_unicode_controls'], 'runs': 1, 'timeout': 90,
         'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1'},
+    },
+    'settled-minimal': {
+        'tests': ['original_unicode_controls'], 'runs': 100, 'timeout': 90,
+        'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1', 'WXNOTEPAD_UNICODE_SETTLED': '1'},
+    },
+    'settled-full': {
+        'tests': ['original_unicode_controls'], 'runs': 25, 'timeout': 90,
+        'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
+    },
+    'settled-wayland': {
+        'tests': ['original_unicode_controls'], 'runs': 15, 'timeout': 90, 'backend': 'wayland',
+        'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
+    },
+    'settled-scale2': {
+        'tests': ['original_unicode_controls_scale2'], 'runs': 15, 'timeout': 90,
+        'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
     },
 }
 
@@ -61,7 +78,7 @@ def session(phase, number, helper):
         environment.update(selected.get('environment', {}))
         isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
-                    'x11', sys.executable, SCRIPT, '--session', directory]
+                    selected.get('backend', 'x11'), sys.executable, SCRIPT, '--session', directory]
         record['exit_code'] = ci.run(isolated, directory / 'session.log', environment, check=False)
         summary_path = directory / 'attempts/summary.json'
         if summary_path.exists():
@@ -90,7 +107,7 @@ def main():
     results = []
     summary_path = REPORTS / 'summary.json'
     for phase in PHASES:
-        # Finish the full control before opening the reduced reproduction sessions.
+        # Each phase changes only the stated fixture input or observation mode.
         # Failure in one session is retained while the others finish independently.
         with ThreadPoolExecutor(max_workers=SESSIONS) as workers:
             pending = [workers.submit(session, phase, number, helper) for number in range(1, SESSIONS + 1)]

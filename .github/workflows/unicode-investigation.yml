@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   reproduce:
-    name: Observe reduced Unicode wrapping sequence
+    name: Compare original and settled Unicode viewport assertions
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:

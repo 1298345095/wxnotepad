@@ -87,18 +87,32 @@ void Table(EditorFrame* frame, int command) {
     NativeSearch::Command(frame, command);
     std::puts("PASS: exact original representation table, core exclusions, painted extent and unchanged history");
 }
+enum class ObservationMode { None, Cached, Measuring };
 class GeometryDiagnostics {
 public:
-    GeometryDiagnostics(EditorFrame* frame, bool minimal) : frame_(frame), minimal_(minimal) {}
+    GeometryDiagnostics(EditorFrame* frame, bool minimal, ObservationMode observation)
+        : frame_(frame), minimal_(minimal), observation_(observation) {}
     ~GeometryDiagnostics() {
         const bool failed = std::uncaught_exceptions() != 0;
-        std::fprintf(stderr, "[DEBUG-unicode-275] outcome=%s mode=%s samples=%zu", failed ? "fail" : "pass",
-                     minimal_ ? "minimal" : "full", count_);
+        const char* observation = observation_ == ObservationMode::None        ? "none"
+                                  : observation_ == ObservationMode::Measuring ? "measuring"
+                                                                               : "cached";
+        std::fprintf(stderr, "[DEBUG-unicode-275] outcome=%s mode=%s observation=%s samples=%zu",
+                     failed ? "fail" : "pass", minimal_ ? "minimal" : "full", observation, count_);
         for (size_t index = 0; index < count_; ++index) {
             const auto& sample = samples_[index];
-            if (sample.rows >= 0)
-                std::fprintf(stderr, " %s_z%d=%lld@%dx%d", sample.phase, sample.zoom,
-                             static_cast<long long>(sample.rows), sample.editorClient.x, sample.editorClient.y);
+            if (sample.rows >= 0) {
+                std::fprintf(stderr, " %s_z%d=%lld", sample.phase, sample.zoom, static_cast<long long>(sample.rows));
+                if (observation_ == ObservationMode::Measuring)
+                    std::fprintf(stderr, "@measured:%dx%d", sample.editorClientMeasured.x,
+                                 sample.editorClientMeasured.y);
+#ifdef __WXGTK__
+                if (observation_ != ObservationMode::None)
+                    std::fprintf(stderr, "@cache:%dx%d,valid:%d,gtk:%dx%d", sample.editorClientCache.x,
+                                 sample.editorClientCache.y, sample.editorClientValid, sample.gtkEditorClient.width,
+                                 sample.gtkEditorClient.height);
+#endif
+            }
         }
         if (count_) PrintGeometry(samples_[count_ - 1]);
         std::fputc('\n', stderr);
@@ -113,20 +127,35 @@ public:
         }
         std::fflush(stderr);
     }
-    void Observe(const char* phase, intptr_t rows = -1) {
-        auto* editor = frame_->Editor();
+    void Observe(const char* phase, int zoom = 0, intptr_t rows = -1) {
         auto& sample = samples_[count_++];
         sample.phase = phase;
-        sample.zoom = static_cast<int>(editor->Send(Scintilla::Message::GetZoom));
-        // Reuse the assertion's original WrapCount read: it can itself lay out a line.
+        sample.zoom = zoom;
         sample.rows = rows;
-        sample.frame = frame_->GetSize();
-        sample.frameClient = frame_->GetClientSize();
-        sample.editor = editor->GetSize();
-        sample.editorClient = editor->GetClientSize();
+        if (observation_ == ObservationMode::None) return;
+        auto* editor = frame_->Editor();
 #ifdef __WXGTK__
-        sample.gtkFrame = Allocation(GTK_WIDGET(frame_->GetHandle()));
-        sample.gtkEditor = Allocation(GTK_WIDGET(editor->GetHandle()));
+        // These public wxGTK fields are read directly: GetClientSize can measure GTK widgets.
+        sample.frameCache = {frame_->m_width, frame_->m_height};
+        sample.frameClientCache = {frame_->m_clientWidth, frame_->m_clientHeight};
+        sample.frameClientValid = frame_->m_useCachedClientSize;
+        sample.editorCache = {editor->m_width, editor->m_height};
+        sample.editorClientCache = {editor->m_clientWidth, editor->m_clientHeight};
+        sample.editorClientValid = editor->m_useCachedClientSize;
+#endif
+        if (observation_ == ObservationMode::Measuring) {
+            // Retain the old measuring getters only in the explicit A/B control.
+            sample.frameMeasured = frame_->GetSize();
+            sample.frameClientMeasured = frame_->GetClientSize();
+            sample.editorMeasured = editor->GetSize();
+            sample.editorClientMeasured = editor->GetClientSize();
+        }
+#ifdef __WXGTK__
+        // gtk_widget_get_allocation only copies the widget's current allocation.
+        sample.gtkFrame = Allocation(frame_->m_widget);
+        sample.gtkFrameClient = Allocation(frame_->GetConnectWidget());
+        sample.gtkEditor = Allocation(editor->m_widget);
+        sample.gtkEditorClient = Allocation(editor->GetConnectWidget());
 #endif
     }
 
@@ -135,20 +164,39 @@ private:
         const char* phase = "";
         int zoom = 0;
         intptr_t rows = -1;
-        wxSize frame, frameClient, editor, editorClient;
+        wxSize frameMeasured, frameClientMeasured, editorMeasured, editorClientMeasured;
 #ifdef __WXGTK__
-        wxRect gtkFrame, gtkEditor;
+        wxSize frameCache, frameClientCache, editorCache, editorClientCache;
+        bool frameClientValid = false;
+        bool editorClientValid = false;
+        wxRect gtkFrame, gtkFrameClient, gtkEditor, gtkEditorClient;
 #endif
     };
-    static void PrintGeometry(const Sample& sample) {
-        std::fprintf(stderr, " frame=%dx%d frame_client=%dx%d editor=%dx%d editor_client=%dx%d", sample.frame.x,
-                     sample.frame.y, sample.frameClient.x, sample.frameClient.y, sample.editor.x, sample.editor.y,
-                     sample.editorClient.x, sample.editorClient.y);
+    void PrintGeometry(const Sample& sample) const {
+        if (observation_ == ObservationMode::None) return;
 #ifdef __WXGTK__
-        std::fprintf(stderr, " gtk_frame=%d,%d,%dx%d gtk_editor=%d,%d,%dx%d", sample.gtkFrame.x, sample.gtkFrame.y,
-                     sample.gtkFrame.width, sample.gtkFrame.height, sample.gtkEditor.x, sample.gtkEditor.y,
-                     sample.gtkEditor.width, sample.gtkEditor.height);
+        std::fprintf(stderr,
+                     " frame_cache=%dx%d frame_client_cache=%dx%d frame_client_valid=%d"
+                     " editor_cache=%dx%d editor_client_cache=%dx%d editor_client_valid=%d",
+                     sample.frameCache.x, sample.frameCache.y, sample.frameClientCache.x, sample.frameClientCache.y,
+                     sample.frameClientValid, sample.editorCache.x, sample.editorCache.y, sample.editorClientCache.x,
+                     sample.editorClientCache.y, sample.editorClientValid);
+        std::fprintf(stderr,
+                     " gtk_frame=%d,%d,%dx%d gtk_frame_client=%d,%d,%dx%d"
+                     " gtk_editor=%d,%d,%dx%d gtk_editor_client=%d,%d,%dx%d",
+                     sample.gtkFrame.x, sample.gtkFrame.y, sample.gtkFrame.width, sample.gtkFrame.height,
+                     sample.gtkFrameClient.x, sample.gtkFrameClient.y, sample.gtkFrameClient.width,
+                     sample.gtkFrameClient.height, sample.gtkEditor.x, sample.gtkEditor.y, sample.gtkEditor.width,
+                     sample.gtkEditor.height, sample.gtkEditorClient.x, sample.gtkEditorClient.y,
+                     sample.gtkEditorClient.width, sample.gtkEditorClient.height);
 #endif
+        if (observation_ == ObservationMode::Measuring)
+            std::fprintf(stderr,
+                         " frame_measured=%dx%d frame_client_measured=%dx%d"
+                         " editor_measured=%dx%d editor_client_measured=%dx%d",
+                         sample.frameMeasured.x, sample.frameMeasured.y, sample.frameClientMeasured.x,
+                         sample.frameClientMeasured.y, sample.editorMeasured.x, sample.editorMeasured.y,
+                         sample.editorClientMeasured.x, sample.editorClientMeasured.y);
     }
 #ifdef __WXGTK__
     static wxRect Allocation(GtkWidget* widget) {
@@ -159,23 +207,52 @@ private:
 #endif
     EditorFrame* frame_;
     bool minimal_;
+    ObservationMode observation_;
     // Fixed storage and delayed output keep diagnostics out of the event loop.
     std::array<Sample, 10> samples_{};
     size_t count_ = 0;
 };
-void Geometry(EditorFrame* frame, int command, bool minimal) {
+void Geometry(EditorFrame* frame, int command, bool minimal, ObservationMode observation, bool settledViewport) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    GeometryDiagnostics diagnostics(frame, minimal);
+    GeometryDiagnostics diagnostics(frame, minimal, observation);
     diagnostics.Observe("before-resize");
-    frame->SetSize(360, 300);
+    const auto requested = frame->FromDIP(wxSize(360, 300));
+    if (settledViewport) {
+        frame->SetClientSize(requested);
+        frame->Layout();
+    } else {
+        frame->SetSize(360, 300);
+    }
+    const auto settled = [frame, editor, requested] {
+        if (frame->GetClientSize() != requested || editor->GetSize() != requested) return false;
+#ifdef __WXGTK__
+        const auto drawingSizeIs = [](GdkWindow* window, const wxSize& size) {
+            return window && gdk_window_get_width(window) == size.x && gdk_window_get_height(window) == size.y;
+        };
+        GtkAllocation allocation;
+        gtk_widget_get_allocation(GTK_WIDGET(editor->GetHandle()), &allocation);
+        return wxSize(allocation.width, allocation.height) == requested &&
+               drawingSizeIs(frame->GTKGetDrawingWindow(), requested) &&
+               drawingSizeIs(editor->GTKGetDrawingWindow(), editor->GetClientSize());
+#else
+        return true;
+#endif
+    };
+    const auto paint = [&] {
+        if (settledViewport)
+            NativePaint::Complete(editor, settled);
+        else
+            NativeFold::Paint(editor);
+    };
+    if (settledViewport) paint();
     diagnostics.Observe("resize-requested");
     if (!minimal) {
         TestEditor::ResetStream(editor,
                                 "A\xe2\x81\xa0"
                                 "B",
                                 5, 5);
-        NativeFold::Paint(editor);
+        paint();
         diagnostics.Observe("resize-painted");
         const int left = static_cast<int>(editor->Send(PointXFromPosition, 0, 1));
         const int right = static_cast<int>(editor->Send(PointXFromPosition, 0, 4));
@@ -188,7 +265,7 @@ void Geometry(EditorFrame* frame, int command, bool minimal) {
                     editor->Send(PositionFromPointClose, right - 1, top + height / 2) == 4,
                 "hit-testing the representation returns character boundaries, never a UTF-8 continuation byte");
         NativeSearch::Command(frame, command);
-        NativeFold::Paint(editor);
+        paint();
         Require(NativePaint::Read(editor, area) != visible,
                 "the named representation changes actual native widget pixels when hidden");
         NativeSearch::Command(frame, command);
@@ -203,20 +280,20 @@ void Geometry(EditorFrame* frame, int command, bool minimal) {
     diagnostics.Observe("wrap-enabled");
     for (const auto zoom : {100, 150}) {
         editor->Send(SetZoom, zoom);
-        NativeFold::Paint(editor);
+        paint();
         const auto visibleRows = editor->Send(WrapCount, 0);
-        diagnostics.Observe("visible", visibleRows);
+        diagnostics.Observe("visible", zoom, visibleRows);
         const auto before = minimal ? std::nullopt : std::optional{DocumentState(frame)};
         NativeSearch::Command(frame, command);
-        NativeFold::Paint(editor);
+        paint();
         const auto hiddenRows = editor->Send(WrapCount, 0);
-        diagnostics.Observe("hidden", hiddenRows);
+        diagnostics.Observe("hidden", zoom, hiddenRows);
         Require(visibleRows > hiddenRows && (minimal || DocumentState(frame) == *before),
                 "representation widths reflow wrapped rows at normal and enlarged zoom without changing the document");
         NativeSearch::Command(frame, command);
-        NativeFold::Paint(editor);
+        paint();
         const auto restoredRows = editor->Send(WrapCount, 0);
-        diagnostics.Observe("restored", restoredRows);
+        diagnostics.Observe("restored", zoom, restoredRows);
         Require(restoredRows == visibleRows, "showing names restores the original wrapped layout");
     }
     if (minimal) {
@@ -226,7 +303,7 @@ void Geometry(EditorFrame* frame, int command, bool minimal) {
     NativeSearch::Command(frame, wrap);
     editor->Send(SetZoom, 100);
     editor->Send(SetXOffset, 100);
-    NativeFold::Paint(editor);
+    paint();
     Require(editor->Send(GetXOffset) > 0, "unwrapped representations participate in horizontal scrolling");
     TestEditor::RequireVirtualRectangleUnchanged(
         editor,
@@ -354,6 +431,13 @@ public:
     bool OnInit() override {
         wxString mode;
         const bool minimal = wxGetEnv("WXNOTEPAD_UNICODE_MINIMAL", &mode) && mode == "1";
+        wxString viewport;
+        const bool settledViewport = wxGetEnv("WXNOTEPAD_UNICODE_SETTLED", &viewport) && viewport == "1";
+        wxString requestedObservation;
+        wxGetEnv("WXNOTEPAD_UNICODE_OBSERVATION", &requestedObservation);
+        const auto observation = requestedObservation == "none"        ? ObservationMode::None
+                                 : requestedObservation == "measuring" ? ObservationMode::Measuring
+                                                                       : ObservationMode::Cached;
 #ifdef __WXMSW__
         if (wxGetenv("WXNOTEPAD_UNICODE_DPI96"))
             Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,
@@ -361,6 +445,7 @@ public:
 #endif
         settings_.values = OriginalSettings{};
         settings_.values.wordWrap = false;
+        if (settledViewport) settings_.values.showMenu = false;
         auto* frame = new EditorFrame(&settings_);
         TestEditor::UseFixedWidthFont(frame->Editor());
         TestRenderer::Select(frame->Editor());
@@ -371,7 +456,7 @@ public:
             Require(frame->Editor()->GetDPI().y == 96, "the complementary native representation fixture uses 96 DPI");
 #endif
         frame->Show();
-        NativeKeys::AfterPresentation(frame, [this, frame, minimal](bool presented) {
+        NativeKeys::AfterPresentation(frame, [this, frame, minimal, observation, settledViewport](bool presented) {
             try {
                 Require(presented, "the owned native editor is presented before representation painting");
                 auto* menu = frame->GetMenuBar();
@@ -385,7 +470,7 @@ public:
                 Require(item->IsChecked(), "native menu enables the representation preference");
                 std::puts("PASS: original native Unicode control display command and default");
                 if (!minimal) Table(frame, id);
-                Geometry(frame, id, minimal);
+                Geometry(frame, id, minimal, observation, settledViewport);
                 if (!minimal) Lifecycle(frame, id);
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
