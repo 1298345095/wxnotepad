@@ -1,0 +1,67 @@
+name: Unicode layout investigation
+
+on:
+  push:
+    branches: [codex/investigate-unicode-layout]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unicode-investigation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reproduce:
+    name: Observe original Unicode wrapping in private X11 sessions
+    runs-on: ubuntu-26.04
+    timeout-minutes: 35
+    env:
+      PYTHONUTF8: '1'
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
+      - name: Set up compiler cache
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.19.0
+      - name: Configure
+        shell: bash
+        env:
+          CXXFLAGS: '-g1'
+        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
+      - name: Build observed Unicode fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build .ci/build/cmake --parallel --target unicode_controls 2>&1 | tee .ci/reports/unicode-build.log
+      - name: Repeat original registered assertion with retained observations
+        shell: bash
+        run: python -X utf8 .github/scripts/unicode_investigation.py
+      - name: Preserve investigation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: unicode-layout-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/build/cmake/unicode_controls
+            .ci/build/cmake/compile_commands.json
+            tests/unicode_controls.cpp
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

@@ -9,8 +9,12 @@
 #include <string>
 #include <tuple>
 #include <cstdio>
+#include <exception>
 #include <print>
 #include <stdexcept>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 
 namespace {
 void Require(bool value, const char* message) {
@@ -82,15 +86,93 @@ void Table(EditorFrame* frame, int command) {
     NativeSearch::Command(frame, command);
     std::puts("PASS: exact original representation table, core exclusions, painted extent and unchanged history");
 }
+class GeometryDiagnostics {
+public:
+    explicit GeometryDiagnostics(EditorFrame* frame) : frame_(frame) {}
+    ~GeometryDiagnostics() {
+        const bool failed = std::uncaught_exceptions() != 0;
+        std::fprintf(stderr, "[DEBUG-unicode-275] outcome=%s samples=%zu", failed ? "fail" : "pass", count_);
+        for (size_t index = 0; index < count_; ++index) {
+            const auto& sample = samples_[index];
+            if (sample.rows >= 0)
+                std::fprintf(stderr, " %s_z%d=%lld@%dx%d", sample.phase, sample.zoom,
+                             static_cast<long long>(sample.rows), sample.editorClient.x, sample.editorClient.y);
+        }
+        if (count_) PrintGeometry(samples_[count_ - 1]);
+        std::fputc('\n', stderr);
+        if (failed) {
+            for (size_t index = 0; index < count_; ++index) {
+                const auto& sample = samples_[index];
+                std::fprintf(stderr, "[DEBUG-unicode-275] phase=%s zoom=%d rows=%lld", sample.phase, sample.zoom,
+                             static_cast<long long>(sample.rows));
+                PrintGeometry(sample);
+                std::fputc('\n', stderr);
+            }
+        }
+        std::fflush(stderr);
+    }
+    void Observe(const char* phase, intptr_t rows = -1) {
+        auto* editor = frame_->Editor();
+        auto& sample = samples_[count_++];
+        sample.phase = phase;
+        sample.zoom = static_cast<int>(editor->Send(Scintilla::Message::GetZoom));
+        // Reuse the assertion's original WrapCount read: it can itself lay out a line.
+        sample.rows = rows;
+        sample.frame = frame_->GetSize();
+        sample.frameClient = frame_->GetClientSize();
+        sample.editor = editor->GetSize();
+        sample.editorClient = editor->GetClientSize();
+#ifdef __WXGTK__
+        sample.gtkFrame = Allocation(GTK_WIDGET(frame_->GetHandle()));
+        sample.gtkEditor = Allocation(GTK_WIDGET(editor->GetHandle()));
+#endif
+    }
+
+private:
+    struct Sample {
+        const char* phase = "";
+        int zoom = 0;
+        intptr_t rows = -1;
+        wxSize frame, frameClient, editor, editorClient;
+#ifdef __WXGTK__
+        wxRect gtkFrame, gtkEditor;
+#endif
+    };
+    static void PrintGeometry(const Sample& sample) {
+        std::fprintf(stderr, " frame=%dx%d frame_client=%dx%d editor=%dx%d editor_client=%dx%d", sample.frame.x,
+                     sample.frame.y, sample.frameClient.x, sample.frameClient.y, sample.editor.x, sample.editor.y,
+                     sample.editorClient.x, sample.editorClient.y);
+#ifdef __WXGTK__
+        std::fprintf(stderr, " gtk_frame=%d,%d,%dx%d gtk_editor=%d,%d,%dx%d", sample.gtkFrame.x, sample.gtkFrame.y,
+                     sample.gtkFrame.width, sample.gtkFrame.height, sample.gtkEditor.x, sample.gtkEditor.y,
+                     sample.gtkEditor.width, sample.gtkEditor.height);
+#endif
+    }
+#ifdef __WXGTK__
+    static wxRect Allocation(GtkWidget* widget) {
+        GtkAllocation allocation;
+        gtk_widget_get_allocation(widget, &allocation);
+        return {allocation.x, allocation.y, allocation.width, allocation.height};
+    }
+#endif
+    EditorFrame* frame_;
+    // Fixed storage and delayed output keep diagnostics out of the event loop.
+    std::array<Sample, 10> samples_{};
+    size_t count_ = 0;
+};
 void Geometry(EditorFrame* frame, int command) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
+    GeometryDiagnostics diagnostics(frame);
+    diagnostics.Observe("before-resize");
     frame->SetSize(360, 300);
+    diagnostics.Observe("resize-requested");
     TestEditor::ResetStream(editor,
                             "A\xe2\x81\xa0"
                             "B",
                             5, 5);
     NativeFold::Paint(editor);
+    diagnostics.Observe("resize-painted");
     const int left = static_cast<int>(editor->Send(PointXFromPosition, 0, 1));
     const int right = static_cast<int>(editor->Send(PointXFromPosition, 0, 4));
     const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, 1));
@@ -113,18 +195,24 @@ void Geometry(EditorFrame* frame, int command) {
     TestEditor::ResetStream(editor, line.c_str());
     const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
     NativeSearch::Command(frame, wrap);
+    diagnostics.Observe("wrap-enabled");
     for (const auto zoom : {100, 150}) {
         editor->Send(SetZoom, zoom);
         NativeFold::Paint(editor);
         const auto visibleRows = editor->Send(WrapCount, 0);
+        diagnostics.Observe("visible", visibleRows);
         const auto before = DocumentState(frame);
         NativeSearch::Command(frame, command);
         NativeFold::Paint(editor);
-        Require(visibleRows > editor->Send(WrapCount, 0) && DocumentState(frame) == before,
+        const auto hiddenRows = editor->Send(WrapCount, 0);
+        diagnostics.Observe("hidden", hiddenRows);
+        Require(visibleRows > hiddenRows && DocumentState(frame) == before,
                 "representation widths reflow wrapped rows at normal and enlarged zoom without changing the document");
         NativeSearch::Command(frame, command);
         NativeFold::Paint(editor);
-        Require(editor->Send(WrapCount, 0) == visibleRows, "showing names restores the original wrapped layout");
+        const auto restoredRows = editor->Send(WrapCount, 0);
+        diagnostics.Observe("restored", restoredRows);
+        Require(restoredRows == visibleRows, "showing names restores the original wrapped layout");
     }
     NativeSearch::Command(frame, wrap);
     editor->Send(SetZoom, 100);
