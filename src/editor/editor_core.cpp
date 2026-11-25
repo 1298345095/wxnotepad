@@ -444,6 +444,9 @@ void EditorControl::Core::Draw(wxDC& dc) {
     if (!surface->Initialised()) throw std::bad_alloc();
     surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
+    // GTK scrollbars can change the client width without a size event.
+    // Reconcile wrapping with the viewport already read for this paint.
+    if (Wrapping() && wrapWidth != size.x - vs.textStart - vs.rightMarginWidth) NeedWrapping();
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
     paintState = PaintState::painting;
     paintingAllText = true;
