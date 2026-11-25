@@ -372,9 +372,11 @@ public:
             mouseReceipts_.Record("failed-before-capture");
             mouseReceipts_.Dump();
             std::fprintf(stderr,
-                         "[DEBUG-context-activation] previous=%p previousThread=%lu attached=%d afterDetach=%p "
+                         "[DEBUG-context-activation] previous=%p previousThread=%lu uiThread=%lu driverThread=%lu "
+                         "attached=%d afterDetach=%p "
                          "console=%p stdoutType=%lu stderrType=%lu\n",
                          static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
+                         focusActivation.uiThreadId, focusActivation.attachmentThreadId,
                          focusActivation.usedInputAttachment, static_cast<void*>(focusActivation.foregroundAfterDetach),
                          static_cast<void*>(GetConsoleWindow()), GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)),
                          GetFileType(GetStdHandle(STD_ERROR_HANDLE)));
@@ -842,11 +844,12 @@ void Check(EditorFrame* frame, bool pointerProbe) {
     TestEditor::RequireSelection(editor, 10, 6, "pointer popup preserves reversed selection outside pointer");
 #ifdef __WXMSW__
     std::fprintf(stderr,
-                 "[DEBUG-context-activation] firstPointerDelivered previous=%p previousThread=%lu attached=%d "
+                 "[DEBUG-context-activation] firstPointerDelivered previous=%p previousThread=%lu uiThread=%lu "
+                 "driverThread=%lu attached=%d "
                  "afterActivation=%p frame=%p\n",
                  static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
-                 focusActivation.usedInputAttachment, static_cast<void*>(focusActivation.foregroundAfterDetach),
-                 static_cast<void*>(frame->GetHandle()));
+                 focusActivation.uiThreadId, focusActivation.attachmentThreadId, focusActivation.usedInputAttachment,
+                 static_cast<void*>(focusActivation.foregroundAfterDetach), static_cast<void*>(frame->GetHandle()));
 #endif
     if (pointerProbe) {
         std::puts("PASS: first native pointer popup preserves reversed selection");
