@@ -246,8 +246,12 @@ public:
             if (stageFile.IsOpened()) stageFile.ReadAll(&stage, wxConvUTF8);
             std::println(stderr, "Peer response read failed request={:?} stage={:?} peerAlive={}",
                          command.utf8_string(), stage.utf8_string(), wxProcess::Exists(static_cast<int>(process_)));
+            wxString pasteLog;
+            wxFFile pasteFile(directory_ + "/peer-paste.log", "rb");
+            if (pasteFile.IsOpened() && pasteFile.ReadAll(&pasteLog, wxConvUTF8))
+                std::println(stderr, "{}", pasteLog.utf8_string());
             NativeFailure::Capture(command == "quit" ? "context-clipboard-cleanup" : "context-clipboard",
-                                   {static_cast<long>(wxGetProcessId())});
+                                   {static_cast<long>(wxGetProcessId()), process_});
         }
 #endif
         Require(responded, "independent clipboard peer responds before deadline");

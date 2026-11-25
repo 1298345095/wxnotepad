@@ -7,6 +7,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <chrono>
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <string_view>
@@ -138,6 +139,47 @@ private:
 #endif
         return frame_->IsActive() && text_->HasFocus();
     }
+#ifdef __WXMSW__
+    struct PasteObservation {
+        HWND opener = GetOpenClipboardWindow();
+        HWND owner = GetClipboardOwner();
+        HWND foreground = GetForegroundWindow();
+        HWND focus = ::GetFocus();
+        DWORD sequence = GetClipboardSequenceNumber();
+        bool unicode = IsClipboardFormatAvailable(CF_UNICODETEXT) != FALSE;
+    };
+    void RecordNativePaste(const PasteObservation& before, const PasteObservation& after) const {
+        wxFFile log(directory_ + "/peer-paste.log", "ab");
+        for (const auto& [phase, observation] : {std::pair{"before", before}, std::pair { "after", after }}) {
+            DWORD openerPid = 0;
+            GetWindowThreadProcessId(observation.opener, &openerPid);
+            log.Write(wxString::Format(
+                          "[DEBUG-paste-272] %s sequence=%lu unicode=%d opener=%p openerPid=%lu owner=%p foreground=%p "
+                          "focus=%p textLength=%zu\n",
+                          phase, observation.sequence, observation.unicode, static_cast<void*>(observation.opener),
+                          openerPid, static_cast<void*>(observation.owner), static_cast<void*>(observation.foreground),
+                          static_cast<void*>(observation.focus), text_->GetValue().length()),
+                      wxConvUTF8);
+        }
+        if (!text_->GetValue().empty()) return;
+        const bool opened = ::OpenClipboard(static_cast<HWND>(frame_->GetHandle())) != FALSE;
+        const auto openError = GetLastError();
+        const auto data = opened ? GetClipboardData(CF_UNICODETEXT) : nullptr;
+        const auto dataError = GetLastError();
+        const auto bytes = data ? GlobalSize(data) : 0;
+        auto* text = data ? static_cast<const wchar_t*>(GlobalLock(data)) : nullptr;
+        const auto characters = text ? std::find(text, text + bytes / sizeof(wchar_t), L'\0') - text : -1;
+        if (text) GlobalUnlock(data);
+        if (opened) ::CloseClipboard();
+        log.Write(wxString::Format(
+                      "[DEBUG-paste-272] failed-native-paste rawOpen=%d openError=%lu data=%p dataError=%lu bytes=%zu "
+                      "characters=%lld controlStyle=%lx enabled=%d editable=%d\n",
+                      opened, openError, static_cast<void*>(data), dataError, bytes, static_cast<long long>(characters),
+                      GetWindowLongW(static_cast<HWND>(text_->GetHandle()), GWL_STYLE), text_->IsEnabled(),
+                      text_->IsEditable()),
+                  wxConvUTF8);
+    }
+#endif
     void Poll() {
         if (std::chrono::steady_clock::now() - started_ > std::chrono::seconds(180)) {
             frame_->Destroy();
@@ -534,7 +576,14 @@ private:
             text_->Clear();
             pendingPaste_ = true;
             RecordStage("pasting-native-text");
+#ifdef __WXMSW__
+            const PasteObservation before;
+#endif
             text_->Paste();
+#ifdef __WXMSW__
+            const PasteObservation after;
+            RecordNativePaste(before, after);
+#endif
             RecordStage("native-paste-returned");
 #ifdef __WXMSW__
         } else if (command == "hold") {
