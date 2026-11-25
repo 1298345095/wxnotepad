@@ -5,6 +5,11 @@ import json
 from pathlib import Path
 import re
 import struct
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools'))
+from report_paths import report_path
 
 
 def region(data, offset, size):
@@ -223,17 +228,10 @@ def inspect(artifact, source, baseline=None):
     return report
 
 
-def report_path(path, directory):
-    resolved = path.resolve()
-    if not resolved.is_relative_to(directory):
-        raise ValueError(f'Report path must stay within the working directory: {path}')
-    return resolved
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifact-dir', type=Path, required=True)
-    parser.add_argument('--source-root', type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument('--source-root', type=Path, default=ROOT)
     parser.add_argument('--baseline-report', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     arguments = parser.parse_args()

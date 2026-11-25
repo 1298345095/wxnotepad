@@ -51,6 +51,159 @@ foreground/active/focus handles recorded before launching the capture helper are
 the failure snapshot; the separately labelled window metadata is collected after
 helper startup. The helper does not disable or activate the test windows, repaint
 them, or pump their events.
+Foreground metadata includes the native window class, process ID and process
+image so a competing window can be identified without capturing its pixels.
+The Windows `native_windows_failure_capture` regression compares the configured
+Python path with its compiled value and launches the real capture helper against
+an owned hidden window. CMake normalizes path separators before embedding the
+Python executable in a C++ string literal.
+Ordinary Windows CI runs the complete registered suite once. The historical
+context-menu prefix replay, hundred first-pointer processes and twenty complete
+menu processes are available only through the manual `ci-swap-prefix`
+investigation below. The complete suite retains all menu and clipboard assertions,
+native input paths and original timeouts. Missing clipboard-peer responses retain
+their protocol stage and failure capture, with the failed read frozen before
+collection. Failure screenshots, native metadata and test reports remain in the
+ordinary evidence artifact.
+The clipboard peer also accepts shutdown while an empty native paste is pending;
+the failed paste is not answered with a successful result. The registered
+`native_windows_clipboard_peer_lifecycle` case checks this path with the real peer
+and verifies that it exits after acknowledging shutdown.
+
+On Windows the stock clipboard peer reserves clipboard access immediately before
+its single native EDIT paste, after wx's capacity preflight, using the remainder
+of its existing three-second activation budget. The control uses its platform
+maximum text length so a busy optional length probe cannot truncate fixture data.
+The lifecycle case also holds the clipboard in a foreign process for 250 ms and
+checks an exact Unicode payload above 64 KiB. The original empty-paste shutdown
+checks and 30-second case guard remain. IPC readers wait for readable UTF-8
+responses within their original five-second deadline, including transient Windows
+sharing violations; the document and clipboard result assertions are unchanged.
+
+The Windows editor fixture grants foreground permission to its specific clipboard
+peer PID before publishing a request; the foreground peer grants it back to the
+editor PID before publishing its response. `AllowSetForegroundWindow` only grants
+permission and does not activate either window. Each sender must actually own the
+foreground, and the existing single activation call and native foreground/focus
+assertions still decide whether the handoff succeeded. Failed editor activations
+retain both grant receipts and the effective foreground-lock timeout.
+
+### Focused Windows investigations
+
+During diagnosis, use `windows_context_investigation.py` against a configured
+Windows build. It selects registered CTest cases and uses the existing Windows
+desktop guard, serial execution, assertions and case timeouts. Every attempt
+keeps a separate JUnit/log directory; a failed attempt stops further attempts.
+Report roots must be fresh. The saved `plan.json` identifies the actual test
+selection and the native targets built for it.
+
+| Scenario | Registered cases | Build scope |
+| --- | --- | --- |
+| `prefix` | Original order through `original_editor_context_menu` (currently 43 cases) | Fourteen inspected predecessor targets and their existing dependencies |
+| `clipboard` | Complete `original_editor_context_menu`, repeated without interleaving other cases | `context_menu`, including its `clipboard_peer` dependency |
+| `swap` | Existing `original_clipboard_swap`, retaining its 180-second case timeout | `clipboard_smoke`, including its `clipboard_peer` dependency |
+| `swap-prefix` | Original registered order through `original_clipboard_swap` (currently 87 cases) | Thirty-nine inspected predecessor targets and their existing dependencies |
+| `ci-swap-prefix` | Historical context-menu prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
+| `focus-transfer` | One hundred native Ctrl+K exchanges, validating Unicode bytes, reversed selection and both real foreground handoffs | `clipboard_smoke` and its existing peer dependency |
+| `search` | Original 13-scenario search-continuation case, retaining its 60-second timeout | `search_continuation`; hosted investigation keeps optimized debug symbols and WER crash dumps |
+
+On Windows, `focus-transfer` uses the existing keyboard-state and native
+accelerator translation path; it does not insert physical keys with `SendInput`.
+Both clipboard endpoints additionally require their top-level HWND to equal
+`GetForegroundWindow()`. The original first-pointer probe still uses `SendInput`.
+
+The workflow-only `escape-x11` scenario builds `extra_escape` and repeats its
+original registered case in four independent X11 sessions, matching the failing
+hosted run's concurrency. `runs` is the attempt count per session. Each attempt
+retains fresh reports; the first failure stops new attempts while already-running
+cases finish and retain their own verdicts. Presentation setup observes actual
+GTK mapping and focus before hiding the frame. The original 250 ms delayed map,
+3 s activation deadline, 60 s case timeout, and all input/result assertions remain.
+This fixture sends wx logs to captured stderr instead of opening modal log dialogs.
+
+The prefix target list is explicit because CTest omits command paths for unbuilt
+executables. Update `PREFIX_TARGETS` when a new predecessor requires another
+program. Test selection still comes from the current CTest registration.
+
+CLI report and foreground-state destinations must resolve within the invocation's
+working directory, including through symlinks. Build input paths can remain
+external. To store reports on F: from Git Bash, invoke the absolute script from
+the selected evidence directory:
+
+```bash
+repo_path=$(pwd -W)
+mkdir -p /f/evidence
+cd /f/evidence
+python -X utf8 "$repo_path/.github/scripts/windows_context_investigation.py" build --scenario prefix --cmake-dir F:/native-build/cmake --report-dir context-build-01
+python -X utf8 "$repo_path/.github/scripts/windows_context_investigation.py" run --scenario prefix --runs 3 --cmake-dir F:/native-build/cmake --report-dir context-prefix-01
+```
+
+Use the `plan` action to inspect the selection without compiling or opening test
+windows. Use `--scenario clipboard` for iterations confined to the clipboard peer.
+The peer-shutdown regression remains in the ordinary full suite and can be
+selected separately through `ci.py test` when that behavior changes; it does not
+alter clipboard state between the reproduction's complete-menu processes.
+An applicable earlier full-suite result remains evidence for unchanged code;
+run related cases during diagnosis, then the complete required checks on the
+final proposed fix.
+
+The separate **Native investigation** workflow is manually dispatched. Its
+Windows scenarios use the same Windows 2025 runner, pinned SDK, compiler cache
+and display conditions. Its default is three prefix
+attempts, with the original independent reference controls run first. It builds
+only the selected native targets; `escape-x11` instead uses Ubuntu 26.04 and the
+private X11 sessions described above. Neither job runs coverage, packaging or a
+complete platform suite. Keep investigation branches without a pull request
+so their pushes do not trigger the ordinary PR workflows. Pushes alone do not
+start the investigation either. Transfer final changes to the repair PR once
+ready for complete validation.
+
+Dispatch the registered workflow against an investigation branch, for example:
+
+```text
+gh workflow run windows-investigation.yml --ref codex/windows-context-investigation-2026-11-24 -f scenario=clipboard -f runs=20
+```
+
+To replay the former CI context-menu prelude before Swap, select
+`scenario=ci-swap-prefix` and `runs=1`. Each attempt preserves separate prefix,
+pointer, complete-menu and Swap-prefix reports and stops at the first failure.
+The pointer probe retains its original native gesture and reversed-selection
+checks; the complete-menu repetitions retain the registered CTest case and its
+sixty-second timeout. Use `zero_foreground_timeout=true` to match the foreground
+policy prepared by ordinary hosted Windows CI.
+
+Its **Windows context investigation** check is separate from required merge
+checks. The ordinary CI/Quality/CodeQL/Fuzz workflows and full acceptance remain
+unchanged; a focused success does not establish full-suite acceptance.
+
+The optional `hide_terminal` workflow input defaults to false. Set it to true
+for an isolated hosted comparison after terminal foreground interference has
+been observed. The runner hides only verified WindowsTerminal.exe windows with
+the observed Cascadia class; it keeps their processes running and records the
+before/after visibility and process state in `terminal-isolation.json`. The same
+registered cases, gestures, response deadlines and assertions still run.
+
+The separate `zero_foreground_timeout` input is an opt-in hosted experiment.
+It reads the Windows foreground lock timeout, attempts to set it to zero for
+that desktop session, verifies the effective value, and restores the original
+setting in the runner's `finally` block. `foreground-timeout.json` retains the
+setter, readback and restoration results. It does not persist the setting in
+the user profile, and the CLI rejects this option outside GitHub Actions.
+An already-zero value or rejected setter cannot establish that foreground lock
+caused a test failure. This does not change test deadlines or assertions. See
+[the primary-source research](observations/windows-ci-foreground.md).
+
+Ordinary hosted Windows CI uses the same foreground-session helper before its
+native checks, then restores the original value in an `always()` cleanup step.
+It records both values in `windows-foreground.json` and does not change local
+developer desktop settings. Native focus helpers keep the application's input
+queue independent; they do not attach it to Terminal or clipboard peers.
+The runner's measured original timeout was 2,147,483,647 ms, so ordinary
+foreground activation was rejected after the first process. With a temporary
+zero timeout and no input attachment, 20 complete menu cases passed with
+Terminal hidden, then 20 passed with Terminal visible. The second run also
+recorded existing successful cross-process handoffs. Test inputs, assertions,
+menu/peer deadlines and CTest timeouts remain unchanged.
 
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use

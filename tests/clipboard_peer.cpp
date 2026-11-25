@@ -10,8 +10,56 @@
 #include <cstring>
 #include <memory>
 #include <string_view>
+#include "native_focus_helpers.h"
 #ifdef __WXMSW__
 #include <richedit.h>
+class NativePasteReservation final {
+public:
+    NativePasteReservation(HWND window, std::chrono::steady_clock::time_point deadline) {
+        for (;;) {
+            if (::OpenClipboard(window)) {
+                acquired_ = true;
+                break;
+            }
+            if (std::chrono::steady_clock::now() >= deadline) break;
+            ::Sleep(RetryDelayMilliseconds);
+        }
+    }
+    ~NativePasteReservation() {
+        if (acquired_) ::CloseClipboard();
+    }
+    NativePasteReservation(const NativePasteReservation&) = delete;
+    NativePasteReservation& operator=(const NativePasteReservation&) = delete;
+    bool Acquired() const { return acquired_; }
+
+private:
+    static constexpr DWORD RetryDelayMilliseconds = 1;
+    bool acquired_ = false;
+};
+class NativePasteText final : public wxTextCtrl {
+public:
+    using wxTextCtrl::wxTextCtrl;
+    void PreparePaste(std::chrono::steady_clock::time_point deadline) {
+        deadline_ = deadline;
+        clipboardReady_ = false;
+    }
+    bool ClipboardReady() const { return clipboardReady_; }
+
+protected:
+    WXLRESULT MSWDefWindowProc(WXUINT message, WXWPARAM word, WXLPARAM parameter) override {
+        if (message != WM_PASTE) return wxTextCtrl::MSWDefWindowProc(message, word, parameter);
+        // wx first probes the clipboard to adjust the EDIT capacity. Reserve
+        // access only afterward, immediately before its one native Paste.
+        const NativePasteReservation clipboard(static_cast<HWND>(GetHandle()), deadline_);
+        clipboardReady_ = clipboard.Acquired();
+        if (!clipboardReady_) return 0;
+        return wxTextCtrl::MSWDefWindowProc(message, word, parameter);
+    }
+
+private:
+    std::chrono::steady_clock::time_point deadline_;
+    bool clipboardReady_ = false;
+};
 #endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -24,11 +72,25 @@ class PeerApp final : public wxApp {
 public:
     bool OnInit() override {
         wxLog::SetActiveTarget(new wxLogStderr);
+#ifdef __WXMSW__
+        if (argc != 2 && argc != 3) return false;
+        if (argc == 3 && (!wxString(argv[2]).ToULong(&foregroundRecipient_) || foregroundRecipient_ == 0 ||
+                          foregroundRecipient_ == ASFW_ANY))
+            return false;
+#else
         if (argc != 2) return false;
+#endif
         directory_ = argv[1];
         RecordStage("starting");
         frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad clipboard test peer");
+#ifdef __WXMSW__
+        text_ = new NativePasteText(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
+        // wx's optional length probe can fail while another process holds the
+        // clipboard. Keep the stock EDIT able to receive every fixture size.
+        text_->SetMaxLength(0);
+#else
         text_ = new wxTextCtrl(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
+#endif
         text_->Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
             if (event.GetKeyCode() == WXK_SHIFT) gestureReceived_ = true;
             event.Skip();
@@ -68,6 +130,9 @@ private:
     std::chrono::steady_clock::time_point activationStarted_;
     bool gestureRequested_ = false;
     bool gestureReceived_ = false;
+#ifdef __WXMSW__
+    DWORD foregroundRecipient_ = 0;
+#endif
 #ifdef __WXGTK__
     std::chrono::steady_clock::time_point renderReadyAt_;
 #endif
@@ -78,6 +143,17 @@ private:
         if (file.IsOpened()) file.Write(wxString::FromUTF8(stage), wxConvUTF8);
     }
     void Respond(const wxString& value) {
+#ifdef __WXMSW__
+        if (foregroundRecipient_) {
+            const bool granted = NativeFocus::GrantTo(static_cast<HWND>(frame_->GetHandle()), foregroundRecipient_);
+            wxFFile receipt(directory_ + "/peer-foreground", "wb");
+            if (receipt.IsOpened())
+                receipt.Write(wxString::Format("sender=%lu recipient=%lu granted=%d foreground=%p",
+                                               GetCurrentProcessId(), foregroundRecipient_, granted,
+                                               static_cast<void*>(GetForegroundWindow())),
+                              wxConvUTF8);
+        }
+#endif
         RecordStage("writing-response");
         {
             wxFFile file(directory_ + "/response.tmp", "wb");
@@ -99,7 +175,7 @@ private:
         // Raising this window can deliver native focus before the driver
         // claims its request. Keep that request until it is acknowledged so
         // a late claim cannot replace the following gesture with an empty file.
-        if (!acknowledged || !frame_->IsActive() || !text_->HasFocus()) {
+        if (!acknowledged || !HasNativeFocus()) {
             if (std::chrono::steady_clock::now() - activationStarted_ > std::chrono::seconds(3)) {
                 pendingCommand_.clear();
                 Respond("native focus unavailable");
@@ -132,6 +208,12 @@ private:
         Perform(command);
         return;
     }
+    bool HasNativeFocus() const {
+#ifdef __WXMSW__
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
+#endif
+        return frame_->IsActive() && text_->HasFocus();
+    }
     void Poll() {
         if (std::chrono::steady_clock::now() - started_ > std::chrono::seconds(180)) {
             frame_->Destroy();
@@ -150,12 +232,10 @@ private:
             ContinuePendingCommand();
             return;
         }
-        if (pendingPaste_) {
-            // GTK delivers the native clipboard request asynchronously.
-            if (!text_->GetValue().empty()) {
-                pendingPaste_ = false;
-                Respond(text_->GetValue());
-            }
+        // GTK delivers the native clipboard request asynchronously.
+        if (pendingPaste_ && !text_->GetValue().empty()) {
+            pendingPaste_ = false;
+            Respond(text_->GetValue());
             return;
         }
         const auto request = directory_ + "/request";
@@ -166,6 +246,9 @@ private:
             wxFFile file(request, "rb");
             file.ReadAll(&command, wxConvUTF8);
         }
+        // A failed paste must remain failed, but must not strand the owned
+        // peer when its caller unwinds and asks it to quit.
+        if (pendingPaste_ && command != "quit") return;
         wxRemoveFile(request);
         RecordStage("request-claimed");
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste" ||
@@ -526,7 +609,19 @@ private:
         } else if (command == "paste") {
             text_->Clear();
             pendingPaste_ = true;
+            RecordStage("pasting-native-text");
+#ifdef __WXMSW__
+            auto* nativeText = static_cast<NativePasteText*>(text_);
+            nativeText->PreparePaste(activationStarted_ + std::chrono::seconds(3));
+#endif
             text_->Paste();
+            RecordStage("native-paste-returned");
+#ifdef __WXMSW__
+            if (!nativeText->ClipboardReady()) {
+                pendingPaste_ = false;
+                Respond("native clipboard unavailable");
+            }
+#endif
 #ifdef __WXMSW__
         } else if (command == "hold") {
             Respond(::OpenClipboard(static_cast<HWND>(frame_->GetHandle())) ? "held" : "failed");

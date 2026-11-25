@@ -6,6 +6,8 @@
 #include "editor_test_helpers.h"
 #include "native_key_helpers.h"
 #include "file_helpers.h"
+#include "clipboard_peer_response.h"
+#include "native_focus_helpers.h"
 #include "native_paint_helpers.h"
 #include "windows_failure_capture.h"
 #include <wx/wx.h>
@@ -212,7 +214,11 @@ public:
         Require(wxMkdir(directory_), "create owned clipboard peer IPC directory");
         wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
         executable.SetName("clipboard_peer");
-        process_ = wxExecute("\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"", wxEXEC_ASYNC);
+        wxString launch = "\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"";
+#ifdef __WXMSW__
+        launch += wxString::Format(" %lu", wxGetProcessId());
+#endif
+        process_ = wxExecute(launch, wxEXEC_ASYNC);
         Require(process_ > 0, "launch independent stock-widget clipboard peer");
         Require(Request("ready") == "ready", "clipboard peer maps its native window");
     }
@@ -225,6 +231,9 @@ public:
         }
     }
     wxString Request(const wxString& command) {
+#ifdef __WXMSW__
+        NativeFocus::GrantTo(static_cast<HWND>(frame_->GetHandle()), static_cast<DWORD>(process_));
+#endif
         if (wxFileExists(directory_ + "/response")) wxRemoveFile(directory_ + "/response");
         {
             wxFFile file(directory_ + "/request.tmp", "wb");
@@ -232,13 +241,21 @@ public:
         }
         Require(wxRenameFile(directory_ + "/request.tmp", directory_ + "/request", true), "publish clipboard request");
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-        while (!wxFileExists(directory_ + "/response") && std::chrono::steady_clock::now() < deadline) {
-            wxYield();
-            wxMilliSleep(10);
+        const auto received = ClipboardPeerResponse::Wait(directory_ + "/response", deadline);
+        const bool responded = received.has_value();
+#ifdef __WXMSW__
+        if (!responded) {
+            wxString stage;
+            wxFFile stageFile(directory_ + "/peer-stage", "rb");
+            if (stageFile.IsOpened()) stageFile.ReadAll(&stage, wxConvUTF8);
+            std::println(stderr, "Peer response read failed request={:?} stage={:?} peerAlive={}",
+                         command.utf8_string(), stage.utf8_string(), wxProcess::Exists(static_cast<int>(process_)));
+            NativeFailure::Capture(command == "quit" ? "context-clipboard-cleanup" : "context-clipboard",
+                                   {static_cast<long>(wxGetProcessId()), process_});
         }
-        wxString response;
-        wxFFile file(directory_ + "/response", "rb");
-        Require(file.IsOpened() && file.ReadAll(&response), "independent clipboard peer responds before deadline");
+#endif
+        Require(responded, "independent clipboard peer responds before deadline");
+        wxString response = *received;
         if (response == "failed" || response.Contains("unavailable")) {
             wxString stage;
             wxFFile stageFile(directory_ + "/peer-stage", "rb");
@@ -764,6 +781,15 @@ void CheckClipboardCommands(EditorFrame* frame, Popup& popup, const wxPoint& scr
     };
     popup.Open(wxDefaultPosition);
     popup.inspect = {};
+#ifdef __WXMSW__
+    constexpr size_t LargeClipboardCharacters = 64 * 1024;
+    const std::string large(LargeClipboardCharacters, 'x');
+    TestEditor::ResetStream(editor, large.c_str(), 0, large.size());
+    popup.action = wxID_COPY;
+    popup.Open(wxDefaultPosition);
+    Require(peer.Request("paste") == wxString::FromUTF8(large),
+            "stock native Paste retains all copied text beyond its default EDIT capacity");
+#endif
 }
 
 void CheckScrolledPlacement(EditorFrame* frame, Popup& popup) {
@@ -796,7 +822,7 @@ void CheckScrolledPlacement(EditorFrame* frame, Popup& popup) {
     popup.anchor.reset();
 }
 
-void Check(EditorFrame* frame) {
+void Check(EditorFrame* frame, bool pointerProbe) {
     auto* editor = frame->Editor();
     Focus(frame);
     TestEditor::UseFixedWidthFont(editor);
@@ -811,6 +837,10 @@ void Check(EditorFrame* frame) {
     const auto screen = editor->ClientToScreen(wxPoint(editor->GetClientSize().x - 40, editor->GetClientSize().y - 40));
     popup.Open(screen);
     TestEditor::RequireSelection(editor, 10, 6, "pointer popup preserves reversed selection outside pointer");
+    if (pointerProbe) {
+        std::puts("PASS: first native pointer popup preserves reversed selection");
+        return;
+    }
     popup.Open(wxDefaultPosition);
     TestEditor::RequireSelection(editor, 10, 6, "keyboard popup preserves caret and selection direction");
     Require(TestEditor::Text(frame) == "alpha beta\nnext line" && !editor->Send(CanUndo) && editor->Send(CanRedo),
@@ -952,6 +982,15 @@ void Check(EditorFrame* frame) {
     CheckScrolledPlacement(frame, popup);
     std::puts("PASS: original native popup groups, pointer and keyboard selection preservation, cancellation");
 }
+void CheckLocalized(EditorFrame* frame, unsigned language) {
+    Focus(frame);
+    TestEditor::ResetStream(frame->Editor(), "alpha beta", 10, 6);
+    Popup popup(frame, language);
+    popup.Open(wxDefaultPosition, WXK_MENU);
+    popup.Open(frame->Editor()->ClientToScreen(wxPoint(150, 80)));
+    TestEditor::RequireSelection(frame->Editor(), 10, 6, "localized native popup preserves directed selection");
+}
+
 class ContextMenuApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -979,6 +1018,7 @@ public:
             argc == 3 && wxString(argv[1]) == "--localized"
                 ? (wxString(argv[2]) == "zh_CN" ? SimplifiedChineseLanguage : TraditionalChineseLanguage)
                 : EnglishLanguage;
+        const bool pointerProbe = argc == 2 && wxString(argv[1]) == "--pointer-probe";
         AppLocalization::Initialize(static_cast<uint16_t>(language));
         auto* frame = new EditorFrame;
         frame->SetTitle("wxnotepad context menu");
@@ -987,19 +1027,13 @@ public:
         // Private pointer coordinates are output-local under Weston.
         frame->ShowFullScreen(true);
 #endif
-        NativeKeys::AfterPresentation(frame, [this, frame, language](bool presented) {
+        NativeKeys::AfterPresentation(frame, [this, frame, language, pointerProbe](bool presented) {
             try {
                 Require(presented, "native compositor presents context-menu test editor");
                 if (language == EnglishLanguage) {
-                    Check(frame);
+                    Check(frame, pointerProbe);
                 } else {
-                    Focus(frame);
-                    TestEditor::ResetStream(frame->Editor(), "alpha beta", 10, 6);
-                    Popup popup(frame, language);
-                    popup.Open(wxDefaultPosition, WXK_MENU);
-                    popup.Open(frame->Editor()->ClientToScreen(wxPoint(150, 80)));
-                    TestEditor::RequireSelection(frame->Editor(), 10, 6,
-                                                 "localized native popup preserves directed selection");
+                    CheckLocalized(frame, language);
                 }
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());

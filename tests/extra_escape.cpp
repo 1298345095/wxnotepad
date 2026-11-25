@@ -6,6 +6,8 @@
 #include "editor_test_helpers.h"
 #include "file_command_driver.h"
 #include <wx/weakref.h>
+#include <wx/apptrait.h>
+#include <wx/log.h>
 #include <memory>
 #include <string_view>
 #include <thread>
@@ -23,14 +25,28 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 #ifdef __WXGTK__
+void SettleX11Frame(EditorFrame* frame, bool presented) {
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    gdk_display_sync(gtk_widget_get_display(widget));
+    const auto deadline = std::chrono::steady_clock::now() + NativeKeys::FocusAcknowledgementTimeout;
+    do {
+        NativeSearch::DispatchEvents(frame);
+        if ((gtk_widget_get_mapped(widget) != FALSE) == presented && frame->IsActive() == presented) return;
+        wxMilliSleep(10);
+    } while (std::chrono::steady_clock::now() < deadline);
+}
 void DelayedX11Activation(EditorFrame* frame) {
     auto* widget = GTK_WIDGET(frame->GetHandle());
     if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
     wxString focus;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focus), "use the owned private X11 input mailbox");
+    // X11 Show() can defer mapping until WM frame extents arrive. Hiding before
+    // that first map completes can leave a late map notification after Hide().
+    SettleX11Frame(frame, true);
+    Require(gtk_widget_get_mapped(widget) && frame->IsActive(),
+            "owned X11 activation starts from a fully presented active frame");
     frame->Hide();
-    wxYield();
-    gdk_display_sync(gtk_widget_get_display(widget));
+    SettleX11Frame(frame, false);
     Require(!gtk_widget_get_mapped(widget) && !frame->IsActive(), "owned X11 activation begins genuinely unmapped");
     struct Observation {
         bool cancelled = false;
@@ -585,8 +601,14 @@ void CheckMinimize(EditorFrame* frame) {
     editor->Send(SetSavePoint);
     std::puts("PASS: native Escape precedence, exact modifiers, minimize, restore and working history");
 }
+// Let wxWidgets create and own the stderr target, including during startup.
+class EscapeAppTraits final : public wxGUIAppTraits {
+public:
+    wxLog* CreateLogTarget() override { return std::make_unique<wxLogStderr>().release(); }
+};
 class EscapeApp final : public wxApp {
 public:
+    wxAppTraits* CreateTraits() override { return std::make_unique<EscapeAppTraits>().release(); }
     bool OnInit() override {
         settings_ =
             argc == 4
