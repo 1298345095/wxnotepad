@@ -2491,10 +2491,16 @@ void RunClipboardScenario(EditorFrame* frame, EditorControl* editor, Peer& peer)
         if (shapes == "focus-transfer") {
             constexpr unsigned TransferIterations = 100;
             for (unsigned transfer = 0; transfer < TransferIterations; ++transfer) {
-                const auto formats = peer.Request("utility-formats");
-                Require(formats == "data" || formats == "empty", "native peer completed its foreground request");
+                TestEditor::ResetStream(editor, "AoldZ", 4, 1);
+                peer.OfferText("中文😀");
+                UtilityShortcut(frame, 'K', true);
+                Require(Text(editor) == "A中文😀Z", "native Ctrl+K exchanges the reversed Unicode selection");
+                TestEditor::RequireSelection(editor, 11, 1, "native Ctrl+K retains reversed UTF-8 byte endpoints");
+                Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                        "native peer receives the original cut bytes after the keyboard focus handoff");
             }
-            std::println("PASS: {} independent native peer/editor foreground handoffs", TransferIterations);
+            std::println("PASS: {} native Ctrl+K exchanges with independent peer/editor foreground handoffs",
+                         TransferIterations);
         } else if (shapes == "swap-ansi-readonly")
             SwapDefaultReadOnly(frame, editor, peer);
         else if (shapes == "swap-ansi-caret")
