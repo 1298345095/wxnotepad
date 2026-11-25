@@ -127,6 +127,14 @@ public:
         wxString response;
         wxFFile file(directory_ + "/response", "rb");
         Require(file.ReadAll(&response, wxConvUTF8), "read owned peer response");
+        if (wxFileExists(directory_ + "/peer-focus-diagnostic")) {
+            wxString diagnostic;
+            wxFFile diagnosticFile(directory_ + "/peer-focus-diagnostic", "rb");
+            diagnosticFile.ReadAll(&diagnostic, wxConvUTF8);
+            std::fputs(diagnostic.utf8_string().c_str(), stderr);
+            diagnosticFile.Close();
+            wxRemoveFile(directory_ + "/peer-focus-diagnostic");
+        }
         if (response == "failed" || response == "native focus unavailable" || response == "native gesture unavailable")
             throw std::runtime_error("independent peer " + command.ToStdString() + ": " + response.ToStdString());
         if (command == "copy") SettleClipboard();
