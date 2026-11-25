@@ -202,7 +202,7 @@ msgstr ""
 msgid "&Copy"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Copy\tCtrl+C"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr ""
 msgid "&Current toolbar buttons:"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Customize Schemes...\tCtrl+F12"
 msgstr ""
 
@@ -237,7 +237,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr ""
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr ""
 
@@ -254,7 +254,7 @@ msgid "&Default..."
 msgstr ""
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Delete"
 msgstr ""
 
@@ -322,7 +322,7 @@ msgstr ""
 msgid "&Find All"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Find...\tCtrl+F"
 msgstr ""
 
@@ -334,7 +334,7 @@ msgstr ""
 msgid "&Goto"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr ""
 
@@ -433,7 +433,7 @@ msgstr ""
 msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&More...\tF9"
 msgstr ""
 
@@ -441,7 +441,7 @@ msgstr ""
 msgid "&Nanosecond (ns)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&New\tCtrl+N"
 msgstr ""
 
@@ -491,7 +491,7 @@ msgstr ""
 msgid "&Open File, Folder, Link, etc."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Open...\tCtrl+O"
 msgstr ""
 
@@ -512,7 +512,7 @@ msgstr ""
 msgid "&Paste"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Paste\tCtrl+V"
 msgstr ""
 
@@ -525,7 +525,7 @@ msgid "&Preview"
 msgstr ""
 
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Print...\tCtrl+P"
 msgstr ""
 
@@ -538,7 +538,7 @@ msgstr ""
 msgid "&Redo"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr ""
 
@@ -597,7 +597,7 @@ msgstr ""
 msgid "&Save"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Save\tCtrl+S"
 msgstr ""
 
@@ -642,7 +642,7 @@ msgstr ""
 msgid "&Strip trailing blanks when saving."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Syntax Scheme...\tF12"
 msgstr ""
 
@@ -681,7 +681,7 @@ msgstr ""
 msgid "&Undo"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr ""
 
@@ -693,7 +693,7 @@ msgstr ""
 msgid "&Unindent"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Unix/macOS (LF)"
 msgstr ""
 
@@ -718,7 +718,7 @@ msgstr ""
 msgid "&Wildcard search"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Windows (CR+LF)"
 msgstr ""
 
@@ -726,7 +726,7 @@ msgstr ""
 msgid "&With...\tAlt+Q"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr ""
 
@@ -1182,7 +1182,7 @@ msgstr ""
 msgid "Class"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr ""
 
@@ -1501,7 +1501,7 @@ msgstr ""
 msgid "Cu&t"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr ""
 
@@ -1693,7 +1693,7 @@ msgid "Draw Block Caret in &Selection"
 msgstr ""
 
 #. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "E&xit\tAlt+F4"
 msgstr ""
 
@@ -1771,7 +1771,7 @@ msgid "Example List"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
-#: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr ""
 
@@ -2621,7 +2621,7 @@ msgstr ""
 msgid "New &GUID"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "New &Window\tAlt+N"
 msgstr ""
 
@@ -2936,7 +2936,7 @@ msgstr ""
 msgid "Python Script"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr ""
 
@@ -3153,7 +3153,7 @@ msgstr ""
 msgid "Sa&ve Find Text\tAlt+F3"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Save &As...\tF6"
 msgstr ""
 
@@ -3166,7 +3166,7 @@ msgstr ""
 msgid "Save Back&up"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr ""
 
@@ -4211,15 +4211,15 @@ msgstr ""
 msgid "Zoom"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Zoom &Level..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr ""
 
