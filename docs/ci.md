@@ -126,6 +126,13 @@ Its **Windows context investigation** check is separate from required merge
 checks. The ordinary CI/Quality/CodeQL/Fuzz workflows and full acceptance remain
 unchanged; a focused success does not establish full-suite acceptance.
 
+The optional `hide_terminal` workflow input defaults to false. Set it to true
+for an isolated hosted comparison after terminal foreground interference has
+been observed. The runner hides only verified WindowsTerminal.exe windows with
+the observed Cascadia class; it keeps their processes running and records the
+before/after visibility and process state in `terminal-isolation.json`. The same
+registered cases, gestures, response deadlines and assertions still run.
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims

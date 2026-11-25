@@ -83,6 +83,16 @@ class WindowsInvestigation(unittest.TestCase):
         self.assertIn('--runs and --jobs must be positive', result.stderr)
         self.assertFalse(reports.exists())
 
+    def test_planning_cannot_hide_terminal_windows(self):
+        reports = self.directory / 'reports'
+        result = subprocess.run([sys.executable, '-X', 'utf8',
+                                 ROOT / '.github/scripts/windows_context_investigation.py', 'plan',
+                                 '--hide-terminal', '--report-dir', reports],
+                                capture_output=True, text=True, encoding='utf-8')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('--hide-terminal is only valid for run', result.stderr)
+        self.assertFalse(reports.exists())
+
     @unittest.skipUnless(sys.platform == 'win32', 'Canonical Windows desktop runner')
     def test_repetitions_use_real_ctest_and_reject_existing_evidence(self):
         self.configure()
