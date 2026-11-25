@@ -154,6 +154,7 @@ jobs:
       SCCACHE_GHA_ENABLED: 'true'
       SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
       INVESTIGATION_RUNS: ${{ inputs.runs }}
+      NATIVE_X11_SESSIONS: '4'
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -187,17 +188,32 @@ jobs:
         run: |
           python -X utf8 - <<'PY'
           import os
+          from concurrent.futures import ThreadPoolExecutor
           from pathlib import Path
           import sys
+          import threading
           sys.path.insert(0, '.github/scripts')
           import ci
 
           runs = int(os.environ['INVESTIGATION_RUNS'])
           if runs < 1:
               raise SystemExit('runs must be positive')
-          for attempt in range(1, runs + 1):
-              ci.test('x11', Path('.ci/build/cmake').resolve(), '^original_extra_escape$', 1,
-                      report_directory=Path('.ci/reports/escape-runs').resolve() / f'run-{attempt:03}')
+          sessions = int(os.environ['NATIVE_X11_SESSIONS'])
+          failed = threading.Event()
+          def check(session):
+              for attempt in range(1, runs + 1):
+                  if failed.is_set():
+                      return
+                  try:
+                      ci.test('x11', Path('.ci/build/cmake').resolve(), '^original_extra_escape$', 1,
+                              report_directory=Path('.ci/reports/escape-runs').resolve() /
+                              f'session-{session:03}' / f'run-{attempt:03}')
+                  except BaseException:
+                      failed.set()
+                      raise
+          with ThreadPoolExecutor(max_workers=sessions) as pool:
+              for result in pool.map(check, range(1, sessions + 1)):
+                  pass
           PY
       - name: Preserve investigation evidence
         if: always()
