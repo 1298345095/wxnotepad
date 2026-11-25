@@ -33,6 +33,10 @@ inline void Activate(HWND root, HWND focus, ActivationReceipt* receipt = nullptr
             if (attached) AttachThreadInput(attachmentThread, foregroundThread, FALSE);
         });
         controller.join();
+        // Cross-queue activation is asynchronous. Dispatch its pending sent
+        // notification before this UI thread sets focus or sends native input.
+        MSG message{};
+        PeekMessage(&message, nullptr, WM_NULL, WM_NULL, PM_NOREMOVE);
     } else {
         SetForegroundWindow(root);
     }
