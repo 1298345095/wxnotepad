@@ -190,10 +190,13 @@ void NativeClick(EditorFrame* frame, wxPoint screen, unsigned button) {
     if (GetForegroundWindow() != static_cast<HWND>(frame->GetHandle()))
         std::fprintf(stderr,
                      "[DEBUG-context-activation] beforePointer previous=%p previousThread=%lu uiThread=%lu "
-                     "driverThread=%lu attached=%d afterActivation=%p foreground=%p active=%p focus=%p frame=%p\n",
+                     "driverThread=%lu attached=%d accepted=%d insideDriver=%p afterActivation=%p foreground=%p "
+                     "active=%p focus=%p frame=%p\n",
                      static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
                      focusActivation.uiThreadId, focusActivation.attachmentThreadId,
-                     focusActivation.usedInputAttachment, static_cast<void*>(focusActivation.foregroundAfterDetach),
+                     focusActivation.usedInputAttachment, focusActivation.foregroundAccepted,
+                     static_cast<void*>(focusActivation.foregroundInsideDriver),
+                     static_cast<void*>(focusActivation.foregroundAfterDetach),
                      static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetActiveWindow()),
                      static_cast<void*>(::GetFocus()), static_cast<void*>(frame->GetHandle()));
     Require(GetForegroundWindow() == static_cast<HWND>(frame->GetHandle()),

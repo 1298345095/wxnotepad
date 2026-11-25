@@ -12,6 +12,8 @@ struct ActivationReceipt {
     DWORD uiThreadId = 0;
     DWORD attachmentThreadId = 0;
     bool usedInputAttachment = false;
+    bool foregroundAccepted = false;
+    HWND foregroundInsideDriver = nullptr;
     HWND foregroundAfterDetach = nullptr;
 };
 inline void Activate(HWND root, HWND focus, ActivationReceipt* receipt = nullptr) {
@@ -20,6 +22,8 @@ inline void Activate(HWND root, HWND focus, ActivationReceipt* receipt = nullptr
     const auto foregroundThread = GetWindowThreadProcessId(previousForeground, nullptr);
     DWORD attachmentThread = 0;
     bool attached = false;
+    bool accepted = false;
+    HWND insideDriver = nullptr;
     BringWindowToTop(root);
     if (foregroundThread && foregroundThread != uiThread) {
         // Keep the tested UI queue independent. A controller can attach to the
@@ -29,7 +33,8 @@ inline void Activate(HWND root, HWND focus, ActivationReceipt* receipt = nullptr
             PeekMessage(&message, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
             attachmentThread = GetCurrentThreadId();
             attached = AttachThreadInput(attachmentThread, foregroundThread, TRUE) != FALSE;
-            SetForegroundWindow(root);
+            accepted = SetForegroundWindow(root) != FALSE;
+            insideDriver = GetForegroundWindow();
             if (attached) AttachThreadInput(attachmentThread, foregroundThread, FALSE);
         });
         controller.join();
@@ -38,12 +43,13 @@ inline void Activate(HWND root, HWND focus, ActivationReceipt* receipt = nullptr
         MSG message{};
         PeekMessage(&message, nullptr, WM_NULL, WM_NULL, PM_NOREMOVE);
     } else {
-        SetForegroundWindow(root);
+        accepted = SetForegroundWindow(root) != FALSE;
     }
     SetActiveWindow(root);
     SetFocus(focus);
     if (receipt)
-        *receipt = {previousForeground, foregroundThread, uiThread, attachmentThread, attached, GetForegroundWindow()};
+        *receipt = {previousForeground, foregroundThread, uiThread,     attachmentThread,
+                    attached,           accepted,         insideDriver, GetForegroundWindow()};
 }
 } // namespace NativeFocus
 #endif
