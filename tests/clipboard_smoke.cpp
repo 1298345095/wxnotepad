@@ -1350,6 +1350,15 @@ void Utilities(EditorFrame* frame, EditorControl* editor, Peer& peer) {
             "independent owner publishes a non-text clipboard format");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(clearClipboard), "any native format enables Clear Clipboard");
+#ifdef __WXMSW__
+    Require(peer.Request("hold") == "held", "independent process holds the non-text clipboard during menu update");
+    const auto formatsWhileHeld = ::CountClipboardFormats();
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    const bool clearEnabledWhileHeld = frame->GetMenuBar()->IsEnabled(clearClipboard);
+    Require(peer.Request("release") == "released", "independent process releases the clipboard after menu update");
+    Require(formatsWhileHeld > 0, "native clipboard format count remains queryable while another process holds it");
+    Require(clearEnabledWhileHeld, "Clear Clipboard availability follows native format count without opening it");
+#endif
     Gesture(editor);
     NativeSearch::Command(frame, clearClipboard);
     Require(peer.Request("utility-formats") == "empty", "independent native process observes a cleared clipboard");

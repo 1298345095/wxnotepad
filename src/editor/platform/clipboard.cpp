@@ -66,8 +66,9 @@ bool GtkHasData() {
 bool EditorClipboard::HasData([[maybe_unused]] wxWindow& owner) {
     if (wxTheClipboard->IsOpened()) return false;
 #ifdef __WXMSW__
-    const NativeClipboard clipboard(static_cast<HWND>(owner.GetHandle()));
-    return clipboard && ::CountClipboardFormats() != 0;
+    // The format count needs no clipboard lock. Idle menu updates must not
+    // contend with another application's native Paste operation.
+    return ::CountClipboardFormats() != 0;
 #else
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
