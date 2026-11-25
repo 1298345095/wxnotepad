@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/original_settings_constants.h"
+#include <cstdint>
 #include <ScintillaTypes.h>
 #include <optional>
 

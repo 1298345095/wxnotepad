@@ -6,7 +6,9 @@
 #include <wx/menu.h>
 #include <wx/translation.h>
 #include "app/command_ids.h"
+#include "app/search_shortcuts.h"
 #include "app/dialogs/align_lines_dialog.h"
+#include "app/dialogs/dialog_layout.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
 #include "app/dialogs/go_to_line_dialog.h"
@@ -16,10 +18,14 @@
 #include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
+#include "editor/platform/native_encoding.h"
 #include "syntax/syntax_scheme.h"
 #include <array>
 #include <wx/accel.h>
 #include <wx/msgdlg.h>
+#include <wx/dialog.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
 
 wxMenu* EditorFrame::CreateEditMenu() {
     auto* edit = new wxMenu;
