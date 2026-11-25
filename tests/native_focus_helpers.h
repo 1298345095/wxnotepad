@@ -12,17 +12,13 @@ struct ActivationReceipt {
     HWND foregroundAfterDetach = nullptr;
 };
 inline void Activate(HWND root, HWND focus, ActivationReceipt* receipt = nullptr) {
-    const auto thread = GetCurrentThreadId();
     const auto previousForeground = GetForegroundWindow();
     const auto foregroundThread = GetWindowThreadProcessId(previousForeground, nullptr);
-    const bool attached =
-        foregroundThread && foregroundThread != thread && AttachThreadInput(thread, foregroundThread, TRUE);
     BringWindowToTop(root);
     SetForegroundWindow(root);
     SetActiveWindow(root);
     SetFocus(focus);
-    if (attached) AttachThreadInput(thread, foregroundThread, FALSE);
-    if (receipt) *receipt = {previousForeground, foregroundThread, attached, GetForegroundWindow()};
+    if (receipt) *receipt = {previousForeground, foregroundThread, false, GetForegroundWindow()};
 }
 } // namespace NativeFocus
 #endif

@@ -840,6 +840,14 @@ void Check(EditorFrame* frame, bool pointerProbe) {
     const auto screen = editor->ClientToScreen(wxPoint(editor->GetClientSize().x - 40, editor->GetClientSize().y - 40));
     popup.Open(screen);
     TestEditor::RequireSelection(editor, 10, 6, "pointer popup preserves reversed selection outside pointer");
+#ifdef __WXMSW__
+    std::fprintf(stderr,
+                 "[DEBUG-context-activation] firstPointerDelivered previous=%p previousThread=%lu attached=%d "
+                 "afterActivation=%p frame=%p\n",
+                 static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
+                 focusActivation.usedInputAttachment, static_cast<void*>(focusActivation.foregroundAfterDetach),
+                 static_cast<void*>(frame->GetHandle()));
+#endif
     if (pointerProbe) {
         std::puts("PASS: first native pointer popup preserves reversed selection");
         return;
