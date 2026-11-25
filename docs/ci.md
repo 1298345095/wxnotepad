@@ -98,6 +98,15 @@ accelerator translation path; it does not insert physical keys with `SendInput`.
 Both clipboard endpoints additionally require their top-level HWND to equal
 `GetForegroundWindow()`. The original first-pointer probe still uses `SendInput`.
 
+The workflow-only `escape-x11` scenario builds `extra_escape` and repeats its
+original registered case in four independent X11 sessions, matching the failing
+hosted run's concurrency. `runs` is the attempt count per session. Each attempt
+retains fresh reports; the first failure stops new attempts while already-running
+cases finish and retain their own verdicts. Presentation setup observes actual
+GTK mapping and focus before hiding the frame. The original 250 ms delayed map,
+3 s activation deadline, 60 s case timeout, and all input/result assertions remain.
+This fixture sends wx logs to captured stderr instead of opening modal log dialogs.
+
 The prefix target list is explicit because CTest omits command paths for unbuilt
 executables. Update `PREFIX_TARGETS` when a new predecessor requires another
 program. Test selection still comes from the current CTest registration.
@@ -124,7 +133,7 @@ An applicable earlier full-suite result remains evidence for unchanged code;
 run related cases during diagnosis, then the complete required checks on the
 final proposed fix.
 
-The separate **Windows investigation** workflow is manually dispatched, using
+The separate **Native investigation** workflow is manually dispatched, using
 the same Windows 2025 runner,
 pinned SDK, compiler cache and display conditions. Its default is three prefix
 attempts, with the original independent reference controls run first. It builds

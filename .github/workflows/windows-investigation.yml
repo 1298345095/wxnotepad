@@ -1,4 +1,4 @@
-name: Windows investigation
+name: Native investigation
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         options: [prefix, clipboard, swap, swap-prefix, ci-swap-prefix, focus-transfer, search, escape-x11]
         default: prefix
       runs:
-        description: Serial attempts; stop on the first failing attempt
+        description: Attempts per session; stop after the first failure
         type: number
         default: 3
       hide_terminal:
@@ -212,8 +212,7 @@ jobs:
                       failed.set()
                       raise
           with ThreadPoolExecutor(max_workers=sessions) as pool:
-              for result in pool.map(check, range(1, sessions + 1)):
-                  pass
+              list(pool.map(check, range(1, sessions + 1)))
           PY
       - name: Preserve investigation evidence
         if: always()
