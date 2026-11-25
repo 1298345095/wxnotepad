@@ -19,6 +19,7 @@
 #include <wx/log.h>
 #include <wx/utils.h>
 #include <algorithm>
+#include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
 #include <shellapi.h>
@@ -236,7 +237,7 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
     tools->Append(openInNewWindow, _("Open &in New Window\tAlt+0"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenInNewWindow(); }, openInNewWindow);
     tools->AppendSeparator();
-    const int execute = AppCommand::ExecuteDocument;
+    const int execute = std::to_underlying(AppCommand::ExecuteDocument);
     // TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
     tools->Append(execute, _("Execute &Document\tCtrl+L"));
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, execute);

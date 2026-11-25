@@ -260,7 +260,7 @@ void EditorFrame::AppendEncodingCommands(wxMenu* file) {
             [this, command](wxUpdateUIEvent& event) { event.Check(document_.CurrentEncoding() == command.choice); },
             id);
     }
-    const int more = AppCommand::ChooseEncoding;
+    const int more = std::to_underlying(AppCommand::ChooseEncoding);
     encoding->Append(more, _("&More...\tF9"));
     Bind(
         wxEVT_MENU,
@@ -286,7 +286,7 @@ void EditorFrame::AppendEncodingCommands(wxMenu* file) {
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, _("&New\tCtrl+N"));
-    const int newWindow = AppCommand::NewWindow;
+    const int newWindow = std::to_underlying(AppCommand::NewWindow);
     file->Append(newWindow, _("New &Window\tAlt+N"));
     Bind(
         wxEVT_MENU,
@@ -323,7 +323,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
     // TRANSLATORS: Saves a separate backup without changing the current file (IDM_FILE_SAVEBACKUP).
     file->Append(saveBackup, _("Save Back&up"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { document_.SaveBackup(); }, saveBackup);
-    file->Append(AppCommand::SaveCopy, _("Save Cop&y...\tCtrl+F6"));
+    file->Append(std::to_underlying(AppCommand::SaveCopy), _("Save Cop&y...\tCtrl+F6"));
     const int saveOriginalTime = wxWindow::NewControlId();
     file->Append(saveOriginalTime, _("Save with Original Time"));
     const int updateTime = wxWindow::NewControlId();
@@ -448,8 +448,8 @@ wxMenu* EditorFrame::CreateFileMenu() {
             if (result.status == SaveStatus::Failed)
                 wxMessageBox(result.error, _("Could not save file"), wxOK | wxICON_ERROR, this);
         },
-        AppCommand::SaveCopy);
-    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, AppCommand::SaveCopy);
+        std::to_underlying(AppCommand::SaveCopy));
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, std::to_underlying(AppCommand::SaveCopy));
     auto* endings = new wxMenu;
     AppendLineEndingCommands(endings);
     file->AppendSubMenu(endings, _("Line Endin&gs"));
@@ -1126,7 +1126,7 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
         [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::MarkerDeleteAll, EditorMarker::Bookmark); },
         bookmarkClear);
     auto* goTo = new wxMenu;
-    const int goToLine = AppCommand::GoToLine;
+    const int goToLine = std::to_underlying(AppCommand::GoToLine);
     goTo->Append(goToLine, _("&Goto Line...\tCtrl+G"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
     goTo->AppendSeparator();
@@ -1176,9 +1176,9 @@ void EditorFrame::AppendLineEndingCommands(wxMenu* edit) {
             },
             id);
     };
-    addEol(AppCommand::EolCrLf, _("&Windows (CR+LF)"), Scintilla::EndOfLine::CrLf);
-    addEol(AppCommand::EolLf, _("&Unix/macOS (LF)"), Scintilla::EndOfLine::Lf);
-    addEol(AppCommand::EolCr, _("Classic &Mac OS (CR)"), Scintilla::EndOfLine::Cr);
+    addEol(std::to_underlying(AppCommand::EolCrLf), _("&Windows (CR+LF)"), Scintilla::EndOfLine::CrLf);
+    addEol(std::to_underlying(AppCommand::EolLf), _("&Unix/macOS (LF)"), Scintilla::EndOfLine::Lf);
+    addEol(std::to_underlying(AppCommand::EolCr), _("Classic &Mac OS (CR)"), Scintilla::EndOfLine::Cr);
     edit->AppendSeparator();
     const int lineEndingOptions = wxWindow::NewControlId();
     edit->Append(lineEndingOptions, _("&Default..."));
@@ -1204,7 +1204,7 @@ void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
 wxMenu* EditorFrame::CreateLanguageMenu() {
     auto* languages = new wxMenu;
     // TRANSLATORS: IDM_VIEW_SCHEME / IDM_VIEW_SCHEME_FAVORITE, before code-style options.
-    const int selectScheme = AppCommand::SyntaxScheme;
+    const int selectScheme = std::to_underlying(AppCommand::SyntaxScheme);
     languages->Append(selectScheme, _("&Syntax Scheme...\tF12"));
     Bind(
         wxEVT_MENU,
@@ -1227,7 +1227,7 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
             ShowSyntaxScheme();
         },
         selectScheme);
-    const int customize = AppCommand::CustomizeSchemes;
+    const int customize = std::to_underlying(AppCommand::CustomizeSchemes);
     languages->Append(customize, _("&Customize Schemes...\tCtrl+F12"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { CustomizeStyles(); }, customize);
     const int favoriteSchemes = wxWindow::NewControlId();
@@ -1420,9 +1420,9 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
         zoom->Append(id, label);
         Bind(wxEVT_MENU, [this, message, value](wxCommandEvent&) { editor_->Send(message, value); }, id);
     };
-    addZoom(AppCommand::ZoomIn, _("Zoom &In\tCtrl++"), Scintilla::Message::ZoomIn);
-    addZoom(AppCommand::ZoomOut, _("Zoom &Out\tCtrl+-"), Scintilla::Message::ZoomOut);
-    const int zoomLevel = AppCommand::ZoomLevel;
+    addZoom(std::to_underlying(AppCommand::ZoomIn), _("Zoom &In\tCtrl++"), Scintilla::Message::ZoomIn);
+    addZoom(std::to_underlying(AppCommand::ZoomOut), _("Zoom &Out\tCtrl+-"), Scintilla::Message::ZoomOut);
+    const int zoomLevel = std::to_underlying(AppCommand::ZoomLevel);
     zoom->Append(zoomLevel, _("Zoom &Level..."));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowZoomLevelDialog(this, *editor_); }, zoomLevel);
     addZoom(wxWindow::NewControlId(), _("&Reset Zoom\tCtrl+\\"), Scintilla::Message::SetZoom,
@@ -1431,7 +1431,7 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
 }
 
 void EditorFrame::AppendDisplayCommands(wxMenu* view) {
-    const int wordWrap = AppCommand::WordWrap;
+    const int wordWrap = std::to_underlying(AppCommand::WordWrap);
     view->AppendCheckItem(wordWrap, _("&Word Wrap\tCtrl+Shift+W"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleWordWrap(); }, wordWrap);
     Bind(
@@ -1609,7 +1609,8 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CodeFoldingVisible()); }, show);
     auto* folds = new wxMenu;
     const auto addFoldCommand = [this, folds](const wxString& label, FoldCommand command, int level = 0) {
-        const int id = command == FoldCommand::DefaultLevels ? AppCommand::FoldDefaultLevels : wxWindow::NewControlId();
+        const int id = command == FoldCommand::DefaultLevels ? std::to_underlying(AppCommand::FoldDefaultLevels)
+                                                             : wxWindow::NewControlId();
         if (command == FoldCommand::CurrentBlock) currentBlockFoldId_ = id;
         folds->Append(id, label);
         Bind(
@@ -2218,7 +2219,7 @@ bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
         wxCommandEvent command(wxEVT_MENU, wxID_SAVEAS);
         GetEventHandler()->ProcessEvent(command);
     } else if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown()) {
-        wxCommandEvent command(wxEVT_MENU, AppCommand::SaveCopy);
+        wxCommandEvent command(wxEVT_MENU, std::to_underlying(AppCommand::SaveCopy));
         GetEventHandler()->ProcessEvent(command);
     }
     return true;

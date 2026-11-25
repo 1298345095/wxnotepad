@@ -437,7 +437,7 @@ void CheckToolbarLayout(EditorFrame* frame) {
             "toolbar visibility is observational for document bytes, encoding and save point");
 }
 
-void ClickStatus(EditorFrame* frame, int field, wxEventType type) {
+void ClickStatus(const EditorFrame* frame, int field, wxEventType type) {
     auto* status = frame->GetStatusBar();
     wxRect bounds;
     Require(status->GetFieldRect(field, bounds) && bounds.width > 0, "status action has a visible native field");
@@ -452,14 +452,16 @@ public:
     explicit CancelStatusDialog(EditorFrame* frame) : frame_(frame) { Register(); }
     int Enter(wxDialog* dialog) override {
         if (dialog->GetParent() != frame_) return wxID_NONE;
-        title = dialog->GetTitle();
+        title_ = dialog->GetTitle();
         wxTheApp->CallAfter([dialog] { NativeSearch::Click(dialog, wxID_CANCEL); });
         return wxID_NONE;
     }
-    wxString title;
+    const wxString& Title() const { return title_; }
+    void ClearTitle() { title_.clear(); }
 
 private:
     EditorFrame* frame_;
+    wxString title_;
 };
 
 #if defined(__WXMSW__) || defined(__WXGTK__)
@@ -469,16 +471,17 @@ public:
         frame_->Bind(wxEVT_MENU_OPEN, &ObserveStatusMenu::Opened, this);
     }
     ~ObserveStatusMenu() override { frame_->Unbind(wxEVT_MENU_OPEN, &ObserveStatusMenu::Opened, this); }
-    wxMenu* menu = nullptr;
+    const wxMenu* Menu() const { return menu_; }
 
 private:
     EditorFrame* frame_;
+    wxMenu* menu_ = nullptr;
     void Opened(wxMenuEvent& event) {
-        menu = event.GetMenu();
-        if (menu) {
+        menu_ = event.GetMenu();
+        if (menu_) {
             // Observe the actual popup selected by the status action, then
             // dismiss its native modal loop without choosing a language.
-            wxTheApp->CallAfter([opened = menu] {
+            wxTheApp->CallAfter([opened = menu_] {
 #ifdef __WXMSW__
                 (void)opened;
                 EndMenu();
@@ -556,7 +559,7 @@ void CheckCommandIdentity(EditorFrame* frame) {
     {
         ObserveStatusMenu popup(frame);
         ClickStatus(frame, StatusField::Scheme, wxEVT_LEFT_DCLICK);
-        Require(popup.menu == scheme, "status opens the actual scheme menu after top-level menu reordering");
+        Require(popup.Menu() == scheme, "status opens the actual scheme menu after top-level menu reordering");
     }
 #endif
     {
@@ -564,13 +567,13 @@ void CheckCommandIdentity(EditorFrame* frame) {
         for (const auto& [field, title] :
              {std::pair{StatusField::Line, "Go To Line"}, std::pair{StatusField::Encoding, "Select Encoding"},
               std::pair{StatusField::Zoom, "Zoom Level"}}) {
-            dialog.title.clear();
+            dialog.ClearTitle();
             ClickStatus(frame, field, field == StatusField::Zoom ? wxEVT_LEFT_UP : wxEVT_LEFT_DCLICK);
-            Require(dialog.title == wxGetTranslation(title), "renamed status command opens its original dialog");
+            Require(dialog.Title() == wxGetTranslation(title), "renamed status command opens its original dialog");
         }
     }
     TestEditor::ResetStream(editor, "a\r\nb\nc\r", 0, 0);
-    editor->Send(SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
+    editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)));
     NativePaint::Complete(editor);
     ClickStatus(frame, StatusField::Eol, wxEVT_LEFT_UP);
     Require(NativeSearch::Text(editor) == "a\r\nb\r\nc\r\n", "status single click converts to its current EOL mode");
