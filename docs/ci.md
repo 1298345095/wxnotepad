@@ -133,12 +133,13 @@ An applicable earlier full-suite result remains evidence for unchanged code;
 run related cases during diagnosis, then the complete required checks on the
 final proposed fix.
 
-The separate **Native investigation** workflow is manually dispatched, using
-the same Windows 2025 runner,
-pinned SDK, compiler cache and display conditions. Its default is three prefix
+The separate **Native investigation** workflow is manually dispatched. Its
+Windows scenarios use the same Windows 2025 runner, pinned SDK, compiler cache
+and display conditions. Its default is three prefix
 attempts, with the original independent reference controls run first. It builds
-only the selected native targets and does not run Linux, coverage, packaging or
-the complete Windows suite. Keep investigation branches without a pull request
+only the selected native targets; `escape-x11` instead uses Ubuntu 26.04 and the
+private X11 sessions described above. Neither job runs coverage, packaging or a
+complete platform suite. Keep investigation branches without a pull request
 so their pushes do not trigger the ordinary PR workflows. Pushes alone do not
 start the investigation either. Transfer final changes to the repair PR once
 ready for complete validation.
