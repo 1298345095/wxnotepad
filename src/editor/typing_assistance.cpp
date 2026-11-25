@@ -3,6 +3,7 @@
 #include <Scintilla.h>
 #include <ScintillaStructures.h>
 #include <ScintillaTypes.h>
+#include <ILexer.h>
 
 using Scintilla::Message;
 
