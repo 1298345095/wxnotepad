@@ -1,4 +1,5 @@
 #include "diagnostics/print.h"
+#include "editor/editor_core.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include "settings/settings_store.h"
@@ -16,6 +17,36 @@
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
+
+// The existing friend permits test-owned, side-effect-free field observations.
+// No geometry getter, font measurement, core message or event pump runs here.
+struct EditorCoreObservation {
+    struct Snapshot {
+        int wrapWidth;
+        Scintilla::Internal::PRectangle rcPaint;
+        int textStart;
+        int rightMarginWidth;
+        int lineHeight;
+        intptr_t wrapStart;
+        intptr_t wrapEnd;
+        bool needsWrap;
+        int paintState;
+        bool paintingAllText;
+    };
+    static Snapshot Capture(const EditorControl& editor) noexcept {
+        const auto& core = *editor.core_;
+        return {core.wrapWidth,
+                core.rcPaint,
+                core.vs.textStart,
+                core.vs.rightMarginWidth,
+                core.vs.lineHeight,
+                core.wrapPending.start,
+                core.wrapPending.end,
+                core.wrapPending.NeedsWrap(),
+                static_cast<int>(core.paintState),
+                core.paintingAllText};
+    }
+};
 
 namespace {
 void Require(bool value, const char* message) {
@@ -125,13 +156,29 @@ public:
                 std::fputc('\n', stderr);
             }
         }
+        for (size_t index = 0; index < count_; ++index) {
+            const auto& sample = samples_[index];
+            if (sample.coreBefore) {
+                PrintCore(sample, "before", *sample.coreBefore);
+                PrintCore(sample, "after", *sample.coreAfter);
+            }
+        }
         std::fflush(stderr);
     }
-    void Observe(const char* phase, int zoom = 0, intptr_t rows = -1) {
+    std::optional<EditorCoreObservation::Snapshot> BeforeWrapCount() const noexcept {
+        if (observation_ == ObservationMode::None) return std::nullopt;
+        return EditorCoreObservation::Capture(*frame_->Editor());
+    }
+    void Observe(const char* phase, int zoom = 0, intptr_t rows = -1,
+                 std::optional<EditorCoreObservation::Snapshot> coreBefore = std::nullopt) {
         auto& sample = samples_[count_++];
         sample.phase = phase;
         sample.zoom = zoom;
         sample.rows = rows;
+        if (coreBefore) {
+            sample.coreBefore = coreBefore;
+            sample.coreAfter = EditorCoreObservation::Capture(*frame_->Editor());
+        }
         if (observation_ == ObservationMode::None) return;
         auto* editor = frame_->Editor();
 #ifdef __WXGTK__
@@ -164,6 +211,7 @@ private:
         const char* phase = "";
         int zoom = 0;
         intptr_t rows = -1;
+        std::optional<EditorCoreObservation::Snapshot> coreBefore, coreAfter;
         wxSize frameMeasured, frameClientMeasured, editorMeasured, editorClientMeasured;
 #ifdef __WXGTK__
         wxSize frameCache, frameClientCache, editorCache, editorClientCache;
@@ -172,6 +220,19 @@ private:
         wxRect gtkFrame, gtkFrameClient, gtkEditor, gtkEditorClient;
 #endif
     };
+    static void PrintCore(const Sample& sample, const char* side, const EditorCoreObservation::Snapshot& core) {
+        std::fprintf(stderr,
+                     "[DEBUG-unicode-275] core_phase=%s zoom=%d rows=%lld side=%s wrap_width=%d"
+                     " paint_rect=%g,%g,%g,%g paint_size=%gx%g text_start=%d right_margin=%d line_height=%d"
+                     " wrap_pending=%d wrap_range=%lld,%lld paint_state=%d painting_all_text=%d\n",
+                     sample.phase, sample.zoom, static_cast<long long>(sample.rows), side, core.wrapWidth,
+                     static_cast<double>(core.rcPaint.left), static_cast<double>(core.rcPaint.top),
+                     static_cast<double>(core.rcPaint.right), static_cast<double>(core.rcPaint.bottom),
+                     static_cast<double>(core.rcPaint.right - core.rcPaint.left),
+                     static_cast<double>(core.rcPaint.bottom - core.rcPaint.top), core.textStart, core.rightMarginWidth,
+                     core.lineHeight, core.needsWrap, static_cast<long long>(core.wrapStart),
+                     static_cast<long long>(core.wrapEnd), core.paintState, core.paintingAllText);
+    }
     void PrintGeometry(const Sample& sample) const {
         if (observation_ == ObservationMode::None) return;
 #ifdef __WXGTK__
@@ -280,19 +341,22 @@ void Geometry(EditorFrame* frame, int command, bool minimal, ObservationMode obs
     for (const auto zoom : {100, 150}) {
         editor->Send(SetZoom, zoom);
         paint();
+        const auto visibleBefore = diagnostics.BeforeWrapCount();
         const auto visibleRows = editor->Send(WrapCount, 0);
-        diagnostics.Observe("visible", zoom, visibleRows);
+        diagnostics.Observe("visible", zoom, visibleRows, visibleBefore);
         const auto before = minimal ? std::nullopt : std::optional{DocumentState(frame)};
         NativeSearch::Command(frame, command);
         paint();
+        const auto hiddenBefore = diagnostics.BeforeWrapCount();
         const auto hiddenRows = editor->Send(WrapCount, 0);
-        diagnostics.Observe("hidden", zoom, hiddenRows);
+        diagnostics.Observe("hidden", zoom, hiddenRows, hiddenBefore);
         Require(visibleRows > hiddenRows && (minimal || DocumentState(frame) == *before),
                 "representation widths reflow wrapped rows at normal and enlarged zoom without changing the document");
         NativeSearch::Command(frame, command);
         paint();
+        const auto restoredBefore = diagnostics.BeforeWrapCount();
         const auto restoredRows = editor->Send(WrapCount, 0);
-        diagnostics.Observe("restored", zoom, restoredRows);
+        diagnostics.Observe("restored", zoom, restoredRows, restoredBefore);
         Require(restoredRows == visibleRows, "showing names restores the original wrapped layout");
     }
     if (minimal) {

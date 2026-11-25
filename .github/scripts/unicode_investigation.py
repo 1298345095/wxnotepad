@@ -16,28 +16,12 @@ REPORTS = ROOT / '.ci/reports/unicode-settled-investigation'
 SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
 PHASES = {
-    'red-none': {
-        'tests': ['original_unicode_controls'], 'runs': 1, 'timeout': 90,
-        'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1', 'WXNOTEPAD_UNICODE_OBSERVATION': 'none'},
-    },
-    'red-cached': {
-        'tests': ['original_unicode_controls'], 'runs': 1, 'timeout': 90,
-        'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1'},
-    },
-    'settled-minimal': {
-        'tests': ['original_unicode_controls'], 'runs': 100, 'timeout': 90,
-        'environment': {'WXNOTEPAD_UNICODE_MINIMAL': '1', 'WXNOTEPAD_UNICODE_SETTLED': '1'},
-    },
-    'settled-full': {
-        'tests': ['original_unicode_controls'], 'runs': 25, 'timeout': 90,
+    'core-normal': {
+        'tests': ['original_unicode_controls'], 'runs': 3, 'timeout': 90,
         'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
     },
-    'settled-wayland': {
-        'tests': ['original_unicode_controls'], 'runs': 15, 'timeout': 90, 'backend': 'wayland',
-        'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
-    },
-    'settled-scale2': {
-        'tests': ['original_unicode_controls_scale2'], 'runs': 15, 'timeout': 90,
+    'core-scale2': {
+        'tests': ['original_unicode_controls_scale2'], 'runs': 3, 'timeout': 90,
         'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
     },
 }
