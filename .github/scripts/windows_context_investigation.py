@@ -39,13 +39,13 @@ def plan(cmake_dir, scenario):
         text=True, encoding='utf-8'))['tests']
     names = [case['name'] for case in cases]
     required = (FOCUS_CASE if scenario == 'focus-transfer' else
-                SWAP_CASE if scenario in ('swap', 'swap-prefix') else CONTEXT_CASE)
+                SWAP_CASE if scenario in ('swap', 'swap-prefix', 'ci-swap-prefix') else CONTEXT_CASE)
     if required not in names:
         raise SystemExit(f'Required registered test is missing: {required}')
     if scenario == 'prefix':
         selected = cases[:names.index(CONTEXT_CASE) + 1]
         targets = PREFIX_TARGETS
-    elif scenario == 'swap-prefix':
+    elif scenario in ('swap-prefix', 'ci-swap-prefix'):
         selected = cases[:names.index(SWAP_CASE) + 1]
         targets = SWAP_PREFIX_TARGETS
     elif scenario == 'clipboard':
@@ -67,8 +67,20 @@ def run(selection, reports, runs):
     expression = '^(' + '|'.join(re.escape(name) for name in selection['tests']) + ')$'
     for attempt in range(1, runs + 1):
         print(f'Investigation {attempt}/{runs}: {len(selection["tests"])} registered cases', flush=True)
+        if selection['scenario'] == 'ci-swap-prefix':
+            warm_context(Path(selection['cmake_dir']), reports / f'run-{attempt:03}' / 'warmup')
         ci.test('windows', Path(selection['cmake_dir']), expression, 1,
                 report_directory=reports / f'run-{attempt:03}')
+
+
+def warm_context(cmake_dir, reports):
+    """Retain the full CI's context-menu prelude before reaching Swap."""
+    run(plan(cmake_dir, 'prefix'), reports / 'prefix', 1)
+    pointer_result = ci.probe([str(cmake_dir / 'context_menu.exe'), '--pointer-probe'],
+                              reports / 'pointer', 60, 100, cmake_dir)
+    if pointer_result:
+        raise SystemExit(pointer_result)
+    run(plan(cmake_dir, 'clipboard'), reports / 'menu', 20)
 
 
 def hide_terminal_windows(reports):
@@ -136,7 +148,8 @@ def hide_terminal_windows(reports):
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('plan', 'build', 'run'))
-    parser.add_argument('--scenario', choices=('prefix', 'clipboard', 'swap', 'swap-prefix', 'focus-transfer'),
+    parser.add_argument('--scenario',
+                        choices=('prefix', 'clipboard', 'swap', 'swap-prefix', 'ci-swap-prefix', 'focus-transfer'),
                         default='prefix')
     parser.add_argument('--cmake-dir', type=Path, default=ci.BUILD / 'cmake')
     parser.add_argument('--report-dir', type=Path, required=True)

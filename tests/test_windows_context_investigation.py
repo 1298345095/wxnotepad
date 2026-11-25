@@ -139,7 +139,7 @@ class WindowsInvestigation(unittest.TestCase):
 
     def test_missing_swap_cannot_silently_shrink_investigation(self):
         self.configure(swap=False)
-        for scenario in ('swap', 'swap-prefix'):
+        for scenario in ('swap', 'swap-prefix', 'ci-swap-prefix'):
             with self.subTest(scenario=scenario), self.assertRaisesRegex(SystemExit, investigation.SWAP_CASE):
                 investigation.plan(self.build, scenario)
 
@@ -156,6 +156,13 @@ class WindowsInvestigation(unittest.TestCase):
                                              'native_windows_clipboard_peer_lifecycle', 'after', investigation.SWAP_CASE])
         self.assertIn('clipboard_smoke', selected['targets'])
         self.assertIn('context_menu', selected['targets'])
+
+    def test_ci_swap_prefix_keeps_the_same_registered_predecessors_and_targets(self):
+        self.configure()
+        selected = investigation.plan(self.build, 'ci-swap-prefix')
+        plain = investigation.plan(self.build, 'swap-prefix')
+        self.assertEqual(selected['tests'], plain['tests'])
+        self.assertEqual(selected['targets'], plain['targets'])
 
     def test_zero_attempts_cannot_report_an_empty_success(self):
         reports = self.directory / 'reports'
