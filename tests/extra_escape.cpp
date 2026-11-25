@@ -6,6 +6,7 @@
 #include "editor_test_helpers.h"
 #include "file_command_driver.h"
 #include <wx/weakref.h>
+#include <wx/log.h>
 #include <memory>
 #include <string_view>
 #include <thread>
@@ -602,6 +603,7 @@ void CheckMinimize(EditorFrame* frame) {
 class EscapeApp final : public wxApp {
 public:
     bool OnInit() override {
+        delete wxLog::SetActiveTarget(new wxLogStderr);
         settings_ =
             argc == 4
                 ? std::make_unique<SettingsStore>()
