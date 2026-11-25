@@ -14,11 +14,11 @@ search algorithm or own the document's language choice.
 | Location | Current responsibility | Assessment |
 | --- | --- | --- |
 | `src/app/main.cpp`, `process_observer.*` | Startup/options and the opt-in process observation protocol | Observation uses the actual application's commands and exists only when requested. |
-| `src/app/editor_frame.*`, `editor_frame_commands.cpp` | Menus, file-command coordination, title/status and native dialogs | The frame coordinates sessions and settings; native dialog construction lives under `app/dialogs`. |
+| `src/app/editor_frame.*`, `editor_frame_commands.cpp`, `command_ids.h` | Menus, shared command identities, file-command coordination, title/status and native dialogs | The frame coordinates sessions and settings; toolbar and status actions use command identities independently of menu labels and ordering. Native dialog construction lives under `app/dialogs`. |
 | `src/app/dialogs/*` | Native file choices, settings prompts, search feedback and modeless search UI | Dialogs collect choices; the frame commits document/settings decisions at the existing points. |
 | `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
 | `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
-| `src/settings/original_settings.h`, `settings_store.*`, `search_settings.*` | Original defaults, INI persistence and search-option conversion | Feature code consumes settings values without depending on the persistence class. Load and save use the same declared defaults; search bit preservation and history conversion stay together. |
+| `src/settings/original_settings.h`, `settings_store.*`, `ini_document.*`, `search_settings.*` | Original defaults, settings lifecycle, per-file INI persistence and search-option conversion | Each INI document owns its path and line-preserving representation. Settings and style operations select an explicit document. Feature code consumes settings values; search bit preservation and history conversion stay together. |
 | `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
 | `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns input, selection/scrolling, IME, notifications and fold repair; editing-command implementations remain separate. |
@@ -79,6 +79,13 @@ The frame remains the composition point. A separate all-purpose application
 controller would mostly relocate its current responsibilities. Native menu
 bindings can stay in the frame once feature algorithms and dialog construction
 have their own modules.
+
+Commands shared by menus, toolbar buttons and status fields use wx stock IDs or
+the small `AppCommand` catalog. The toolbar maps the original persisted button
+identities to these command IDs, then reads the actual menu item's label, help,
+kind and state. Status actions dispatch the same IDs; the scheme popup finds its
+owning menu through the scheme command. Menu captions, accelerators and top-level
+ordering can therefore change without changing action routing.
 
 Indentation guides use the syntax catalog's original look-forward metadata and
 the pinned core's guide drawing. `syntax_scheme.cpp` installs the original
@@ -418,6 +425,15 @@ directory mapping. A missing file can be seeded by `Notepad4.ini-default`; missi
 fields use original built-in defaults. Save Settings Now and Save Settings On
 Exit share this lifecycle and preserve unrelated fields. See
 [the limited settings slice](settings.md) for names and platform mapping.
+
+`IniDocument` owns one configuration path and its parsed lines, including the
+original scalar/history parsing and UTF-16LE/BOM/CRLF save format.
+`SettingsStore` keeps its primary document for ordinary preferences and history.
+Theme loading, import, export and dark-profile saving use separate local
+documents; style readers and writers receive the intended document explicitly.
+The main configuration retains its identity and pending edits throughout those
+operations. Default-value handling, unknown fields and the existing settings
+save decisions stay with their established owners.
 
 Stream-text drag/drop uses the existing native text transfer protocols: wx/OLE
 on Windows and GTK text targets on Linux. The pinned original core owns drag

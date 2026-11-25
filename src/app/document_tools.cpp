@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/command_ids.h"
 #include "app/dialogs/dialog_layout.h"
 #include "app/desktop_launch.h"
 #include "app/native_launch.h"
@@ -235,7 +236,7 @@ void EditorFrame::AppendDocumentTools(wxMenu* tools) {
     tools->Append(openInNewWindow, _("Open &in New Window\tAlt+0"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenInNewWindow(); }, openInNewWindow);
     tools->AppendSeparator();
-    const int execute = wxWindow::NewControlId();
+    const int execute = AppCommand::ExecuteDocument;
     // TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
     tools->Append(execute, _("Execute &Document\tCtrl+L"));
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, execute);

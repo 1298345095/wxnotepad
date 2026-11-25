@@ -8,30 +8,16 @@
 #include <wx/filename.h>
 #include <wx/log.h>
 #include <wx/stdpaths.h>
-#include <wx/tokenzr.h>
 #include <wx/utils.h>
 #include <string>
 #include <algorithm>
-#include <cstdlib>
 #include <cctype>
-#include <limits>
 #ifdef __WXMSW__
 #include <shlobj.h>
 #include <filesystem>
 #endif
 
 namespace {
-std::vector<wxString> IniLines(const wxString& text) {
-    std::vector<wxString> result;
-    wxStringTokenizer lines(text, "\n", wxTOKEN_RET_EMPTY_ALL);
-    while (lines.HasMoreTokens()) {
-        auto line = lines.GetNextToken();
-        if (line.EndsWith("\r")) line.RemoveLast();
-        result.push_back(line);
-    }
-    if (!result.empty() && result.back().empty()) result.pop_back();
-    return result;
-}
 wxString ConfigurationPath() {
     wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
 #ifdef __WXMSW__
@@ -102,176 +88,184 @@ SettingsStore::SettingsStore() : SettingsStore(ConfigurationPath()) {
 
 int SettingsStore::OriginalRunCommandWidth(int screenWidth, int screenHeight) const {
     const auto section = wxString::Format("Window Position %dx%d", screenWidth, screenHeight);
-    const int matching = ReadInt("RunDlgSizeX", 0, section);
+    const int matching = document_.ReadInt("RunDlgSizeX", 0, section);
     if (matching > 0) return matching;
     // Imported Windows monitor dimensions may not exist on the current desktop.
     // Reuse the first saved original width without creating a new monitor schema.
-    for (auto line : lines_) {
-        line = line.Strip(wxString::both);
-        if (!line.StartsWith("[Window Position ") || !line.EndsWith("]")) continue;
-        const int width = ReadInt("RunDlgSizeX", 0, line.Mid(1, line.length() - 2));
+    for (const auto& name : document_.SectionNames()) {
+        if (!name.StartsWith("Window Position ")) continue;
+        const int width = document_.ReadInt("RunDlgSizeX", 0, name);
         if (width > 0) return width;
     }
     return 0;
 }
 
-SettingsStore::SettingsStore(const wxString& path) : path_(path) {
+SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     const OriginalSettings defaults;
-    LoadLines();
-    values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
-    values.autoSave.flags = ReadInt("AutoSaveOption", defaults.autoSave.flags);
+    document_.Load();
+    values.saveSettings = document_.ReadBool("SaveSettings", defaults.saveSettings);
+    values.autoSave.flags = document_.ReadInt("AutoSaveOption", defaults.autoSave.flags);
     values.autoSave.periodMilliseconds =
-        static_cast<uint32_t>(ReadInt("AutoSavePeriod", defaults.autoSave.periodMilliseconds));
-    values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
-    const auto openWith = ReadString("OpenWithDir", {});
+        static_cast<uint32_t>(document_.ReadInt("AutoSavePeriod", defaults.autoSave.periodMilliseconds));
+    values.saveBeforeRunningTools = document_.ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
+    const auto openWith = document_.ReadString("OpenWithDir", {});
     if (!openWith.empty()) values.openWithDirectory = RecentFiles::ExpandPath(openWith);
-    values.runCommandWidthDIP = std::max(0, ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
+    values.runCommandWidthDIP = std::max(0, document_.ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
     auto& print = values.printing;
-    print.header = static_cast<PrintHeader>(std::clamp(ReadInt("PrintHeader", std::to_underlying(print.header)),
-                                                       std::to_underlying(PrintHeader::FilenameAndDateTime),
-                                                       std::to_underlying(PrintHeader::Blank)));
-    print.footer = static_cast<PrintFooter>(std::clamp(ReadInt("PrintFooter", std::to_underlying(print.footer)),
-                                                       std::to_underlying(PrintFooter::PageNumber),
-                                                       std::to_underlying(PrintFooter::Blank)));
+    print.header = static_cast<PrintHeader>(
+        std::clamp(document_.ReadInt("PrintHeader", std::to_underlying(print.header)),
+                   std::to_underlying(PrintHeader::FilenameAndDateTime), std::to_underlying(PrintHeader::Blank)));
+    print.footer = static_cast<PrintFooter>(
+        std::clamp(document_.ReadInt("PrintFooter", std::to_underlying(print.footer)),
+                   std::to_underlying(PrintFooter::PageNumber), std::to_underlying(PrintFooter::Blank)));
     print.colour = static_cast<Scintilla::PrintOption>(std::clamp(
-        ReadInt("PrintColorMode", std::to_underlying(print.colour)), std::to_underlying(Scintilla::PrintOption::Normal),
-        std::to_underlying(Scintilla::PrintOption::ScreenColours)));
-    print.zoom = std::clamp(ReadInt("PrintZoom", print.zoom), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
+        document_.ReadInt("PrintColorMode", std::to_underlying(print.colour)),
+        std::to_underlying(Scintilla::PrintOption::Normal), std::to_underlying(Scintilla::PrintOption::ScreenColours)));
+    print.zoom =
+        std::clamp(document_.ReadInt("PrintZoom", print.zoom), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
     for (size_t index = 0; index < PrintMarginKeys.size(); ++index)
-        print.margins[index] = std::max(ReadInt(PrintMarginKeys[index], print.margins[index]), -1);
-    values.uiLanguage = UILanguage::Normalize(ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
-    const int recent = ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
+        print.margins[index] = std::max(document_.ReadInt(PrintMarginKeys[index], print.margins[index]), -1);
+    values.uiLanguage = UILanguage::Normalize(document_.ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
+    const int recent = document_.ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
     values.saveRecentFiles = (recent & 1) != 0;
     values.maxRecentFiles = std::max(recent >> 1, RecentFiles::MinimumCapacity);
     recentFileCapacity_ = values.maxRecentFiles;
-    values.relativeFileMRU = ReadBool("RelativeFileMRU", true, "Settings2");
-    values.portableMyDocs = ReadBool("PortableMyDocs", values.relativeFileMRU, "Settings2");
+    values.relativeFileMRU = document_.ReadBool("RelativeFileMRU", true, "Settings2");
+    values.portableMyDocs = document_.ReadBool("PortableMyDocs", values.relativeFileMRU, "Settings2");
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
-    values.showMenu = ReadBool("ShowMenu", defaults.showMenu);
-    values.showToolbar = ReadBool("ShowToolbar", defaults.showToolbar);
-    values.autoScaleToolbar = ReadInt("AutoScaleToolbar", defaults.autoScaleToolbar);
-    values.toolbarButtons = ReadString("ToolbarButtons", defaults.toolbarButtons);
-    values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
-    values.fullScreenMode = ReadInt("FullScreenMode", defaults.fullScreenMode);
+    values.showMenu = document_.ReadBool("ShowMenu", defaults.showMenu);
+    values.showToolbar = document_.ReadBool("ShowToolbar", defaults.showToolbar);
+    values.autoScaleToolbar = document_.ReadInt("AutoScaleToolbar", defaults.autoScaleToolbar);
+    values.toolbarButtons = document_.ReadString("ToolbarButtons", defaults.toolbarButtons);
+    values.showStatusbar = document_.ReadBool("ShowStatusbar", defaults.showStatusbar);
+    values.fullScreenMode = document_.ReadInt("FullScreenMode", defaults.fullScreenMode);
     values.escapeFunction = static_cast<EscapeFunction>(
-        std::clamp(ReadInt("EscFunction", std::to_underlying(defaults.escapeFunction)),
+        std::clamp(document_.ReadInt("EscFunction", std::to_underlying(defaults.escapeFunction)),
                    std::to_underlying(EscapeFunction::None), std::to_underlying(EscapeFunction::Exit)));
     values.pathNameFormat = static_cast<TitlePathNameFormat>(std::clamp(
-        ReadInt("PathNameFormat", std::to_underlying(defaults.pathNameFormat)),
+        document_.ReadInt("PathNameFormat", std::to_underlying(defaults.pathNameFormat)),
         std::to_underlying(TitlePathNameFormat::NameOnly), std::to_underlying(TitlePathNameFormat::FullPath)));
-    values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
+    values.wordWrap = document_.ReadBool("WordWrap", defaults.wordWrap);
     values.wordWrapMode =
-        std::clamp(ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
+        std::clamp(document_.ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
                    std::to_underlying(Scintilla::Wrap::Auto));
     values.wordWrapIndent = static_cast<WrapContinuationIndent>(std::clamp(
-        ReadInt("WordWrapIndent", std::to_underlying(defaults.wordWrapIndent)),
+        document_.ReadInt("WordWrapIndent", std::to_underlying(defaults.wordWrapIndent)),
         std::to_underlying(WrapContinuationIndent::None), std::to_underlying(WrapContinuationIndent::DeepIndent)));
-    values.wordWrapSelectSubLine = ReadBool("WordWrapSelectSubLine", defaults.wordWrapSelectSubLine);
-    values.endAtLastLine = std::clamp(ReadInt("EndAtLastLine", defaults.endAtLastLine), 0, 4);
-    values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
-    values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
-    values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
-    values.changeHistoryMarker = ReadInt("ChangeHistoryMarker", defaults.changeHistoryMarker);
-    values.matchBraces = ReadBool("MatchBraces", defaults.matchBraces);
-    values.showCodeFolding = ReadBool("ShowCodeFolding", defaults.showCodeFolding);
-    values.highlightCurrentBlock = ReadBool("HighlightCurrentBlock", defaults.highlightCurrentBlock);
-    values.viewWhiteSpace = ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
-    values.showIndentGuides = ReadBool("ShowIndentGuides", defaults.showIndentGuides);
-    values.simpleIndentGuides = ReadBool("SimpleIndentGuides", defaults.simpleIndentGuides, "Settings2");
-    values.viewEOLs = ReadBool("ViewEOLs", defaults.viewEOLs);
-    values.showUnicodeControlCharacter = ReadBool("ShowUnicodeControlCharacter", defaults.showUnicodeControlCharacter);
-    const int callTipMode = ReadInt("ShowCallTip", std::to_underlying(defaults.showCallTip));
+    values.wordWrapSelectSubLine = document_.ReadBool("WordWrapSelectSubLine", defaults.wordWrapSelectSubLine);
+    values.endAtLastLine = std::clamp(document_.ReadInt("EndAtLastLine", defaults.endAtLastLine), 0, 4);
+    values.autoShrinkScrollWidth =
+        document_.ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
+    values.showLineNumbers = document_.ReadBool("ShowLineNumbers", defaults.showLineNumbers);
+    values.showBookmarkMargin = document_.ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
+    values.changeHistoryMarker = document_.ReadInt("ChangeHistoryMarker", defaults.changeHistoryMarker);
+    values.matchBraces = document_.ReadBool("MatchBraces", defaults.matchBraces);
+    values.showCodeFolding = document_.ReadBool("ShowCodeFolding", defaults.showCodeFolding);
+    values.highlightCurrentBlock = document_.ReadBool("HighlightCurrentBlock", defaults.highlightCurrentBlock);
+    values.viewWhiteSpace = document_.ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
+    values.showIndentGuides = document_.ReadBool("ShowIndentGuides", defaults.showIndentGuides);
+    values.simpleIndentGuides = document_.ReadBool("SimpleIndentGuides", defaults.simpleIndentGuides, "Settings2");
+    values.viewEOLs = document_.ReadBool("ViewEOLs", defaults.viewEOLs);
+    values.showUnicodeControlCharacter =
+        document_.ReadBool("ShowUnicodeControlCharacter", defaults.showUnicodeControlCharacter);
+    const int callTipMode = document_.ReadInt("ShowCallTip", std::to_underlying(defaults.showCallTip));
     if (callTipMode >= std::to_underlying(ColorCallTipMode::Off) &&
         callTipMode <= std::to_underlying(ColorCallTipMode::ABGR))
         values.showCallTip = static_cast<ColorCallTipMode>(callTipMode);
-    values.showWordWrapSymbols = ReadBool("ShowWordWrapSymbols", defaults.showWordWrapSymbols);
-    const int wrapSymbols = std::clamp(ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
+    values.showWordWrapSymbols = document_.ReadBool("ShowWordWrapSymbols", defaults.showWordWrapSymbols);
+    const int wrapSymbols = std::clamp(document_.ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
     values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
-    values.autoSelect = ReadBool("AutoSelect", defaults.autoSelect, "Styles");
-    values.defaultScheme = ReadInt("DefaultScheme", defaults.defaultScheme, "Styles");
-    values.favoriteSchemes = ReadString("FavoriteSchemes", {}, "Styles");
-    values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
-    values.noHtmlGuess = ReadBool("NoHTMLGuess", defaults.noHtmlGuess, "Settings2");
-    values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
-    values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
+    values.autoSelect = document_.ReadBool("AutoSelect", defaults.autoSelect, "Styles");
+    values.defaultScheme = document_.ReadInt("DefaultScheme", defaults.defaultScheme, "Styles");
+    values.favoriteSchemes = document_.ReadString("FavoriteSchemes", {}, "Styles");
+    values.noCgiGuess = document_.ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
+    values.noHtmlGuess = document_.ReadBool("NoHTMLGuess", defaults.noHtmlGuess, "Settings2");
+    values.fixLineEndings = document_.ReadBool("FixLineEndings", defaults.fixLineEndings);
+    values.fixTrailingBlanks = document_.ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
     values.fileWatching.mode = static_cast<FileWatchingMode>(
-        std::clamp(ReadInt("FileWatchingMode", std::to_underlying(defaults.fileWatching.mode)),
+        std::clamp(document_.ReadInt("FileWatchingMode", std::to_underlying(defaults.fileWatching.mode)),
                    std::to_underlying(FileWatchingMode::None), std::to_underlying(FileWatchingMode::AutoReload)));
-    values.fileWatching.checkInterval = ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
+    values.fileWatching.checkInterval =
+        document_.ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
     values.fileWatching.autoReloadDelay =
-        ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");
-    values.fileWatching.flags = ReadInt("FileWatchingOption", defaults.fileWatching.flags);
-    values.fileWatching.resetOnNewFile = ReadBool("ResetFileWatching", defaults.fileWatching.resetOnNewFile);
+        document_.ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");
+    values.fileWatching.flags = document_.ReadInt("FileWatchingOption", defaults.fileWatching.flags);
+    values.fileWatching.resetOnNewFile = document_.ReadBool("ResetFileWatching", defaults.fileWatching.resetOnNewFile);
     values.encoding.defaultEncoding =
-        NormalizeEncodingSetting(ReadInt("DefaultEncoding", defaults.encoding.defaultEncoding));
-    values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", defaults.encoding.skipUnicodeDetection);
-    values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", defaults.encoding.loadANSIasUTF8);
-    values.encoding.loadASCIIasUTF8 = ReadBool("LoadASCIIasUTF8", defaults.encoding.loadASCIIasUTF8);
-    values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", defaults.encoding.loadNFOasOEM);
-    values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
-    values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
-    values.zoomLevel =
-        std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
-    values.renderingTechnology = std::clamp(ReadInt("RenderingTechnology", defaults.renderingTechnology),
+        NormalizeEncodingSetting(document_.ReadInt("DefaultEncoding", defaults.encoding.defaultEncoding));
+    values.encoding.skipUnicodeDetection =
+        document_.ReadBool("SkipUnicodeDetection", defaults.encoding.skipUnicodeDetection);
+    values.encoding.loadANSIasUTF8 = document_.ReadBool("LoadANSIasUTF8", defaults.encoding.loadANSIasUTF8);
+    values.encoding.loadASCIIasUTF8 = document_.ReadBool("LoadASCIIasUTF8", defaults.encoding.loadASCIIasUTF8);
+    values.encoding.loadNFOasOEM = document_.ReadBool("LoadNFOasOEM", defaults.encoding.loadNFOasOEM);
+    values.encoding.noEncodingTags = document_.ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
+    values.encoding.noFileVariables =
+        document_.ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
+    values.zoomLevel = std::clamp(document_.ReadInt("ZoomLevel", defaults.zoomLevel), Scintilla::MinZoomLevel,
+                                  Scintilla::MaxZoomLevel);
+    values.renderingTechnology = std::clamp(document_.ReadInt("RenderingTechnology", defaults.renderingTechnology),
                                             std::to_underlying(Scintilla::Technology::Default),
                                             std::to_underlying(Scintilla::Technology::DirectWrite1));
-    int caretStyle = ReadInt("CaretStyle", defaults.caret.lineWidth);
+    int caretStyle = document_.ReadInt("CaretStyle", defaults.caret.lineWidth);
     values.caret.blockAfterSelection = caretStyle >= 100;
     caretStyle %= 100;
     values.caret.overstrikeBlock = caretStyle >= 10;
     values.caret.lineWidth = std::clamp(caretStyle % 10, 0, 3);
-    values.caret.blinkPeriod = ReadInt("CaretBlinkPeriod", defaults.caret.blinkPeriod);
-    const int currentLine = ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
+    values.caret.blinkPeriod = document_.ReadInt("CaretBlinkPeriod", defaults.caret.blinkPeriod);
+    const int currentLine = document_.ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
     values.highlightCurrentLine = std::clamp(currentLine % 10, 0, 2) + (currentLine >= 10 ? 10 : 0);
-    values.longLinesLimit =
-        std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, OriginalSettingLimits::MaxLongLineColumn);
-    values.markLongLines = ReadBool("MarkLongLines", defaults.markLongLines);
-    values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
-    values.selectOption = ReadInt("SelectOption", defaults.selectOption);
+    values.longLinesLimit = std::clamp(document_.ReadInt("LongLinesLimit", defaults.longLinesLimit), 0,
+                                       OriginalSettingLimits::MaxLongLineColumn);
+    values.markLongLines = document_.ReadBool("MarkLongLines", defaults.markLongLines);
+    values.longLineMode = std::clamp(document_.ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
+    values.selectOption = document_.ReadInt("SelectOption", defaults.selectOption);
     auto& completion = values.completion;
     const auto& defaultCompletion = defaults.completion;
-    completion.completeOption = ReadInt("AutoCompleteOption", defaultCompletion.completeOption);
-    const int scopes = ReadInt("AutoCompleteScope", WordCompletionLimits::DefaultScopes);
+    completion.completeOption = document_.ReadInt("AutoCompleteOption", defaultCompletion.completeOption);
+    const int scopes = document_.ReadInt("AutoCompleteScope", WordCompletionLimits::DefaultScopes);
     completion.completeScope = scopes & WordCompletionLimits::ScopeMask;
     completion.scanWordScope = scopes >> WordCompletionLimits::ScanScopeShift;
-    completion.scanWordsTimeout = std::max(ReadInt("AutoCScanWordsTimeout", defaultCompletion.scanWordsTimeout),
-                                           WordCompletionLimits::MinScanTimeoutMs);
-    completion.ignoreCase = ReadBool("AutoCIgnoreCase", defaultCompletion.ignoreCase);
-    completion.latexInputMethod = ReadBool("LaTeXInputMethod", defaultCompletion.latexInputMethod);
-    completion.visibleItemCount = std::max(ReadInt("AutoCVisibleItemCount", defaultCompletion.visibleItemCount),
-                                           WordCompletionLimits::MinVisibleRows);
-    completion.minWordLength =
-        std::max(ReadInt("AutoCMinWordLength", defaultCompletion.minWordLength), WordCompletionLimits::MinWordLength);
-    completion.minNumberLength = std::max(ReadInt("AutoCMinNumberLength", defaultCompletion.minNumberLength),
+    completion.scanWordsTimeout =
+        std::max(document_.ReadInt("AutoCScanWordsTimeout", defaultCompletion.scanWordsTimeout),
+                 WordCompletionLimits::MinScanTimeoutMs);
+    completion.ignoreCase = document_.ReadBool("AutoCIgnoreCase", defaultCompletion.ignoreCase);
+    completion.latexInputMethod = document_.ReadBool("LaTeXInputMethod", defaultCompletion.latexInputMethod);
+    completion.visibleItemCount =
+        std::max(document_.ReadInt("AutoCVisibleItemCount", defaultCompletion.visibleItemCount),
+                 WordCompletionLimits::MinVisibleRows);
+    completion.minWordLength = std::max(document_.ReadInt("AutoCMinWordLength", defaultCompletion.minWordLength),
+                                        WordCompletionLimits::MinWordLength);
+    completion.minNumberLength = std::max(document_.ReadInt("AutoCMinNumberLength", defaultCompletion.minNumberLength),
                                           WordCompletionLimits::MinNumberLength);
-    completion.fillUpMask = ReadInt("AutoCFillUpMask", defaultCompletion.fillUpMask);
-    const auto punctuation = ReadString("AutoCFillUpPunctuation", defaultCompletion.fillUpPunctuation)
+    completion.fillUpMask = document_.ReadInt("AutoCFillUpMask", defaultCompletion.fillUpMask);
+    const auto punctuation = document_.ReadString("AutoCFillUpPunctuation", defaultCompletion.fillUpPunctuation)
                                  .Left(WordCompletionLimits::MaxPunctuationCharacters);
     completion.fillUpPunctuation.clear();
     for (const wxUniChar ch : punctuation)
         if (ch.GetValue() < 128 && std::ispunct(static_cast<unsigned char>(ch.GetValue())))
             completion.fillUpPunctuation += ch;
-    values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
-    values.markOccurrences = ReadInt("MarkOccurrences", defaults.markOccurrences);
-    values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
-    values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
+    values.autoInsertMask = document_.ReadInt("AutoInsertMask", defaults.autoInsertMask);
+    values.markOccurrences = document_.ReadInt("MarkOccurrences", defaults.markOccurrences);
+    values.saveFindReplace = document_.ReadBool("SaveFindReplace", defaults.saveFindReplace);
+    values.findReplaceOption = document_.ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
-        values.findReplaceFlag = ReadInt("FindReplaceFlag", defaults.findReplaceFlag);
-        values.recentFind = ReadHistory("Recent Find", SearchLimits::HistoryEntries);
-        values.recentReplace = ReadHistory("Recent Replace", SearchLimits::HistoryEntries);
+        values.findReplaceFlag = document_.ReadInt("FindReplaceFlag", defaults.findReplaceFlag);
+        values.recentFind = document_.ReadHistory("Recent Find", SearchLimits::HistoryEntries);
+        values.recentReplace = document_.ReadHistory("Recent Replace", SearchLimits::HistoryEntries);
     }
-    values.lineSelection = ReadInt("LineSelection", defaults.lineSelection);
-    values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
-    values.warnLineEndings = ReadBool("WarnLineEndings", defaults.warnLineEndings);
+    values.lineSelection = document_.ReadInt("LineSelection", defaults.lineSelection);
+    values.defaultEOLMode = std::clamp(document_.ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
+    values.warnLineEndings = document_.ReadBool("WarnLineEndings", defaults.warnLineEndings);
     values.globalTabs.tabWidth =
-        std::clamp(ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, OriginalSettingLimits::MaxTabWidth);
-    values.globalTabs.indentWidth =
-        std::clamp(ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0, OriginalSettingLimits::MaxTabWidth);
-    values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", defaults.globalTabs.tabsAsSpaces);
-    values.tabIndents = ReadBool("TabIndents", defaults.tabIndents);
-    values.autoIndent = ReadBool("AutoIndent", defaults.autoIndent);
-    values.detectIndentation = ReadBool("DetectIndentation", defaults.detectIndentation);
-    values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", defaults.backspaceUnindents));
+        std::clamp(document_.ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, OriginalSettingLimits::MaxTabWidth);
+    values.globalTabs.indentWidth = std::clamp(document_.ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0,
+                                               OriginalSettingLimits::MaxTabWidth);
+    values.globalTabs.tabsAsSpaces = document_.ReadBool("TabsAsSpaces", defaults.globalTabs.tabsAsSpaces);
+    values.tabIndents = document_.ReadBool("TabIndents", defaults.tabIndents);
+    values.autoIndent = document_.ReadBool("AutoIndent", defaults.autoIndent);
+    values.detectIndentation = document_.ReadBool("DetectIndentation", defaults.detectIndentation);
+    values.backspaceUnindents =
+        static_cast<uint8_t>(document_.ReadInt("BackspaceUnindents", defaults.backspaceUnindents));
     values.dateTimeShort = ReadDateTimeFormat("DateTimeShort");
     values.dateTimeLong = ReadDateTimeFormat("DateTimeLong");
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
@@ -279,18 +273,19 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
         if (SyntaxSettingsLanguage(language) != language) continue;
         const auto* section = SyntaxSettingsSection(language);
         auto& tabs = values.schemeTabs[index];
-        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, section), 1, OriginalSettingLimits::MaxTabWidth);
-        tabs.indentWidth =
-            std::clamp(ReadInt("IndentWidth", tabs.indentWidth, section), 0, OriginalSettingLimits::MaxTabWidth);
-        tabs.tabsAsSpaces = ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, section) != 0;
-        tabs.useGlobal = ReadInt("UseGlobalTabSettings", tabs.useGlobal, section) != 0;
+        tabs.tabWidth =
+            std::clamp(document_.ReadInt("TabWidth", tabs.tabWidth, section), 1, OriginalSettingLimits::MaxTabWidth);
+        tabs.indentWidth = std::clamp(document_.ReadInt("IndentWidth", tabs.indentWidth, section), 0,
+                                      OriginalSettingLimits::MaxTabWidth);
+        tabs.tabsAsSpaces = document_.ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, section) != 0;
+        tabs.useGlobal = document_.ReadInt("UseGlobalTabSettings", tabs.useGlobal, section) != 0;
     }
-    const auto theme = static_cast<StyleTheme>(std::clamp(ReadInt("StyleTheme", 0, "Styles"), 0, 1));
+    const auto theme = static_cast<StyleTheme>(std::clamp(document_.ReadInt("StyleTheme", 0, "Styles"), 0, 1));
     values.fonts = LoadStyleProfile(theme);
     loadedFonts_ = values.fonts;
     for (const auto& scheme : SyntaxCatalog()) {
         if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
-        if (const auto extension = FindValue(SyntaxSettingsSection(scheme.language), "File Extensions");
+        if (const auto extension = document_.FindValue(SyntaxSettingsSection(scheme.language), "File Extensions");
             extension && !extension->empty())
             values.schemeExtensions[scheme.language] = *extension;
     }
@@ -302,96 +297,86 @@ void SettingsStore::WriteExtensions() {
         if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
         const auto value = SyntaxExtensionsFor(scheme.language, values.schemeExtensions);
         if (value != SyntaxExtensionsFor(scheme.language, loadedExtensions_))
-            WriteString(SyntaxSettingsSection(scheme.language), value, SyntaxExtensionsFor(scheme.language),
-                        "File Extensions");
+            document_.WriteString(SyntaxSettingsSection(scheme.language), value, SyntaxExtensionsFor(scheme.language),
+                                  "File Extensions");
     }
 }
 
 wxString SettingsStore::DarkProfilePath() const {
-    return wxFileName(wxFileName(path_).GetPath(), "Notepad4 DarkTheme.ini").GetFullPath();
+    return wxFileName(wxFileName(document_.Path()).GetPath(), "Notepad4 DarkTheme.ini").GetFullPath();
 }
 
-wxString SettingsStore::ReadStyle(const char* key, const char* fallback, const char* section) const {
+wxString SettingsStore::ReadStyle(const IniDocument& document, const char* key, const char* fallback,
+                                  const char* section) {
     // An explicitly empty original style resets every optional attribute.
-    const auto value = FindValue(wxString::FromUTF8(key), wxString::FromUTF8(section));
+    const auto value = document.FindValue(wxString::FromUTF8(key), wxString::FromUTF8(section));
     return value ? value->Strip(wxString::both) : wxString::FromUTF8(fallback);
 }
 
 FontSettings SettingsStore::LoadStyleProfile(StyleTheme theme) {
-    auto originalLines = std::move(lines_);
-    const auto originalPath = path_;
-    if (theme == StyleTheme::Dark) {
-        path_ = DarkProfilePath();
-        if (wxFileExists(path_))
-            LoadLines();
-        else
-            lines_ = IniLines(wxString::FromUTF8(OriginalDarkProfile()));
-    } else {
-        LoadLines();
-    }
+    IniDocument profile(theme == StyleTheme::Dark ? DarkProfilePath() : Path());
+    profile.Load(theme == StyleTheme::Dark ? wxString::FromUTF8(OriginalDarkProfile()) : wxString{});
     FontSettings result;
     result.theme = theme;
-    ReadCustomColours(result);
+    ReadCustomColours(profile, result);
     for (const auto& definition : GlobalStyleDefinitions()) {
         const auto key = wxString::FromUTF8(definition.key);
         // Preserve the established global font string contract: remove outer
         // double quotes, retain enclosed spaces and use defaults for empty.
         if (key == "Default Code Style")
-            result.codeStyle = ReadString(key, wxString::FromUTF8(definition.defaultValue), "Global Styles");
+            result.codeStyle = profile.ReadString(key, wxString::FromUTF8(definition.defaultValue), "Global Styles");
         else if (key == "Default Text Style")
-            result.textStyle = ReadString(key, wxString::FromUTF8(definition.defaultValue), "Global Styles");
+            result.textStyle = profile.ReadString(key, wxString::FromUTF8(definition.defaultValue), "Global Styles");
         else
-            result.globalStyles[key] = ReadStyle(definition.key, definition.defaultValue, "Global Styles");
+            result.globalStyles[key] = ReadStyle(profile, definition.key, definition.defaultValue, "Global Styles");
     }
     for (const auto& scheme : SyntaxCatalog()) {
         if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
         const auto* section = SyntaxSettingsSection(scheme.language);
         auto& style = result.Scheme(scheme.language);
-        style.useCode = ReadBool("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode, section);
+        style.useCode = profile.ReadBool("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode, section);
         for (const auto& definition : SyntaxStyleDefinitions(scheme.language)) {
-            const auto value = ReadStyle(definition.key, definition.defaultValue, section);
+            const auto value = ReadStyle(profile, definition.key, definition.defaultValue, section);
             if (wxString::FromUTF8(definition.key) == "Default")
                 style.defaultStyle = value;
             else
                 style.tokenStyles[wxString::FromUTF8(definition.key)] = value;
         }
     }
-    path_ = originalPath;
-    lines_ = std::move(originalLines);
     return result;
 }
 
-void SettingsStore::WriteStyleProfile() {
+void SettingsStore::WriteStyleProfile(IniDocument& document) {
     for (size_t index = 0; index < values.fonts.customColours.size(); ++index) {
         if (values.fonts.customColours[index] != loadedFonts_.customColours[index])
-            WriteString(wxString::Format("%02zu", index + 1),
-                        wxString::Format("#%06X", values.fonts.customColours[index]),
-                        wxString::Format("#%06X", DefaultCustomColours[index]), "Custom Colors");
+            document.WriteString(wxString::Format("%02zu", index + 1),
+                                 wxString::Format("#%06X", values.fonts.customColours[index]),
+                                 wxString::Format("#%06X", DefaultCustomColours[index]), "Custom Colors");
     }
     for (const auto& definition : GlobalStyleDefinitions()) {
         const auto key = wxString::FromUTF8(definition.key);
         const auto value = values.fonts.GlobalStyle(key);
         if (value != loadedFonts_.GlobalStyle(key))
-            WriteString(key, value, wxString::FromUTF8(definition.defaultValue), "Global Styles");
+            document.WriteString(key, value, wxString::FromUTF8(definition.defaultValue), "Global Styles");
     }
     for (const auto& scheme : SyntaxCatalog()) {
         if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
         const auto* section = SyntaxSettingsSection(scheme.language);
         if (values.fonts.Scheme(scheme.language).useCode != loadedFonts_.Scheme(scheme.language).useCode)
-            WriteBool("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode,
-                      scheme.language != SyntaxLanguage::PlainText, section);
+            document.WriteBool("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode,
+                               scheme.language != SyntaxLanguage::PlainText, section);
         for (const auto& definition : SyntaxStyleDefinitions(scheme.language)) {
             const auto value = values.fonts.TokenStyle(scheme.language, definition);
             if (value != loadedFonts_.TokenStyle(scheme.language, definition))
-                WriteString(wxString::FromUTF8(definition.key), value, wxString::FromUTF8(definition.defaultValue),
-                            section);
+                document.WriteString(wxString::FromUTF8(definition.key), value,
+                                     wxString::FromUTF8(definition.defaultValue), section);
         }
     }
 }
 
-void SettingsStore::ReadCustomColours(FontSettings& profile) const {
+void SettingsStore::ReadCustomColours(const IniDocument& document, FontSettings& profile) {
     for (size_t index = 0; index < profile.customColours.size(); ++index) {
-        const auto value = FindValue(wxString::Format("%02zu", index + 1), "Custom Colors");
+        const auto value = document.FindValue(wxString::Format("%02zu", index + 1), "Custom Colors");
         unsigned long rgb;
         if (value && value->StartsWith('#') && value->Mid(1).ToULong(&rgb, 16))
             profile.customColours[index] = static_cast<unsigned>(rgb) & 0xffffffU;
@@ -404,15 +389,13 @@ FontSettings SettingsStore::ResetStyles() {
 
 bool SettingsStore::ImportStyles(const wxString& path) {
     const wxLogNull noGuiLog;
-    const auto originalPath = path_;
-    auto originalLines = std::move(lines_);
-    path_ = path;
-    const bool success = wxFileExists(path) && LoadLines();
+    IniDocument profile(path);
+    const bool success = wxFileExists(path) && profile.Load();
     if (success) {
-        ReadCustomColours(values.fonts);
+        ReadCustomColours(profile, values.fonts);
         for (const auto& definition : GlobalStyleDefinitions()) {
             const auto key = wxString::FromUTF8(definition.key);
-            const auto value = FindValue(key, "Global Styles");
+            const auto value = profile.FindValue(key, "Global Styles");
             if (!value) continue;
             if (key == "Default Code Style")
                 values.fonts.codeStyle = value->Left(StyleProfileLimits::StyleCharacters);
@@ -424,13 +407,13 @@ bool SettingsStore::ImportStyles(const wxString& path) {
         for (const auto& scheme : SyntaxCatalog()) {
             if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
             const auto* section = SyntaxSettingsSection(scheme.language);
-            if (const auto extension = FindValue(section, "File Extensions"); extension && !extension->empty())
+            if (const auto extension = profile.FindValue(section, "File Extensions"); extension && !extension->empty())
                 values.schemeExtensions[scheme.language] = extension->Left(StyleProfileLimits::ExtensionCharacters);
             auto& styles = values.fonts.Scheme(scheme.language);
-            styles.useCode = ReadBool("UseDefaultCodeStyle", styles.useCode, section);
+            styles.useCode = profile.ReadBool("UseDefaultCodeStyle", styles.useCode, section);
             for (const auto& definition : SyntaxStyleDefinitions(scheme.language)) {
                 const auto key = wxString::FromUTF8(definition.key);
-                const auto value = FindValue(key, section);
+                const auto value = profile.FindValue(key, section);
                 if (!value) continue;
                 if (key == "Default")
                     styles.defaultStyle = value->Left(StyleProfileLimits::StyleCharacters);
@@ -439,61 +422,48 @@ bool SettingsStore::ImportStyles(const wxString& path) {
             }
         }
     }
-    path_ = originalPath;
-    lines_ = std::move(originalLines);
     return success;
 }
 
 bool SettingsStore::ExportStyles(const wxString& path) {
     const wxLogNull noGuiLog;
-    const auto originalPath = path_;
-    auto originalLines = std::move(lines_);
-    path_ = path;
-    bool success = (!wxFileExists(path) || wxIsWritable(path)) && LoadLines();
+    IniDocument profile(path);
+    bool success = (!wxFileExists(path) || wxIsWritable(path)) && profile.Load();
     if (success) {
         for (const auto& definition : GlobalStyleDefinitions()) {
             const auto key = wxString::FromUTF8(definition.key);
-            WriteString(key, values.fonts.GlobalStyle(key), {}, "Global Styles", true);
+            profile.WriteString(key, values.fonts.GlobalStyle(key), {}, "Global Styles", true);
         }
         for (const auto& scheme : SyntaxCatalog()) {
             if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
             const auto* section = SyntaxSettingsSection(scheme.language);
-            WriteString(section, SyntaxExtensionsFor(scheme.language, values.schemeExtensions), {}, "File Extensions",
-                        true);
-            WriteString("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode ? "1" : "0", {}, section,
-                        true);
+            profile.WriteString(section, SyntaxExtensionsFor(scheme.language, values.schemeExtensions), {},
+                                "File Extensions", true);
+            profile.WriteString("UseDefaultCodeStyle", values.fonts.Scheme(scheme.language).useCode ? "1" : "0", {},
+                                section, true);
             for (const auto& definition : SyntaxStyleDefinitions(scheme.language))
-                WriteString(wxString::FromUTF8(definition.key), values.fonts.TokenStyle(scheme.language, definition),
-                            {}, section, true);
+                profile.WriteString(wxString::FromUTF8(definition.key),
+                                    values.fonts.TokenStyle(scheme.language, definition), {}, section, true);
         }
         for (size_t index = 0; index < values.fonts.customColours.size(); ++index)
-            WriteString(wxString::Format("%02zu", index + 1),
-                        wxString::Format("#%06X", values.fonts.customColours[index]), {}, "Custom Colors", true);
-        success = SaveLines();
+            profile.WriteString(wxString::Format("%02zu", index + 1),
+                                wxString::Format("#%06X", values.fonts.customColours[index]), {}, "Custom Colors",
+                                true);
+        success = profile.Save();
     }
-    path_ = originalPath;
-    lines_ = std::move(originalLines);
     return success;
 }
 
 bool SettingsStore::SaveStyleProfile() {
     if (values.fonts == loadedFonts_) return true;
     if (values.fonts.theme == StyleTheme::Default) {
-        WriteStyleProfile();
+        WriteStyleProfile(document_);
         return true;
     }
-    auto originalLines = std::move(lines_);
-    const auto originalPath = path_;
-    path_ = DarkProfilePath();
-    bool success = LoadLines();
-    if (success) {
-        if (!wxFileExists(path_)) lines_ = IniLines(wxString::FromUTF8(OriginalDarkProfile()));
-        WriteStyleProfile();
-        success = SaveLines();
-    }
-    path_ = originalPath;
-    lines_ = std::move(originalLines);
-    return success;
+    IniDocument profile(DarkProfilePath());
+    if (!profile.Load(wxString::FromUTF8(OriginalDarkProfile()))) return false;
+    WriteStyleProfile(profile);
+    return profile.Save();
 }
 
 bool SettingsStore::SwitchStyleTheme(StyleTheme theme) {
@@ -505,14 +475,14 @@ bool SettingsStore::SwitchStyleTheme(StyleTheme theme) {
         // SaveSettingsNow(true, true) calls Style_Save only. Ordinary view/tool
         // preferences remain unsaved when Save Settings On Exit is disabled.
         const wxLogNull noGuiLog;
-        saved = (!wxFileExists(path_) || wxIsWritable(path_)) && LoadLines();
+        saved = (!wxFileExists(document_.Path()) || wxIsWritable(document_.Path())) && document_.Load();
         if (saved) {
-            WriteInt("StyleTheme", std::to_underlying(values.fonts.theme), 0, "Styles");
-            WriteInt("DefaultScheme", values.defaultScheme, 0, "Styles");
-            WriteBool("AutoSelect", values.autoSelect, true, "Styles");
-            WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
+            document_.WriteInt("StyleTheme", std::to_underlying(values.fonts.theme), 0, "Styles");
+            document_.WriteInt("DefaultScheme", values.defaultScheme, 0, "Styles");
+            document_.WriteBool("AutoSelect", values.autoSelect, true, "Styles");
+            document_.WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
             WriteExtensions();
-            saved = SaveStyleProfile() && SaveLines();
+            saved = SaveStyleProfile() && document_.Save();
         }
     }
     // The original still changes theme after reporting a style-save failure.
@@ -522,60 +492,8 @@ bool SettingsStore::SwitchStyleTheme(StyleTheme theme) {
     return saved;
 }
 
-bool SettingsStore::LoadLines() {
-    lines_.clear();
-    wxString text;
-    if (wxFileExists(path_)) {
-        wxFFile input(path_, "rb");
-        if (!input.IsOpened()) return false;
-        const auto length = input.Length();
-        if (length < 0) return false;
-        std::string bytes(static_cast<size_t>(length), '\0');
-        if (input.Read(bytes.data(), bytes.size()) != bytes.size() || input.Error() || !input.Close()) return false;
-#ifdef __WXMSW__
-        if (wxConvAuto::DetectBOM(bytes.data(), bytes.size()) == wxBOM_None)
-            text = wxString(bytes.data(), wxConvLocal, bytes.size());
-        else
-#endif
-            text = wxString(bytes.data(), wxConvAuto(wxFONTENCODING_SYSTEM), bytes.size());
-    }
-    wxStringTokenizer lines(text, "\n", wxTOKEN_RET_EMPTY_ALL);
-    while (lines.HasMoreTokens()) {
-        wxString line = lines.GetNextToken();
-        if (line.EndsWith("\r")) line.RemoveLast();
-        lines_.push_back(line);
-    }
-    if (!lines_.empty() && lines_.back().empty()) lines_.pop_back();
-    return true;
-}
-
-std::optional<wxString> SettingsStore::FindValue(const wxString& key, const wxString& sectionName,
-                                                 KeyCase keyCase) const {
-    bool section = false;
-    for (auto line : lines_) {
-        line.Trim().Trim(false);
-        if (line.StartsWith("[")) {
-            section = line.CmpNoCase("[" + sectionName + "]") == 0;
-        } else if (section && line.Contains('=')) {
-            const auto name = line.BeforeFirst('=').Trim().Trim(false);
-            if (keyCase == KeyCase::Exact ? name == key : name.CmpNoCase(key) == 0) return line.AfterFirst('=');
-        }
-    }
-    return std::nullopt;
-}
-
-bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString& sectionName) const {
-    if (auto value = FindValue(key, sectionName)) {
-        value->Trim().Trim(false);
-        // Original IniSectionParser::GetBoolImpl accepts a leading 0 or 1.
-        if (value->StartsWith("0")) return false;
-        if (value->StartsWith("1")) return true;
-    }
-    return fallback;
-}
-
 wxString SettingsStore::ReadDateTimeFormat(const wxString& key) const {
-    const auto value = FindValue(key, "Settings2", KeyCase::Insensitive);
+    const auto value = document_.FindValue(key, "Settings2", IniDocument::KeyCase::Insensitive);
     constexpr size_t MaxDateTimeFormatUtf16Units = 255;
     return value ? ParseOriginalIniString(*value, MaxDateTimeFormatUtf16Units) : wxString{};
 }
@@ -588,58 +506,18 @@ wxString SettingsStore::SelectionActionTemplate(SelectionAction action) {
 #ifdef __WXMSW__
     std::array<wchar_t, TemplateUtf16Capacity> value{};
     GetPrivateProfileStringW(L"Settings2", key.wc_str(), L"", value.data(), static_cast<DWORD>(value.size()),
-                             path_.wc_str());
+                             document_.Path().wc_str());
     return wxString(value.data());
 #else
     const wxLogNull noGuiLog;
-    if (!LoadLines()) return {};
-    const auto value = FindValue(key, "Settings2", KeyCase::Insensitive);
+    if (!document_.Load()) return {};
+    const auto value = document_.FindValue(key, "Settings2", IniDocument::KeyCase::Insensitive);
     return value ? ParseOriginalIniString(*value, TemplateUtf16Capacity - 1) : wxString{};
 #endif
 }
 
-int SettingsStore::ReadInt(const wxString& key, int fallback, const wxString& sectionName) const {
-    const auto field = FindValue(key, sectionName);
-    if (!field) return fallback;
-    // Original CRTStrToInt accepts a decimal prefix (including a sign).
-    const auto value = field->ToStdString(wxConvUTF8);
-    char* end = nullptr;
-    const long number = std::strtol(value.c_str(), &end, 10);
-    if (end == value.c_str()) return fallback;
-    return static_cast<int>(std::clamp(number, static_cast<long>(std::numeric_limits<int>::min()),
-                                       static_cast<long>(std::numeric_limits<int>::max())));
-}
-
-void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback, const wxString& sectionName) {
-    WriteInt(key, value, fallback, sectionName);
-}
-
-std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName, size_t capacity,
-                                                 bool preserveWhitespace) const {
-    std::vector<wxString> history;
-    bool section = false;
-    for (const auto& raw : lines_) {
-        wxString line = raw;
-        line.Trim().Trim(false);
-        if (line.StartsWith("[")) {
-            section = line.CmpNoCase("[" + sectionName + "]") == 0;
-        } else if (section && !line.StartsWith(";") && !line.StartsWith("#") && line.Contains('=')) {
-            wxString value = raw.AfterFirst('=');
-            wxString trimmed = value;
-            trimmed.Trim().Trim(false);
-            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.length() >= 2)
-                value = trimmed.Mid(1, trimmed.length() - 2);
-            else if (!preserveWhitespace)
-                value = trimmed;
-            if (!value.empty()) history.push_back(value);
-            if (history.size() == capacity) break;
-        }
-    }
-    return history;
-}
-
 std::vector<wxString> SettingsStore::ReadRecentFiles() const {
-    auto history = ReadHistory("Recent Files", recentFileCapacity_, true);
+    auto history = document_.ReadHistory("Recent Files", recentFileCapacity_, true);
     for (auto& path : history)
         path = RecentFiles::ExpandPath(path);
     return history;
@@ -650,7 +528,7 @@ void SettingsStore::WriteRecentFiles(const std::vector<wxString>& history) {
     portable.reserve(history.size());
     for (const auto& path : history)
         portable.push_back(RecentFiles::PortablePath(path, values.relativeFileMRU, values.portableMyDocs));
-    ReplaceHistorySection("Recent Files", portable);
+    document_.ReplaceHistorySection("Recent Files", portable);
 }
 
 void SettingsStore::AddRecentFile(const wxString& path) {
@@ -659,9 +537,9 @@ void SettingsStore::AddRecentFile(const wxString& path) {
 
 void SettingsStore::ClearRecentFiles(const wxString& currentPath) {
     values.recentFiles.clear();
-    if (values.saveRecentFiles && LoadLines()) {
+    if (values.saveRecentFiles && document_.Load()) {
         WriteRecentFiles({});
-        SaveLines();
+        document_.Save();
     }
     AddRecentFile(currentPath);
 }
@@ -669,212 +547,161 @@ void SettingsStore::ClearRecentFiles(const wxString& currentPath) {
 void SettingsStore::RemoveRecentFile(size_t index) {
     if (index >= values.recentFiles.size()) return;
     const wxString removed = values.recentFiles[index];
-    if (LoadLines()) {
+    if (document_.Load()) {
         auto stored = ReadRecentFiles();
         std::erase_if(stored, [&removed](const auto& path) { return RecentFiles::Equal(path, removed); });
         WriteRecentFiles(stored);
-        SaveLines();
+        document_.Save();
     }
     values.recentFiles.erase(values.recentFiles.begin() + static_cast<std::ptrdiff_t>(index));
 }
 
 void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<wxString>& history) {
     if (history.empty()) return;
-    auto merged = ReadHistory(sectionName, SearchLimits::HistoryEntries);
+    auto merged = document_.ReadHistory(sectionName, SearchLimits::HistoryEntries);
     for (auto item = history.rbegin(); item != history.rend(); ++item) {
         std::erase(merged, *item);
         merged.insert(merged.begin(), *item);
     }
     if (merged.size() > SearchLimits::HistoryEntries) merged.resize(SearchLimits::HistoryEntries);
-    ReplaceHistorySection(sectionName, merged);
-}
-
-void SettingsStore::ReplaceHistorySection(const wxString& sectionName, const std::vector<wxString>& history) {
-    bool section = false;
-    for (size_t index = 0; index < lines_.size();) {
-        wxString line = lines_[index];
-        line.Trim().Trim(false);
-        if (line.StartsWith("[")) {
-            section = line.CmpNoCase("[" + sectionName + "]") == 0;
-        }
-        if (section)
-            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
-        else
-            ++index;
-    }
-    if (history.empty()) return;
-    lines_.push_back("[" + sectionName + "]");
-    for (size_t index = 0; index < history.size(); ++index)
-        lines_.push_back(wxString::Format("%02zu=\"", index + 1) + history[index] + "\"");
-}
-
-void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName) {
-    WriteString(key, wxString::Format("%d", value), wxString::Format("%d", fallback), sectionName);
-}
-
-void SettingsStore::WriteString(const wxString& key, const wxString& value, const wxString& fallback,
-                                const wxString& sectionName, bool includeDefault) {
-    bool settings = false;
-    bool foundSection = false;
-    size_t insertion = lines_.size();
-    for (size_t index = 0; index < lines_.size();) {
-        wxString line = lines_[index];
-        line.Trim().Trim(false);
-        if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[" + sectionName + "]") == 0;
-            if (settings && !foundSection) {
-                insertion = index + 1;
-                foundSection = true;
-            }
-        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
-            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
-            continue;
-        }
-        ++index;
-    }
-    if (value == fallback && !includeDefault) return;
-    if (!foundSection) {
-        lines_.push_back("[" + sectionName + "]");
-        insertion = lines_.size();
-    }
-    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + "=" + value);
-}
-wxString SettingsStore::ReadString(const wxString& key, const wxString& fallback, const wxString& sectionName) const {
-    auto value = FindValue(key, sectionName);
-    if (!value) return fallback;
-    value->Trim().Trim(false);
-    if (value->StartsWith("\"") && value->EndsWith("\"") && value->length() >= 2)
-        value = value->Mid(1, value->length() - 2);
-    return value->empty() ? fallback : *value;
+    document_.ReplaceHistorySection(sectionName, merged);
 }
 
 bool SettingsStore::Save(bool explicitSave) {
     const OriginalSettings defaults;
-    if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
+    if (wxFileExists(document_.Path()) && !wxIsWritable(document_.Path())) return false;
     // Merge the implemented fields into the current file, retaining other fields
     // and sections, including settings added by subsequent parity slices.
-    if (!LoadLines()) return false;
-    WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
+    if (!document_.Load()) return false;
+    document_.WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
         if (!SaveStyleProfile()) return false;
         WriteExtensions();
-        WriteInt("StyleTheme", std::to_underlying(values.fonts.theme), 0, "Styles");
-        WriteInt("AutoSaveOption", values.autoSave.flags, defaults.autoSave.flags);
-        WriteInt("AutoSavePeriod", static_cast<int32_t>(values.autoSave.periodMilliseconds),
-                 defaults.autoSave.periodMilliseconds);
-        WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
-        WriteString("OpenWithDir",
-                    values.openWithDirectory.empty()
-                        ? wxString{}
-                        : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs,
-                                                    RecentFiles::PathKind::Directory),
-                    {});
-        WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
+        document_.WriteInt("StyleTheme", std::to_underlying(values.fonts.theme), 0, "Styles");
+        document_.WriteInt("AutoSaveOption", values.autoSave.flags, defaults.autoSave.flags);
+        document_.WriteInt("AutoSavePeriod", static_cast<int32_t>(values.autoSave.periodMilliseconds),
+                           defaults.autoSave.periodMilliseconds);
+        document_.WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
+        document_.WriteString("OpenWithDir",
+                              values.openWithDirectory.empty()
+                                  ? wxString{}
+                                  : RecentFiles::PortablePath(values.openWithDirectory, true, values.portableMyDocs,
+                                                              RecentFiles::PathKind::Directory),
+                              {});
+        document_.WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;
-        WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
-        WriteInt("PrintFooter", std::to_underlying(print.footer), std::to_underlying(defaultPrint.footer));
-        WriteInt("PrintColorMode", std::to_underlying(print.colour), std::to_underlying(defaultPrint.colour));
-        WriteInt("PrintZoom", print.zoom, defaultPrint.zoom);
+        document_.WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
+        document_.WriteInt("PrintFooter", std::to_underlying(print.footer), std::to_underlying(defaultPrint.footer));
+        document_.WriteInt("PrintColorMode", std::to_underlying(print.colour), std::to_underlying(defaultPrint.colour));
+        document_.WriteInt("PrintZoom", print.zoom, defaultPrint.zoom);
         for (size_t index = 0; index < PrintMarginKeys.size(); ++index)
-            WriteInt(PrintMarginKeys[index], print.margins[index], defaultPrint.margins[index]);
-        WriteInt("SaveRecentFiles",
-                 static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
-                                  static_cast<unsigned>(values.saveRecentFiles)),
-                 RecentFiles::MinimumCapacity << 1);
-        WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
-        WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
-        WriteInt("AutoScaleToolbar", values.autoScaleToolbar, defaults.autoScaleToolbar);
-        WriteString("ToolbarButtons", values.toolbarButtons, defaults.toolbarButtons);
-        WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
-        WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
-        WriteInt("EscFunction", std::to_underlying(values.escapeFunction), std::to_underlying(defaults.escapeFunction));
-        WriteInt("PathNameFormat", std::to_underlying(values.pathNameFormat),
-                 std::to_underlying(defaults.pathNameFormat));
-        WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
-        WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
-        WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),
-                 std::to_underlying(defaults.wordWrapIndent));
-        WriteBool("WordWrapSelectSubLine", values.wordWrapSelectSubLine, defaults.wordWrapSelectSubLine);
-        WriteInt("EndAtLastLine", values.endAtLastLine, defaults.endAtLastLine);
-        WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
-        WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
-        WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
-        WriteInt("ChangeHistoryMarker", values.changeHistoryMarker, defaults.changeHistoryMarker);
-        WriteBool("MatchBraces", values.matchBraces, defaults.matchBraces);
-        WriteBool("ShowCodeFolding", values.showCodeFolding, defaults.showCodeFolding);
-        WriteBool("HighlightCurrentBlock", values.highlightCurrentBlock, defaults.highlightCurrentBlock);
-        WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
-        WriteBool("ShowIndentGuides", values.showIndentGuides, defaults.showIndentGuides);
-        WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);
-        WriteBool("ShowUnicodeControlCharacter", values.showUnicodeControlCharacter,
-                  defaults.showUnicodeControlCharacter);
-        WriteInt("ShowCallTip", std::to_underlying(values.showCallTip), std::to_underlying(defaults.showCallTip));
-        WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
-        WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
-        WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");
-        WriteInt("DefaultScheme", values.defaultScheme, defaults.defaultScheme, "Styles");
-        WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
-        WriteInt("DefaultEncoding", values.encoding.defaultEncoding, defaults.encoding.defaultEncoding);
-        WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, defaults.encoding.skipUnicodeDetection);
-        WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, defaults.encoding.loadANSIasUTF8);
-        WriteBool("LoadASCIIasUTF8", values.encoding.loadASCIIasUTF8, defaults.encoding.loadASCIIasUTF8);
-        WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
-        WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
-        WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+            document_.WriteInt(PrintMarginKeys[index], print.margins[index], defaultPrint.margins[index]);
+        document_.WriteInt("SaveRecentFiles",
+                           static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
+                                            static_cast<unsigned>(values.saveRecentFiles)),
+                           RecentFiles::MinimumCapacity << 1);
+        document_.WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
+        document_.WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
+        document_.WriteInt("AutoScaleToolbar", values.autoScaleToolbar, defaults.autoScaleToolbar);
+        document_.WriteString("ToolbarButtons", values.toolbarButtons, defaults.toolbarButtons);
+        document_.WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
+        document_.WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
+        document_.WriteInt("EscFunction", std::to_underlying(values.escapeFunction),
+                           std::to_underlying(defaults.escapeFunction));
+        document_.WriteInt("PathNameFormat", std::to_underlying(values.pathNameFormat),
+                           std::to_underlying(defaults.pathNameFormat));
+        document_.WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
+        document_.WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
+        document_.WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),
+                           std::to_underlying(defaults.wordWrapIndent));
+        document_.WriteBool("WordWrapSelectSubLine", values.wordWrapSelectSubLine, defaults.wordWrapSelectSubLine);
+        document_.WriteInt("EndAtLastLine", values.endAtLastLine, defaults.endAtLastLine);
+        document_.WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth,
+                            "wxnotepad");
+        document_.WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
+        document_.WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
+        document_.WriteInt("ChangeHistoryMarker", values.changeHistoryMarker, defaults.changeHistoryMarker);
+        document_.WriteBool("MatchBraces", values.matchBraces, defaults.matchBraces);
+        document_.WriteBool("ShowCodeFolding", values.showCodeFolding, defaults.showCodeFolding);
+        document_.WriteBool("HighlightCurrentBlock", values.highlightCurrentBlock, defaults.highlightCurrentBlock);
+        document_.WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
+        document_.WriteBool("ShowIndentGuides", values.showIndentGuides, defaults.showIndentGuides);
+        document_.WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);
+        document_.WriteBool("ShowUnicodeControlCharacter", values.showUnicodeControlCharacter,
+                            defaults.showUnicodeControlCharacter);
+        document_.WriteInt("ShowCallTip", std::to_underlying(values.showCallTip),
+                           std::to_underlying(defaults.showCallTip));
+        document_.WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
+        document_.WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
+        document_.WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");
+        document_.WriteInt("DefaultScheme", values.defaultScheme, defaults.defaultScheme, "Styles");
+        document_.WriteString("FavoriteSchemes", values.favoriteSchemes, {}, "Styles");
+        document_.WriteInt("DefaultEncoding", values.encoding.defaultEncoding, defaults.encoding.defaultEncoding);
+        document_.WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection,
+                            defaults.encoding.skipUnicodeDetection);
+        document_.WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, defaults.encoding.loadANSIasUTF8);
+        document_.WriteBool("LoadASCIIasUTF8", values.encoding.loadASCIIasUTF8, defaults.encoding.loadASCIIasUTF8);
+        document_.WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
+        document_.WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
+        document_.WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
 #ifdef __WXMSW__
-        WriteInt("RenderingTechnology", values.renderingTechnology, defaults.renderingTechnology);
+        document_.WriteInt("RenderingTechnology", values.renderingTechnology, defaults.renderingTechnology);
 #endif
-        WriteInt("CaretStyle",
-                 values.caret.lineWidth + (values.caret.overstrikeBlock ? 10 : 0) +
-                     (values.caret.blockAfterSelection ? 100 : 0),
-                 defaults.caret.lineWidth);
-        WriteInt("CaretBlinkPeriod", values.caret.blinkPeriod, defaults.caret.blinkPeriod);
-        WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);
-        WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
-        WriteBool("MarkLongLines", values.markLongLines, defaults.markLongLines);
-        WriteInt("LongLineMode", values.longLineMode, defaults.longLineMode);
-        WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
-        WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
-        WriteInt("FileWatchingMode", std::to_underlying(values.fileWatching.mode),
-                 std::to_underlying(defaults.fileWatching.mode));
-        WriteInt("FileCheckInterval", values.fileWatching.checkInterval, defaults.fileWatching.checkInterval,
-                 "Settings2");
-        WriteInt("AutoReloadTimeout", values.fileWatching.autoReloadDelay, defaults.fileWatching.autoReloadDelay,
-                 "Settings2");
-        WriteInt("FileWatchingOption", values.fileWatching.flags, defaults.fileWatching.flags);
-        WriteBool("ResetFileWatching", values.fileWatching.resetOnNewFile, defaults.fileWatching.resetOnNewFile);
-        WriteInt("SelectOption", values.selectOption, defaults.selectOption);
+        document_.WriteInt("CaretStyle",
+                           values.caret.lineWidth + (values.caret.overstrikeBlock ? 10 : 0) +
+                               (values.caret.blockAfterSelection ? 100 : 0),
+                           defaults.caret.lineWidth);
+        document_.WriteInt("CaretBlinkPeriod", values.caret.blinkPeriod, defaults.caret.blinkPeriod);
+        document_.WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);
+        document_.WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
+        document_.WriteBool("MarkLongLines", values.markLongLines, defaults.markLongLines);
+        document_.WriteInt("LongLineMode", values.longLineMode, defaults.longLineMode);
+        document_.WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
+        document_.WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
+        document_.WriteInt("FileWatchingMode", std::to_underlying(values.fileWatching.mode),
+                           std::to_underlying(defaults.fileWatching.mode));
+        document_.WriteInt("FileCheckInterval", values.fileWatching.checkInterval, defaults.fileWatching.checkInterval,
+                           "Settings2");
+        document_.WriteInt("AutoReloadTimeout", values.fileWatching.autoReloadDelay,
+                           defaults.fileWatching.autoReloadDelay, "Settings2");
+        document_.WriteInt("FileWatchingOption", values.fileWatching.flags, defaults.fileWatching.flags);
+        document_.WriteBool("ResetFileWatching", values.fileWatching.resetOnNewFile,
+                            defaults.fileWatching.resetOnNewFile);
+        document_.WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         const auto& completion = values.completion;
         const auto& defaultCompletion = defaults.completion;
-        WriteInt("AutoCompleteOption", completion.completeOption, defaultCompletion.completeOption);
-        WriteInt("AutoCompleteScope",
-                 completion.completeScope | (completion.scanWordScope << WordCompletionLimits::ScanScopeShift),
-                 WordCompletionLimits::DefaultScopes);
-        WriteInt("AutoCScanWordsTimeout", completion.scanWordsTimeout, defaultCompletion.scanWordsTimeout);
-        WriteBool("AutoCIgnoreCase", completion.ignoreCase, defaultCompletion.ignoreCase);
-        WriteBool("LaTeXInputMethod", completion.latexInputMethod, defaultCompletion.latexInputMethod);
-        WriteInt("AutoCVisibleItemCount", completion.visibleItemCount, defaultCompletion.visibleItemCount);
-        WriteInt("AutoCMinWordLength", completion.minWordLength, defaultCompletion.minWordLength);
-        WriteInt("AutoCMinNumberLength", completion.minNumberLength, defaultCompletion.minNumberLength);
-        WriteInt("AutoCFillUpMask", completion.fillUpMask, defaultCompletion.fillUpMask);
-        WriteString("AutoCFillUpPunctuation", completion.fillUpPunctuation, defaultCompletion.fillUpPunctuation);
-        WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
-        WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
-        WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
-        WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
-        WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : defaults.findReplaceFlag,
-                 defaults.findReplaceFlag);
-        WriteInt("LineSelection", values.lineSelection, defaults.lineSelection);
-        WriteInt("DefaultEOLMode", values.defaultEOLMode, defaults.defaultEOLMode);
-        WriteBool("WarnLineEndings", values.warnLineEndings, defaults.warnLineEndings);
-        WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, defaults.globalTabs.tabsAsSpaces);
-        WriteBool("TabIndents", values.tabIndents, defaults.tabIndents);
-        WriteBool("AutoIndent", values.autoIndent, defaults.autoIndent);
-        WriteBool("DetectIndentation", values.detectIndentation, defaults.detectIndentation);
-        WriteInt("TabWidth", values.globalTabs.tabWidth, defaults.globalTabs.tabWidth);
-        WriteInt("IndentWidth", values.globalTabs.indentWidth, defaults.globalTabs.indentWidth);
-        WriteInt("BackspaceUnindents", values.backspaceUnindents, defaults.backspaceUnindents);
+        document_.WriteInt("AutoCompleteOption", completion.completeOption, defaultCompletion.completeOption);
+        document_.WriteInt("AutoCompleteScope",
+                           completion.completeScope |
+                               (completion.scanWordScope << WordCompletionLimits::ScanScopeShift),
+                           WordCompletionLimits::DefaultScopes);
+        document_.WriteInt("AutoCScanWordsTimeout", completion.scanWordsTimeout, defaultCompletion.scanWordsTimeout);
+        document_.WriteBool("AutoCIgnoreCase", completion.ignoreCase, defaultCompletion.ignoreCase);
+        document_.WriteBool("LaTeXInputMethod", completion.latexInputMethod, defaultCompletion.latexInputMethod);
+        document_.WriteInt("AutoCVisibleItemCount", completion.visibleItemCount, defaultCompletion.visibleItemCount);
+        document_.WriteInt("AutoCMinWordLength", completion.minWordLength, defaultCompletion.minWordLength);
+        document_.WriteInt("AutoCMinNumberLength", completion.minNumberLength, defaultCompletion.minNumberLength);
+        document_.WriteInt("AutoCFillUpMask", completion.fillUpMask, defaultCompletion.fillUpMask);
+        document_.WriteString("AutoCFillUpPunctuation", completion.fillUpPunctuation,
+                              defaultCompletion.fillUpPunctuation);
+        document_.WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
+        document_.WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
+        document_.WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
+        document_.WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
+        document_.WriteInt("FindReplaceFlag",
+                           values.saveFindReplace ? values.findReplaceFlag : defaults.findReplaceFlag,
+                           defaults.findReplaceFlag);
+        document_.WriteInt("LineSelection", values.lineSelection, defaults.lineSelection);
+        document_.WriteInt("DefaultEOLMode", values.defaultEOLMode, defaults.defaultEOLMode);
+        document_.WriteBool("WarnLineEndings", values.warnLineEndings, defaults.warnLineEndings);
+        document_.WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, defaults.globalTabs.tabsAsSpaces);
+        document_.WriteBool("TabIndents", values.tabIndents, defaults.tabIndents);
+        document_.WriteBool("AutoIndent", values.autoIndent, defaults.autoIndent);
+        document_.WriteBool("DetectIndentation", values.detectIndentation, defaults.detectIndentation);
+        document_.WriteInt("TabWidth", values.globalTabs.tabWidth, defaults.globalTabs.tabWidth);
+        document_.WriteInt("IndentWidth", values.globalTabs.indentWidth, defaults.globalTabs.indentWidth);
+        document_.WriteInt("BackspaceUnindents", values.backspaceUnindents, defaults.backspaceUnindents);
         for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
             WriteSchemeTabs(index);
         }
@@ -894,7 +721,7 @@ bool SettingsStore::Save(bool explicitSave) {
         values.recentFiles = std::move(merged);
         WriteRecentFiles(values.recentFiles);
     }
-    const bool saved = SaveLines();
+    const bool saved = document_.Save();
     if (saved && (values.saveSettings || explicitSave)) {
         loadedFonts_ = values.fonts;
         loadedExtensions_ = values.schemeExtensions;
@@ -906,24 +733,24 @@ bool SettingsStore::SaveUILanguage(int language) {
     // The language command reports failure itself. Suppress deferred wxLogGui
     // errors from file operations so they cannot add a second modal dialog.
     const wxLogNull noGuiLog;
-    if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
-    if (!LoadLines()) return false;
+    if (wxFileExists(document_.Path()) && !wxIsWritable(document_.Path())) return false;
+    if (!document_.Load()) return false;
     const auto normalized = UILanguage::Normalize(language);
-    WriteInt("UILanguage", normalized, -1, "Settings2");
-    if (!SaveLines()) return false;
+    document_.WriteInt("UILanguage", normalized, -1, "Settings2");
+    if (!document_.Save()) return false;
     values.uiLanguage = normalized;
     return true;
 }
 
 int SettingsStore::MessageSuppression(const wxString& key) {
-    if (!LoadLines()) return 0;
-    return ReadInt(key, 0, "Suppressed Messages");
+    if (!document_.Load()) return 0;
+    return document_.ReadInt(key, 0, "Suppressed Messages");
 }
 
 bool SettingsStore::SuppressMessage(const wxString& key) {
-    if (!LoadLines()) return false;
-    WriteInt(key, 1, 0, "Suppressed Messages");
-    return SaveLines();
+    if (!document_.Load()) return false;
+    document_.WriteInt(key, 1, 0, "Suppressed Messages");
+    return document_.Save();
 }
 
 void SettingsStore::WriteSchemeTabs(size_t index) {
@@ -932,7 +759,7 @@ void SettingsStore::WriteSchemeTabs(size_t index) {
     const auto& tabs = values.schemeTabs[index];
     const auto fallback = OriginalSettings{}.schemeTabs[index];
     const auto write = [this, index](const wxString& key, int value, int defaultValue) {
-        WriteInt(key, value, defaultValue, SyntaxSettingsSection(static_cast<SyntaxLanguage>(index)));
+        document_.WriteInt(key, value, defaultValue, SyntaxSettingsSection(static_cast<SyntaxLanguage>(index)));
     };
     write("TabWidth", tabs.tabWidth, fallback.tabWidth);
     write("IndentWidth", tabs.indentWidth, fallback.indentWidth);
@@ -941,16 +768,8 @@ void SettingsStore::WriteSchemeTabs(size_t index) {
 }
 
 bool SettingsStore::SaveSchemeTabs(SyntaxLanguage language) {
-    if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
-    if (!LoadLines()) return false;
+    if (wxFileExists(document_.Path()) && !wxIsWritable(document_.Path())) return false;
+    if (!document_.Load()) return false;
     WriteSchemeTabs(static_cast<size_t>(std::to_underlying(SyntaxSettingsLanguage(language))));
-    return SaveLines();
-}
-
-bool SettingsStore::SaveLines() {
-    wxString text(wxUniChar(0xFEFF));
-    for (const auto& line : lines_)
-        text += line + "\r\n";
-    wxTempFile output(path_);
-    return output.IsOpened() && output.Write(text, wxMBConvUTF16LE()) && output.Commit();
+    return document_.Save();
 }

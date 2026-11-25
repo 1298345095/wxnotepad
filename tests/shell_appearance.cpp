@@ -12,8 +12,11 @@
 #include <wx/statusbr.h>
 #include <memory>
 #include <utility>
+#include <vector>
 #include <wx/log.h>
 #include <wx/dialog.h>
+#include <wx/modalhook.h>
+#include <wx/menu.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/settings.h>
@@ -434,6 +437,159 @@ void CheckToolbarLayout(EditorFrame* frame) {
             "toolbar visibility is observational for document bytes, encoding and save point");
 }
 
+void ClickStatus(EditorFrame* frame, int field, wxEventType type) {
+    auto* status = frame->GetStatusBar();
+    wxRect bounds;
+    Require(status->GetFieldRect(field, bounds) && bounds.width > 0, "status action has a visible native field");
+    wxMouseEvent event(type);
+    event.SetPosition(bounds.GetPosition() + wxPoint(bounds.width / 2, bounds.height / 2));
+    event.SetEventObject(status);
+    status->GetEventHandler()->ProcessEvent(event);
+}
+
+class CancelStatusDialog final : public wxModalDialogHook {
+public:
+    explicit CancelStatusDialog(EditorFrame* frame) : frame_(frame) { Register(); }
+    int Enter(wxDialog* dialog) override {
+        if (dialog->GetParent() != frame_) return wxID_NONE;
+        title = dialog->GetTitle();
+        wxTheApp->CallAfter([dialog] { NativeSearch::Click(dialog, wxID_CANCEL); });
+        return wxID_NONE;
+    }
+    wxString title;
+
+private:
+    EditorFrame* frame_;
+};
+
+#if defined(__WXMSW__) || defined(__WXGTK__)
+class ObserveStatusMenu final : public wxEvtHandler {
+public:
+    explicit ObserveStatusMenu(EditorFrame* frame) : frame_(frame) {
+        frame_->Bind(wxEVT_MENU_OPEN, &ObserveStatusMenu::Opened, this);
+    }
+    ~ObserveStatusMenu() override { frame_->Unbind(wxEVT_MENU_OPEN, &ObserveStatusMenu::Opened, this); }
+    wxMenu* menu = nullptr;
+
+private:
+    EditorFrame* frame_;
+    void Opened(wxMenuEvent& event) {
+        menu = event.GetMenu();
+        if (menu) {
+            // Observe the actual popup selected by the status action, then
+            // dismiss its native modal loop without choosing a language.
+            wxTheApp->CallAfter([opened = menu] {
+#ifdef __WXMSW__
+                (void)opened;
+                EndMenu();
+#else
+                gtk_menu_popdown(GTK_MENU(opened->m_menu));
+#endif
+            });
+        }
+        event.Skip();
+    }
+};
+#endif
+
+void CheckCommandIdentity(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    auto* menus = frame->GetMenuBar();
+    auto* toolbar = frame->GetToolBar();
+    auto* editor = frame->Editor();
+    const auto command = [menus](const char* menu, const char* label) {
+        const int id = menus->FindMenuItem(menu, label);
+        Require(id != wxNOT_FOUND, "original menu command exists before changing its presentation");
+        return id;
+    };
+    const int rebuild = command("Settings", "Use Large Toolbar");
+    const int wordWrap = command("View", "Word Wrap");
+    const int schemeCommand = command("Scheme", "Syntax Scheme...");
+    const std::array statusCommands{command("Search", "Goto Line..."),  command("File", "More..."),
+                                    command("View", "Zoom Level..."),   command("File", "Windows (CR+LF)"),
+                                    command("File", "Unix/macOS (LF)"), command("File", "Classic Mac OS (CR)")};
+    std::vector<std::pair<wxMenuItem*, wxString>> labels;
+    const auto rename = [menus, &labels](int id) {
+        auto* item = menus->FindItem(id);
+        Require(item, "shared command has an actual menu item");
+        labels.emplace_back(item, item->GetItemLabel());
+        item->SetItemLabel(wxString::Format("Renamed command %d", id));
+    };
+    std::vector<int> toolbarOrder;
+    for (size_t index = 0; index < toolbar->GetToolsCount(); ++index) {
+        const auto* tool = toolbar->GetToolByPos(static_cast<int>(index));
+        toolbarOrder.push_back(tool->IsSeparator() ? wxID_SEPARATOR : tool->GetId());
+        if (!tool->IsSeparator()) rename(tool->GetId());
+    }
+    for (const int id : statusCommands)
+        rename(id);
+    wxMenu* scheme = nullptr;
+    menus->FindItem(schemeCommand, &scheme);
+    size_t schemeIndex = 0;
+    while (schemeIndex < menus->GetMenuCount() && menus->GetMenu(schemeIndex) != scheme)
+        ++schemeIndex;
+    Require(schemeIndex < menus->GetMenuCount(), "scheme command belongs to the actual top-level scheme menu");
+    const auto schemeLabel = menus->GetMenuLabel(schemeIndex);
+    Require(menus->Insert(0, menus->Remove(schemeIndex), schemeLabel), "move scheme menu before the File menu");
+    NativeSearch::Command(frame, rebuild);
+    Require(toolbar->GetToolsCount() == toolbarOrder.size(), "renaming commands preserves the toolbar layout");
+    for (size_t index = 0; index < toolbarOrder.size(); ++index) {
+        const auto* tool = toolbar->GetToolByPos(static_cast<int>(index));
+        Require((tool->IsSeparator() ? wxID_SEPARATOR : tool->GetId()) == toolbarOrder[index],
+                "toolbar command identity and separators survive caption and menu-order changes");
+        if (!tool->IsSeparator())
+            Require(tool->GetShortHelp() == menus->FindItem(tool->GetId())->GetItemLabelText(),
+                    "rebuilt toolbar takes its new display text from the menu");
+    }
+    const bool wrapped = editor->Send(GetWrapMode) != 0;
+    for (const bool expected : {!wrapped, wrapped}) {
+        wxCommandEvent toggle(wxEVT_TOOL, wordWrap);
+        toggle.SetEventObject(toolbar);
+        toolbar->GetEventHandler()->ProcessEvent(toggle);
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        toolbar->UpdateWindowUI();
+        Require((editor->Send(GetWrapMode) != 0) == expected && menus->IsChecked(wordWrap) == expected &&
+                    toolbar->GetToolState(wordWrap) == expected,
+                "renamed toolbar command shares editor behavior and menu check state");
+    }
+#if defined(__WXMSW__) || defined(__WXGTK__)
+    {
+        ObserveStatusMenu popup(frame);
+        ClickStatus(frame, StatusField::Scheme, wxEVT_LEFT_DCLICK);
+        Require(popup.menu == scheme, "status opens the actual scheme menu after top-level menu reordering");
+    }
+#endif
+    {
+        CancelStatusDialog dialog(frame);
+        for (const auto& [field, title] :
+             {std::pair{StatusField::Line, "Go To Line"}, std::pair{StatusField::Encoding, "Select Encoding"},
+              std::pair{StatusField::Zoom, "Zoom Level"}}) {
+            dialog.title.clear();
+            ClickStatus(frame, field, field == StatusField::Zoom ? wxEVT_LEFT_UP : wxEVT_LEFT_DCLICK);
+            Require(dialog.title == wxGetTranslation(title), "renamed status command opens its original dialog");
+        }
+    }
+    TestEditor::ResetStream(editor, "a\r\nb\nc\r", 0, 0);
+    editor->Send(SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
+    NativePaint::Complete(editor);
+    ClickStatus(frame, StatusField::Eol, wxEVT_LEFT_UP);
+    Require(NativeSearch::Text(editor) == "a\r\nb\r\nc\r\n", "status single click converts to its current EOL mode");
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == "a\r\nb\nc\r", "status conversion retains undo of mixed line endings");
+    for (const auto& [mode, text] :
+         {std::pair{Scintilla::EndOfLine::Lf, "a\nb\nc\n"}, std::pair{Scintilla::EndOfLine::Cr, "a\rb\rc\r"},
+          std::pair{Scintilla::EndOfLine::CrLf, "a\r\nb\r\nc\r\n"}}) {
+        NativePaint::Complete(editor);
+        ClickStatus(frame, StatusField::Eol, wxEVT_LEFT_DCLICK);
+        Require(editor->Send(GetEOLMode) == std::to_underlying(mode) && NativeSearch::Text(editor) == text,
+                "status double click cycles and converts all EOL modes after their labels change");
+    }
+    for (const auto& [item, label] : labels)
+        item->SetItemLabel(label);
+    Require(menus->Insert(schemeIndex, menus->Remove(0), schemeLabel), "restore original menu order");
+    NativeSearch::Command(frame, rebuild);
+}
+
 void CheckMultipleSelectionStatus(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
@@ -536,6 +692,7 @@ public:
 #ifdef __WXMSW__
                 CheckNarrowStatus(frame);
 #endif
+                CheckCommandIdentity(frame);
                 result_ = 0;
                 std::puts("PASS: native default toolbar");
             } catch (const std::exception& error) {

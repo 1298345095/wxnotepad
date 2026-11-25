@@ -128,6 +128,7 @@ add_library(app_shell STATIC
     src/app/dialogs/recent_files_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
+    src/settings/ini_document.cpp
     src/settings/recent_files.cpp
     src/settings/environment_expansion.cpp
     src/settings/search_settings.cpp

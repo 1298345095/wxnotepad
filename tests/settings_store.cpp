@@ -97,6 +97,73 @@ void CheckHistorySections(const wxString& path) {
     Require(cleared.Contains("[Recent Find]") && cleared.Contains("[Untouched]\r\nOther=retained\r\n"),
             "clearing file history retains adjacent sections and search history");
 }
+
+void CheckStyleFileIsolation(const wxString& path) {
+    WriteSettings(path, "[Settings]\nWordWrap=1\n[Main Only]\nKeep=main\n"
+                        "[Window Position 1024x768]\nRunDlgSizeX=321\n");
+    const auto importFile = TestFiles::TemporaryDirectory("imported-styles.ini");
+    const auto exportFile = TestFiles::TemporaryDirectory("exported-styles.ini");
+    const auto importPath = TestFiles::Filename(importFile);
+    const auto exportPath = TestFiles::Filename(exportFile);
+    WriteSettings(importPath, "[Settings]\nWordWrap=0\n[Import Only]\nKeep=import\n"
+                              "[Window Position 1024x768]\nRunDlgSizeX=999\n"
+                              "[Global Styles]\nDefault Code Style=font:Fixture; size:17\n"
+                              "[File Extensions]\nPython Script=fixture\n");
+    WriteSettings(exportPath, "[Settings]\nWordWrap=0\n[Export Only]\nKeep=export\n");
+    const auto importedBytes = TestFiles::Bytes(importFile);
+    SettingsStore settings(path);
+    const auto saveMain = [&](bool wordWrap) {
+        Require(settings.Path() == path && settings.OriginalRunCommandWidth(1024, 768) == 321 &&
+                    settings.OriginalRunCommandWidth(800, 600) == 321,
+                "profile operations retain the primary file identity and cached section data");
+        settings.values.wordWrap = wordWrap;
+        Require(settings.Save(false), "ordinary settings save succeeds after an external profile operation");
+        const SettingsStore restarted(path);
+        const auto mainText = ReadSettings(path);
+        Require(restarted.values.wordWrap == wordWrap && mainText.Contains("[Main Only]\r\nKeep=main\r\n") &&
+                    !mainText.Contains("[Import Only]") && !mainText.Contains("[Export Only]"),
+                "ordinary settings save updates the primary file and preserves only its unrelated sections");
+        Require(TestFiles::Bytes(importFile) == importedBytes,
+                "ordinary settings save leaves the import source intact");
+    };
+
+    const auto initialMain = ReadSettings(path);
+    Require(settings.ImportStyles(importPath) && settings.values.fonts.codeStyle == "font:Fixture; size:17" &&
+                settings.values.schemeExtensions.at(SyntaxLanguage::Python) == "fixture" && settings.values.wordWrap,
+            "import reads styles and associations without importing ordinary settings");
+    Require(ReadSettings(path) == initialMain, "style import leaves primary file bytes pending until settings save");
+    saveMain(false);
+    Require(SettingsStore(path).values.fonts.codeStyle == "font:Fixture; size:17",
+            "imported styles are persisted by the following primary settings save");
+
+    const auto beforeExport = ReadSettings(path);
+    Require(settings.ExportStyles(exportPath), "export styles into an existing separate file");
+    const auto exportedBytes = TestFiles::Bytes(exportFile);
+    Require(ReadSettings(exportPath).Contains("[Export Only]\r\nKeep=export\r\n") &&
+                ReadSettings(exportPath).Contains("Default Code Style=font:Fixture; size:17") &&
+                ReadSettings(path) == beforeExport,
+            "style export preserves destination sections and leaves the primary file untouched");
+    saveMain(true);
+    Require(TestFiles::Bytes(exportFile) == exportedBytes,
+            "ordinary settings save leaves the export destination intact");
+
+    const auto fonts = settings.values.fonts;
+    const auto extensions = settings.values.schemeExtensions;
+    const auto beforeFailure = ReadSettings(path);
+    const auto missingImport = TestFiles::Filename(TestFiles::TemporaryDirectory("missing-styles.ini"));
+    Require(!settings.ImportStyles(missingImport) && settings.values.fonts == fonts &&
+                settings.values.schemeExtensions == extensions && ReadSettings(path) == beforeFailure,
+            "failed import retains the current profile and primary file");
+    saveMain(false);
+    Require(TestFiles::Bytes(exportFile) == exportedBytes,
+            "save after failed import leaves the export destination intact");
+
+    const auto missingExport = TestFiles::Filename(TestFiles::TemporaryDirectory("missing-style-directory/export.ini"));
+    Require(!settings.ExportStyles(missingExport) && !wxFileExists(missingExport),
+            "export failure in an absent directory leaves no destination file");
+    saveMain(true);
+    Require(TestFiles::Bytes(exportFile) == exportedBytes, "save after failed export leaves the earlier export intact");
+}
 } // namespace
 
 class SettingsStoreApp final : public wxApp {
@@ -107,7 +174,8 @@ public:
             const auto path = TestFiles::Filename(TestFiles::TemporaryDirectory("settings.ini"));
             CheckScalarSettings(path);
             CheckHistorySections(path);
-            std::puts("PASS: settings field parsing and history replacement preserve original INI semantics");
+            CheckStyleFileIsolation(path);
+            std::puts("PASS: settings INI semantics, history replacement and profile file isolation");
             return 0;
         } catch (const std::exception& error) {
             DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
