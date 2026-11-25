@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / '.github/scripts'))
 import windows_context_investigation as investigation
+import windows_foreground
 
 
 class WindowsInvestigation(unittest.TestCase):
@@ -106,6 +107,33 @@ class WindowsInvestigation(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertIn('--zero-foreground-timeout is only valid for run on GitHub Actions', result.stderr)
                 self.assertFalse(reports.exists())
+
+    def test_shared_foreground_setup_and_restore_reject_local_host(self):
+        state = self.directory / 'foreground.json'
+        for action in ('prepare', 'restore'):
+            with self.subTest(action=action):
+                result = subprocess.run([sys.executable, '-X', 'utf8',
+                                         ROOT / '.github/scripts/windows_foreground.py', action,
+                                         '--state-file', state],
+                                        env={key: value for key, value in os.environ.items() if key != 'GITHUB_ACTIONS'},
+                                        capture_output=True, text=True, encoding='utf-8')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('only supported on hosted Windows CI', result.stderr)
+                self.assertFalse(state.exists())
+
+    @unittest.skipUnless(sys.platform == 'win32' and os.environ.get('GITHUB_ACTIONS') == 'true',
+                         'Only change the isolated hosted Windows desktop')
+    def test_native_foreground_policy_restores_after_failed_operation(self):
+        state = self.directory / 'foreground.json'
+        with self.assertRaisesRegex(RuntimeError, 'owned failed operation'):
+            with windows_foreground.temporary(state):
+                effective = json.loads(state.read_text(encoding='utf-8'))
+                self.assertTrue(effective['set_succeeded'])
+                self.assertEqual(effective['effective_milliseconds'], 0)
+                raise RuntimeError('owned failed operation')
+        restored = json.loads(state.read_text(encoding='utf-8'))
+        self.assertTrue(restored['restore_succeeded'])
+        self.assertEqual(restored['restored_milliseconds'], restored['original_milliseconds'])
 
     @unittest.skipUnless(sys.platform == 'win32', 'Canonical Windows desktop runner')
     def test_repetitions_use_real_ctest_and_reject_existing_evidence(self):

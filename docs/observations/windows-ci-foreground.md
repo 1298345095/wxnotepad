@@ -40,7 +40,28 @@ sources below:
 
 The controller receipt is a rejected foreground request. It must not be
 described as a successful request waiting for asynchronous activation. The
-original helper's later loss of foreground remains unexplained.
+original helper's later loss of foreground is consistent with a queue-state
+problem, but its exact Windows-internal cause has not been established.
+
+## Hosted experiment results
+
+After this research, the isolated runner reported an original foreground-lock
+timeout of 2,147,483,647 ms (about 24.9 days). Setting the session value to zero
+succeeded, and final readback confirmed restoration to the original value.
+The same non-attached activation that failed the second process in the control
+then passed 20 complete menu cases with Terminal hidden and another 20 with
+Terminal visible. The visible run recorded successful existing handoffs from
+the independent clipboard peer to the editor. No extra input or longer test
+deadlines were introduced.
+
+- [Direct activation control, failed](https://github.com/1298345095/wxnotepad/actions/runs/45517852308)
+- [Zero timeout, hidden Terminal, 20 passed](https://github.com/1298345095/wxnotepad/actions/runs/45522754770)
+- [Zero timeout, visible Terminal, 20 passed](https://github.com/1298345095/wxnotepad/actions/runs/45523449889)
+
+These results support preparing the disposable CI desktop's foreground policy
+and removing GUI-queue attachment. They do not independently establish the
+cause of the earlier empty native clipboard paste; its original content
+assertions remain part of each complete run.
 
 ## What Windows documents
 

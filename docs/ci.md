@@ -143,6 +143,18 @@ An already-zero value or rejected setter cannot establish that foreground lock
 caused a test failure. This does not change test deadlines or assertions. See
 [the primary-source research](observations/windows-ci-foreground.md).
 
+Ordinary hosted Windows CI uses the same foreground-session helper before its
+native checks, then restores the original value in an `always()` cleanup step.
+It records both values in `windows-foreground.json` and does not change local
+developer desktop settings. Native focus helpers keep the application's input
+queue independent; they do not attach it to Terminal or clipboard peers.
+The runner's measured original timeout was 2,147,483,647 ms, so ordinary
+foreground activation was rejected after the first process. With a temporary
+zero timeout and no input attachment, 20 complete menu cases passed with
+Terminal hidden, then 20 passed with Terminal visible. The second run also
+recorded existing successful cross-process handoffs. Test inputs, assertions,
+menu/peer deadlines and CTest timeouts remain unchanged.
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims

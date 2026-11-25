@@ -139,9 +139,14 @@ jobs:
           if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
             throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
           }
+      - name: Prepare Windows native foreground activation
+        id: windows_foreground
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_display.outcome == 'success' }}
+        shell: bash
+        run: python -X utf8 .github/scripts/windows_foreground.py prepare --state-file .ci/reports/windows-foreground.json
       - name: Collect independent original GDI viewport reference
         id: original_reference
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_display.outcome == 'success' }}
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows_foreground.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -201,13 +206,13 @@ jobs:
                           '--report-dir', '.ci/reports/context-menu-prefix', '--tests', expression], check=True)
           PY
       - name: Repeat Windows first-pointer delivery with native evidence
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' && steps.windows_foreground.outcome == 'success' }}
         shell: pwsh
         run: |
           python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/context-pointer-repeat `
             --cwd .ci/build/cmake --timeout 60 --runs 100 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/context_menu.exe" --pointer-probe
       - name: Repeat Windows context-menu regression with native evidence
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' && steps.windows_foreground.outcome == 'success' }}
         shell: bash
         run: |
           python -X utf8 - <<'PY'
@@ -244,13 +249,13 @@ jobs:
           WXNOTEPAD_ORIGINAL_WRAP_REFERENCE: ${{ github.workspace }}/.ci/reports/original-word-wrap
         run: python -X utf8 .github/scripts/ci.py test --backend windows
       - name: Repeat Windows visual brace regression with crash evidence
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' && steps.windows_foreground.outcome == 'success' }}
         shell: pwsh
         run: |
           python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/visual-brace-repeat `
             --cwd .ci/build/cmake --timeout 90 --runs 20 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/visual_brace.exe"
       - name: Repeat Windows mixed-EOL regression with crash evidence
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' && steps.windows_foreground.outcome == 'success' }}
         shell: pwsh
         run: |
           python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/eol-open-repeat `
@@ -295,7 +300,7 @@ jobs:
           set -euo pipefail
           sccache --show-stats | tee .ci/reports/sccache-diagnostic.txt
       - name: Test Windows diagnostics
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.diagnostic_build.outcome == 'success' }}
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.diagnostic_build.outcome == 'success' && steps.windows_foreground.outcome == 'success' }}
         shell: bash
         run: python -X utf8 .github/scripts/ci.py diagnostic-test --backend windows
       - name: Test private X11 diagnostics
@@ -310,6 +315,10 @@ jobs:
         run: |
           ulimit -c unlimited
           python -X utf8 .github/scripts/ci.py diagnostic-test --backend wayland
+      - name: Restore Windows native foreground activation
+        if: ${{ always() && runner.os == 'Windows' && steps.windows_foreground.outcome != 'skipped' }}
+        shell: bash
+        run: python -X utf8 .github/scripts/windows_foreground.py restore --state-file .ci/reports/windows-foreground.json
       - name: Collect Linux native crash evidence
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
         shell: bash

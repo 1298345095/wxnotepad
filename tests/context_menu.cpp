@@ -32,22 +32,11 @@ constexpr unsigned TraditionalChineseLanguage = 1028;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-#ifdef __WXMSW__
-NativeFocus::ActivationReceipt focusActivation;
-#endif
 void Focus(EditorFrame* frame) {
     wxYield();
     frame->SetTitle("wxnotepad context menu");
 #ifdef __WXMSW__
-    NativeFocus::Activate(static_cast<HWND>(frame->GetHandle()), static_cast<HWND>(frame->Editor()->GetHandle()),
-                          &focusActivation);
-    if (focusActivation.previousThreadId && focusActivation.previousThreadId != focusActivation.uiThreadId)
-        std::fprintf(stderr,
-                     "[DEBUG-context-activation] foreignHandoff previous=%p previousThread=%lu uiThread=%lu "
-                     "accepted=%d afterActivation=%p frame=%p\n",
-                     static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
-                     focusActivation.uiThreadId, focusActivation.foregroundAccepted,
-                     static_cast<void*>(focusActivation.foregroundAfterDetach), static_cast<void*>(frame->GetHandle()));
+    NativeFocus::Activate(static_cast<HWND>(frame->GetHandle()), static_cast<HWND>(frame->Editor()->GetHandle()));
 #else
     wxString focusFile;
     NativeKeys::FocusEditor(frame, "wxnotepad context menu", focusFile);
@@ -170,10 +159,8 @@ private:
     };
     static LRESULT CALLBACK Observe(HWND window, UINT message, WPARAM word, LPARAM parameter, UINT_PTR,
                                     DWORD_PTR data) {
-        // [DEBUG-context-activation] Keep native activation events beside mouse delivery.
         if (message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK ||
-            message == WM_CONTEXTMENU || message == WM_ACTIVATE || message == WM_ACTIVATEAPP ||
-            message == WM_SETFOCUS || message == WM_KILLFOCUS || message == WM_MOUSEACTIVATE)
+            message == WM_CONTEXTMENU)
             reinterpret_cast<MouseReceipts*>(data)->Record("native-message", window, message, word, parameter);
         return DefSubclassProc(window, message, word, parameter);
     }
@@ -194,18 +181,6 @@ private:
 #endif
 void NativeClick(EditorFrame* frame, wxPoint screen, unsigned button) {
 #ifdef __WXMSW__
-    if (GetForegroundWindow() != static_cast<HWND>(frame->GetHandle()))
-        std::fprintf(stderr,
-                     "[DEBUG-context-activation] beforePointer previous=%p previousThread=%lu uiThread=%lu "
-                     "driverThread=%lu attached=%d accepted=%d insideDriver=%p afterActivation=%p foreground=%p "
-                     "active=%p focus=%p frame=%p\n",
-                     static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
-                     focusActivation.uiThreadId, focusActivation.attachmentThreadId,
-                     focusActivation.usedInputAttachment, focusActivation.foregroundAccepted,
-                     static_cast<void*>(focusActivation.foregroundInsideDriver),
-                     static_cast<void*>(focusActivation.foregroundAfterDetach),
-                     static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetActiveWindow()),
-                     static_cast<void*>(::GetFocus()), static_cast<void*>(frame->GetHandle()));
     Require(GetForegroundWindow() == static_cast<HWND>(frame->GetHandle()),
             "native mouse targets owned foreground frame");
     const auto target = WindowFromPoint(POINT{screen.x, screen.y});
@@ -271,10 +246,6 @@ public:
             if (stageFile.IsOpened()) stageFile.ReadAll(&stage, wxConvUTF8);
             std::println(stderr, "Peer response read failed request={:?} stage={:?} peerAlive={}",
                          command.utf8_string(), stage.utf8_string(), wxProcess::Exists(static_cast<int>(process_)));
-            wxString pasteDetails;
-            wxFFile pasteFile(directory_ + "/peer-paste", "rb");
-            if (pasteFile.IsOpened() && pasteFile.ReadAll(&pasteDetails, wxConvUTF8))
-                std::println(stderr, "{}", pasteDetails.utf8_string());
             NativeFailure::Capture(command == "quit" ? "context-clipboard-cleanup" : "context-clipboard",
                                    {static_cast<long>(wxGetProcessId())});
         }
@@ -390,15 +361,6 @@ public:
         if (failure_ || observed_ != 1 || (action != wxID_NONE && dispatches_ != 1)) {
             mouseReceipts_.Record("failed-before-capture");
             mouseReceipts_.Dump();
-            std::fprintf(stderr,
-                         "[DEBUG-context-activation] previous=%p previousThread=%lu uiThread=%lu driverThread=%lu "
-                         "attached=%d afterDetach=%p "
-                         "console=%p stdoutType=%lu stderrType=%lu\n",
-                         static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
-                         focusActivation.uiThreadId, focusActivation.attachmentThreadId,
-                         focusActivation.usedInputAttachment, static_cast<void*>(focusActivation.foregroundAfterDetach),
-                         static_cast<void*>(GetConsoleWindow()), GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)),
-                         GetFileType(GetStdHandle(STD_ERROR_HANDLE)));
             NativeFailure::Capture("context-menu", {static_cast<long>(wxGetProcessId())});
         }
 #endif
@@ -861,15 +823,6 @@ void Check(EditorFrame* frame, bool pointerProbe) {
     const auto screen = editor->ClientToScreen(wxPoint(editor->GetClientSize().x - 40, editor->GetClientSize().y - 40));
     popup.Open(screen);
     TestEditor::RequireSelection(editor, 10, 6, "pointer popup preserves reversed selection outside pointer");
-#ifdef __WXMSW__
-    std::fprintf(stderr,
-                 "[DEBUG-context-activation] firstPointerDelivered previous=%p previousThread=%lu uiThread=%lu "
-                 "driverThread=%lu attached=%d "
-                 "afterActivation=%p frame=%p\n",
-                 static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
-                 focusActivation.uiThreadId, focusActivation.attachmentThreadId, focusActivation.usedInputAttachment,
-                 static_cast<void*>(focusActivation.foregroundAfterDetach), static_cast<void*>(frame->GetHandle()));
-#endif
     if (pointerProbe) {
         std::puts("PASS: first native pointer popup preserves reversed selection");
         return;
