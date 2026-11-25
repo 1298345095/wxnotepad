@@ -84,6 +84,14 @@ checks and 30-second case guard remain. IPC readers wait for readable UTF-8
 responses within their original five-second deadline, including transient Windows
 sharing violations; the document and clipboard result assertions are unchanged.
 
+The Windows editor fixture grants foreground permission to its specific clipboard
+peer PID before publishing a request; the foreground peer grants it back to the
+editor PID before publishing its response. `AllowSetForegroundWindow` only grants
+permission and does not activate either window. Each sender must actually own the
+foreground, and the existing single activation call and native foreground/focus
+assertions still decide whether the handoff succeeded. Failed editor activations
+retain both grant receipts and the effective foreground-lock timeout.
+
 ### Focused Windows investigations
 
 During diagnosis, use `windows_context_investigation.py` against a configured

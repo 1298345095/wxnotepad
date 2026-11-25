@@ -78,6 +78,27 @@ establish it as the cause or cure of the intermittent Swap failure. Failed edito
 handoffs now retain the activation result and the foreground HWNDs around that
 call, alongside the existing owned-window capture.
 
+The [subsequent complete run][19] passed 353 Windows cases with four existing
+skips, but failed `native_windows_clipboard_focus_transfer` after `utility-read`.
+This time `SetForegroundWindow` returned zero: the independent clipboard peer
+remained foreground before and after the call. Both visible windows reported
+96 DPI, and their bounds fit the recorded 1920 by 1080 desktop. The session
+setup recorded a successful zero-timeout readback and final restoration, but
+did not sample the timeout at the failure itself.
+
+The clipboard fixtures now use the documented specific-PID permission transfer
+between the cooperating foreground processes before publishing requests and
+responses. They retain the original activation call, actual foreground/focus
+assertions, and deadlines. Grant results and the effective timeout are captured
+if editor activation fails. The old revision also passed [ten focused
+repetitions][20], so passing replays alone cannot establish the precise cause of
+the intermittent rejection.
+
+The specific-PID candidate passed [ten complete focused repetitions][21], each
+retaining all one hundred exchanges. All ten reports contain one executed case,
+zero failures and zero skips. This validates the candidate under that replay;
+the old revision's passing control still limits causal attribution.
+
 ## What Windows documents
 
 `SetForegroundWindow` requires a desktop application, no active menu, and no
@@ -240,3 +261,6 @@ the result on Windows Server 2025 x64.
 [16]: https://github.com/1298345095/wxnotepad/actions/runs/45525811897
 [17]: https://github.com/1298345095/wxnotepad/actions/runs/45542021456
 [18]: https://github.com/1298345095/wxnotepad/actions/runs/45542119296
+[19]: https://github.com/1298345095/wxnotepad/actions/runs/45645202969
+[20]: https://github.com/1298345095/wxnotepad/actions/runs/45651591259
+[21]: https://github.com/1298345095/wxnotepad/actions/runs/45653390067
