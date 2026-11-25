@@ -13,6 +13,34 @@
 #include <string_view>
 #ifdef __WXMSW__
 #include <richedit.h>
+class ObservedPeerText final : public wxTextCtrl {
+public:
+    using wxTextCtrl::wxTextCtrl;
+    wxString observationDirectory;
+    WXLRESULT MSWDefWindowProc(WXUINT message, WXWPARAM word, WXLPARAM parameter) override {
+        if (message != WM_PASTE) return wxTextCtrl::MSWDefWindowProc(message, word, parameter);
+        const auto openerBefore = GetOpenClipboardWindow();
+        const auto sequenceBefore = GetClipboardSequenceNumber();
+        SetLastError(ERROR_SUCCESS);
+        const auto result = wxTextCtrl::MSWDefWindowProc(message, word, parameter);
+        const auto nativeError = GetLastError();
+        const auto openerAfter = GetOpenClipboardWindow();
+        const auto sequenceAfter = GetClipboardSequenceNumber();
+        DWORD beforePid = 0, afterPid = 0;
+        GetWindowThreadProcessId(openerBefore, &beforePid);
+        GetWindowThreadProcessId(openerAfter, &afterPid);
+        wxFFile log(observationDirectory + "/peer-paste.log", "ab");
+        log.Write(
+            wxString::Format(
+                "[DEBUG-paste-272] default-paste result=%lld error=%lu openerBefore=%p beforePid=%lu openerAfter=%p "
+                "afterPid=%lu sequenceBefore=%lu sequenceAfter=%lu length=%zu limit=%lld\n",
+                static_cast<long long>(result), nativeError, static_cast<void*>(openerBefore), beforePid,
+                static_cast<void*>(openerAfter), afterPid, sequenceBefore, sequenceAfter, GetValue().length(),
+                static_cast<long long>(SendMessageW(static_cast<HWND>(GetHandle()), EM_GETLIMITTEXT, 0, 0))),
+            wxConvUTF8);
+        return result;
+    }
+};
 #endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -29,7 +57,14 @@ public:
         directory_ = argv[1];
         RecordStage("starting");
         frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad clipboard test peer");
+#ifdef __WXMSW__
+        auto* observed =
+            new ObservedPeerText(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
+        observed->observationDirectory = directory_;
+        text_ = observed;
+#else
         text_ = new wxTextCtrl(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
+#endif
         text_->Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
             if (event.GetKeyCode() == WXK_SHIFT) gestureReceived_ = true;
             event.Skip();
