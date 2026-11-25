@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 #include <wx/string.h>
 #include "ScintillaTypes.h"

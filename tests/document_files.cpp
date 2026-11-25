@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
+#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -12,27 +13,26 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 
-size_t PendingFiles(const std::filesystem::path& destination) {
-    const auto prefix = destination.filename().string() + ".wxnotepad-";
-    size_t count = 0;
-    for (const auto& entry : std::filesystem::directory_iterator(destination.parent_path())) {
-        if (entry.path().filename().string().starts_with(prefix)) ++count;
-    }
-    return count;
+std::set<std::filesystem::path> DirectoryEntries(const std::filesystem::path& directory) {
+    std::set<std::filesystem::path> entries;
+    for (const auto& entry : std::filesystem::directory_iterator(directory))
+        entries.insert(entry.path().filename());
+    return entries;
 }
 
 void CancelPreparedSave(const std::filesystem::path& root) {
     const auto existing = root / "cancel-existing.txt";
     TestFiles::WriteBytes(existing, "original bytes");
+    const auto before = DirectoryEntries(root);
     {
         DocumentFiles::SaveTransaction save;
         Require(save.Prepare(TestFiles::Filename(existing)).empty() &&
                     save.Prepare(TestFiles::Filename(existing)).empty(),
                 "preparing a save is repeatable");
-        Require(TestFiles::Bytes(existing) == "original bytes" && PendingFiles(existing) == 1,
+        Require(TestFiles::Bytes(existing) == "original bytes" && DirectoryEntries(root).size() == before.size() + 1,
                 "preparation reserves one sibling and preserves the destination");
     }
-    Require(TestFiles::Bytes(existing) == "original bytes" && PendingFiles(existing) == 0,
+    Require(TestFiles::Bytes(existing) == "original bytes" && DirectoryEntries(root) == before,
             "cancellation removes only the pending sibling");
 
     const auto unnamed = root / "cancel-new.txt";
@@ -40,7 +40,7 @@ void CancelPreparedSave(const std::filesystem::path& root) {
         DocumentFiles::SaveTransaction save;
         Require(save.Prepare(TestFiles::Filename(unnamed)).empty(), "a new destination can be prepared");
     }
-    Require(!std::filesystem::exists(unnamed) && PendingFiles(unnamed) == 0,
+    Require(!std::filesystem::exists(unnamed) && DirectoryEntries(root) == before,
             "a cancelled ordinary save leaves no new destination or pending sibling");
     std::puts("PASS: prepared saves preserve destinations and clean up on cancellation");
 }
@@ -48,10 +48,11 @@ void CancelPreparedSave(const std::filesystem::path& root) {
 void CommitSavedBytes(const std::filesystem::path& root) {
     const auto destination = root / "commit.bin";
     TestFiles::WriteBytes(destination, "longer original contents");
+    const auto before = DirectoryEntries(root);
     const std::string bytes("x\0y", 3);
     DocumentFiles::SaveTransaction save;
     Require(save.Commit(TestFiles::Filename(destination), bytes).empty() && TestFiles::Bytes(destination) == bytes &&
-                PendingFiles(destination) == 0,
+                DirectoryEntries(root) == before,
             "implicit preparation commits complete binary bytes without an old tail or pending sibling");
     std::puts("PASS: safe file commit replaces complete binary content");
 }
@@ -59,6 +60,7 @@ void CommitSavedBytes(const std::filesystem::path& root) {
 void FailedReplacement(const std::filesystem::path& root) {
     const auto destination = root / "changed-destination";
     TestFiles::WriteBytes(destination, "old destination");
+    const auto before = DirectoryEntries(root);
     {
         DocumentFiles::SaveTransaction save;
         Require(save.Prepare(TestFiles::Filename(destination)).empty(), "replacement fixture can reserve its sibling");
@@ -68,7 +70,7 @@ void FailedReplacement(const std::filesystem::path& root) {
         Require(!save.Commit(TestFiles::Filename(destination), "new contents").empty(),
                 "a replacement race reports a failed commit");
     }
-    Require(TestFiles::Bytes(destination / "sentinel") == "retain this directory" && PendingFiles(destination) == 0,
+    Require(TestFiles::Bytes(destination / "sentinel") == "retain this directory" && DirectoryEntries(root) == before,
             "a failed replacement retains the new destination and removes the pending sibling");
     std::puts("PASS: failed replacement retains the destination and cleans its sibling");
 }
@@ -96,14 +98,14 @@ void DestinationAfterDecision(const std::filesystem::path& root) {
     const auto changed = root / "after-decision.txt";
     TestFiles::WriteBytes(original, "original destination");
     TestFiles::WriteBytes(changed, "changed destination");
+    const auto before = DirectoryEntries(root);
     auto destination = TestFiles::Filename(original);
     DocumentFiles::SaveTransaction save;
     Require(save.Prepare(destination).empty(), "save cleanup reserves a sibling before the decision");
     destination = TestFiles::Filename(changed);
     Require(save.Commit(destination, "decided contents").empty() &&
                 TestFiles::Bytes(original) == "original destination" &&
-                TestFiles::Bytes(changed) == "decided contents" && PendingFiles(original) == 0 &&
-                PendingFiles(changed) == 0,
+                TestFiles::Bytes(changed) == "decided contents" && DirectoryEntries(root) == before,
             "commit uses the destination supplied after a modal decision while retaining its prepared sibling");
     std::puts("PASS: save commit retains the destination read after a decision");
 }
