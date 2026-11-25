@@ -9,6 +9,7 @@ import subprocess
 
 import ci
 import windows_foreground
+from report_paths import report_path
 
 CONTEXT_CASE = 'original_editor_context_menu'
 SWAP_CASE = 'original_clipboard_swap'
@@ -119,7 +120,7 @@ def hide_terminal_windows(reports):
     print(f'Hidden {len(records)} Terminal windows; their processes remain running', flush=True)
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('plan', 'build', 'run'))
     parser.add_argument('--scenario', choices=('prefix', 'clipboard', 'swap'), default='prefix')
@@ -139,8 +140,17 @@ def main():
         parser.error('--zero-foreground-timeout is only valid for run on GitHub Actions')
     if arguments.action != 'plan' and not ci.WINDOWS:
         parser.error('Native Windows investigations must run on Windows')
+    try:
+        arguments.report_dir = report_path(arguments.report_dir, Path.cwd().resolve())
+    except (OSError, RuntimeError, ValueError) as error:
+        parser.error(str(error))
+    return arguments
+
+
+def main():
+    arguments = parse_arguments()
     selection = plan(arguments.cmake_dir, arguments.scenario)
-    reports = arguments.report_dir.resolve()
+    reports = arguments.report_dir
     reports.mkdir(parents=True, exist_ok=False)
     (reports / 'plan.json').write_text(json.dumps(selection, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(selection, indent=2), flush=True)

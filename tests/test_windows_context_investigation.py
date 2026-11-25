@@ -1,11 +1,13 @@
 """Keep focused investigations cold-buildable, scoped and fail-preserving."""
 import json
 import os
+from contextlib import chdir
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +51,10 @@ class WindowsInvestigation(unittest.TestCase):
                        'ENVIRONMENT "WXNOTEPAD_INVESTIGATION_CONTRACT=retained")\n')
         if swap:
             source += 'set_tests_properties(original_clipboard_swap PROPERTIES TIMEOUT 180)\n'
+            for target, event, dependency in (('clipboard_peer', 'peer-built', ''),
+                                               ('clipboard_smoke', 'swap-built', 'DEPENDS clipboard_peer')):
+                source += (f'add_custom_target({target} {dependency} COMMAND "{Path(sys.executable).as_posix()}" '
+                           f'"{script.as_posix()}" "{self.events.as_posix()}" "{event}" "pass")\n')
         (self.directory / 'CMakeLists.txt').write_text(source, encoding='utf-8')
         subprocess.run(['cmake', '-S', self.directory, '-B', self.build, '-G', 'Ninja'],
                        check=True, capture_output=True)
@@ -57,7 +63,45 @@ class WindowsInvestigation(unittest.TestCase):
         return subprocess.run([sys.executable, '-X', 'utf8',
                                ROOT / '.github/scripts/windows_context_investigation.py', 'run',
                                '--cmake-dir', self.build, '--report-dir', reports, '--runs', str(runs)],
-                              capture_output=True, text=True, encoding='utf-8')
+                              cwd=self.directory, capture_output=True, text=True, encoding='utf-8')
+
+    def run_with_test_desktop(self, reports, runs):
+        arguments = ['windows_context_investigation.py', 'run', '--cmake-dir', str(self.build),
+                     '--report-dir', str(reports), '--runs', str(runs)]
+        # The process/CTest contract is portable; replace only the Windows host
+        # and input-desktop boundary. Native CLI checks below still use the OS.
+        with chdir(self.directory), mock.patch.object(sys, 'argv', arguments), \
+                mock.patch.object(investigation.ci, 'WINDOWS', True), \
+                mock.patch.object(investigation.ci, 'windows_desktop_names',
+                                  return_value={'thread': 'Default', 'input': 'Default'}):
+            investigation.main()
+
+    def test_registered_ctest_repetitions_keep_reports_and_original_environment(self):
+        self.configure()
+        reports = self.directory / 'portable-runs'
+        self.run_with_test_desktop(reports, 2)
+        self.assertEqual(self.events.read_text(), ('before\n' + investigation.CONTEXT_CASE + '\n') * 2)
+        for attempt in ('run-001', 'run-002'):
+            suite = ET.parse(reports / attempt / 'windows-tests.xml').getroot()
+            self.assertEqual((suite.get('tests'), suite.get('failures')), ('2', '0'))
+
+    def test_registered_ctest_failure_stops_before_a_second_attempt(self):
+        self.configure(fail=True)
+        reports = self.directory / 'portable-failure'
+        with self.assertRaises(SystemExit) as failure:
+            self.run_with_test_desktop(reports, 3)
+        self.assertEqual(failure.exception.code, 8)
+        self.assertEqual(self.events.read_text(), 'before\n' + investigation.CONTEXT_CASE + '\n')
+        self.assertFalse((reports / 'run-002').exists())
+        suite = ET.parse(reports / 'run-001/windows-tests.xml').getroot()
+        self.assertEqual(suite.get('failures'), '1')
+
+    def test_selected_cold_target_build_keeps_its_real_peer_dependency(self):
+        self.configure()
+        reports = self.directory / 'cold-build'
+        reports.mkdir()
+        investigation.build(investigation.plan(self.build, 'swap'), reports, 2)
+        self.assertEqual(self.events.read_text(), 'peer-built\nswap-built\n')
 
     def test_cold_prefix_preserves_registration_and_stops_at_context_case(self):
         self.configure(unbuilt=True)
@@ -104,6 +148,38 @@ class WindowsInvestigation(unittest.TestCase):
         self.assertIn('--runs and --jobs must be positive', result.stderr)
         self.assertFalse(reports.exists())
 
+    def test_cli_report_paths_cannot_escape_the_invocation_directory(self):
+        work = self.directory / 'work'
+        work.mkdir()
+        outside = self.directory / 'outside'
+        for candidate in (Path('../outside'), outside):
+            with self.subTest(candidate=candidate):
+                result = subprocess.run([sys.executable, '-X', 'utf8',
+                                         ROOT / '.github/scripts/windows_context_investigation.py', 'plan',
+                                         '--cmake-dir', self.build, '--report-dir', candidate],
+                                        cwd=work, capture_output=True, text=True, encoding='utf-8')
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('Report path must stay within the working directory', result.stderr)
+                self.assertFalse(outside.exists())
+
+    def test_foreground_cli_rejects_escape_before_touching_external_state(self):
+        work = self.directory / 'work'
+        work.mkdir()
+        outside = self.directory / 'outside.json'
+        before = b'{"original_milliseconds": 1234, "set_succeeded": true}\n'
+        outside.write_bytes(before)
+        environment = {key: value for key, value in os.environ.items() if key != 'GITHUB_ACTIONS'}
+        for action in ('prepare', 'restore'):
+            for candidate in (Path('../outside.json'), outside):
+                with self.subTest(action=action, candidate=candidate):
+                    result = subprocess.run([sys.executable, '-X', 'utf8',
+                                             ROOT / '.github/scripts/windows_foreground.py', action,
+                                             '--state-file', candidate], cwd=work, env=environment,
+                                            capture_output=True, text=True, encoding='utf-8')
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn('Report path must stay within the working directory', result.stderr)
+                    self.assertEqual(outside.read_bytes(), before)
+
     def test_planning_cannot_hide_terminal_windows(self):
         reports = self.directory / 'reports'
         result = subprocess.run([sys.executable, '-X', 'utf8',
@@ -122,7 +198,7 @@ class WindowsInvestigation(unittest.TestCase):
                                          ROOT / '.github/scripts/windows_context_investigation.py', action,
                                          '--zero-foreground-timeout', '--report-dir', reports],
                                         env={key: value for key, value in os.environ.items() if key != 'GITHUB_ACTIONS'},
-                                        capture_output=True, text=True, encoding='utf-8')
+                                        cwd=self.directory, capture_output=True, text=True, encoding='utf-8')
                 self.assertEqual(result.returncode, 2)
                 self.assertIn('--zero-foreground-timeout is only valid for run on GitHub Actions', result.stderr)
                 self.assertFalse(reports.exists())
@@ -135,7 +211,7 @@ class WindowsInvestigation(unittest.TestCase):
                                          ROOT / '.github/scripts/windows_foreground.py', action,
                                          '--state-file', state],
                                         env={key: value for key, value in os.environ.items() if key != 'GITHUB_ACTIONS'},
-                                        capture_output=True, text=True, encoding='utf-8')
+                                        cwd=self.directory, capture_output=True, text=True, encoding='utf-8')
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('only supported on hosted Windows CI', result.stderr)
                 self.assertFalse(state.exists())
@@ -144,12 +220,17 @@ class WindowsInvestigation(unittest.TestCase):
                          'Only change the isolated hosted Windows desktop')
     def test_native_foreground_policy_restores_after_failed_operation(self):
         state = self.directory / 'foreground.json'
-        with self.assertRaisesRegex(RuntimeError, 'owned failed operation'):
+        observed = []
+
+        def failed_operation():
             with windows_foreground.temporary(state):
-                effective = json.loads(state.read_text(encoding='utf-8'))
-                self.assertTrue(effective['set_succeeded'])
-                self.assertEqual(effective['effective_milliseconds'], 0)
+                observed.append(json.loads(state.read_text(encoding='utf-8')))
                 raise RuntimeError('owned failed operation')
+
+        with self.assertRaisesRegex(RuntimeError, 'owned failed operation'):
+            failed_operation()
+        self.assertTrue(observed[0]['set_succeeded'])
+        self.assertEqual(observed[0]['effective_milliseconds'], 0)
         restored = json.loads(state.read_text(encoding='utf-8'))
         self.assertTrue(restored['restore_succeeded'])
         self.assertEqual(restored['restored_milliseconds'], restored['original_milliseconds'])

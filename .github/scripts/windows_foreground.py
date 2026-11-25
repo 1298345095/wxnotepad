@@ -6,6 +6,11 @@ from ctypes import wintypes
 import json
 import os
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools'))
+from report_paths import report_path
 
 SPI_GETFOREGROUNDLOCKTIMEOUT = 0x2000
 SPI_SETFOREGROUNDLOCKTIMEOUT = 0x2001
@@ -89,10 +94,14 @@ def main():
     parser.add_argument('action', choices=('prepare', 'restore'))
     parser.add_argument('--state-file', type=Path, required=True)
     arguments = parser.parse_args()
+    try:
+        destination = report_path(arguments.state_file, Path.cwd().resolve())
+    except (OSError, RuntimeError, ValueError) as error:
+        parser.error(str(error))
     if arguments.action == 'prepare':
-        prepare(arguments.state_file)
+        prepare(destination)
     else:
-        restore(arguments.state_file)
+        restore(destination)
 
 
 if __name__ == '__main__':

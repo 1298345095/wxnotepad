@@ -150,13 +150,11 @@ private:
             ContinuePendingCommand();
             return;
         }
-        if (pendingPaste_) {
-            // GTK delivers the native clipboard request asynchronously.
-            if (!text_->GetValue().empty()) {
-                pendingPaste_ = false;
-                Respond(text_->GetValue());
-                return;
-            }
+        // GTK delivers the native clipboard request asynchronously.
+        if (pendingPaste_ && !text_->GetValue().empty()) {
+            pendingPaste_ = false;
+            Respond(text_->GetValue());
+            return;
         }
         const auto request = directory_ + "/request";
         if (!wxFileExists(request)) return;
