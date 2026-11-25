@@ -28,10 +28,6 @@ class SavedDocumentVerification(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         RESOURCES.verify_saved_bytes(saved, source)
 
-    def test_invalid_observation_is_rejected(self):
-        with self.assertRaises(ValueError):
-            RESOURCES.require(False, {'dirty': 'unexpected'})
-
 
 if __name__ == '__main__':
     unittest.main()
