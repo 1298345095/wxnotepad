@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       scenario:
-        description: Registered predecessor sequence, complete context-menu case, or clipboard Swap
+        description: Registered Windows cases or the private Linux X11 Escape fixture
         type: choice
-        options: [prefix, clipboard, swap, swap-prefix, ci-swap-prefix, focus-transfer, search]
+        options: [prefix, clipboard, swap, swap-prefix, ci-swap-prefix, focus-transfer, search, escape-x11]
         default: prefix
       runs:
         description: Serial attempts; stop on the first failing attempt
@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   investigate:
+    if: inputs.scenario != 'escape-x11'
     name: Windows context investigation
     runs-on: windows-2025
     timeout-minutes: 45
@@ -140,6 +141,72 @@ jobs:
             .ci/build/cmake/search_continuation.exe
             .ci/build/cmake/search_continuation.pdb
             .ci/build/cmake/*.dll
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+  investigate-x11:
+    if: inputs.scenario == 'escape-x11'
+    name: Linux Escape investigation
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: '1'
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
+      INVESTIGATION_RUNS: ${{ inputs.runs }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
+      - name: Set up compiler cache
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.19.0
+      - name: Configure
+        shell: bash
+        env:
+          CXXFLAGS: '-g1'
+        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
+      - name: Build Escape target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build .ci/build/cmake --parallel --target extra_escape 2>&1 | tee .ci/reports/escape-build.log
+      - name: Repeat registered Escape case in private X11 sessions
+        shell: bash
+        run: |
+          python -X utf8 - <<'PY'
+          import os
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, '.github/scripts')
+          import ci
+
+          runs = int(os.environ['INVESTIGATION_RUNS'])
+          if runs < 1:
+              raise SystemExit('runs must be positive')
+          for attempt in range(1, runs + 1):
+              ci.test('x11', Path('.ci/build/cmake').resolve(), '^original_extra_escape$', 1,
+                      report_directory=Path('.ci/reports/escape-runs').resolve() / f'run-{attempt:03}')
+          PY
+      - name: Preserve investigation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: escape-x11-investigation-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/build/cmake/Testing/Temporary/
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
