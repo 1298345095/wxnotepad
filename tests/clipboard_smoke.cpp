@@ -138,8 +138,19 @@ public:
             wxFFile file(privateFocusFile, "wb");
             file.Write("editor");
         }
+#ifdef __WXMSW__
+        // Raise() uses this same API. Retain its result so a hosted failure
+        // distinguishes a rejected activation from subsequent focus loss.
+        const auto beforeRaise = GetForegroundWindow();
+        const bool accepted = SetForegroundWindow(static_cast<HWND>(frame_->GetHandle())) != FALSE;
+        const auto afterRaise = GetForegroundWindow();
+#else
         frame_->Raise();
+#endif
         editor_->SetFocus();
+#ifdef __WXMSW__
+        const auto afterFocus = GetForegroundWindow();
+#endif
         const auto activationDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         bool acknowledged = privateFocusFile.empty();
         while (std::chrono::steady_clock::now() < activationDeadline) {
@@ -153,18 +164,33 @@ public:
             // dispatches its deactivate event. Keep the request until the driver
             // claims it, and process native events before trusting cached focus.
             wxYield();
-            if (acknowledged && frame_->IsActive() && editor_->HasFocus()) break;
+            if (acknowledged && HasNativeFocus()) break;
             wxMilliSleep(10);
         }
-        if (!acknowledged || !frame_->IsActive() || !editor_->HasFocus())
+        if (!acknowledged || !HasNativeFocus()) {
+#ifdef __WXMSW__
+            std::println(stderr,
+                         "Clipboard activation: accepted={:d} before={} afterRaise={} afterFocus={} foreground={}",
+                         accepted, static_cast<void*>(beforeRaise), static_cast<void*>(afterRaise),
+                         static_cast<void*>(afterFocus), static_cast<void*>(GetForegroundWindow()));
+#endif
             throw std::runtime_error("editor must receive actual native focus after peer command: " +
                                      command.ToStdString());
+        }
         frame_->SetTitle(title);
         SettleClipboard();
         return response;
     }
 
 private:
+    bool HasNativeFocus() const {
+#ifdef __WXMSW__
+        // wxWidgets checks focus within this process; also require the desktop's
+        // foreground window before continuing the cross-process exchange.
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
+#endif
+        return frame_->IsActive() && editor_->HasFocus();
+    }
     wxString directory_;
     long process_ = 0;
     EditorFrame* frame_;
@@ -2442,7 +2468,20 @@ void RichTextCopy(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 void RunClipboardScenario(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     wxString shapes;
     if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-        if (shapes == "swap-ansi-readonly")
+        if (shapes == "focus-transfer") {
+            constexpr unsigned TransferIterations = 100;
+            for (unsigned transfer = 0; transfer < TransferIterations; ++transfer) {
+                TestEditor::ResetStream(editor, "AoldZ", 4, 1);
+                peer.OfferText("中文😀");
+                UtilityShortcut(frame, 'K', true);
+                Require(Text(editor) == "A中文😀Z", "native Ctrl+K exchanges the reversed Unicode selection");
+                TestEditor::RequireSelection(editor, 11, 1, "native Ctrl+K retains reversed UTF-8 byte endpoints");
+                Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                        "native peer receives the original cut bytes after the keyboard focus handoff");
+            }
+            std::println("PASS: {} native Ctrl+K exchanges with independent peer/editor foreground handoffs",
+                         TransferIterations);
+        } else if (shapes == "swap-ansi-readonly")
             SwapDefaultReadOnly(frame, editor, peer);
         else if (shapes == "swap-ansi-caret")
             SwapDefaultCaretEncoding(frame, editor, peer);

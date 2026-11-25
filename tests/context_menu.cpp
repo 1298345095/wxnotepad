@@ -968,6 +968,15 @@ void Check(EditorFrame* frame, bool pointerProbe) {
     CheckScrolledPlacement(frame, popup);
     std::puts("PASS: original native popup groups, pointer and keyboard selection preservation, cancellation");
 }
+void CheckLocalized(EditorFrame* frame, unsigned language) {
+    Focus(frame);
+    TestEditor::ResetStream(frame->Editor(), "alpha beta", 10, 6);
+    Popup popup(frame, language);
+    popup.Open(wxDefaultPosition, WXK_MENU);
+    popup.Open(frame->Editor()->ClientToScreen(wxPoint(150, 80)));
+    TestEditor::RequireSelection(frame->Editor(), 10, 6, "localized native popup preserves directed selection");
+}
+
 class ContextMenuApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -1010,13 +1019,7 @@ public:
                 if (language == EnglishLanguage) {
                     Check(frame, pointerProbe);
                 } else {
-                    Focus(frame);
-                    TestEditor::ResetStream(frame->Editor(), "alpha beta", 10, 6);
-                    Popup popup(frame, language);
-                    popup.Open(wxDefaultPosition, WXK_MENU);
-                    popup.Open(frame->Editor()->ClientToScreen(wxPoint(150, 80)));
-                    TestEditor::RequireSelection(frame->Editor(), 10, 6,
-                                                 "localized native popup preserves directed selection");
+                    CheckLocalized(frame, language);
                 }
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());

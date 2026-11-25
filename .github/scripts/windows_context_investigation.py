@@ -9,8 +9,11 @@ import subprocess
 
 import ci
 import windows_foreground
+from report_paths import report_path
 
 CONTEXT_CASE = 'original_editor_context_menu'
+SWAP_CASE = 'original_clipboard_swap'
+FOCUS_CASE = 'native_windows_clipboard_focus_transfer'
 # CTest omits an unbuilt executable's command from its JSON listing. Keep the
 # inspected predecessor targets explicit so cold investigations can build them.
 PREFIX_TARGETS = (
@@ -18,6 +21,14 @@ PREFIX_TARGETS = (
     'menu_hierarchy', 'new_window', 'open_targets', 'recent_files', 'run_command',
     'scroll_past_last_line', 'sdk_capabilities', 'selection_options',
     'settings_read_failure', 'wxnotepad',
+)
+SWAP_PREFIX_TARGETS = PREFIX_TARGETS + (
+    'align_lines', 'base64_conversion', 'caret_appearance', 'clipboard_smoke',
+    'current_encoding', 'date_time', 'feature_sessions', 'file_times', 'full_screen',
+    'header_insert', 'line_wrap', 'modify_lines', 'pad_spaces', 'path_text',
+    'periodic_backup', 'printing', 'read_only', 'read_only_file', 'reopen_document',
+    'revert_document', 'save_backup', 'save_cleanup', 'save_copy', 'special_insert',
+    'url_conversion',
 )
 
 
@@ -27,14 +38,22 @@ def plan(cmake_dir, scenario):
         ['ctest', '--test-dir', str(cmake_dir), '-C', 'Release', '--show-only=json-v1'],
         text=True, encoding='utf-8'))['tests']
     names = [case['name'] for case in cases]
-    if CONTEXT_CASE not in names:
-        raise SystemExit(f'Required registered test is missing: {CONTEXT_CASE}')
+    required = (FOCUS_CASE if scenario == 'focus-transfer' else
+                SWAP_CASE if scenario in ('swap', 'swap-prefix', 'ci-swap-prefix') else CONTEXT_CASE)
+    if required not in names:
+        raise SystemExit(f'Required registered test is missing: {required}')
     if scenario == 'prefix':
         selected = cases[:names.index(CONTEXT_CASE) + 1]
         targets = PREFIX_TARGETS
-    else:
+    elif scenario in ('swap-prefix', 'ci-swap-prefix'):
+        selected = cases[:names.index(SWAP_CASE) + 1]
+        targets = SWAP_PREFIX_TARGETS
+    elif scenario == 'clipboard':
         selected = [cases[names.index(CONTEXT_CASE)]]
         targets = ('context_menu',)  # Includes its existing clipboard_peer dependency.
+    else:
+        selected = [cases[names.index(required)]]
+        targets = ('clipboard_smoke',)  # Includes its existing clipboard_peer dependency.
     return {'cmake_dir': str(cmake_dir), 'scenario': scenario,
             'tests': [case['name'] for case in selected], 'targets': list(targets)}
 
@@ -48,8 +67,22 @@ def run(selection, reports, runs):
     expression = '^(' + '|'.join(re.escape(name) for name in selection['tests']) + ')$'
     for attempt in range(1, runs + 1):
         print(f'Investigation {attempt}/{runs}: {len(selection["tests"])} registered cases', flush=True)
+        attempt_reports = reports / f'run-{attempt:03}'
+        if selection['scenario'] == 'ci-swap-prefix':
+            warm_context(Path(selection['cmake_dir']), attempt_reports / 'warmup')
+            attempt_reports /= 'tests'
         ci.test('windows', Path(selection['cmake_dir']), expression, 1,
-                report_directory=reports / f'run-{attempt:03}')
+                report_directory=attempt_reports)
+
+
+def warm_context(cmake_dir, reports):
+    """Retain the full CI's context-menu prelude before reaching Swap."""
+    run(plan(cmake_dir, 'prefix'), reports / 'prefix', 1)
+    pointer_result = ci.probe([str(cmake_dir / 'context_menu.exe'), '--pointer-probe'],
+                              reports / 'pointer', 60, 100, cmake_dir)
+    if pointer_result:
+        raise SystemExit(pointer_result)
+    run(plan(cmake_dir, 'clipboard'), reports / 'menu', 20)
 
 
 def hide_terminal_windows(reports):
@@ -114,10 +147,12 @@ def hide_terminal_windows(reports):
     print(f'Hidden {len(records)} Terminal windows; their processes remain running', flush=True)
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('plan', 'build', 'run'))
-    parser.add_argument('--scenario', choices=('prefix', 'clipboard'), default='prefix')
+    parser.add_argument('--scenario',
+                        choices=('prefix', 'clipboard', 'swap', 'swap-prefix', 'ci-swap-prefix', 'focus-transfer'),
+                        default='prefix')
     parser.add_argument('--cmake-dir', type=Path, default=ci.BUILD / 'cmake')
     parser.add_argument('--report-dir', type=Path, required=True)
     parser.add_argument('--runs', type=int, default=3)
@@ -134,8 +169,17 @@ def main():
         parser.error('--zero-foreground-timeout is only valid for run on GitHub Actions')
     if arguments.action != 'plan' and not ci.WINDOWS:
         parser.error('Native Windows investigations must run on Windows')
+    try:
+        arguments.report_dir = report_path(arguments.report_dir, Path.cwd().resolve())
+    except (OSError, RuntimeError, ValueError) as error:
+        parser.error(str(error))
+    return arguments
+
+
+def main():
+    arguments = parse_arguments()
     selection = plan(arguments.cmake_dir, arguments.scenario)
-    reports = arguments.report_dir.resolve()
+    reports = arguments.report_dir
     reports.mkdir(parents=True, exist_ok=False)
     (reports / 'plan.json').write_text(json.dumps(selection, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(selection, indent=2), flush=True)

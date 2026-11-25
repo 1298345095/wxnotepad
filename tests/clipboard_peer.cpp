@@ -99,7 +99,7 @@ private:
         // Raising this window can deliver native focus before the driver
         // claims its request. Keep that request until it is acknowledged so
         // a late claim cannot replace the following gesture with an empty file.
-        if (!acknowledged || !frame_->IsActive() || !text_->HasFocus()) {
+        if (!acknowledged || !HasNativeFocus()) {
             if (std::chrono::steady_clock::now() - activationStarted_ > std::chrono::seconds(3)) {
                 pendingCommand_.clear();
                 Respond("native focus unavailable");
@@ -132,6 +132,12 @@ private:
         Perform(command);
         return;
     }
+    bool HasNativeFocus() const {
+#ifdef __WXMSW__
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
+#endif
+        return frame_->IsActive() && text_->HasFocus();
+    }
     void Poll() {
         if (std::chrono::steady_clock::now() - started_ > std::chrono::seconds(180)) {
             frame_->Destroy();
@@ -150,13 +156,11 @@ private:
             ContinuePendingCommand();
             return;
         }
-        if (pendingPaste_) {
-            // GTK delivers the native clipboard request asynchronously.
-            if (!text_->GetValue().empty()) {
-                pendingPaste_ = false;
-                Respond(text_->GetValue());
-                return;
-            }
+        // GTK delivers the native clipboard request asynchronously.
+        if (pendingPaste_ && !text_->GetValue().empty()) {
+            pendingPaste_ = false;
+            Respond(text_->GetValue());
+            return;
         }
         const auto request = directory_ + "/request";
         if (!wxFileExists(request)) return;

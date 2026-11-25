@@ -87,14 +87,31 @@ selection and the native targets built for it.
 | --- | --- | --- |
 | `prefix` | Original order through `original_editor_context_menu` (currently 43 cases) | Fourteen inspected predecessor targets and their existing dependencies |
 | `clipboard` | Complete `original_editor_context_menu`, repeated without interleaving other cases | `context_menu`, including its `clipboard_peer` dependency |
+| `swap` | Existing `original_clipboard_swap`, retaining its 180-second case timeout | `clipboard_smoke`, including its `clipboard_peer` dependency |
+| `swap-prefix` | Original registered order through `original_clipboard_swap` (currently 87 cases) | Thirty-nine inspected predecessor targets and their existing dependencies |
+| `ci-swap-prefix` | Full CI's original prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
+| `focus-transfer` | One hundred native Ctrl+K exchanges, validating Unicode bytes, reversed selection and both real foreground handoffs | `clipboard_smoke` and its existing peer dependency |
+
+On Windows, `focus-transfer` uses the existing keyboard-state and native
+accelerator translation path; it does not insert physical keys with `SendInput`.
+Both clipboard endpoints additionally require their top-level HWND to equal
+`GetForegroundWindow()`. The original first-pointer probe still uses `SendInput`.
 
 The prefix target list is explicit because CTest omits command paths for unbuilt
 executables. Update `PREFIX_TARGETS` when a new predecessor requires another
 program. Test selection still comes from the current CTest registration.
 
-```text
-python -X utf8 .github/scripts/windows_context_investigation.py build --scenario prefix --cmake-dir F:/native-build/cmake --report-dir F:/evidence/context-build-01
-python -X utf8 .github/scripts/windows_context_investigation.py run --scenario prefix --runs 3 --cmake-dir F:/native-build/cmake --report-dir F:/evidence/context-prefix-01
+CLI report and foreground-state destinations must resolve within the invocation's
+working directory, including through symlinks. Build input paths can remain
+external. To store reports on F: from Git Bash, invoke the absolute script from
+the selected evidence directory:
+
+```bash
+repo_path=$(pwd -W)
+mkdir -p /f/evidence
+cd /f/evidence
+python -X utf8 "$repo_path/.github/scripts/windows_context_investigation.py" build --scenario prefix --cmake-dir F:/native-build/cmake --report-dir context-build-01
+python -X utf8 "$repo_path/.github/scripts/windows_context_investigation.py" run --scenario prefix --runs 3 --cmake-dir F:/native-build/cmake --report-dir context-prefix-01
 ```
 
 Use the `plan` action to inspect the selection without compiling or opening test
