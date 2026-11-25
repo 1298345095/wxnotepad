@@ -74,6 +74,87 @@ the failed paste is not answered with a successful result. The registered
 `native_windows_clipboard_peer_lifecycle` case checks this path with the real peer
 and verifies that it exits after acknowledging shutdown.
 
+### Focused Windows investigations
+
+During diagnosis, use `windows_context_investigation.py` against a configured
+Windows build. It selects registered CTest cases and uses the existing Windows
+desktop guard, serial execution, assertions and case timeouts. Every attempt
+keeps a separate JUnit/log directory; a failed attempt stops further attempts.
+Report roots must be fresh. The saved `plan.json` identifies the actual test
+selection and the native targets built for it.
+
+| Scenario | Registered cases | Build scope |
+| --- | --- | --- |
+| `prefix` | Original order through `original_editor_context_menu` (currently 43 cases) | Fourteen inspected predecessor targets and their existing dependencies |
+| `clipboard` | Complete `original_editor_context_menu`, repeated without interleaving other cases | `context_menu`, including its `clipboard_peer` dependency |
+
+The prefix target list is explicit because CTest omits command paths for unbuilt
+executables. Update `PREFIX_TARGETS` when a new predecessor requires another
+program. Test selection still comes from the current CTest registration.
+
+```text
+python -X utf8 .github/scripts/windows_context_investigation.py build --scenario prefix --cmake-dir F:/native-build/cmake --report-dir F:/evidence/context-build-01
+python -X utf8 .github/scripts/windows_context_investigation.py run --scenario prefix --runs 3 --cmake-dir F:/native-build/cmake --report-dir F:/evidence/context-prefix-01
+```
+
+Use the `plan` action to inspect the selection without compiling or opening test
+windows. Use `--scenario clipboard` for iterations confined to the clipboard peer.
+The peer-shutdown regression remains in the ordinary full suite and can be
+selected separately through `ci.py test` when that behavior changes; it does not
+alter clipboard state between the reproduction's complete-menu processes.
+An applicable earlier full-suite result remains evidence for unchanged code;
+run related cases during diagnosis, then the complete required checks on the
+final proposed fix.
+
+The separate **Windows investigation** workflow is manually dispatched, using
+the same Windows 2025 runner,
+pinned SDK, compiler cache and display conditions. Its default is three prefix
+attempts, with the original independent reference controls run first. It builds
+only the selected native targets and does not run Linux, coverage, packaging or
+the complete Windows suite. Keep investigation branches without a pull request
+so their pushes do not trigger the ordinary PR workflows. Pushes alone do not
+start the investigation either. Transfer final changes to the repair PR once
+ready for complete validation.
+
+Dispatch the registered workflow against an investigation branch, for example:
+
+```text
+gh workflow run windows-investigation.yml --ref codex/windows-context-investigation-2026-11-24 -f scenario=clipboard -f runs=20
+```
+
+Its **Windows context investigation** check is separate from required merge
+checks. The ordinary CI/Quality/CodeQL/Fuzz workflows and full acceptance remain
+unchanged; a focused success does not establish full-suite acceptance.
+
+The optional `hide_terminal` workflow input defaults to false. Set it to true
+for an isolated hosted comparison after terminal foreground interference has
+been observed. The runner hides only verified WindowsTerminal.exe windows with
+the observed Cascadia class; it keeps their processes running and records the
+before/after visibility and process state in `terminal-isolation.json`. The same
+registered cases, gestures, response deadlines and assertions still run.
+
+The separate `zero_foreground_timeout` input is an opt-in hosted experiment.
+It reads the Windows foreground lock timeout, attempts to set it to zero for
+that desktop session, verifies the effective value, and restores the original
+setting in the runner's `finally` block. `foreground-timeout.json` retains the
+setter, readback and restoration results. It does not persist the setting in
+the user profile, and the CLI rejects this option outside GitHub Actions.
+An already-zero value or rejected setter cannot establish that foreground lock
+caused a test failure. This does not change test deadlines or assertions. See
+[the primary-source research](observations/windows-ci-foreground.md).
+
+Ordinary hosted Windows CI uses the same foreground-session helper before its
+native checks, then restores the original value in an `always()` cleanup step.
+It records both values in `windows-foreground.json` and does not change local
+developer desktop settings. Native focus helpers keep the application's input
+queue independent; they do not attach it to Terminal or clipboard peers.
+The runner's measured original timeout was 2,147,483,647 ms, so ordinary
+foreground activation was rejected after the first process. With a temporary
+zero timeout and no input attachment, 20 complete menu cases passed with
+Terminal hidden, then 20 passed with Terminal visible. The second run also
+recorded existing successful cross-process handoffs. Test inputs, assertions,
+menu/peer deadlines and CTest timeouts remain unchanged.
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims
