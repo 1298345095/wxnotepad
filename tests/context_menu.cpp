@@ -780,6 +780,15 @@ void CheckClipboardCommands(EditorFrame* frame, Popup& popup, const wxPoint& scr
     };
     popup.Open(wxDefaultPosition);
     popup.inspect = {};
+#ifdef __WXMSW__
+    constexpr size_t LargeClipboardCharacters = 64 * 1024;
+    const std::string large(LargeClipboardCharacters, 'x');
+    TestEditor::ResetStream(editor, large.c_str(), 0, large.size());
+    popup.action = wxID_COPY;
+    popup.Open(wxDefaultPosition);
+    Require(peer.Request("paste") == wxString::FromUTF8(large),
+            "stock native Paste retains all copied text beyond its default EDIT capacity");
+#endif
 }
 
 void CheckScrolledPlacement(EditorFrame* frame, Popup& popup) {

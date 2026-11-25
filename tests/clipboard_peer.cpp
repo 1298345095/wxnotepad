@@ -13,12 +13,38 @@
 #include <string_view>
 #ifdef __WXMSW__
 #include <richedit.h>
+class NativePasteReservation final {
+public:
+    NativePasteReservation(HWND window, std::chrono::steady_clock::time_point deadline) {
+        do {
+            if (::OpenClipboard(window)) {
+                acquired_ = true;
+                break;
+            }
+            ::Sleep(1);
+        } while (std::chrono::steady_clock::now() < deadline);
+    }
+    ~NativePasteReservation() {
+        if (acquired_) ::CloseClipboard();
+    }
+    NativePasteReservation(const NativePasteReservation&) = delete;
+    NativePasteReservation& operator=(const NativePasteReservation&) = delete;
+    bool Acquired() const { return acquired_; }
+
+private:
+    bool acquired_ = false;
+};
 class ObservedPeerText final : public wxTextCtrl {
 public:
     using wxTextCtrl::wxTextCtrl;
     wxString observationDirectory;
+    std::chrono::steady_clock::time_point pasteDeadline;
+    bool pasteClipboardReady = true;
     WXLRESULT MSWDefWindowProc(WXUINT message, WXWPARAM word, WXLPARAM parameter) override {
         if (message != WM_PASTE) return wxTextCtrl::MSWDefWindowProc(message, word, parameter);
+        const NativePasteReservation clipboard(static_cast<HWND>(GetHandle()), pasteDeadline);
+        pasteClipboardReady = clipboard.Acquired();
+        if (!pasteClipboardReady) return 0;
         const auto openerBefore = GetOpenClipboardWindow();
         const auto sequenceBefore = GetClipboardSequenceNumber();
         const auto errorBefore = GetLastError();
@@ -614,11 +640,17 @@ private:
             RecordStage("pasting-native-text");
 #ifdef __WXMSW__
             const PasteObservation before;
+            static_cast<ObservedPeerText*>(text_)->pasteDeadline = activationStarted_ + std::chrono::seconds(3);
 #endif
             text_->Paste();
 #ifdef __WXMSW__
             const PasteObservation after;
             RecordNativePaste(before, after);
+            if (!static_cast<ObservedPeerText*>(text_)->pasteClipboardReady) {
+                pendingPaste_ = false;
+                Respond("native clipboard unavailable");
+                return;
+            }
 #endif
             RecordStage("native-paste-returned");
 #ifdef __WXMSW__
