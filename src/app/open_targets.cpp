@@ -3,7 +3,7 @@
 #include "ScintillaStructures.h"
 #include "app/native_launch.h"
 #include "app/desktop_launch.h"
-#include "syntax/syntax_catalog.h"
+#include "syntax/syntax_detection.h"
 #include "settings/environment_expansion.h"
 #include "settings/settings_store.h"
 #include "diagnostics/trace.h"

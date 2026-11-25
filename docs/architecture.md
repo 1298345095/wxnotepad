@@ -3,6 +3,8 @@
 Status: implemented structure, with future extensions identified separately.
 The restructuring follows the proposal committed at `6cd13eb`. Validation is
 recorded in [the restructuring report](observations/architecture-refactor.md).
+The subsequent ownership changes are recorded in the
+[responsibility refactor](observations/responsibility-refactor.md).
 
 The original-core + wxWidgets design is retained. Search semantics, document
 transitions and language definitions now live in their respective modules.
@@ -14,14 +16,16 @@ search algorithm or own the document's language choice.
 | Location | Current responsibility | Assessment |
 | --- | --- | --- |
 | `src/app/main.cpp`, `process_observer.*` | Startup/options and the opt-in process observation protocol | Observation uses the actual application's commands and exists only when requested. |
-| `src/app/editor_frame.*`, `editor_frame_commands.cpp`, `command_ids.h` | Menus, shared command identities, file-command coordination, title/status and native dialogs | The frame coordinates sessions and settings; toolbar and status actions use command identities independently of menu labels and ordering. Native dialog construction lives under `app/dialogs`. |
+| `src/app/editor_frame.*`, `editor_frame_*commands.cpp`, `editor_frame_shortcuts.cpp`, `command_ids.h` | Window composition, feature-grouped menu bindings, keyboard dispatch, file-command coordination and title/status | Command identities remain shared by menus, toolbar and status actions. Each command group includes its own dependencies; native dialog construction lives under `app/dialogs`. |
 | `src/app/dialogs/*` | Native file choices, settings prompts, search feedback and modeless search UI | Dialogs collect choices; the frame commits document/settings decisions at the existing points. |
-| `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
+| `src/document/document_session.*` | Path, encoding/BOM, save/load decisions, save point and language choice | The session controls operation ordering and commits document identity after successful operations. |
+| `src/document/document_file.*`, `backup_file.*` | Safe-write transactions, file permissions/timestamps and backup file publication | A save transaction owns the temporary sibling and its cleanup. Backup creation owns naming, exclusive writes and fallback. |
+| `src/app/word_wrap_state.*` | Window wrapping preference, live file overrides, wrap symbols and accepted dialog choices | The frame delegates transitions and persistence capture; the dialog edits a focused `WordWrapOptions` value. |
 | `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
-| `src/settings/original_settings.h`, `settings_store.*`, `ini_document.*`, `search_settings.*` | Original defaults, settings lifecycle, per-file INI persistence and search-option conversion | Each INI document owns its path and line-preserving representation. Settings and style operations select an explicit document. Feature code consumes settings values; search bit preservation and history conversion stay together. |
+| `src/settings/original_settings.h`, `settings_store.*`, `ini_document.*`, `search_settings.*`, `style_profile_io.*` | Original defaults, settings lifecycle, per-file INI persistence and settings format modules | `SettingsStore` owns file identity and saved snapshots. `StyleProfileIO` owns style parsing, delta serialization and import/export; `IniDocument` owns the line-preserving representation. |
 | `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
-| `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
-| `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns input, selection/scrolling, IME, notifications and fold repair; editing-command implementations remain separate. |
+| `src/syntax/*`, `src/syntax/generated/*` | Static catalog, automatic detection, lexer/style installation and generated data | `syntax_detection.*` applies filename/content precedence through the catalog interface. Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
+| `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns native input, selection/scrolling, IME, notifications and fold repair. `typing_assistance.*` owns automatic-input policy and completion state; editing-command implementations remain separate. |
 | `src/editor/word_completion.cpp`, `completion_candidates.*` | Language/document candidate collection and the completion candidate set | The collector reads live editor state; the candidate module owns matching, deduplication, ordering, prefix fallback and serialization behind the same interface used by its contract tests. |
 | `src/editor/go_to_location.*` | Original line, column and byte-position parsing and navigation | Separate from the host's keyboard-navigation mapping. |
 | `src/editor/tab_conversion.cpp`, `strip_blanks.cpp`, `compress_whitespace.cpp`, `blank_lines.cpp`, `strip_characters.cpp`, `join_lines.cpp`, `pad_spaces.cpp`, `duplicate_lines.cpp`, `enclose_selection.cpp`, `line_comments.cpp`, `block_comments.cpp`, `align_lines.cpp` | Original text transformations behind public editor commands | Algorithms share the live core's text, column and history operations across languages. Each preserves its own original scope, rectangle and replacement rules. |
@@ -158,10 +162,11 @@ tests/                          # gradual organization by tested behavior
 ```
 
 Directories describe responsibility, not one abstract base class or library per
-directory. Related file transaction mechanics remain in `document_session.cpp`;
-clipboard transport, publication ownership and GTK drag/drop transfers live in
-private platform modules. Native IME and editing-side drag/drop decisions remain
-in the host's private core adapter.
+directory. `DocumentSession` coordinates saves while `document_file.*` owns their
+filesystem transaction and `backup_file.*` owns backup publication. Clipboard
+transport, publication ownership and GTK drag/drop transfers live in private
+platform modules. Native IME and editing-side drag/drop decisions remain in the
+host's private core adapter.
 
 ## State ownership and lifetime
 
@@ -248,10 +253,15 @@ a second search engine or copy the document into a searchable application model.
 
 Keep existing `OpenResult`/`SaveResult` meanings and the existing prompt callbacks.
 Native choosers, overwrite confirmation and Save/Discard/Cancel presentation stay
-in the app. File reads, decoding, write completion and save-point transitions stay
-in the session. Extract file/codec mechanics into private functions only where
-this makes the transaction easier to read; real temporary files remain suitable
-test dependencies.
+in the app. File reads, decoding, save decisions and save-point transitions stay
+in the session. `DocumentFiles::SaveTransaction` prepares a temporary sibling,
+writes and replaces the destination, restores original timestamps when selected,
+and cleans up uncommitted files. The session chooses when to prepare: Save Copy
+creates its destination first, while save cleanup and Original-time saves check
+write access before modifying editor text. `Prepare` and `Commit` receive the
+destination at their existing decision points, retaining path changes during
+modal encoding confirmation. Real temporary files exercise this interface in
+`feature_session_contracts`.
 
 The private `ReadDocument` operation returns a complete decoded candidate or a
 read/decode error. `DocumentSession::Load` accepts a `DocumentLoad::Intent` and
@@ -378,6 +388,25 @@ The build still needs an explicit delivered-lexer source list and upstream lexer
 registration. Document those together and verify agreement when adding a language;
 runtime metadata alone cannot change what is compiled. A plugin loader or a new
 code-generation framework is not needed for this catalog.
+
+### Automatic typing and wrapping state
+
+`TypingAssistance` owns automatic indentation, paired-character insertion, tag
+closure and completion notification policy, together with the completion callback,
+settings, current candidate state and language styles. The private Core records
+notification changes first, forwards typing notifications, then performs its
+ordinary UI notification. Completion acceptance still consumes its notification.
+The existing Core exception handler covers these calls. Typing state is constructed
+before Core and destroyed after it, so shutdown notifications see live state.
+
+`WordWrapState` separates the window preference from a file's `truncate-lines`
+override. Before a document transition it remembers the live preference only
+when the old file has no override. A successful load applies the new file's
+optional value; New restores the window preference. Capturing settings while a
+file override is active retains the window preference. Explicit toggles and
+accepted wrap choices update that preference. The editor continues to own the
+preferred nonzero wrap mode and layout. The native dialog edits only
+`WordWrapOptions`; Cancel leaves both live state and persisted values intact.
 
 ### Completion candidates
 

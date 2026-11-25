@@ -1,3 +1,4 @@
+#include "syntax/syntax_detection.h"
 #include "diagnostics/print.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"

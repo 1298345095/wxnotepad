@@ -15,6 +15,7 @@
 #include "app/dialogs/sort_lines_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
 #include "app/dialogs/word_wrap_settings_dialog.h"
+#include "app/word_wrap_state.h"
 #include "app/localization.h"
 #include "editor/align_lines.h"
 #include "settings/print_options.h"
@@ -229,7 +230,10 @@ void Validate(EditorFrame& frame, OriginalSettings& preferences) {
     int mode = 1;
     hook.Check(Policy::Fixed, [&frame, &column, &mode] { ShowLongLineSettingsDialog(&frame, column, mode); });
     hook.Check(Policy::Fixed, [&frame, editor] { ShowGoToLineDialog(&frame, *editor); });
-    hook.Check(Policy::Fixed, [&frame, &preferences] { ShowWordWrapSettingsDialog(&frame, preferences); });
+    hook.Check(Policy::Fixed, [&frame] {
+        WordWrapOptions wrapOptions;
+        ShowWordWrapSettingsDialog(&frame, wrapOptions);
+    });
     IndentationSettings indentation(preferences);
     hook.Check(Policy::Fixed, [&frame, &preferences, &indentation] {
         ShowTabSettingsDialog(&frame, preferences, SyntaxLanguage::PlainText, indentation);

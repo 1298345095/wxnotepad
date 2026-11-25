@@ -1,6 +1,7 @@
 #include "diagnostics/print.h"
 #include "document/document_session.h"
 #include "document_load.h"
+#include "document_files.h"
 #include "editor/editor_control.h"
 #include "search/search_session.h"
 #include <wx/wx.h>
@@ -381,6 +382,7 @@ public:
                 std::puts("PASS: independent DocumentSession language transitions and saved bytes");
                 EncodingSelection(*editor);
                 CheckDocumentLoadIntents(*editor);
+                CheckDocumentFileTransactions();
                 result_ = 0;
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());

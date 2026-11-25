@@ -69,6 +69,7 @@ add_library(editor_runtime STATIC
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
     src/editor/auto_insertion.cpp
+    src/editor/typing_assistance.cpp
     src/editor/auto_close_tags.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
@@ -78,6 +79,7 @@ add_library(editor_runtime STATIC
     src/editor/style_profile_application.cpp
     src/syntax/style_profile.cpp
     src/syntax/syntax_catalog.cpp
+    src/syntax/syntax_detection.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
     src/editor/platform/character_hex.cpp
@@ -104,6 +106,8 @@ add_library(editor_features STATIC
     src/editor/go_to_location.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
+    src/document/document_file.cpp
+    src/document/backup_file.cpp
     src/document/file_variables.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/single_byte_codec.cpp
@@ -128,6 +132,7 @@ add_library(app_shell STATIC
     src/app/dialogs/recent_files_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
+    src/settings/style_profile_io.cpp
     src/settings/ini_document.cpp
     src/settings/recent_files.cpp
     src/settings/environment_expansion.cpp
@@ -140,6 +145,7 @@ add_library(app_shell STATIC
     src/app/dialogs/modify_lines_dialog.cpp
     src/app/dialogs/win_edit_input.cpp
     src/app/dialogs/zoom_input.cpp
+    src/app/dialogs/zoom_level_dialog.cpp
     src/app/dialogs/print_page_setup_dialog.cpp
     src/app/dialogs/print_page_preview.cpp
     src/app/dialogs/go_to_line_dialog.cpp
@@ -151,6 +157,11 @@ add_library(app_shell STATIC
     src/app/file_change_monitor.cpp
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
+    src/app/editor_frame_edit_commands.cpp
+    src/app/editor_frame_view_commands.cpp
+    src/app/editor_frame_settings_commands.cpp
+    src/app/editor_frame_shortcuts.cpp
+    src/app/word_wrap_state.cpp
     src/app/editor_printing.cpp
     src/app/editor_print_job.cpp
     src/app/native_launch.cpp

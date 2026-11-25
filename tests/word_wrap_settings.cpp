@@ -312,6 +312,13 @@ void Exercise(EditorFrame* frame, SettingsStore& settings) {
     Require(frame->Open(path).status == OpenStatus::Opened && editor->Send(GetWrapMode) == 0 &&
                 editor->Send(GetWrapStartIndent) == 6,
             "original truncate-lines file variable overrides wrapping and file indentation");
+    const auto overriddenWrap = WrapState(editor);
+    Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled && WrapState(editor) == overriddenWrap &&
+                frame->DocumentPath() == path,
+            "cancelling Open retains the active file's wrapping override");
+    Require(frame->Open(path + ".missing").status == OpenStatus::Failed && WrapState(editor) == overriddenWrap &&
+                frame->DocumentPath() == path,
+            "failed Open retains the active file's wrapping override and global preference");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
     Require(settings.values.wordWrap && settings.values.wordWrapMode == 2,
             "saving preferences does not promote a document's truncate-lines override to the global setting");

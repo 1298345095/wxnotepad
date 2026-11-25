@@ -908,11 +908,7 @@ void EditorControl::Core::ReplaceTargetWithNativeBytes(std::string_view text, Na
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
     RecordNotificationChanges(notification);
     try {
-        if (notification.nmhdr.code == Scintilla::Notification::AutoCSelection) {
-            AcceptWordCompletion(window_, window_.completionSettings_, notification);
-            return;
-        }
-        HandleCompletionNotification(notification);
+        if (window_.typing_.HandleNotification(notification)) return;
         if (notification.nmhdr.code == Scintilla::Notification::DwellStart && !ac.Active()
 #ifdef __WXMSW__
             && !imeComposing_
@@ -958,59 +954,6 @@ void EditorControl::Core::RecordNotificationChanges(const Scintilla::Notificatio
         if (notification.position <= countedEnd_) selectionCountDirty_ = true;
         if (notification.linesAdded != 0) window_.lineNumberWidthDirty_ = true;
     }
-}
-
-void EditorControl::Core::HandleCompletionNotification(const Scintilla::NotificationData& notification) const {
-    if (notification.nmhdr.code == Scintilla::Notification::AutoCCharDeleted && window_.wordCompletionHandler_)
-        window_.wordCompletionHandler_(WordCompletionCondition::CharacterDeleted);
-    if (notification.nmhdr.code == Scintilla::Notification::AutoCCompleted ||
-        notification.nmhdr.code == Scintilla::Notification::AutoCCancelled)
-        window_.completionState_ = {};
-    if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType)
-        HandleCharacterAdded(notification);
-}
-
-// Original Notepad4.cpp SCN_CHARADDED: listType excludes tentative input
-// and multiple-selection typing. Bracket and tag paths return before words.
-void EditorControl::Core::HandleCharacterAdded(const Scintilla::NotificationData& notification) const {
-    const int ch = notification.ch;
-    if (ch == '\r' || ch == '\n') {
-        if (window_.autoIndent_ && (pdoc->eolMode != Scintilla::EndOfLine::CrLf || ch != '\n')) window_.AutoIndent();
-        return;
-    }
-    if (ch == '>') {
-        CompleteTagOrMemberAccess();
-        return;
-    }
-    if (ch == '(' || ch == '{' || ch == '[' || ch == '<' || ch == '"' || ch == '\'' || ch == '`' || ch == ',') {
-        window_.AutoInsertCharacter(ch);
-        return;
-    }
-    if (ShouldCompleteTypedWord(notification))
-        window_.wordCompletionHandler_(window_.Send(Message::AutoCActive) ? WordCompletionCondition::CharacterAdded
-                                                                          : WordCompletionCondition::Normal);
-}
-
-void EditorControl::Core::CompleteTagOrMemberAccess() const {
-    const auto& settings = window_.completionSettings_;
-    if (!(settings.completeOption & (WordCompletionOption::CloseTags | WordCompletionOption::CompleteWord))) return;
-    if (window_.AutoCloseTag()) return;
-    if ((settings.completeOption & WordCompletionOption::CompleteWord) &&
-        window_.Send(Message::GetCharAt, window_.Send(Message::GetCurrentPos) - 2) == '-' &&
-        window_.wordCompletionHandler_)
-        window_.wordCompletionHandler_(WordCompletionCondition::Normal);
-}
-
-bool EditorControl::Core::ShouldCompleteTypedWord(const Scintilla::NotificationData& notification) const {
-    const int ch = notification.ch;
-    const auto& settings = window_.completionSettings_;
-    return (settings.completeOption & WordCompletionOption::CompleteWord) &&
-           (notification.characterSource == Scintilla::CharacterSource::DirectInput ||
-            (ch < 0x80 && !(settings.completeOption & WordCompletionOption::EnglishIMEModeOnly))) &&
-           (ch < 0x80 ? CompletionStyleContains(window_.completionStyles_.wordCharacters, ch)
-                      : window_.Send(Message::GetCharacterClass, ch) ==
-                            std::to_underlying(Scintilla::CharacterClass::word)) &&
-           window_.wordCompletionHandler_;
 }
 
 void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationData& notification) const {

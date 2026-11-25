@@ -111,10 +111,6 @@ private:
     void NotifyModified(Scintilla::Internal::Document* document, Scintilla::Internal::DocModification modification,
                         void* userData) override;
     void RecordNotificationChanges(const Scintilla::NotificationData& notification) const noexcept;
-    void HandleCompletionNotification(const Scintilla::NotificationData& notification) const;
-    void HandleCharacterAdded(const Scintilla::NotificationData& notification) const;
-    void CompleteTagOrMemberAccess() const;
-    bool ShouldCompleteTypedWord(const Scintilla::NotificationData& notification) const;
     void UpdateNotificationState(const Scintilla::NotificationData& notification) const;
     std::unique_ptr<Scintilla::Internal::CaseFolder> CaseFolderForEncoding() const override;
     std::string CaseMapString(const std::string& value, CaseMapping mapping) const override;
