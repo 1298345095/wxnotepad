@@ -40,6 +40,12 @@ static_assert(!wxUSE_ZIPSTREAM && !wxUSE_TARSTREAM && !wxUSE_ARCHIVE_STREAMS && 
 #endif
 #endif
 #ifdef __WXMSW__
+#ifdef WXUSINGDLL
+#error The Windows SDK must link wxWidgets statically
+#endif
+#if defined(_MSC_VER) && !defined(_DLL)
+#error The Microsoft C and C++ runtime must remain dynamically linked
+#endif
 static_assert(wxUSE_ACCESSIBILITY);
 #endif
 

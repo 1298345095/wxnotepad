@@ -45,13 +45,14 @@ class SdkContract(unittest.TestCase):
         artifact = self.root / 'artifact'
         artifact.mkdir()
         (artifact / 'wxnotepad.exe').touch()
-        (artifact / 'wxmsw333u_core_vc_x64_custom.dll').touch()
-        (artifact / 'libpng16.dll').touch()
+        (artifact / 'vcruntime140.dll').touch()
+        (artifact / 'msvcp140.dll').touch()
+        (artifact / 'ucrtbase.dll').touch()
         report = SDK.inspect(self.build, artifact)
         self.assertTrue(report['success'], report)
         self.assertEqual(report['sdk_root'], str(prefix.resolve()))
         self.assertEqual(report['sdk_library_count'], 2)
-        self.assertEqual(report['runtime_file_count'], 3)
+        self.assertEqual(report['runtime_file_count'], 4)
 
     def test_wrong_or_empty_sdk_is_not_an_empty_success(self):
         prefix = self.configure()
@@ -61,6 +62,21 @@ class SdkContract(unittest.TestCase):
         for library in (prefix / 'lib').iterdir():
             library.unlink()
         self.assertFalse(SDK.inspect(self.build)['success'])
+
+    def test_windows_distribution_rejects_shared_application_dependencies(self):
+        self.configure()
+        artifact = self.root / 'artifact'
+        artifact.mkdir()
+        (artifact / 'wxnotepad.exe').touch()
+        for name in ('wxbase333u_vc_x64_custom.dll', 'wxmsw333u_core_vc_x64_custom.dll',
+                     'libpng16.dll', 'z.dll', 'application_dependency.dll'):
+            with self.subTest(name=name):
+                shared = artifact / name
+                shared.touch()
+                report = SDK.inspect(self.build, artifact)
+                self.assertFalse(report['success'])
+                self.assertEqual(report['forbidden_runtime_artifacts'], [str(shared)])
+                shared.unlink()
 
     def test_missing_cache_or_selected_wx_configuration_fails(self):
         self.assertFalse(SDK.inspect(self.build)['success'])
@@ -90,8 +106,15 @@ class SdkContract(unittest.TestCase):
         libraries = artifact / 'lib'
         libraries.mkdir(parents=True)
         (artifact / 'wxnotepad').touch()
-        (libraries / 'libwebp.so.7').touch()
+        (prefix / 'lib/libwebp.a').touch()
+        (libraries / 'libdbus-1.so.3').touch()
         self.assertTrue(SDK.inspect(self.build, artifact)['success'])
+        shared_codec = libraries / 'libwebp.so.7'
+        shared_codec.touch()
+        report = SDK.inspect(self.build, artifact)
+        self.assertFalse(report['success'])
+        self.assertEqual(report['forbidden_runtime_artifacts'], [str(shared_codec)])
+        shared_codec.unlink()
         forbidden = prefix / 'lib/libwxlexilla-3.3.a'
         forbidden.touch()
         report = SDK.inspect(self.build, artifact)
