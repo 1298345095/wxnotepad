@@ -89,7 +89,6 @@ private:
     FileWatchingOptions fileWatchingOptions_;
     FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
-    int saveCopyId_;
     OpenResult ReloadQuickEncoding(QuickReloadEncoding encoding);
     int recentFilesId_;
     int openSelectionId_ = wxID_NONE;
@@ -132,7 +131,6 @@ private:
     void RebuildToolbar();
     void CustomizeToolbar();
     std::vector<int> toolbarButtons_;
-    int FindMenuCommand(const wxString& label) const;
     void CreatePositionStatus();
     void ShowEditorContextMenu(wxContextMenuEvent& event);
     void ApplyBarVisibility();

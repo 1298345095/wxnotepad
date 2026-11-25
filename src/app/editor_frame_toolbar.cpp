@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/command_ids.h"
 #include "app/toolbar_art.h"
 #include "app/dialogs/toolbar_customization_dialog.h"
 #include "settings/settings_store.h"
@@ -127,50 +128,33 @@ wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& bac
     return wxBitmapBundle::FromBitmaps(images);
 }
 
-// Resolve the already-created native menu command, including translated labels.
-wxMenuItem* FindCommand(wxMenu* menu, const wxString& label) {
-    for (auto* item : menu->GetMenuItems()) {
-        if (item->GetSubMenu()) {
-            if (auto* found = FindCommand(item->GetSubMenu(), label)) return found;
-        } else if (item->GetItemLabel() == label) {
-            return item;
-        }
-    }
-    return nullptr;
-}
-
 std::vector<ToolbarCommand> ToolbarCommands(wxMenuBar* menuBar) {
-    static const auto specifications =
-        std::to_array<std::pair<int, const char*>>({{1, wxTRANSLATE("&New\tCtrl+N")},
-                                                    {2, wxTRANSLATE("&Open...\tCtrl+O")},
-                                                    {4, wxTRANSLATE("&Save\tCtrl+S")},
-                                                    {5, wxTRANSLATE("&Undo\tCtrl+Z")},
-                                                    {6, wxTRANSLATE("&Redo\tCtrl+Y")},
-                                                    {7, wxTRANSLATE("Cu&t\tCtrl+X")},
-                                                    {8, wxTRANSLATE("&Copy\tCtrl+C")},
-                                                    {9, wxTRANSLATE("&Paste\tCtrl+V")},
-                                                    {10, wxTRANSLATE("&Find...\tCtrl+F")},
-                                                    {11, wxTRANSLATE("R&eplace...\tCtrl+H")},
-                                                    {12, wxTRANSLATE("&Word Wrap\tCtrl+Shift+W")},
-                                                    {13, wxTRANSLATE("Zoom &In\tCtrl++")},
-                                                    {14, wxTRANSLATE("Zoom &Out\tCtrl+-")},
-                                                    {15, wxTRANSLATE("&Syntax Scheme...\tF12")},
-                                                    {16, wxTRANSLATE("&Customize Schemes...\tCtrl+F12")},
-                                                    {17, wxTRANSLATE("E&xit\tAlt+F4")},
-                                                    {18, wxTRANSLATE("Save &As...\tF6")},
-                                                    {19, wxTRANSLATE("Save Cop&y...\tCtrl+F6")},
-                                                    {20, wxTRANSLATE("&Delete")},
-                                                    {21, wxTRANSLATE("&Print...\tCtrl+P")},
-                                                    {24, wxTRANSLATE("&Default Levels\tShift+Alt+D")},
-                                                    {25, wxTRANSLATE("Execute &Document\tCtrl+L")},
-                                                    {27, wxTRANSLATE("New &Window\tAlt+N")}});
+    static constexpr auto specifications = std::to_array<std::pair<int, int>>({{1, wxID_NEW},
+                                                                               {2, wxID_OPEN},
+                                                                               {4, wxID_SAVE},
+                                                                               {5, wxID_UNDO},
+                                                                               {6, wxID_REDO},
+                                                                               {7, wxID_CUT},
+                                                                               {8, wxID_COPY},
+                                                                               {9, wxID_PASTE},
+                                                                               {10, wxID_FIND},
+                                                                               {11, wxID_REPLACE},
+                                                                               {12, AppCommand::WordWrap},
+                                                                               {13, AppCommand::ZoomIn},
+                                                                               {14, AppCommand::ZoomOut},
+                                                                               {15, AppCommand::SyntaxScheme},
+                                                                               {16, AppCommand::CustomizeSchemes},
+                                                                               {17, wxID_EXIT},
+                                                                               {18, wxID_SAVEAS},
+                                                                               {19, AppCommand::SaveCopy},
+                                                                               {20, wxID_DELETE},
+                                                                               {21, wxID_PRINT},
+                                                                               {24, AppCommand::FoldDefaultLevels},
+                                                                               {25, AppCommand::ExecuteDocument},
+                                                                               {27, AppCommand::NewWindow}});
     std::vector<ToolbarCommand> commands;
-    for (const auto& [identity, label] : specifications)
-        for (size_t index = 0; index < menuBar->GetMenuCount(); ++index)
-            if (auto* menu = FindCommand(menuBar->GetMenu(index), wxGetTranslation(label))) {
-                commands.push_back({identity, menu});
-                break;
-            }
+    for (const auto& [identity, id] : specifications)
+        if (auto* menu = menuBar->FindItem(id)) commands.push_back({identity, menu});
     return commands;
 }
 
@@ -219,12 +203,6 @@ wxString EncodeToolbarButtons(const std::vector<int>& buttons) {
     return result;
 }
 } // namespace
-
-int EditorFrame::FindMenuCommand(const wxString& label) const {
-    for (size_t menu = 0; menu < GetMenuBar()->GetMenuCount(); ++menu)
-        if (auto* item = FindCommand(GetMenuBar()->GetMenu(menu), label)) return item->GetId();
-    return wxNOT_FOUND;
-}
 
 void EditorFrame::AppendToolbarCommands(wxMenu* appearance) {
     const int customize = wxWindow::NewControlId();

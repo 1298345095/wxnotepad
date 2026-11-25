@@ -254,7 +254,7 @@ msgid "&Copy"
 msgstr "複製(&C)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_COPY; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Copy\tCtrl+C"
 msgstr "複製(&C)\tCtrl+C"
 
@@ -272,7 +272,7 @@ msgstr "目前區塊(&C)\tAlt+C"
 msgid "&Current toolbar buttons:"
 msgstr "目前工具列按鈕(&C)："
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Customize Schemes...\tCtrl+F12"
 msgstr "自訂語法高亮(&C)...\tCtrl+F12"
 
@@ -290,7 +290,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr "預設編碼(&D)\tCtrl+Alt+F"
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr "預設層級(&D)\tShift+Alt+D"
 
@@ -310,7 +310,7 @@ msgid "&Default..."
 msgstr "預設(&D)..."
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Delete"
 msgstr "刪除(&D)"
 
@@ -392,7 +392,7 @@ msgid "&Find All"
 msgstr "尋找全部(&F)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_FIND; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Find...\tCtrl+F"
 msgstr "尋找(&F)...\tCtrl+F"
 
@@ -406,7 +406,7 @@ msgid "&Goto"
 msgstr "跳到(&G)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_GOTOLINE; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr "跳到行(&G)...\tCtrl+G"
 
@@ -523,7 +523,7 @@ msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr "監看連續更新的檔案（例如記錄檔）(&M)。"
 
 # Original Notepad4 zh-Hant: IDM_ENCODING_SELECT; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&More...\tF9"
 msgstr "更多(&M)...\tF9"
 
@@ -533,7 +533,7 @@ msgid "&Nanosecond (ns)"
 msgstr "奈秒(&N) (ns)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_NEW; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&New\tCtrl+N"
 msgstr "新增(&N)\tCtrl+N"
 
@@ -592,7 +592,7 @@ msgid "&Open File, Folder, Link, etc."
 msgstr "開啟檔案、資料夾、連結等(&O)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_OPEN; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Open...\tCtrl+O"
 msgstr "開啟(&O)...\tCtrl+O"
 
@@ -617,7 +617,7 @@ msgid "&Paste"
 msgstr "貼上(&P)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_PASTE; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Paste\tCtrl+V"
 msgstr "貼上(&P)\tCtrl+V"
 
@@ -631,7 +631,7 @@ msgid "&Preview"
 msgstr "預覽(&P)"
 
 #. TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Print...\tCtrl+P"
 msgstr "列印(&P)...\tCtrl+P"
 
@@ -646,7 +646,7 @@ msgid "&Redo"
 msgstr "重做(&R)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_REDO; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr "重做(&R)\tCtrl+Y"
 
@@ -716,7 +716,7 @@ msgid "&Save"
 msgstr "儲存(&S)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVE; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Save\tCtrl+S"
 msgstr "儲存(&S)\tCtrl+S"
 
@@ -769,7 +769,7 @@ msgstr "分割行(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "儲存檔案時移除行尾空白(&S)。"
 
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Syntax Scheme...\tF12"
 msgstr "選擇語法高亮(&S)...\tF12"
 
@@ -813,7 +813,7 @@ msgid "&Undo"
 msgstr "復原(&U)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_UNDO; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr "復原(&U)\tCtrl+Z"
 
@@ -828,7 +828,7 @@ msgid "&Unindent"
 msgstr "減少縮排(&U)"
 
 # Original Notepad4 zh-Hant: IDM_LINEENDINGS_LF; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Unix/macOS (LF)"
 msgstr "&Unix/macOS (LF)"
 
@@ -858,7 +858,7 @@ msgid "&Wildcard search"
 msgstr "萬用字元搜尋(&I)"
 
 # Original Notepad4 zh-Hant: IDM_LINEENDINGS_CRLF; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Windows (CR+LF)"
 msgstr "&Windows (CR+LF)"
 
@@ -868,7 +868,7 @@ msgid "&With...\tAlt+Q"
 msgstr "自訂(&W)...\tAlt+Q"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_WORDWRAP; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr "自動換行(&R)\tCtrl+Shift+W"
 
@@ -1354,7 +1354,7 @@ msgid "Class"
 msgstr "類別"
 
 # Original Notepad4 zh-Hant: IDM_LINEENDINGS_CR; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Classic &Mac OS (CR)"
 msgstr "經典 &Mac OS (CR)"
 
@@ -1687,7 +1687,7 @@ msgid "Cu&t"
 msgstr "剪下(&T)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_CUT; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr "剪下(&T)\tCtrl+X"
 
@@ -1890,7 +1890,7 @@ msgid "Draw Block Caret in &Selection"
 msgstr "在選取範圍內繪製方塊游標(&S)"
 
 #. TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "E&xit\tAlt+F4"
 msgstr "結束(&X)\tAlt+F4"
 
@@ -1973,7 +1973,7 @@ msgid "Example List"
 msgstr "範例清單"
 
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
-#: src/app/document_tools.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "執行文件(&D)\tCtrl+L"
 
@@ -2890,7 +2890,7 @@ msgid "New &GUID"
 msgstr "新的 &GUID"
 
 # Original Notepad4 zh-Hant: IDM_FILE_NEWWINDOW; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "New &Window\tAlt+N"
 msgstr "新增視窗(&W)\tAlt+N"
 
@@ -3214,7 +3214,7 @@ msgid "Python Script"
 msgstr "Python 指令碼"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_REPLACE; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr "取代(&E)...\tCtrl+H"
 
@@ -3453,7 +3453,7 @@ msgid "Sa&ve Find Text\tAlt+F3"
 msgstr "儲存尋找文字(&V)\tAlt+F3"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVEAS; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Save &As...\tF6"
 msgstr "另存為(&A)...\tF6"
 
@@ -3468,7 +3468,7 @@ msgid "Save Back&up"
 msgstr "儲存備份(&U)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVECOPY; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr "儲存複本(&Y)...\tCtrl+F6"
 
@@ -4604,17 +4604,17 @@ msgid "Zoom"
 msgstr "縮放"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_ZOOMIN; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr "放大(&I)\tCtrl++"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_ZOOM_LEVEL; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_status.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Zoom &Level..."
 msgstr "縮放比例(&L)..."
 
 # Original Notepad4 zh-Hant: IDM_VIEW_ZOOMOUT; adapted where needed.
-#: src/app/editor_frame_commands.cpp src/app/editor_frame_toolbar.cpp
+#: src/app/editor_frame_commands.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr "縮小(&O)\tCtrl+-"
 

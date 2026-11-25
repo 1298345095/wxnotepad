@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/command_ids.h"
 #include "app/status_fields.h"
 #include "editor/editor_control.h"
 #include "editor/occurrence_marking.h"
@@ -27,7 +28,6 @@
 #endif
 
 namespace {
-constexpr size_t SchemeMenuIndex = 4;
 #ifdef __WXGTK__
 struct StatusTextMetrics {
     double ascent;
@@ -329,26 +329,28 @@ void EditorFrame::CreatePositionStatus() {
         int id = wxNOT_FOUND;
         switch (StatusFieldAtPoint(*status, event.GetPosition())) {
         case StatusField::Line:
-            id = FindMenuCommand(_("&Goto Line...\tCtrl+G"));
+            id = AppCommand::GoToLine;
             break;
         case StatusField::Matches:
             id = wxID_FIND;
             break;
         case StatusField::Encoding:
-            id = FindMenuCommand(_("&More...\tF9"));
+            id = AppCommand::ChooseEncoding;
             break;
-        case StatusField::Scheme:
-            PopupMenu(GetMenuBar()->GetMenu(SchemeMenuIndex));
+        case StatusField::Scheme: {
+            wxMenu* scheme = nullptr;
+            if (GetMenuBar()->FindItem(AppCommand::SyntaxScheme, &scheme)) PopupMenu(scheme);
             break;
+        }
         case StatusField::Overtype:
             editor_->Send(Scintilla::Message::EditToggleOvertype);
             UpdatePositionStatus();
             break;
         case StatusField::Eol: {
             const auto mode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-            id = FindMenuCommand(mode == Scintilla::EndOfLine::CrLf ? _("&Unix/macOS (LF)")
-                                 : mode == Scintilla::EndOfLine::Lf ? _("Classic &Mac OS (CR)")
-                                                                    : _("&Windows (CR+LF)"));
+            id = mode == Scintilla::EndOfLine::CrLf ? AppCommand::EolLf
+                 : mode == Scintilla::EndOfLine::Lf ? AppCommand::EolCr
+                                                    : AppCommand::EolCrLf;
             break;
         }
         default:
@@ -363,14 +365,14 @@ void EditorFrame::CreatePositionStatus() {
     status->Bind(wxEVT_LEFT_UP, [this, status](wxMouseEvent& event) {
         wxRect rectangle;
         if (status->GetFieldRect(StatusField::Zoom, rectangle) && rectangle.Contains(event.GetPosition())) {
-            wxCommandEvent command(wxEVT_MENU, FindMenuCommand(_("Zoom &Level...")));
+            wxCommandEvent command(wxEVT_MENU, AppCommand::ZoomLevel);
             GetEventHandler()->ProcessEvent(command);
         } else if (status->GetFieldRect(StatusField::Eol, rectangle) && rectangle.Contains(event.GetPosition())) {
             const auto mode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-            const auto label = mode == Scintilla::EndOfLine::CrLf ? _("&Windows (CR+LF)")
-                               : mode == Scintilla::EndOfLine::Lf ? _("&Unix/macOS (LF)")
-                                                                  : _("Classic &Mac OS (CR)");
-            wxCommandEvent command(wxEVT_MENU, FindMenuCommand(label));
+            const int id = mode == Scintilla::EndOfLine::CrLf ? AppCommand::EolCrLf
+                           : mode == Scintilla::EndOfLine::Lf ? AppCommand::EolLf
+                                                              : AppCommand::EolCr;
+            wxCommandEvent command(wxEVT_MENU, id);
             GetEventHandler()->ProcessEvent(command);
         }
         event.Skip();
