@@ -1,49 +1,111 @@
-"""Temporary PR 275 diagnosis: preserve every original test outcome."""
-from concurrent.futures import ThreadPoolExecutor
+"""Repeat original registered cases on four persistent private X11 sessions."""
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import os
 from pathlib import Path
-import threading
+import re
+import sys
 import time
 
+sys.path.insert(0, str(Path.cwd() / '.github/scripts'))
 import ci
 
-REPORTS = Path('.ci/reports/unicode-investigation').resolve()
-BUILD = Path('.ci/build/cmake').resolve()
+ROOT = ci.ROOT
+BUILD = ROOT / '.ci/build/cmake'
+REPORTS = ROOT / '.ci/reports/unicode-warm-investigation'
+SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
-RUNS = 100
-MAX_FAILURES = 5
-records = []
-lock = threading.Lock()
-finished = threading.Event()
+PHASES = {
+    'warm-single': {
+        'tests': ['original_unicode_controls'], 'runs': 200, 'timeout': 90,
+    },
+    'prefix': {
+        'tests': ['cpp_highlighting', 'json_highlighting', 'manual_language_choice',
+                  'fold_all_commands', 'line_number_view', 'original_unicode_controls'],
+        'runs': 30, 'timeout': 390,
+    },
+}
 
 
-def check(session):
-    for attempt in range(1, RUNS + 1):
-        if finished.is_set():
-            return
-        report = REPORTS / f'session-{session:02}' / f'run-{attempt:03}'
-        started = time.monotonic()
-        record = {'session': session, 'attempt': attempt, 'report': str(report)}
-        try:
-            ci.test('x11', BUILD, '^original_unicode_controls$', 1, report_directory=report)
-        except (Exception, SystemExit) as error:
-            record.update(success=False, error=str(error))
+def inside_session(directory):
+    plan = json.loads((directory / 'plan.json').read_text(encoding='utf-8'))
+    # One probe invocation retains run-001.log ... on the same DISPLAY, D-Bus,
+    # and native focus driver. CTest keeps each registered case's own timeout.
+    return ci.probe(plan['command'], directory / 'attempts', plan['timeout'],
+                    plan['runs'], ROOT)
+
+
+def session(phase, number, helper):
+    selected = PHASES[phase]
+    directory = REPORTS / phase / f'session-{number:02}'
+    record = {'phase': phase, 'session': number, 'report': str(directory),
+              'requested_runs': selected['runs'], 'tests': selected['tests']}
+    started = time.monotonic()
+    try:
+        expression = '^(' + '|'.join(re.escape(name) for name in selected['tests']) + ')$'
+        [(workspace, names)] = ci.test_shards(BUILD, expression, 1, directory / 'ctest')
+        if names != selected['tests']:
+            raise RuntimeError(f'Registered test selection/order changed: {names}')
+        # Keep the requested prefix order even after CTest records test costs.
+        # These dependencies affect this private workspace only.
+        with (workspace / 'CTestTestfile.cmake').open('a', encoding='utf-8') as output:
+            for previous, following in zip(names, names[1:]):
+                output.write(f'set_tests_properties("{following}" PROPERTIES DEPENDS "{previous}")\n')
+        command = ['ctest', '--test-dir', str(workspace), '-C', 'Release',
+                   '--parallel', '1', '-V', '--output-on-failure', '--no-tests=error',
+                   '--stop-on-failure', '-R', expression,
+                   '--output-junit', str(directory / 'last-tests.xml')]
+        plan = dict(record, command=command, runs=selected['runs'], timeout=selected['timeout'])
+        (directory / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
+        environment = dict(os.environ, GIO_LAUNCH_DESKTOP=str(helper),
+                           WXNOTEPAD_DISPLAY_LOG_DIR=str(directory / 'display'))
+        isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
+                    'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
+                    'x11', sys.executable, SCRIPT, '--session', directory]
+        record['exit_code'] = ci.run(isolated, directory / 'session.log', environment, check=False)
+        summary_path = directory / 'attempts/summary.json'
+        if summary_path.exists():
+            probe = json.loads(summary_path.read_text(encoding='utf-8'))
+            record.update(completed_runs=probe['completed_runs'],
+                          successful_runs=sum(item['status'] == 'completed' and item['exit_code'] == 0
+                                              for item in probe['results']),
+                          success=record['exit_code'] == 0 and probe['success'],
+                          attempts_summary=str(summary_path))
         else:
-            record['success'] = True
-        record['seconds'] = round(time.monotonic() - started, 3)
-        with lock:
-            records.append(record)
-            failed = sum(not item['success'] for item in records)
-            (REPORTS / 'summary.json').write_text(json.dumps({
-                'sessions': SESSIONS, 'runs_per_session': RUNS,
-                'completed': len(records), 'failed': failed, 'results': records,
-            }, indent=2) + '\n', encoding='utf-8')
-            print(f'Unicode investigation: completed={len(records)} failed={failed}', flush=True)
-            if failed >= MAX_FAILURES:
-                finished.set()
+            record.update(completed_runs=0, successful_runs=0, success=False,
+                          error='The private session ended before publishing probe results')
+    except (Exception, SystemExit) as error:
+        record.update(success=False, error=str(error))
+    record['seconds'] = round(time.monotonic() - started, 3)
+    return record
 
 
-REPORTS.mkdir(parents=True, exist_ok=False)
-with ThreadPoolExecutor(max_workers=SESSIONS) as pool:
-    list(pool.map(check, range(1, SESSIONS + 1)))
-raise SystemExit(1 if any(not item['success'] for item in records) else 0)
+def main():
+    if len(sys.argv) == 3 and sys.argv[1] == '--session':
+        return inside_session(Path(sys.argv[2]))
+    if len(sys.argv) != 1:
+        raise SystemExit('Usage: warm_unicode_investigation.py')
+    REPORTS.mkdir(parents=True, exist_ok=False)
+    helper = ci.linux_gio_helper(ci.read_cmake_cache(BUILD))
+    results = []
+    summary_path = REPORTS / 'summary.json'
+    for phase in PHASES:
+        # Finish all four warm-single sessions before opening the prefix sessions.
+        # Failure in one session is retained while the others finish independently.
+        with ThreadPoolExecutor(max_workers=SESSIONS) as workers:
+            pending = [workers.submit(session, phase, number, helper) for number in range(1, SESSIONS + 1)]
+            for future in as_completed(pending):
+                result = future.result()
+                results.append(result)
+                summary_path.write_text(json.dumps({
+                    'sessions_per_phase': SESSIONS, 'phases': PHASES,
+                    'completed_sessions': len(results),
+                    'failed_sessions': sum(not item['success'] for item in results),
+                    'results': results,
+                }, indent=2) + '\n', encoding='utf-8')
+                print(json.dumps(result), flush=True)
+    return 1 if any(not item['success'] for item in results) else 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
