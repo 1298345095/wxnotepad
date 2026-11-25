@@ -6,6 +6,7 @@
 #include "editor_test_helpers.h"
 #include "file_command_driver.h"
 #include <wx/weakref.h>
+#include <wx/apptrait.h>
 #include <wx/log.h>
 #include <memory>
 #include <string_view>
@@ -600,15 +601,15 @@ void CheckMinimize(EditorFrame* frame) {
     editor->Send(SetSavePoint);
     std::puts("PASS: native Escape precedence, exact modifiers, minimize, restore and working history");
 }
+// Let wxWidgets create and own the stderr target, including during startup.
+class EscapeAppTraits final : public wxGUIAppTraits {
+public:
+    wxLog* CreateLogTarget() override { return std::make_unique<wxLogStderr>().release(); }
+};
 class EscapeApp final : public wxApp {
 public:
+    wxAppTraits* CreateTraits() override { return std::make_unique<EscapeAppTraits>().release(); }
     bool OnInit() override {
-        {
-            auto target = std::make_unique<wxLogStderr>();
-            const std::unique_ptr<wxLog> previousLog(wxLog::SetActiveTarget(target.get()));
-            // wxWidgets owns the active target and deletes it during cleanup.
-            target.release();
-        }
         settings_ =
             argc == 4
                 ? std::make_unique<SettingsStore>()
