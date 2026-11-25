@@ -97,6 +97,7 @@ public:
         wxFileName::Rmdir(directory_, wxPATH_RMDIR_RECURSIVE);
     }
     wxString Request(const wxString& command) {
+        const auto requestNumber = ++requests_;
         if (wxFileExists(directory_ + "/response")) wxRemoveFile(directory_ + "/response");
         {
             wxFFile file(directory_ + "/request.tmp", "wb");
@@ -138,8 +139,19 @@ public:
             wxFFile file(privateFocusFile, "wb");
             file.Write("editor");
         }
+#ifdef __WXMSW__
+        // [DEBUG-swap-focus] Same call as wxTopLevelWindowMSW::Raise, with its
+        // return value retained to distinguish rejection from later focus loss.
+        const auto beforeRaise = GetForegroundWindow();
+        const bool accepted = SetForegroundWindow(static_cast<HWND>(frame_->GetHandle())) != FALSE;
+        const auto afterRaise = GetForegroundWindow();
+#else
         frame_->Raise();
+#endif
         editor_->SetFocus();
+#ifdef __WXMSW__
+        const auto afterFocus = GetForegroundWindow();
+#endif
         const auto activationDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         bool acknowledged = privateFocusFile.empty();
         while (std::chrono::steady_clock::now() < activationDeadline) {
@@ -156,9 +168,25 @@ public:
             if (acknowledged && frame_->IsActive() && editor_->HasFocus()) break;
             wxMilliSleep(10);
         }
-        if (!acknowledged || !frame_->IsActive() || !editor_->HasFocus())
+        if (!acknowledged || !frame_->IsActive() || !editor_->HasFocus()) {
+#ifdef __WXMSW__
+            DWORD timeout = 0;
+            const bool policyRead = SystemParametersInfoW(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &timeout, 0) != FALSE;
+            GUITHREADINFO info{sizeof(GUITHREADINFO)};
+            const bool guiRead = GetGUIThreadInfo(0, &info) != FALSE;
+            std::fprintf(stderr,
+                         "[DEBUG-swap-focus] request=%u command=%s accepted=%d before=%p afterRaise=%p afterFocus=%p "
+                         "foreground=%p active=%p focus=%p root=%p peerPid=%ld policyRead=%d policyMs=%lu "
+                         "guiRead=%d guiFlags=%lu\n",
+                         requestNumber, command.utf8_string().c_str(), accepted, static_cast<void*>(beforeRaise),
+                         static_cast<void*>(afterRaise), static_cast<void*>(afterFocus),
+                         static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetActiveWindow()),
+                         static_cast<void*>(::GetFocus()), static_cast<void*>(frame_->GetHandle()), process_,
+                         policyRead, timeout, guiRead, info.flags);
+#endif
             throw std::runtime_error("editor must receive actual native focus after peer command: " +
                                      command.ToStdString());
+        }
         frame_->SetTitle(title);
         SettleClipboard();
         return response;
@@ -167,6 +195,7 @@ public:
 private:
     wxString directory_;
     long process_ = 0;
+    unsigned requests_ = 0;
     EditorFrame* frame_;
     EditorControl* editor_;
 };

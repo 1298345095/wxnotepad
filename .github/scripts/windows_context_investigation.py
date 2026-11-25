@@ -11,6 +11,7 @@ import ci
 import windows_foreground
 
 CONTEXT_CASE = 'original_editor_context_menu'
+SWAP_CASE = 'original_clipboard_swap'
 # CTest omits an unbuilt executable's command from its JSON listing. Keep the
 # inspected predecessor targets explicit so cold investigations can build them.
 PREFIX_TARGETS = (
@@ -27,14 +28,18 @@ def plan(cmake_dir, scenario):
         ['ctest', '--test-dir', str(cmake_dir), '-C', 'Release', '--show-only=json-v1'],
         text=True, encoding='utf-8'))['tests']
     names = [case['name'] for case in cases]
-    if CONTEXT_CASE not in names:
-        raise SystemExit(f'Required registered test is missing: {CONTEXT_CASE}')
+    required = SWAP_CASE if scenario == 'swap' else CONTEXT_CASE
+    if required not in names:
+        raise SystemExit(f'Required registered test is missing: {required}')
     if scenario == 'prefix':
         selected = cases[:names.index(CONTEXT_CASE) + 1]
         targets = PREFIX_TARGETS
-    else:
+    elif scenario == 'clipboard':
         selected = [cases[names.index(CONTEXT_CASE)]]
         targets = ('context_menu',)  # Includes its existing clipboard_peer dependency.
+    else:
+        selected = [cases[names.index(SWAP_CASE)]]
+        targets = ('clipboard_smoke',)  # Includes its existing clipboard_peer dependency.
     return {'cmake_dir': str(cmake_dir), 'scenario': scenario,
             'tests': [case['name'] for case in selected], 'targets': list(targets)}
 
@@ -117,7 +122,7 @@ def hide_terminal_windows(reports):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('plan', 'build', 'run'))
-    parser.add_argument('--scenario', choices=('prefix', 'clipboard'), default='prefix')
+    parser.add_argument('--scenario', choices=('prefix', 'clipboard', 'swap'), default='prefix')
     parser.add_argument('--cmake-dir', type=Path, default=ci.BUILD / 'cmake')
     parser.add_argument('--report-dir', type=Path, required=True)
     parser.add_argument('--runs', type=int, default=3)

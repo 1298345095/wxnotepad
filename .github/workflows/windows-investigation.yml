@@ -6,7 +6,7 @@ on:
       scenario:
         description: Original predecessor sequence, or complete context-menu case only
         type: choice
-        options: [prefix, clipboard]
+        options: [prefix, clipboard, swap]
         default: prefix
       runs:
         description: Serial attempts; stop on the first failing attempt

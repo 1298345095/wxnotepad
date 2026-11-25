@@ -22,7 +22,7 @@ class WindowsInvestigation(unittest.TestCase):
         self.build = self.directory / 'build'
         self.events = self.directory / 'events.txt'
 
-    def configure(self, *, unbuilt=False, context=True, fail=False):
+    def configure(self, *, unbuilt=False, context=True, swap=True, fail=False):
         script = self.directory / 'event.py'
         script.write_text(
             'import os,sys; from pathlib import Path\n'
@@ -34,6 +34,8 @@ class WindowsInvestigation(unittest.TestCase):
         if context:
             cases.append(investigation.CONTEXT_CASE)
         cases += ['native_windows_clipboard_peer_lifecycle', 'after']
+        if swap:
+            cases.append(investigation.SWAP_CASE)
         source = 'cmake_minimum_required(VERSION 3.25)\nproject(Investigation NONE)\nenable_testing()\n'
         for name in cases:
             if unbuilt and name == investigation.CONTEXT_CASE:
@@ -45,6 +47,8 @@ class WindowsInvestigation(unittest.TestCase):
         if context:
             source += ('set_tests_properties(original_editor_context_menu PROPERTIES TIMEOUT 60 '
                        'ENVIRONMENT "WXNOTEPAD_INVESTIGATION_CONTRACT=retained")\n')
+        if swap:
+            source += 'set_tests_properties(original_clipboard_swap PROPERTIES TIMEOUT 180)\n'
         (self.directory / 'CMakeLists.txt').write_text(source, encoding='utf-8')
         subprocess.run(['cmake', '-S', self.directory, '-B', self.build, '-G', 'Ninja'],
                        check=True, capture_output=True)
@@ -77,6 +81,21 @@ class WindowsInvestigation(unittest.TestCase):
         for scenario in ('prefix', 'clipboard'):
             with self.subTest(scenario=scenario), self.assertRaisesRegex(SystemExit, investigation.CONTEXT_CASE):
                 investigation.plan(self.build, scenario)
+
+    def test_swap_selects_its_original_case_target_and_timeout(self):
+        self.configure()
+        selected = investigation.plan(self.build, 'swap')
+        self.assertEqual(selected['tests'], [investigation.SWAP_CASE])
+        self.assertEqual(selected['targets'], ['clipboard_smoke'])
+        listing = json.loads(subprocess.check_output(
+            ['ctest', '--test-dir', str(self.build), '--show-only=json-v1']))
+        case = next(case for case in listing['tests'] if case['name'] == investigation.SWAP_CASE)
+        self.assertIn({'name': 'TIMEOUT', 'value': 180.0}, case['properties'])
+
+    def test_missing_swap_cannot_silently_shrink_investigation(self):
+        self.configure(swap=False)
+        with self.assertRaisesRegex(SystemExit, investigation.SWAP_CASE):
+            investigation.plan(self.build, 'swap')
 
     def test_zero_attempts_cannot_report_an_empty_success(self):
         reports = self.directory / 'reports'
