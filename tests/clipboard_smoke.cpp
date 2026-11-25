@@ -165,10 +165,10 @@ public:
             // dispatches its deactivate event. Keep the request until the driver
             // claims it, and process native events before trusting cached focus.
             wxYield();
-            if (acknowledged && frame_->IsActive() && editor_->HasFocus()) break;
+            if (acknowledged && HasNativeFocus()) break;
             wxMilliSleep(10);
         }
-        if (!acknowledged || !frame_->IsActive() || !editor_->HasFocus()) {
+        if (!acknowledged || !HasNativeFocus()) {
 #ifdef __WXMSW__
             DWORD timeout = 0;
             const bool policyRead = SystemParametersInfoW(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &timeout, 0) != FALSE;
@@ -204,6 +204,12 @@ public:
     }
 
 private:
+    bool HasNativeFocus() const {
+#ifdef __WXMSW__
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
+#endif
+        return frame_->IsActive() && editor_->HasFocus();
+    }
     wxString directory_;
     long process_ = 0;
     unsigned requests_ = 0;
@@ -2482,7 +2488,14 @@ void RichTextCopy(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 void RunClipboardScenario(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     wxString shapes;
     if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-        if (shapes == "swap-ansi-readonly")
+        if (shapes == "focus-transfer") {
+            constexpr unsigned TransferIterations = 100;
+            for (unsigned transfer = 0; transfer < TransferIterations; ++transfer) {
+                const auto formats = peer.Request("utility-formats");
+                Require(formats == "data" || formats == "empty", "native peer completed its foreground request");
+            }
+            std::println("PASS: {} independent native peer/editor foreground handoffs", TransferIterations);
+        } else if (shapes == "swap-ansi-readonly")
             SwapDefaultReadOnly(frame, editor, peer);
         else if (shapes == "swap-ansi-caret")
             SwapDefaultCaretEncoding(frame, editor, peer);

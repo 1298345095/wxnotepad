@@ -6,7 +6,7 @@ on:
       scenario:
         description: Registered predecessor sequence, complete context-menu case, or clipboard Swap
         type: choice
-        options: [prefix, clipboard, swap, swap-prefix]
+        options: [prefix, clipboard, swap, swap-prefix, focus-transfer]
         default: prefix
       runs:
         description: Serial attempts; stop on the first failing attempt

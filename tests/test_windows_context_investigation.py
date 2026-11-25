@@ -38,6 +38,7 @@ class WindowsInvestigation(unittest.TestCase):
         cases += ['native_windows_clipboard_peer_lifecycle', 'after']
         if swap:
             cases += [investigation.SWAP_CASE, 'after-swap']
+        cases += [investigation.FOCUS_CASE]
         source = 'cmake_minimum_required(VERSION 3.25)\nproject(Investigation NONE)\nenable_testing()\n'
         for name in cases:
             if unbuilt and name == investigation.CONTEXT_CASE:
@@ -141,6 +142,12 @@ class WindowsInvestigation(unittest.TestCase):
         for scenario in ('swap', 'swap-prefix'):
             with self.subTest(scenario=scenario), self.assertRaisesRegex(SystemExit, investigation.SWAP_CASE):
                 investigation.plan(self.build, scenario)
+
+    def test_focus_transfer_isolates_the_real_clipboard_peer(self):
+        self.configure()
+        selected = investigation.plan(self.build, 'focus-transfer')
+        self.assertEqual(selected['tests'], [investigation.FOCUS_CASE])
+        self.assertEqual(selected['targets'], ['clipboard_smoke'])
 
     def test_swap_prefix_keeps_all_registered_predecessors_in_order(self):
         self.configure()

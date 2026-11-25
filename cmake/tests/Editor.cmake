@@ -193,6 +193,9 @@ if(WIN32)
     add_gui_program(windows_failure_capture_launch tests/windows_failure_capture_launch.cpp wx::core wx::base)
     add_test(NAME native_windows_failure_capture COMMAND windows_failure_capture_launch "${Python3_EXECUTABLE}")
     set_tests_properties(native_windows_failure_capture PROPERTIES TIMEOUT 30)
+    add_test(NAME native_windows_clipboard_focus_transfer COMMAND clipboard_smoke)
+    set_tests_properties(native_windows_clipboard_focus_transfer PROPERTIES TIMEOUT 180
+        ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=focus-transfer")
     foreach(target IN ITEMS clipboard_smoke word_wrap context_menu windows_failure_capture_launch)
         target_compile_definitions(${target} PRIVATE
             "NATIVE_FAILURE_PYTHON=\"${native_failure_python}\""
