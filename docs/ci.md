@@ -57,18 +57,14 @@ The Windows `native_windows_failure_capture` regression compares the configured
 Python path with its compiled value and launches the real capture helper against
 an owned hidden window. CMake normalizes path separators before embedding the
 Python executable in a C++ string literal.
-Windows reproduces the original configured test prefix through the context-menu
-case, then runs a hundred first-pointer processes and twenty complete context-menu
-processes with the case's sixty-second outer timeout. The pointer-only mode shares
-the original first native gesture and reversed-selection checks; the ordinary
-complete mode retains all clipboard and menu assertions. Each probe stops on its
-first failure and preserves every completed verdict. Those reports and native
-failure evidence are uploaded immediately, before the complete registered suite
-runs. That suite still executes after a reproduction failure; later success cannot
-replace an earlier failure. Missing clipboard-peer responses also retain their
-protocol stage and failure capture, with the failed read frozen before collection.
-The complete-menu repetitions use the registered CTest entry point, including
-its original timeout, and retain a separate report directory for each attempt.
+Ordinary Windows CI runs the complete registered suite once. The historical
+context-menu prefix replay, hundred first-pointer processes and twenty complete
+menu processes are available only through the manual `ci-swap-prefix`
+investigation below. The complete suite retains all menu and clipboard assertions,
+native input paths and original timeouts. Missing clipboard-peer responses retain
+their protocol stage and failure capture, with the failed read frozen before
+collection. Failure screenshots, native metadata and test reports remain in the
+ordinary evidence artifact.
 The clipboard peer also accepts shutdown while an empty native paste is pending;
 the failed paste is not answered with a successful result. The registered
 `native_windows_clipboard_peer_lifecycle` case checks this path with the real peer
@@ -107,7 +103,7 @@ selection and the native targets built for it.
 | `clipboard` | Complete `original_editor_context_menu`, repeated without interleaving other cases | `context_menu`, including its `clipboard_peer` dependency |
 | `swap` | Existing `original_clipboard_swap`, retaining its 180-second case timeout | `clipboard_smoke`, including its `clipboard_peer` dependency |
 | `swap-prefix` | Original registered order through `original_clipboard_swap` (currently 87 cases) | Thirty-nine inspected predecessor targets and their existing dependencies |
-| `ci-swap-prefix` | Full CI's original prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
+| `ci-swap-prefix` | Historical context-menu prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
 | `focus-transfer` | One hundred native Ctrl+K exchanges, validating Unicode bytes, reversed selection and both real foreground handoffs | `clipboard_smoke` and its existing peer dependency |
 | `search` | Original 13-scenario search-continuation case, retaining its 60-second timeout | `search_continuation`; hosted investigation keeps optimized debug symbols and WER crash dumps |
 
@@ -167,6 +163,14 @@ Dispatch the registered workflow against an investigation branch, for example:
 ```text
 gh workflow run windows-investigation.yml --ref codex/windows-context-investigation-2026-11-24 -f scenario=clipboard -f runs=20
 ```
+
+To replay the former CI context-menu prelude before Swap, select
+`scenario=ci-swap-prefix` and `runs=1`. Each attempt preserves separate prefix,
+pointer, complete-menu and Swap-prefix reports and stops at the first failure.
+The pointer probe retains its original native gesture and reversed-selection
+checks; the complete-menu repetitions retain the registered CTest case and its
+sixty-second timeout. Use `zero_foreground_timeout=true` to match the foreground
+policy prepared by ordinary hosted Windows CI.
 
 Its **Windows context investigation** check is separate from required merge
 checks. The ordinary CI/Quality/CodeQL/Fuzz workflows and full acceptance remain

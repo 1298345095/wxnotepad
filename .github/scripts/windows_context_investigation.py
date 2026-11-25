@@ -86,7 +86,7 @@ def run(selection, reports, runs):
 
 
 def warm_context(cmake_dir, reports):
-    """Retain the full CI's context-menu prelude before reaching Swap."""
+    """Replay the historical CI context-menu prelude before reaching Swap."""
     run(plan(cmake_dir, 'prefix'), reports / 'prefix', 1)
     pointer_result = ci.probe([str(cmake_dir / 'context_menu.exe'), '--pointer-probe'],
                               reports / 'pointer', 60, 100, cmake_dir)
