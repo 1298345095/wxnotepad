@@ -129,6 +129,7 @@ wxBitmapBundle DisabledArtwork(const wxBitmapBundle& normal, const wxColour& bac
 }
 
 std::vector<ToolbarCommand> ToolbarCommands(wxMenuBar* menuBar) {
+    using enum AppCommand;
     static constexpr auto specifications =
         std::to_array<std::pair<int, int>>({{1, wxID_NEW},
                                             {2, wxID_OPEN},
@@ -140,19 +141,19 @@ std::vector<ToolbarCommand> ToolbarCommands(wxMenuBar* menuBar) {
                                             {9, wxID_PASTE},
                                             {10, wxID_FIND},
                                             {11, wxID_REPLACE},
-                                            {12, std::to_underlying(AppCommand::WordWrap)},
-                                            {13, std::to_underlying(AppCommand::ZoomIn)},
-                                            {14, std::to_underlying(AppCommand::ZoomOut)},
-                                            {15, std::to_underlying(AppCommand::SyntaxScheme)},
-                                            {16, std::to_underlying(AppCommand::CustomizeSchemes)},
+                                            {12, std::to_underlying(WordWrap)},
+                                            {13, std::to_underlying(ZoomIn)},
+                                            {14, std::to_underlying(ZoomOut)},
+                                            {15, std::to_underlying(SyntaxScheme)},
+                                            {16, std::to_underlying(CustomizeSchemes)},
                                             {17, wxID_EXIT},
                                             {18, wxID_SAVEAS},
-                                            {19, std::to_underlying(AppCommand::SaveCopy)},
+                                            {19, std::to_underlying(SaveCopy)},
                                             {20, wxID_DELETE},
                                             {21, wxID_PRINT},
-                                            {24, std::to_underlying(AppCommand::FoldDefaultLevels)},
-                                            {25, std::to_underlying(AppCommand::ExecuteDocument)},
-                                            {27, std::to_underlying(AppCommand::NewWindow)}});
+                                            {24, std::to_underlying(FoldDefaultLevels)},
+                                            {25, std::to_underlying(ExecuteDocument)},
+                                            {27, std::to_underlying(NewWindow)}});
     std::vector<ToolbarCommand> commands;
     for (const auto& [identity, id] : specifications)
         if (auto* menu = menuBar->FindItem(id)) commands.push_back({identity, menu});

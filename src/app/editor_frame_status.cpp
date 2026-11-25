@@ -190,14 +190,16 @@ wxString DocumentSize(intptr_t bytes) {
     return wxString::Format("%.2f %s", size, units[unit]);
 }
 AppCommand EolCommand(Scintilla::EndOfLine mode) {
-    if (mode == Scintilla::EndOfLine::CrLf) return AppCommand::EolCrLf;
-    if (mode == Scintilla::EndOfLine::Lf) return AppCommand::EolLf;
-    return AppCommand::EolCr;
+    using enum AppCommand;
+    if (mode == Scintilla::EndOfLine::CrLf) return EolCrLf;
+    if (mode == Scintilla::EndOfLine::Lf) return EolLf;
+    return EolCr;
 }
 AppCommand NextEolCommand(Scintilla::EndOfLine mode) {
-    if (mode == Scintilla::EndOfLine::CrLf) return AppCommand::EolLf;
-    if (mode == Scintilla::EndOfLine::Lf) return AppCommand::EolCr;
-    return AppCommand::EolCrLf;
+    using enum AppCommand;
+    if (mode == Scintilla::EndOfLine::CrLf) return EolLf;
+    if (mode == Scintilla::EndOfLine::Lf) return EolCr;
+    return EolCrLf;
 }
 } // namespace
 
