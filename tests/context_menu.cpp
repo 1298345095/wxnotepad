@@ -41,6 +41,13 @@ void Focus(EditorFrame* frame) {
 #ifdef __WXMSW__
     NativeFocus::Activate(static_cast<HWND>(frame->GetHandle()), static_cast<HWND>(frame->Editor()->GetHandle()),
                           &focusActivation);
+    if (focusActivation.previousThreadId && focusActivation.previousThreadId != focusActivation.uiThreadId)
+        std::fprintf(stderr,
+                     "[DEBUG-context-activation] foreignHandoff previous=%p previousThread=%lu uiThread=%lu "
+                     "accepted=%d afterActivation=%p frame=%p\n",
+                     static_cast<void*>(focusActivation.previousForeground), focusActivation.previousThreadId,
+                     focusActivation.uiThreadId, focusActivation.foregroundAccepted,
+                     static_cast<void*>(focusActivation.foregroundAfterDetach), static_cast<void*>(frame->GetHandle()));
 #else
     wxString focusFile;
     NativeKeys::FocusEditor(frame, "wxnotepad context menu", focusFile);
