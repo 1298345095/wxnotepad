@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       scenario:
-        description: Original predecessor sequence, or complete context-menu case only
+        description: Registered predecessor sequence, complete context-menu case, or clipboard Swap
         type: choice
-        options: [prefix, clipboard, swap]
+        options: [prefix, clipboard, swap, swap-prefix]
         default: prefix
       runs:
         description: Serial attempts; stop on the first failing attempt
@@ -84,7 +84,7 @@ jobs:
             throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
           }
       - name: Preserve the original reference-control predecessors
-        if: env.INVESTIGATION_SCENARIO == 'prefix'
+        if: env.INVESTIGATION_SCENARIO == 'prefix' || env.INVESTIGATION_SCENARIO == 'swap-prefix'
         shell: bash
         run: |
           set -euo pipefail

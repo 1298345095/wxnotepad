@@ -37,7 +37,7 @@ class WindowsInvestigation(unittest.TestCase):
             cases.append(investigation.CONTEXT_CASE)
         cases += ['native_windows_clipboard_peer_lifecycle', 'after']
         if swap:
-            cases.append(investigation.SWAP_CASE)
+            cases += [investigation.SWAP_CASE, 'after-swap']
         source = 'cmake_minimum_required(VERSION 3.25)\nproject(Investigation NONE)\nenable_testing()\n'
         for name in cases:
             if unbuilt and name == investigation.CONTEXT_CASE:
@@ -138,8 +138,17 @@ class WindowsInvestigation(unittest.TestCase):
 
     def test_missing_swap_cannot_silently_shrink_investigation(self):
         self.configure(swap=False)
-        with self.assertRaisesRegex(SystemExit, investigation.SWAP_CASE):
-            investigation.plan(self.build, 'swap')
+        for scenario in ('swap', 'swap-prefix'):
+            with self.subTest(scenario=scenario), self.assertRaisesRegex(SystemExit, investigation.SWAP_CASE):
+                investigation.plan(self.build, scenario)
+
+    def test_swap_prefix_keeps_all_registered_predecessors_in_order(self):
+        self.configure()
+        selected = investigation.plan(self.build, 'swap-prefix')
+        self.assertEqual(selected['tests'], ['before', investigation.CONTEXT_CASE,
+                                             'native_windows_clipboard_peer_lifecycle', 'after', investigation.SWAP_CASE])
+        self.assertIn('clipboard_smoke', selected['targets'])
+        self.assertIn('context_menu', selected['targets'])
 
     def test_zero_attempts_cannot_report_an_empty_success(self):
         reports = self.directory / 'reports'

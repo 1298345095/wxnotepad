@@ -174,15 +174,26 @@ public:
             const bool policyRead = SystemParametersInfoW(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &timeout, 0) != FALSE;
             GUITHREADINFO info{sizeof(GUITHREADINFO)};
             const bool guiRead = GetGUIThreadInfo(0, &info) != FALSE;
+            POINT cursor{};
+            const bool cursorRead = GetCursorPos(&cursor) != FALSE;
+            BOOL tracking = FALSE;
+            const bool trackingRead = SystemParametersInfoW(SPI_GETACTIVEWINDOWTRACKING, 0, &tracking, 0) != FALSE;
             std::fprintf(stderr,
                          "[DEBUG-swap-focus] request=%u command=%s accepted=%d before=%p afterRaise=%p afterFocus=%p "
                          "foreground=%p active=%p focus=%p root=%p peerPid=%ld policyRead=%d policyMs=%lu "
-                         "guiRead=%d guiFlags=%lu\n",
+                         "guiRead=%d guiFlags=%lu cursorRead=%d cursor=%ld,%ld hit=%p trackingRead=%d tracking=%d "
+                         "enabled=%d popup=%p alt=%04x control=%04x shift=%04x\n",
                          requestNumber, command.utf8_string().c_str(), accepted, static_cast<void*>(beforeRaise),
                          static_cast<void*>(afterRaise), static_cast<void*>(afterFocus),
                          static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetActiveWindow()),
                          static_cast<void*>(::GetFocus()), static_cast<void*>(frame_->GetHandle()), process_,
-                         policyRead, timeout, guiRead, info.flags);
+                         policyRead, timeout, guiRead, info.flags, cursorRead, cursor.x, cursor.y,
+                         static_cast<void*>(WindowFromPoint(cursor)), trackingRead, tracking,
+                         IsWindowEnabled(static_cast<HWND>(frame_->GetHandle())),
+                         static_cast<void*>(GetLastActivePopup(static_cast<HWND>(frame_->GetHandle()))),
+                         static_cast<unsigned short>(GetAsyncKeyState(VK_MENU)),
+                         static_cast<unsigned short>(GetAsyncKeyState(VK_CONTROL)),
+                         static_cast<unsigned short>(GetAsyncKeyState(VK_SHIFT)));
 #endif
             throw std::runtime_error("editor must receive actual native focus after peer command: " +
                                      command.ToStdString());

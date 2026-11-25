@@ -21,6 +21,14 @@ PREFIX_TARGETS = (
     'scroll_past_last_line', 'sdk_capabilities', 'selection_options',
     'settings_read_failure', 'wxnotepad',
 )
+SWAP_PREFIX_TARGETS = PREFIX_TARGETS + (
+    'align_lines', 'base64_conversion', 'caret_appearance', 'clipboard_smoke',
+    'current_encoding', 'date_time', 'feature_sessions', 'file_times', 'full_screen',
+    'header_insert', 'line_wrap', 'modify_lines', 'pad_spaces', 'path_text',
+    'periodic_backup', 'printing', 'read_only', 'read_only_file', 'reopen_document',
+    'revert_document', 'save_backup', 'save_cleanup', 'save_copy', 'special_insert',
+    'url_conversion',
+)
 
 
 def plan(cmake_dir, scenario):
@@ -29,12 +37,15 @@ def plan(cmake_dir, scenario):
         ['ctest', '--test-dir', str(cmake_dir), '-C', 'Release', '--show-only=json-v1'],
         text=True, encoding='utf-8'))['tests']
     names = [case['name'] for case in cases]
-    required = SWAP_CASE if scenario == 'swap' else CONTEXT_CASE
+    required = SWAP_CASE if scenario in ('swap', 'swap-prefix') else CONTEXT_CASE
     if required not in names:
         raise SystemExit(f'Required registered test is missing: {required}')
     if scenario == 'prefix':
         selected = cases[:names.index(CONTEXT_CASE) + 1]
         targets = PREFIX_TARGETS
+    elif scenario == 'swap-prefix':
+        selected = cases[:names.index(SWAP_CASE) + 1]
+        targets = SWAP_PREFIX_TARGETS
     elif scenario == 'clipboard':
         selected = [cases[names.index(CONTEXT_CASE)]]
         targets = ('context_menu',)  # Includes its existing clipboard_peer dependency.
@@ -123,7 +134,7 @@ def hide_terminal_windows(reports):
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('plan', 'build', 'run'))
-    parser.add_argument('--scenario', choices=('prefix', 'clipboard', 'swap'), default='prefix')
+    parser.add_argument('--scenario', choices=('prefix', 'clipboard', 'swap', 'swap-prefix'), default='prefix')
     parser.add_argument('--cmake-dir', type=Path, default=ci.BUILD / 'cmake')
     parser.add_argument('--report-dir', type=Path, required=True)
     parser.add_argument('--runs', type=int, default=3)
