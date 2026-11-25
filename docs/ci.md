@@ -92,6 +92,11 @@ selection and the native targets built for it.
 | `ci-swap-prefix` | Full CI's original prefix, 100 pointer processes and 20 complete menus, then the registered order through Swap | Same targets as `swap-prefix` |
 | `focus-transfer` | One hundred native Ctrl+K exchanges, validating Unicode bytes, reversed selection and both real foreground handoffs | `clipboard_smoke` and its existing peer dependency |
 
+On Windows, `focus-transfer` uses the existing keyboard-state and native
+accelerator translation path; it does not insert physical keys with `SendInput`.
+Both clipboard endpoints additionally require their top-level HWND to equal
+`GetForegroundWindow()`. The original first-pointer probe still uses `SendInput`.
+
 The prefix target list is explicit because CTest omits command paths for unbuilt
 executables. Update `PREFIX_TARGETS` when a new predecessor requires another
 program. Test selection still comes from the current CTest registration.

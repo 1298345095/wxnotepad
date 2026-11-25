@@ -97,7 +97,6 @@ public:
         wxFileName::Rmdir(directory_, wxPATH_RMDIR_RECURSIVE);
     }
     wxString Request(const wxString& command) {
-        const auto requestNumber = ++requests_;
         if (wxFileExists(directory_ + "/response")) wxRemoveFile(directory_ + "/response");
         {
             wxFFile file(directory_ + "/request.tmp", "wb");
@@ -127,14 +126,6 @@ public:
         wxString response;
         wxFFile file(directory_ + "/response", "rb");
         Require(file.ReadAll(&response, wxConvUTF8), "read owned peer response");
-        if (wxFileExists(directory_ + "/peer-focus-diagnostic")) {
-            wxString diagnostic;
-            wxFFile diagnosticFile(directory_ + "/peer-focus-diagnostic", "rb");
-            diagnosticFile.ReadAll(&diagnostic, wxConvUTF8);
-            std::fputs(diagnostic.utf8_string().c_str(), stderr);
-            diagnosticFile.Close();
-            wxRemoveFile(directory_ + "/peer-focus-diagnostic");
-        }
         if (response == "failed" || response == "native focus unavailable" || response == "native gesture unavailable")
             throw std::runtime_error("independent peer " + command.ToStdString() + ": " + response.ToStdString());
         if (command == "copy") SettleClipboard();
@@ -148,8 +139,8 @@ public:
             file.Write("editor");
         }
 #ifdef __WXMSW__
-        // [DEBUG-swap-focus] Same call as wxTopLevelWindowMSW::Raise, with its
-        // return value retained to distinguish rejection from later focus loss.
+        // Raise() uses this same API. Retain its result so a hosted failure
+        // distinguishes a rejected activation from subsequent focus loss.
         const auto beforeRaise = GetForegroundWindow();
         const bool accepted = SetForegroundWindow(static_cast<HWND>(frame_->GetHandle())) != FALSE;
         const auto afterRaise = GetForegroundWindow();
@@ -178,30 +169,10 @@ public:
         }
         if (!acknowledged || !HasNativeFocus()) {
 #ifdef __WXMSW__
-            DWORD timeout = 0;
-            const bool policyRead = SystemParametersInfoW(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &timeout, 0) != FALSE;
-            GUITHREADINFO info{sizeof(GUITHREADINFO)};
-            const bool guiRead = GetGUIThreadInfo(0, &info) != FALSE;
-            POINT cursor{};
-            const bool cursorRead = GetCursorPos(&cursor) != FALSE;
-            BOOL tracking = FALSE;
-            const bool trackingRead = SystemParametersInfoW(SPI_GETACTIVEWINDOWTRACKING, 0, &tracking, 0) != FALSE;
-            std::fprintf(stderr,
-                         "[DEBUG-swap-focus] request=%u command=%s accepted=%d before=%p afterRaise=%p afterFocus=%p "
-                         "foreground=%p active=%p focus=%p root=%p peerPid=%ld policyRead=%d policyMs=%lu "
-                         "guiRead=%d guiFlags=%lu cursorRead=%d cursor=%ld,%ld hit=%p trackingRead=%d tracking=%d "
-                         "enabled=%d popup=%p alt=%04x control=%04x shift=%04x\n",
-                         requestNumber, command.utf8_string().c_str(), accepted, static_cast<void*>(beforeRaise),
-                         static_cast<void*>(afterRaise), static_cast<void*>(afterFocus),
-                         static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetActiveWindow()),
-                         static_cast<void*>(::GetFocus()), static_cast<void*>(frame_->GetHandle()), process_,
-                         policyRead, timeout, guiRead, info.flags, cursorRead, cursor.x, cursor.y,
-                         static_cast<void*>(WindowFromPoint(cursor)), trackingRead, tracking,
-                         IsWindowEnabled(static_cast<HWND>(frame_->GetHandle())),
-                         static_cast<void*>(GetLastActivePopup(static_cast<HWND>(frame_->GetHandle()))),
-                         static_cast<unsigned short>(GetAsyncKeyState(VK_MENU)),
-                         static_cast<unsigned short>(GetAsyncKeyState(VK_CONTROL)),
-                         static_cast<unsigned short>(GetAsyncKeyState(VK_SHIFT)));
+            std::println(stderr,
+                         "Clipboard activation: accepted={:d} before={} afterRaise={} afterFocus={} foreground={}",
+                         accepted, static_cast<void*>(beforeRaise), static_cast<void*>(afterRaise),
+                         static_cast<void*>(afterFocus), static_cast<void*>(GetForegroundWindow()));
 #endif
             throw std::runtime_error("editor must receive actual native focus after peer command: " +
                                      command.ToStdString());
@@ -213,25 +184,15 @@ public:
 
 private:
     bool HasNativeFocus() const {
-        const bool local = frame_->IsActive() && editor_->HasFocus();
 #ifdef __WXMSW__
-        const auto foreground = GetForegroundWindow();
-        if (local && foreground != static_cast<HWND>(frame_->GetHandle()) && !observedLocalFocus_) {
-            observedLocalFocus_ = true;
-            DWORD foregroundProcess = 0;
-            GetWindowThreadProcessId(foreground, &foregroundProcess);
-            std::fprintf(stderr, "[DEBUG-local-focus] processLocal=1 foreground=%p foregroundPid=%lu peerPid=%ld\n",
-                         static_cast<void*>(foreground), foregroundProcess, process_);
-        }
-        return local && foreground == static_cast<HWND>(frame_->GetHandle());
-#else
-        return local;
+        // wxWidgets checks focus within this process; also require the desktop's
+        // foreground window before continuing the cross-process exchange.
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
 #endif
+        return frame_->IsActive() && editor_->HasFocus();
     }
     wxString directory_;
     long process_ = 0;
-    unsigned requests_ = 0;
-    mutable bool observedLocalFocus_ = false;
     EditorFrame* frame_;
     EditorControl* editor_;
 };

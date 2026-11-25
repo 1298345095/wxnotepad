@@ -63,6 +63,21 @@ and removing GUI-queue attachment. They do not independently establish the
 cause of the earlier empty native clipboard paste; its original content
 assertions remain part of each complete run.
 
+The subsequent [complete CI run][16] passed the context-menu probes but failed
+`original_clipboard_swap`: after `utility-formats`, the independent clipboard
+peer remained foreground while the editor had no active or focus HWND. The
+session timeout was zero. That run did not retain `SetForegroundWindow`'s return
+value, so it cannot distinguish rejection from a later activation takeover.
+
+Both [the original process-local focus control][17] and [the desktop-foreground
+check][18] passed a replay of all original predecessors through Swap, including
+the complete CI prelude. The latter did not observe the parent's process-local
+focus succeeding while another HWND was foreground. The explicit desktop check
+strengthens the fixture's focus precondition; these passing replays do not
+establish it as the cause or cure of the intermittent Swap failure. Failed editor
+handoffs now retain the activation result and the foreground HWNDs around that
+call, alongside the existing owned-window capture.
+
 ## What Windows documents
 
 `SetForegroundWindow` requires a desktop application, no active menu, and no
@@ -222,3 +237,6 @@ the result on Windows Server 2025 x64.
 [13]: https://github.com/microsoft/terminal/issues/14131
 [14]: https://github.com/microsoft/terminal/issues/19749#issuecomment-3781966914
 [15]: https://github.com/actions/runner-images/issues/14049#issuecomment-5217338266
+[16]: https://github.com/1298345095/wxnotepad/actions/runs/45525811897
+[17]: https://github.com/1298345095/wxnotepad/actions/runs/45542021456
+[18]: https://github.com/1298345095/wxnotepad/actions/runs/45542119296

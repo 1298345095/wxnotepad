@@ -134,17 +134,7 @@ private:
     }
     bool HasNativeFocus() const {
 #ifdef __WXMSW__
-        const auto foreground = GetForegroundWindow();
-        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) {
-            if (frame_->IsActive() && text_->HasFocus()) {
-                wxFFile file(directory_ + "/peer-focus-diagnostic", "wb");
-                DWORD foregroundProcess = 0;
-                GetWindowThreadProcessId(foreground, &foregroundProcess);
-                file.Write(wxString::Format("[DEBUG-peer-local-focus] processLocal=1 foregroundPid=%lu command=%s\n",
-                                            foregroundProcess, pendingCommand_));
-            }
-            return false;
-        }
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
 #endif
         return frame_->IsActive() && text_->HasFocus();
     }
