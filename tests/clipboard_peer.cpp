@@ -133,7 +133,9 @@ private:
         return;
     }
     bool HasNativeFocus() const {
-        // [DEBUG-local-focus-control] Replay the original process-local predicate.
+#ifdef __WXMSW__
+        if (GetForegroundWindow() != static_cast<HWND>(frame_->GetHandle())) return false;
+#endif
         return frame_->IsActive() && text_->HasFocus();
     }
     void Poll() {

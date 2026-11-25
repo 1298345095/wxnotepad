@@ -205,12 +205,25 @@ public:
 
 private:
     bool HasNativeFocus() const {
-        // [DEBUG-local-focus-control] Replay the original process-local predicate.
-        return frame_->IsActive() && editor_->HasFocus();
+        const bool local = frame_->IsActive() && editor_->HasFocus();
+#ifdef __WXMSW__
+        const auto foreground = GetForegroundWindow();
+        if (local && foreground != static_cast<HWND>(frame_->GetHandle()) && !observedLocalFocus_) {
+            observedLocalFocus_ = true;
+            DWORD foregroundProcess = 0;
+            GetWindowThreadProcessId(foreground, &foregroundProcess);
+            std::fprintf(stderr, "[DEBUG-local-focus] processLocal=1 foreground=%p foregroundPid=%lu peerPid=%ld\n",
+                         static_cast<void*>(foreground), foregroundProcess, process_);
+        }
+        return local && foreground == static_cast<HWND>(frame_->GetHandle());
+#else
+        return local;
+#endif
     }
     wxString directory_;
     long process_ = 0;
     unsigned requests_ = 0;
+    mutable bool observedLocalFocus_ = false;
     EditorFrame* frame_;
     EditorControl* editor_;
 };
