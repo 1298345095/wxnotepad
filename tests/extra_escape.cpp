@@ -603,7 +603,12 @@ void CheckMinimize(EditorFrame* frame) {
 class EscapeApp final : public wxApp {
 public:
     bool OnInit() override {
-        delete wxLog::SetActiveTarget(new wxLogStderr);
+        {
+            auto target = std::make_unique<wxLogStderr>();
+            const std::unique_ptr<wxLog> previousLog(wxLog::SetActiveTarget(target.get()));
+            // wxWidgets owns the active target and deletes it during cleanup.
+            target.release();
+        }
         settings_ =
             argc == 4
                 ? std::make_unique<SettingsStore>()
