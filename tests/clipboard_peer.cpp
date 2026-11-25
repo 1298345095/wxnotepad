@@ -21,7 +21,7 @@ public:
         if (message != WM_PASTE) return wxTextCtrl::MSWDefWindowProc(message, word, parameter);
         const auto openerBefore = GetOpenClipboardWindow();
         const auto sequenceBefore = GetClipboardSequenceNumber();
-        SetLastError(ERROR_SUCCESS);
+        const auto errorBefore = GetLastError();
         const auto result = wxTextCtrl::MSWDefWindowProc(message, word, parameter);
         const auto nativeError = GetLastError();
         const auto openerAfter = GetOpenClipboardWindow();
@@ -30,14 +30,15 @@ public:
         GetWindowThreadProcessId(openerBefore, &beforePid);
         GetWindowThreadProcessId(openerAfter, &afterPid);
         wxFFile log(observationDirectory + "/peer-paste.log", "ab");
-        log.Write(
-            wxString::Format(
-                "[DEBUG-paste-272] default-paste result=%lld error=%lu openerBefore=%p beforePid=%lu openerAfter=%p "
-                "afterPid=%lu sequenceBefore=%lu sequenceAfter=%lu length=%zu limit=%lld\n",
-                static_cast<long long>(result), nativeError, static_cast<void*>(openerBefore), beforePid,
-                static_cast<void*>(openerAfter), afterPid, sequenceBefore, sequenceAfter, GetValue().length(),
-                static_cast<long long>(SendMessageW(static_cast<HWND>(GetHandle()), EM_GETLIMITTEXT, 0, 0))),
-            wxConvUTF8);
+        log.Write(wxString::Format(
+                      "[DEBUG-paste-272] default-paste result=%lld errorBefore=%lu error=%lu openerBefore=%p "
+                      "beforePid=%lu openerAfter=%p "
+                      "afterPid=%lu sequenceBefore=%lu sequenceAfter=%lu length=%zu limit=%lld\n",
+                      static_cast<long long>(result), errorBefore, nativeError, static_cast<void*>(openerBefore),
+                      beforePid, static_cast<void*>(openerAfter), afterPid, sequenceBefore, sequenceAfter,
+                      GetValue().length(),
+                      static_cast<long long>(SendMessageW(static_cast<HWND>(GetHandle()), EM_GETLIMITTEXT, 0, 0))),
+                  wxConvUTF8);
         return result;
     }
 };
