@@ -1,3 +1,4 @@
+#include "syntax_menu_helpers.h"
 #include "diagnostics/print.h"
 #include "status_helpers.h"
 #include "editor/editor_control.h"
@@ -145,9 +146,9 @@ void Language(EditorFrame* frame, bool cpp) {
     Require(StatusMetadata(frame).Contains(cpp ? "C/C++" : "Plain Text"), "status must follow the effective language");
 }
 void Choose(EditorFrame* frame, const char* label) {
-    const auto id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
+    const auto id = TestSyntax::SchemeCommand(*frame->GetMenuBar(), label);
     Require(id != wxNOT_FOUND, "supported language choice must exist");
-    Command(frame, id);
+    TestSyntax::WithSchemeOptions(label, [&] { Command(frame, id); });
     Require(frame->GetMenuBar()->IsChecked(id) && StatusMetadata(frame).Contains("override"),
             "manual language command must check its item and display the override");
 }
@@ -162,7 +163,7 @@ void Automatic(EditorFrame* frame, const char* language, int lexer) {
 }
 void Selected(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);
-    const auto checked = frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language));
+    const auto checked = frame->GetMenuBar()->IsChecked(TestSyntax::SchemeCommand(*frame->GetMenuBar(), language));
     const auto status = StatusMetadata(frame);
     const auto actualLexer = frame->Editor()->Send(Message::GetLexer);
     if (!checked || !status.Contains(wxString(language) + " (override)") || actualLexer != lexer)
