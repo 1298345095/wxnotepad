@@ -4,9 +4,9 @@ import argparse
 import os
 from pathlib import Path
 import shutil
-import tempfile
 
 from settings_process import Application
+from temporary_directory import TemporaryDirectory
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
     parser.add_argument("executable", type=Path)
     args = parser.parse_args()
     source = args.executable.resolve()
-    with tempfile.TemporaryDirectory(prefix="wxnotepad-caret-") as name:
+    with TemporaryDirectory(prefix="wxnotepad-caret-") as name:
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
