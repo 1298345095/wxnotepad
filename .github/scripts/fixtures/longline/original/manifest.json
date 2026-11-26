@@ -1,0 +1,39 @@
+{
+  "source_root": "/workspace/scratch/1c46ea145285/wxnotepad",
+  "inputs": {
+    "tests/search_continuation.cpp": {
+      "source": "/workspace/scratch/1c46ea145285/wxnotepad/tests/search_continuation.cpp",
+      "sha256": "d60763f3c5e0c7a7c622f85f1dff1d58ad24544338669bf945f0cd0a42be51ee"
+    },
+    "tests/native_key_helpers.h": {
+      "source": "/workspace/scratch/1c46ea145285/wxnotepad/tests/native_key_helpers.h",
+      "sha256": "c2804b4ad8f0f7727d0418956698c102f24e283a0dbe42588f0382f7a34ad8eb"
+    },
+    "src/editor/editor_core.cpp": {
+      "source": "/workspace/scratch/1c46ea145285/wxnotepad/src/editor/editor_core.cpp",
+      "sha256": "f8d9d2b18e8b2a1756d044a6aba0a6db27b847b79cf68ce671f851946b249ac3"
+    }
+  },
+  "outputs": {
+    "tests/search_continuation.cpp": "a87185ff746a1b167ac552c710afc0d742f127cae77c61b1b763e4f40d66be36",
+    "tests/native_key_helpers.h": "f851ecbeeae959ee43ed63a9ca5f47b4b78663f015125a4775cd152c4f9abd03",
+    "src/editor/editor_core.cpp": "ec0b6d8333f258b09ec30c02ebd54f0fc13d8ed88ff1b6a9e42925d84ad3c71f",
+    "src/diagnostics/longline_probe.h": "506271c9ed09f685d408def8a9fd7d9c287d4784a6367925bc06cd689ab9717c",
+    "tests/syntax_large.cpp": "fff67fb6113a5ac7cd2d61886eedf54ae001be0b9dddc035b519708a09994740"
+  },
+  "stage_names": {
+    "13695025917052115084": "selection limit ResetStream begin",
+    "8574890184344842519": "selection limit ResetStream complete; save begin",
+    "8265548607393931115": "selection limit save complete; Find begin",
+    "5477681064279220760": "selection limit Find complete; Cancel begin",
+    "2837691739960525249": "selection limit Cancel complete; near-limit SetSel begin",
+    "4239286009650822085": "near-limit SetSel complete; save begin",
+    "9205349924565602972": "near-limit save complete; Find begin",
+    "16229946391400956202": "near-limit Find complete; validation begin",
+    "9605333132871693815": "near-limit validation complete"
+  },
+  "trace_environment": "WXNOTEPAD_PAINT_TRACE",
+  "trace_path_is_exact": true,
+  "record_capacity": 8192,
+  "record_bytes": 80
+}
