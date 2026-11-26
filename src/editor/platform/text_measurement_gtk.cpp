@@ -149,7 +149,7 @@ Characters Decode(std::string_view text, bool utf8) {
 
 // Match wxCairoContext::GetPartialTextExtents in wxWidgets 3.3.3, including
 // its compact cursor-cluster array and padding to the Unicode character count.
-std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount) {
+std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount, bool printableAscii) {
     std::vector<int> extents;
     int width = 0;
     if (pango_layout_get_character_count(layout)) {
@@ -163,7 +163,13 @@ std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount) {
                 throw NativeDrawingError("Pango layout character attributes do not match its text");
             byteIndex = pango_layout_iter_get_index(iterator.get());
             if (!attributes[character].is_cursor_position) continue;
-            pango_layout_index_to_pos(layout, byteIndex, &rectangle);
+            // Printable ASCII has one cursor position per character. Reuse the
+            // iterator's rectangle instead of rescanning the run for every byte.
+            // Grapheme and control-character rectangles retain wxCairo's path.
+            if (printableAscii)
+                pango_layout_iter_get_char_extents(iterator.get(), &rectangle);
+            else
+                pango_layout_index_to_pos(layout, byteIndex, &rectangle);
             width = rectangle.width < 0 ? rectangle.x + rectangle.width : rectangle.x;
             extents.push_back(PANGO_PIXELS(width));
         }
@@ -313,7 +319,9 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
     const auto characters = Decode(text, utf8);
     auto& worker = data_->Context();
     data_->SetText(worker, *font.data_, characters);
-    const auto extents = PartialExtents(worker.layout.get(), characters.count);
+    const bool printableAscii = std::all_of(characters.text.begin(), characters.text.end(),
+                                            [](unsigned char ch) { return ch >= ' ' && ch < 0x7f; });
+    const auto extents = PartialExtents(worker.layout.get(), characters.count, printableAscii);
     std::vector<PangoLogAttr> cursorPositions;
     if (utf8 && !extents.empty() &&
         std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; })) {
