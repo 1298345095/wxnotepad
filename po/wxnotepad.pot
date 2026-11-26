@@ -2298,6 +2298,14 @@ msgstr ""
 msgid "JSX"
 msgstr ""
 
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Japanese"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Japanese (Shift-JIS)"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Java Source"
 msgstr ""
@@ -2320,6 +2328,14 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Keyword"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Korean"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Korean (Unified Hangul Code)"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -3823,6 +3839,10 @@ msgstr ""
 
 #: src/document/document_session.cpp
 msgid "The file could not be decoded with the selected Chinese encoding."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The file could not be decoded with the selected Japanese or Korean encoding."
 msgstr ""
 
 #: src/document/document_session.cpp

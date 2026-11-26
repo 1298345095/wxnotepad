@@ -1334,6 +1334,21 @@ msgstr "字元資訊"
 msgid "Chinese"
 msgstr "中文"
 
+msgid "Japanese"
+msgstr "日文"
+
+msgid "The file could not be decoded with the selected Japanese or Korean encoding."
+msgstr "無法使用所選的日文或韓文編碼解碼檔案。"
+
+msgid "Japanese (Shift-JIS)"
+msgstr "日文 (Shift-JIS)"
+
+msgid "Korean"
+msgstr "韓文"
+
+msgid "Korean (Unified Hangul Code)"
+msgstr "韓文 (統一韓文編碼)"
+
 #: src/document/document_file.cpp
 msgid "Choose a file as the save destination."
 msgstr "選擇儲存目的檔案。"
