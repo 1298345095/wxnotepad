@@ -15,7 +15,7 @@
     }
   },
   "outputs": {
-    "tests/search_continuation.cpp": "6e4c2c2319713a03d7c7169bb85519995056e5a263fb761d2e77245960d0e3b2",
+    "tests/search_continuation.cpp": "5d53d78f8df7679510dd6bdc529f888a59e0c29484b800191c7f96151da238f3",
     "tests/native_key_helpers.h": "266a15bb4d737b959052a75a04cc5efca68f4453ccd2bc87a9a5611df698b466",
     "src/editor/editor_core.cpp": "ec0b6d8333f258b09ec30c02ebd54f0fc13d8ed88ff1b6a9e42925d84ad3c71f",
     "src/diagnostics/longline_probe.h": "506271c9ed09f685d408def8a9fd7d9c287d4784a6367925bc06cd689ab9717c",
@@ -35,5 +35,20 @@
   "trace_environment": "WXNOTEPAD_PAINT_TRACE",
   "trace_path_is_exact": true,
   "record_capacity": 8192,
-  "record_bytes": 80
+  "record_bytes": 80,
+  "diagnostic_delta": {
+    "reference_investigation_head": "acbc8719",
+    "parent_tree": "/workspace/scratch/1c46ea145285/wxnotepad/.ci/reports/unicode-root-cause/diagnostic-source/longline-candidate-v3",
+    "fixture_change": "After SelectionLimit ResetStream returns and before the existing save-begin stage, set the actual per-editor Scintilla caret period to 50 ms.",
+    "added_statement": "editor->Send(SetCaretPeriod, 50);",
+    "observed_prior_period_ms": 600,
+    "requested_period_ms": 50,
+    "registered_test": "original_search_continuation",
+    "ctest_timeout_seconds_unchanged": 60,
+    "all_other_generated_source_bytes_unchanged": true,
+    "assertions_and_document_input_unchanged": true,
+    "original_prediction": "An open release dispatch continues drawing after the actual key-up until the original CTest timeout.",
+    "candidate_prediction": "All 13 original scenarios complete inside the original CTest timeout.",
+    "results": "Not run yet; predictions require native trace evidence."
+  }
 }

@@ -1,4 +1,4 @@
-name: Native long-line dispatch investigation
+name: Native long-line caret control
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   compare:
-    name: Measure paint boundaries and validate native map acknowledgement
+    name: Verify paint draining after actual key release
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:
@@ -45,13 +45,13 @@ jobs:
         run: python -X utf8 .github/scripts/ci.py configure --coverage
       - name: Build measured original and candidate fixtures
         run: python -X utf8 .github/scripts/longline_investigation.py build
-      - name: Observe baseline and verify candidate on both backends
+      - name: Verify baseline timeout and finite candidate with 50ms native caret
         run: python -X utf8 .github/scripts/longline_investigation.py run
       - name: Preserve all timing and assertion evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: longline-dispatch-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: longline-caret50-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
             .ci/build/coverage-cmake/compile_commands.json

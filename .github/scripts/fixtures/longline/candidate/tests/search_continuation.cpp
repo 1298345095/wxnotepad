@@ -178,6 +178,7 @@ void SelectionLimit(EditorFrame* frame) {
     auto* editor = frame->Editor();
     ReportStage("selection limit ResetStream begin");
     TestEditor::ResetStream(editor, text.c_str(), 0, OneMiB);
+    editor->Send(SetCaretPeriod, 50);
     ReportStage("selection limit ResetStream complete; save begin");
     {
 #ifdef __WXGTK__

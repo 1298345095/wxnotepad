@@ -1,0 +1,32 @@
+{
+  "reference": "acbc8719",
+  "variants": [
+    {
+      "variant": "original",
+      "output": ".ci/reports/unicode-root-cause/diagnostic-source/longline-caret50-original-v1",
+      "fixture_sha256": "c2c3aa6dcc06b42549d9973f2c20d5707ff741724ffa7c0e91930c798d053d62",
+      "other_sources_unchanged": true
+    },
+    {
+      "variant": "candidate",
+      "output": ".ci/reports/unicode-root-cause/diagnostic-source/longline-caret50-candidate-v1",
+      "fixture_sha256": "5d53d78f8df7679510dd6bdc529f888a59e0c29484b800191c7f96151da238f3",
+      "other_sources_unchanged": true
+    }
+  ],
+  "delta": {
+    "reference_investigation_head": "acbc8719",
+    "parent_tree": "/workspace/scratch/1c46ea145285/wxnotepad/.ci/reports/unicode-root-cause/diagnostic-source/longline-candidate-v3",
+    "fixture_change": "After SelectionLimit ResetStream returns and before the existing save-begin stage, set the actual per-editor Scintilla caret period to 50 ms.",
+    "added_statement": "editor->Send(SetCaretPeriod, 50);",
+    "observed_prior_period_ms": 600,
+    "requested_period_ms": 50,
+    "registered_test": "original_search_continuation",
+    "ctest_timeout_seconds_unchanged": 60,
+    "all_other_generated_source_bytes_unchanged": true,
+    "assertions_and_document_input_unchanged": true,
+    "original_prediction": "An open release dispatch continues drawing after the actual key-up until the original CTest timeout.",
+    "candidate_prediction": "All 13 original scenarios complete inside the original CTest timeout.",
+    "results": "Not run yet; predictions require native trace evidence."
+  }
+}

@@ -17,23 +17,17 @@ import decode_longline_probe
 
 ROOT = ci.ROOT
 BUILD = ROOT / '.ci/build/coverage-cmake'
-REPORTS = ROOT / '.ci/reports/longline-investigation'
+REPORTS = ROOT / '.ci/reports/longline-caret50-investigation'
 FIXTURES = ROOT / '.github/scripts/fixtures/longline'
 SCRIPT = Path(__file__).resolve()
 SOURCES = ('tests/search_continuation.cpp', 'tests/native_key_helpers.h',
-           'src/editor/editor_core.cpp', 'src/diagnostics/longline_probe.h',
-           'tests/syntax_large.cpp')
-TESTS = ('original_search_continuation', 'native_search_feedback_release', 'large_language_selection')
-DEADLINES = dict(zip((*TESTS, 'original_extra_escape'), (60, 60, 120, 60)))
-TARGETS = ('search_continuation', 'syntax_large', 'extra_escape')
+           'src/editor/editor_core.cpp', 'src/diagnostics/longline_probe.h')
+TESTS = ('original_search_continuation',)
+DEADLINES = {'original_search_continuation': 60}
+TARGETS = ('search_continuation',)
 PHASES = {
-    'original-x11': {'variant': 'original', 'backend': 'x11', 'sessions': 4},
-    'candidate-x11': {'variant': 'candidate', 'backend': 'x11', 'sessions': 4},
-    'candidate-wayland': {'variant': 'candidate', 'backend': 'wayland', 'sessions': 4},
-    'candidate-extra-x11': {'variant': 'candidate', 'backend': 'x11', 'sessions': 1,
-                            'tests': ['original_extra_escape']},
-    'candidate-extra-wayland': {'variant': 'candidate', 'backend': 'wayland', 'sessions': 1,
-                                'tests': ['original_extra_escape']},
+    'original-x11': {'variant': 'original', 'backend': 'x11', 'sessions': 2},
+    'candidate-x11': {'variant': 'candidate', 'backend': 'x11', 'sessions': 2},
 }
 
 
@@ -142,6 +136,9 @@ def session(phase, number, helper):
                                       directory / 'attempts/run-001.log'))
         record['registry_warnings'] = [line for line in logs.splitlines()
                                        if 'Disabling unresponsive app' in line or 'Re-enabling app' in line]
+        record['baseline_timeout'] = (phase == 'original-x11' and
+                                      all(item['failed'] and 59 <= item['seconds'] <= 66 for item in record['tests']) and
+                                      '***Timeout' in logs)
         record['trace_exists'] = (directory / 'paint-trace.bin').is_file()
         if 'original_search_continuation' in requested and not record['trace_exists']:
             raise RuntimeError('Search paint trace missing')
@@ -190,10 +187,14 @@ def run():
     complete = len(results) == sum(spec['sessions'] for spec in PHASES.values())
     complete &= all('collection_error' not in record for record in results)
     candidates = [record for record in results if record['phase'].startswith('candidate-')]
-    success = complete and all(record['success'] for record in candidates)
+    controls = [record for record in results if record['phase'] == 'original-x11']
+    baseline_reproduced = len(controls) == 2 and all(record.get('baseline_timeout') for record in controls)
+    success = complete and baseline_reproduced and all(record['success'] for record in candidates)
     write_json(REPORTS / 'summary.json', {'phases': PHASES, 'results': results,
                                         'complete_collection': complete,
-                                        'candidate_success': success})
+                                        'baseline_timeout_reproduced': baseline_reproduced,
+                                        'candidate_success': all(record['success'] for record in candidates),
+                                        'comparison_success': success})
     return 0 if success else 1
 
 
