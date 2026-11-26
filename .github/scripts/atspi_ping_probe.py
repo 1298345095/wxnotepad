@@ -4,7 +4,8 @@
 Run inside the repository's private display/D-Bus wrapper. The executable must
 be one of the diagnostic copies with flushed case-loop-begin/complete markers.
 The GUI retains its own 90-second limit; the caller allows separate monitor
-startup/cleanup time. No accessibility desktop enumeration is used.
+startup/cleanup time. No accessibility desktop enumeration is used. Stdout and
+stderr have independent pipes, buffers and logs; only stdout carries protocol.
 """
 
 import argparse
@@ -78,12 +79,13 @@ class PingProbe:
         self.pass_seen = False
         self.fail_lines = []
         self.protocol_errors = []
-        self.output_buffer = bytearray()
-        self.output_eof = False
+        self.output_buffers = {'stdout': bytearray(), 'stderr': bytearray()}
+        self.output_eof = {'stdout': False, 'stderr': False}
         self.report = args.report_dir.resolve()
         self.report.mkdir(parents=True, exist_ok=False)
         self.events = (self.report / 'events.jsonl').open('w', encoding='utf-8')
-        self.output = (self.report / 'gui.log').open('wb')
+        self.outputs = {'stdout': (self.report / 'gui.log').open('wb'),
+                        'stderr': (self.report / 'gui.stderr.log').open('wb')}
 
     def emit(self, event, console=True, **fields):
         now = time.monotonic_ns()
@@ -154,17 +156,23 @@ class PingProbe:
         self.app_started_ns = time.monotonic_ns()
         self.process = subprocess.Popen(
             [str(self.args.executable.resolve())], stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
         os.set_blocking(self.process.stdout.fileno(), False)
+        os.set_blocking(self.process.stderr.fileno(), False)
         self.emit('gui_started', executable=str(self.args.executable.resolve()),
                   cwd=str(Path.cwd()), backend=os.environ.get('GDK_BACKEND'),
                   timeout_seconds=self.args.timeout, core_soft_limit=0)
         self.watchdog = threading.Thread(target=self.enforce_deadline, daemon=True)
         self.watchdog.start()
 
-    def line(self, raw):
+    def line(self, raw, stream):
         text = raw.decode('utf-8', errors='replace').rstrip('\r')
-        self.emit('gui_output', console=False, text=text)
+        self.emit('gui_output', console=stream == 'stderr', stream=stream, text=text)
+        if text.startswith('FAIL:'):
+            self.fail_lines.append(text)
+            self.emit('gui_failure', stream=stream, text=text)
+        if stream != 'stdout':
+            return
         if match := BEGIN.fullmatch(text):
             if self.begin_ns is not None or int(match[1]) != CASE_COUNT:
                 self.protocol_errors.append('invalid or repeated begin marker')
@@ -183,34 +191,37 @@ class PingProbe:
         elif text == PASS:
             self.pass_seen = True
             self.emit('gui_pass', text=text)
-        elif text.startswith('FAIL:'):
-            self.fail_lines.append(text)
-            self.emit('gui_failure', text=text)
 
     def read_output(self):
-        if self.process is None or self.output_eof:
+        if self.process is None:
             return
-        # A bounded read prevents an unexpectedly noisy child from monopolizing
-        # the observer. Normal complete fixture output is much smaller than this.
-        remaining = 1_048_576
-        while remaining:
-            try:
-                data = os.read(self.process.stdout.fileno(), min(65_536, remaining))
-            except BlockingIOError:
-                break
-            if not data:
-                self.output_eof = True
-                if self.output_buffer:
-                    self.line(bytes(self.output_buffer))
-                    self.output_buffer.clear()
-                break
-            remaining -= len(data)
-            self.output.write(data)
-            self.output.flush()
-            self.output_buffer.extend(data)
-            while (end := self.output_buffer.find(b'\n')) >= 0:
-                self.line(bytes(self.output_buffer[:end]))
-                del self.output_buffer[:end + 1]
+        for stream in ('stdout', 'stderr'):
+            if self.output_eof[stream]:
+                continue
+            pipe = getattr(self.process, stream)
+            buffer = self.output_buffers[stream]
+            output = self.outputs[stream]
+            # Bound each channel independently so warning output cannot hide
+            # stdout completion, or splice into a partially written case line.
+            remaining = 1_048_576
+            while remaining:
+                try:
+                    data = os.read(pipe.fileno(), min(65_536, remaining))
+                except BlockingIOError:
+                    break
+                if not data:
+                    self.output_eof[stream] = True
+                    if buffer:
+                        self.line(bytes(buffer), stream)
+                        buffer.clear()
+                    break
+                remaining -= len(data)
+                output.write(data)
+                output.flush()
+                buffer.extend(data)
+                while (end := buffer.find(b'\n')) >= 0:
+                    self.line(bytes(buffer[:end]), stream)
+                    del buffer[:end + 1]
 
     def bus_call(self, method, parameters, reply_type):
         return self.connection.call_sync(
@@ -358,6 +369,7 @@ class PingProbe:
             self.kill_group(signal.SIGKILL)
             self.read_output()
             self.process.stdout.close()
+            self.process.stderr.close()
         if self.watchdog is not None:
             self.watchdog.join(timeout=1)
         if self.connection is not None:
@@ -413,6 +425,7 @@ class PingProbe:
                 'max_case_ms': self.max_case_ms, 'mid_loop_replies': len(replies),
                 'mid_loop_timeouts': len(missed), 'mid_loop_other_errors': len(other),
                 'ping_timeout_ms': PING_TIMEOUT_MS, 'pings': self.pings,
+                'stdout_log': 'gui.log', 'stderr_log': 'gui.stderr.log',
                 'fail_lines': self.fail_lines, 'protocol_errors': self.protocol_errors,
                 'monitor_seconds': round((time.monotonic_ns() - self.started_ns) / 1_000_000_000, 3)}
 
@@ -446,7 +459,8 @@ class PingProbe:
         summary = self.summary()
         (self.report / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
         self.emit('summary', **summary)
-        self.output.close()
+        for output in self.outputs.values():
+            output.close()
         self.events.close()
         return 0 if summary['success'] else 1
 
