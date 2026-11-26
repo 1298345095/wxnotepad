@@ -152,9 +152,13 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
     add(chinese, _("Simplified Chinese (GBK, GB2312)"), EncodingChoice(FileEncoding::Gbk));
     add(chinese, _("Simplified Chinese (GB18030)"), EncodingChoice(FileEncoding::Gb18030));
     add(chinese, _("Traditional Chinese (Big5, Big5-HKSCS)"), EncodingChoice(FileEncoding::Big5));
+    // TRANSLATORS: Original IDS_ENCODINGGROUP_JAPANESE, encoding-selection tree category.
     const auto japanese = tree->AppendItem(root, _("Japanese"));
+    // TRANSLATORS: Original IDS_ENCODING_SHIFT_JIS; Shift-JIS names the Windows-932 encoding.
     add(japanese, _("Japanese (Shift-JIS)"), EncodingChoice(FileEncoding::Windows932));
+    // TRANSLATORS: Original IDS_ENCODINGGROUP_KOREAN, encoding-selection tree category.
     const auto korean = tree->AppendItem(root, _("Korean"));
+    // TRANSLATORS: Original IDS_ENCODING_UHC; Unified Hangul Code names the Windows-949 encoding.
     add(korean, _("Korean (Unified Hangul Code)"), EncodingChoice(FileEncoding::Windows949));
     const auto western = tree->AppendItem(root, _("Western European"));
     add(western, _("Latin-1 (Windows-1252)"), EncodingChoice(FileEncoding::Windows1252));

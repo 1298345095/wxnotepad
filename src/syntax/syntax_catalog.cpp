@@ -966,6 +966,7 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      diffOriginal,
      {SyntaxMenuFamily::Standalone, 25}},
+    // TRANSLATORS: Original lexRuby / NP2LEX_RUBY scheme name, used in menus, status and file filters.
     {wxTRANSLATE("Ruby Script"),
      rubyExtensions,
      rubyLists,
@@ -983,6 +984,7 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      "ruby",
      rubyOriginal,
      {SyntaxMenuFamily::Standalone, 85}},
+    // TRANSLATORS: Original lexPerl / NP2LEX_PERL scheme name, used in menus, status and file filters.
     {wxTRANSLATE("Perl Script"),
      perlExtensions,
      perlLists,
@@ -1000,6 +1002,7 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      "perl",
      perlOriginal,
      {SyntaxMenuFamily::Standalone, 75}},
+    // TRANSLATORS: Original lexTcl / NP2LEX_TCL scheme name, used in menus, status and file filters.
     {wxTRANSLATE("Tcl Script"),
      tclExtensions,
      tclLists,
@@ -1017,6 +1020,7 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      "wish",
      tclOriginal,
      {SyntaxMenuFamily::Standalone, 105}},
+    // TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
     {wxTRANSLATE("CSV File"),
      csvExtensions,
      csvLists,

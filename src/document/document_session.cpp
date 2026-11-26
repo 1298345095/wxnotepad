@@ -202,6 +202,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     } else if (loaded.encoding == Windows932 || loaded.encoding == Windows949) {
         const auto decoded = DecodeJapaneseKorean(bytes, loaded.encoding);
         if (!decoded)
+            // TRANSLATORS: New wxnotepad source-decoding failure for Windows-932 or Windows-949 files.
             return wxString(_("The file could not be decoded with the selected Japanese or Korean encoding."));
         bytes = *decoded;
     } else if (loaded.encoding == Gb18030 || loaded.encoding == Big5) {
@@ -730,10 +731,13 @@ void DocumentSession::SetCsvOptions(uint32_t options) {
     if (Language() == SyntaxLanguage::Csv) ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
 }
 
-void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
+void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language, bool namedScheme) {
     const auto previous = Language();
     const auto previousDialect = EffectiveLanguage();
     const auto previousCsvOptions = csvOptions_;
+    // Pinned Style_SetLexerFromName sniffs named CSV independently of the
+    // filename's automatic TSV rule. Manual selection retains session options.
+    if (namedScheme && language == SyntaxLanguage::Csv) csvOptions_ = SniffCsvOptions(editor_, csvOptions_, false);
     markupDialect_.reset();
     // Pinned Styles.cpp::Style_SelectLexer sniffs only the canonical Web/XML
     // choices; explicit dialect choices retain the user's selected language.

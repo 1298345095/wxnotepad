@@ -28,6 +28,42 @@
 namespace {
 constexpr size_t MaximumPacketBytes = 1024 * 1024;
 
+enum class ReceiverState { Unavailable = 0, Available = 1, Busy = 2 };
+enum class DeliveryReply {
+    Unacknowledged = 0,
+    Activated = 1,
+    Busy = 2,
+    Closing = 3,
+    Opened = 4,
+    Cancelled = 5,
+    Failed = 6
+};
+
+ReceiverState DecodeState(long long value) {
+    if (value == std::to_underlying(ReceiverState::Unavailable)) return ReceiverState::Unavailable;
+    if (value == std::to_underlying(ReceiverState::Busy)) return ReceiverState::Busy;
+    return ReceiverState::Available;
+}
+
+DeliveryReply DecodeReply(long long value) {
+    switch (value) {
+    case std::to_underlying(DeliveryReply::Activated):
+        return DeliveryReply::Activated;
+    case std::to_underlying(DeliveryReply::Busy):
+        return DeliveryReply::Busy;
+    case std::to_underlying(DeliveryReply::Closing):
+        return DeliveryReply::Closing;
+    case std::to_underlying(DeliveryReply::Opened):
+        return DeliveryReply::Opened;
+    case std::to_underlying(DeliveryReply::Cancelled):
+        return DeliveryReply::Cancelled;
+    case std::to_underlying(DeliveryReply::Failed):
+        return DeliveryReply::Failed;
+    default:
+        return DeliveryReply::Unacknowledged;
+    }
+}
+
 wxString EncodeRequest(const WindowRequest& request) {
     const auto path = request.startup.utf8_string();
     const auto startup = request.startupId.utf8_string();
@@ -119,15 +155,19 @@ bool SameFile(const wxString& first, const wxString& second) {
 }
 
 bool OpenAnotherWindow() {
+    // TRANSLATORS: Original IDS_ERR_PREVWINDISABLED; wxnotepad is the application name.
     return wxMessageBox(_("Existing wxnotepad window is busy or has an active dialog box. Would you like to open "
                           "another wxnotepad window?"),
                         "wxnotepad", wxYES_NO | wxICON_QUESTION) == wxYES;
 }
 
-WindowRouting::Result DeliveryResult(const wxString& reply) {
-    if (reply == "2") return OpenAnotherWindow() ? WindowRouting::Result::NewWindow : WindowRouting::Result::Handled;
-    if (reply == "3") return WindowRouting::Result::NewWindow; // Explicitly rejected before delivery while closing.
-    if (reply == "1" || reply == "4" || reply == "5" || reply == "6") return WindowRouting::Result::Handled;
+WindowRouting::Result DeliveryResult(DeliveryReply reply) {
+    if (reply == DeliveryReply::Busy)
+        return OpenAnotherWindow() ? WindowRouting::Result::NewWindow : WindowRouting::Result::Handled;
+    if (reply == DeliveryReply::Closing) return WindowRouting::Result::NewWindow; // Rejected before delivery.
+    if (reply == DeliveryReply::Activated || reply == DeliveryReply::Opened || reply == DeliveryReply::Cancelled ||
+        reply == DeliveryReply::Failed)
+        return WindowRouting::Result::Handled;
     // No acknowledgement is an uncertain delivery: never execute it again.
     return WindowRouting::Result::Failed;
 }
@@ -221,15 +261,14 @@ struct WindowRouting::Impl final : wxEvtHandler {
         }
         if (self && message == QueryMessage) {
             SetWindowTextW(handle, self->frame ? self->frame->DocumentPath().wc_str() : L"");
-            return self->State();
+            return std::to_underlying(self->State());
         }
         if (self && message == WM_COPYDATA) {
             const auto* packet = reinterpret_cast<const COPYDATASTRUCT*>(lParam);
             if (!packet || packet->dwData != PacketVersion || !packet->lpData || packet->cbData > MaximumPacketBytes)
-                return 0;
-            long reply = 0;
-            self->Handle(wxString::FromUTF8(static_cast<const char*>(packet->lpData), packet->cbData)).ToLong(&reply);
-            return reply;
+                return std::to_underlying(DeliveryReply::Unacknowledged);
+            return std::to_underlying(
+                self->Handle(wxString::FromUTF8(static_cast<const char*>(packet->lpData), packet->cbData)));
         }
         return DefWindowProcW(handle, message, wParam, lParam);
     }
@@ -240,7 +279,10 @@ struct WindowRouting::Impl final : wxEvtHandler {
         explicit Connection(Impl& receiver) : owner(receiver) {}
         const void* OnRequest(const wxString&, const wxString& item, size_t* size, wxIPCFormat format) override {
             if (format != wxIPC_UTF8TEXT) return nullptr;
-            reply = owner.Handle(item).utf8_string();
+            const auto response = item == "query" ? wxString::Format("%d\n", std::to_underlying(owner.State())) +
+                                                        (owner.frame ? owner.frame->DocumentPath() : wxString{})
+                                                  : wxString::Format("%d", std::to_underlying(owner.Handle(item)));
+            reply = response.utf8_string();
             *size = reply.size();
             return reply.data();
         }
@@ -283,18 +325,20 @@ struct WindowRouting::Impl final : wxEvtHandler {
         if (event.GetEventObject() == frame) frame = nullptr;
         event.Skip();
     }
-    int State() const {
-        if (!frame || frame->IsBeingDeleted() || wxTheApp->IsScheduledForDestruction(frame)) return 0;
+    ReceiverState State() const {
+        if (!frame || frame->IsBeingDeleted() || wxTheApp->IsScheduledForDestruction(frame))
+            return ReceiverState::Unavailable;
         // GTK modal windows use a native grab without changing IsEnabled().
-        return receiving || !frame->IsEnabled() || wxModalDialogHook::GetOpenCount() != 0 ? 2 : 1;
+        return receiving || !frame->IsEnabled() || wxModalDialogHook::GetOpenCount() != 0 ? ReceiverState::Busy
+                                                                                          : ReceiverState::Available;
     }
-    wxString Handle(const wxString& command) {
-        if (command == "query") return wxString::Format("%d\n", State()) + (frame ? frame->DocumentPath() : wxString{});
+    DeliveryReply Handle(const wxString& command) {
         const auto state = State();
-        if (state != 1) return state == 2 ? "2" : "3";
+        if (state != ReceiverState::Available)
+            return state == ReceiverState::Busy ? DeliveryReply::Busy : DeliveryReply::Closing;
         const bool activate = command.StartsWith("activate\n");
         const auto request = activate ? std::optional<WindowRequest>{} : DecodeRequest(command);
-        if (!activate && !request) return "0";
+        if (!activate && !request) return DeliveryReply::Unacknowledged;
         wxString startupId;
         if (activate) {
             const auto decoded = wxBase64Decode(command.Mid(9));
@@ -325,10 +369,12 @@ struct WindowRouting::Impl final : wxEvtHandler {
         // compositor. Do not add another activation call after this one.
         frame->Raise();
         frame->Editor()->SetFocus();
-        wxString reply = "1";
+        auto reply = DeliveryReply::Activated;
         if (request) {
             const auto opened = frame->ReceiveWindowRequest(*request);
-            reply = opened == OpenStatus::Opened ? "4" : opened == OpenStatus::Cancelled ? "5" : "6";
+            reply = opened == OpenStatus::Opened      ? DeliveryReply::Opened
+                    : opened == OpenStatus::Cancelled ? DeliveryReply::Cancelled
+                                                      : DeliveryReply::Failed;
         }
         receiving = false;
         return reply;
@@ -389,14 +435,14 @@ WindowRouting::Result WindowRouting::Route(const WindowRequest& request, bool re
     for (const auto window : windows) {
         DWORD_PTR state = 0;
         if (!SendMessageTimeoutW(window, QueryMessage, 0, 0, SMTO_ABORTIFHUNG, QueryTimeoutMilliseconds, &state) ||
-            !state)
+            DecodeState(static_cast<long long>(state)) == ReceiverState::Unavailable)
             continue;
         const int length = GetWindowTextLengthW(window);
         std::vector<wchar_t> title(static_cast<size_t>(length) + 1);
         GetWindowTextW(window, title.data(), length + 1);
         if (sameFile && !SameFile(request.startup, wxString(title.data()))) continue;
         chosen = window;
-        busy = state == 2;
+        busy = DecodeState(static_cast<long long>(state)) == ReceiverState::Busy;
         if (!busy) break;
     }
     if (!chosen) return Result::NewWindow;
@@ -407,7 +453,7 @@ WindowRouting::Result WindowRouting::Route(const WindowRequest& request, bool re
     const auto bytes = command.utf8_string();
     COPYDATASTRUCT packet{PacketVersion, static_cast<DWORD>(bytes.size()), const_cast<char*>(bytes.data())};
     const auto reply = SendMessageW(chosen, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&packet));
-    return DeliveryResult(wxString::Format("%lld", static_cast<long long>(reply)));
+    return DeliveryResult(DecodeReply(reply));
 #else
     const auto directory = SessionDirectory();
     if (!PrivateDirectory(directory)) return Result::NewWindow;
@@ -422,13 +468,16 @@ WindowRouting::Result WindowRouting::Route(const WindowRequest& request, bool re
         if (!connection) continue;
         static_cast<ClientConnection*>(connection.get())->SetRequestTimeout();
         const auto reply = Exchange(*connection, "query");
-        if (reply.length() < 2 || reply[0] == '0' || (sameFile && !SameFile(request.startup, reply.Mid(2)))) continue;
-        busy = reply[0] == '2';
+        if (reply.length() < 2) continue;
+        const auto state = DecodeState(reply[0].GetValue() - '0');
+        if (state == ReceiverState::Unavailable || (sameFile && !SameFile(request.startup, reply.Mid(2)))) continue;
+        busy = state == ReceiverState::Busy;
         chosen = std::move(connection);
         if (!busy) break;
     }
     if (!chosen) return Result::NewWindow;
     if (busy) return OpenAnotherWindow() ? Result::NewWindow : Result::Handled;
-    return DeliveryResult(Exchange(*chosen, command));
+    const auto reply = Exchange(*chosen, command);
+    return DeliveryResult(reply.length() == 1 ? DecodeReply(reply[0].GetValue() - '0') : DeliveryReply::Unacknowledged);
 #endif
 }

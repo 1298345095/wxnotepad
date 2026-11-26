@@ -197,7 +197,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
                 const bool nextSingle = reuse ? values.singleFileInstance : !values.singleFileInstance;
                 if (settings_) {
                     if (!settings_->SaveWindowRouting(nextReuse, nextSingle))
+                        // TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
                         wxMessageBox(wxString::Format(_("Could not write %s"), settings_->Path()),
+                                     // TRANSLATORS: wxnotepad title for a settings-file write failure.
                                      _("Could not save settings"), wxOK | wxICON_ERROR, this);
                 } else {
                     values.reuseWindow = nextReuse;
@@ -213,10 +215,13 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             },
             id);
     };
+    // TRANSLATORS: Original IDM_VIEW_REUSEWINDOW menu caption under Window Options.
     appendRouting(windowOptions, _("&Reuse Window"), true);
+    // TRANSLATORS: Original Notepad4.rc Window Options submenu under Settings.
     view->AppendSubMenu(windowOptions, _("Window O&ptions"));
     AppendWindowTitleOptions(view);
     view->AppendSeparator();
+    // TRANSLATORS: Original IDM_VIEW_SINGLEFILEINSTANCE menu caption under Settings.
     appendRouting(view, _("Single &File Instance"), false);
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
@@ -308,9 +313,13 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     advanced->AppendSubMenu(rendering, _("Ren&dering Technology"));
     auto* qualityMenu = new wxMenu;
     for (const auto& [label, quality] :
-         {std::pair{wxTRANSLATE("&Default"), Scintilla::FontQuality::QualityDefault},
+         {// TRANSLATORS: Original IDM_VIEW_FONTQUALITY_DEFAULT; default Windows font antialiasing.
+          std::pair{wxTRANSLATE("&Default"), Scintilla::FontQuality::QualityDefault},
+          // TRANSLATORS: Original IDM_VIEW_FONTQUALITY_NONE; disable Windows font antialiasing.
           std::pair{wxTRANSLATE("&None"), Scintilla::FontQuality::QualityNonAntialiased},
+          // TRANSLATORS: Original IDM_VIEW_FONTQUALITY_STANDARD; grayscale Windows font antialiasing.
           std::pair{wxTRANSLATE("&Standard"), Scintilla::FontQuality::QualityAntialiased},
+          // TRANSLATORS: Original IDM_VIEW_FONTQUALITY_CLEARTYPE; ClearType is the Windows rendering-mode name.
           std::pair{wxTRANSLATE("&ClearType"), Scintilla::FontQuality::QualityLcdOptimized}}) {
         const int id = wxWindow::NewControlId();
         qualityMenu->AppendRadioItem(id, wxGetTranslation(label));
@@ -327,6 +336,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             },
             id);
     }
+    // TRANSLATORS: Original Notepad4.rc Font Quality submenu under Settings / Advanced Settings.
     advanced->AppendSubMenu(qualityMenu, _("Font &Quality"));
     view->AppendSubMenu(advanced, _("A&dvanced Settings"));
 #endif

@@ -69,7 +69,9 @@ settings or inherited as consumed XDG activation tokens by relaunched children.
 The native tests obtain IDs from the real
 `GdkAppLaunchContext.get_startup_notify_id` caller. On X11 the receiver's
 `_NET_STARTUP_ID` property exactly matches each issued ID. The private Weston
-configuration issues no token through that API. Its no-token minimized case
+probe, using Python GI with `Gio.AppInfoCreateFlags.NONE` and a direct
+`get_startup_notify_id` call, returned `None`. This does not establish why no
+token was returned or a compositor/protocol refusal. Its no-token minimized case
 records successful delivery with the actual surface still unmapped and
 inactive; it does not claim that the compositor granted restoration. Positive
 activation with a compositor-issued Wayland token is not established by this
