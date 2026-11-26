@@ -531,6 +531,38 @@ add_test(NAME original_japanese_korean_process COMMAND "${Python3_EXECUTABLE}"
     --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/japanese-korean-process")
 set_tests_properties(original_japanese_korean_process PROPERTIES TIMEOUT 90)
 
+add_editor_test(syntax_dynamic_languages original_ruby_perl_tcl_schemes 90)
+set(dynamic_language_references
+    "DYNAMIC_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/dynamic_languages_reference.tsv\""
+    "DYNAMIC_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/dynamic_operations_reference.tsv\"")
+target_compile_definitions(syntax_dynamic_languages PRIVATE ${dynamic_language_references})
+if(WIN32)
+    add_test(NAME original_ruby_perl_tcl_dpi96 COMMAND syntax_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_dpi96 PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_DYNAMIC_DPI96=1")
+    add_gui_program(directwrite_dynamic_languages tests/syntax_dynamic_languages.cpp app_shell)
+    target_compile_definitions(directwrite_dynamic_languages PRIVATE WXNOTEPAD_TEST_DIRECTWRITE ${dynamic_language_references})
+    add_test(NAME original_ruby_perl_tcl_directwrite COMMAND directwrite_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_directwrite PROPERTIES TIMEOUT 90)
+    add_test(NAME original_ruby_perl_tcl_directwrite_dpi96 COMMAND directwrite_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_directwrite_dpi96 PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_DYNAMIC_DPI96=1")
+else()
+    add_test(NAME original_ruby_perl_tcl_scale2 COMMAND syntax_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_scale2 PROPERTIES TIMEOUT 90
+        ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+endif()
+add_test(NAME original_ruby_perl_tcl_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/dynamic_languages_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/dynamic-languages-process")
+set_tests_properties(original_ruby_perl_tcl_process PROPERTIES TIMEOUT 180)
+if(WIN32)
+    add_test(NAME original_ruby_perl_tcl_process_gdi COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/dynamic_languages_process.py" "$<TARGET_FILE:wxnotepad>" --gdi
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/dynamic-languages-process-gdi")
+    set_tests_properties(original_ruby_perl_tcl_process_gdi PROPERTIES TIMEOUT 180)
+endif()
+
 # Append to preserve existing test order and private-display shard membership.
 add_editor_test(font_quality original_font_quality_menu 60)
 target_include_directories(font_quality PRIVATE src/editor/platform

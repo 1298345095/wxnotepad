@@ -22,5 +22,17 @@ class StyleProfileImport(unittest.TestCase):
         ])
 
 
+    def test_original_ruby_symbol_array_identity_is_retained(self):
+        source = '''static const EDITSTYLE Styles_Ruby[] = {
+            EDITSTYLE_DEFAULT,
+            { MULTI_STYLE(SCE_RB_STRING_I, SCE_RB_STRING_QI, 0, 0), NP2STYLEX_SymbolArray,
+                L"fore:#E24000" },
+        };'''
+        self.assertEqual(style_records(source, 'Ruby', {'SymbolArray': 'Symbol Array'}), [
+            ('Default', '', ['STYLE_DEFAULT']),
+            ('Symbol Array', 'fore:#E24000', ['SCE_RB_STRING_I', 'SCE_RB_STRING_QI']),
+        ])
+
+
 if __name__ == '__main__':
     unittest.main()

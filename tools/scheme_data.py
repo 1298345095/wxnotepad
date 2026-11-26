@@ -38,7 +38,7 @@ def _style_line_initializers(line, prefix, *, eol_filled, offset):
 def style_initializers(styles, prefix, *, eol_filled=False, offset=""):
     output = []
     for line in styles.splitlines():
-        if 'L"' not in line:
+        if line.lstrip().startswith('//') or 'L"' not in line:
             continue
         output.extend(_style_line_initializers(line, prefix, eol_filled=eol_filled, offset=offset))
     return output

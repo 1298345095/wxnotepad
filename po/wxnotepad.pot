@@ -858,6 +858,10 @@ msgstr ""
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Array @var"
+msgstr ""
+
 #. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
 #: src/app/editor_frame_commands.cpp
 msgid "As &ANSI\tCtrl+Shift+A"
@@ -1584,6 +1588,10 @@ msgid "Dar&k"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Data Section"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "DateTime"
 msgstr ""
 
@@ -1923,6 +1931,14 @@ msgid "For&e..."
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Format Body"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Identifier"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Format Specifier"
 msgstr ""
 
@@ -2078,6 +2094,10 @@ msgid "Hard Line Break"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Hash %var"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Header 1"
 msgstr ""
 
@@ -2111,7 +2131,15 @@ msgid "Headers and Footers"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Backticks)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Here-doc (Delimiter)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Double Quoted)"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2613,8 +2641,16 @@ msgstr ""
 msgid "Minimum word length"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Modifier"
+msgstr ""
+
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Modify Lines"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Module"
 msgstr ""
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
@@ -2811,6 +2847,18 @@ msgstr ""
 msgid "PHP Tag"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "POD"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Common)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Verbatim)"
+msgstr ""
+
 #: src/editor/special_insert.h
 msgid "PS — Para&graph Separator"
 msgstr ""
@@ -2863,6 +2911,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Perl Script"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2945,6 +2997,10 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Prototype"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -3134,6 +3190,10 @@ msgstr ""
 #. TRANSLATORS: Right paper margin in IDD_PAGESETUP.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right:"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Ruby Script"
 msgstr ""
 
 #. TRANSLATORS: IDD_RUN dialog title.
@@ -3569,6 +3629,10 @@ msgstr ""
 msgid "String"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "String Array"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
 msgstr ""
@@ -3610,6 +3674,10 @@ msgid "Subscript"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Substitution"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Superscript"
 msgstr ""
 
@@ -3625,12 +3693,24 @@ msgstr ""
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol"
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &after wrap:"
 msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &before wrap:"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Array"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Table *var"
 msgstr ""
 
 #: src/app/dialogs/scheme_chooser.cpp
@@ -3720,6 +3800,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Task Marker"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Tcl Script"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h

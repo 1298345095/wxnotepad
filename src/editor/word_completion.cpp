@@ -531,6 +531,20 @@ class Collector final {
                 return AddWordResult_Finish;
             }
             break;
+        case SCLEX_RUBY:
+            if (ch == '$') {
+                constexpr size_t RubyPredefinedVariable = 4;
+                AddList(words, definition_, RubyPredefinedVariable);
+                return AddWordResult_IgnoreLexer;
+            }
+            break;
+        case SCLEX_PERL:
+            if (ch == '$' || ch == '@' || (previous == '$' && ch == '^')) {
+                constexpr size_t PerlVariable = 2;
+                AddList(words, definition_, PerlVariable);
+                return AddWordResult_IgnoreLexer;
+            }
+            break;
         case SCLEX_POWERSHELL:
             if (ch == '$' || ch == '@') {
                 constexpr size_t PowerShellPredefinedVariable = 4;

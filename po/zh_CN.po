@@ -934,6 +934,10 @@ msgstr "外观(&R)"
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "适用于字面文本搜索。正则表达式中请使用单词边界。"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Array @var"
+msgstr "数组 @var"
+
 #. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
 #: src/app/editor_frame_commands.cpp
 msgid "As &ANSI\tCtrl+Shift+A"
@@ -1696,6 +1700,10 @@ msgid "Dar&k"
 msgstr "深色(&K)"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Data Section"
+msgstr "数据段"
+
+#: src/syntax/generated/style_profiles.h
 msgid "DateTime"
 msgstr "日期时间"
 
@@ -2045,6 +2053,14 @@ msgid "For&e..."
 msgstr "颜色(&E)..."
 
 #: src/syntax/generated/style_profiles.h
+msgid "Format Body"
+msgstr "格式主体"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Identifier"
+msgstr "格式标识符"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Format Specifier"
 msgstr "格式说明符"
 
@@ -2214,6 +2230,10 @@ msgid "Hard Line Break"
 msgstr "硬换行"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Hash %var"
+msgstr "哈希 %var"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Header 1"
 msgstr "一级标题"
 
@@ -2247,8 +2267,16 @@ msgid "Headers and Footers"
 msgstr "页眉和页脚"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Backticks)"
+msgstr "Here-doc（反引号）"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Here-doc (Delimiter)"
 msgstr "Here-doc（分隔符）"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Double Quoted)"
+msgstr "Here-doc（双引号）"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Here-doc (Single Quoted)"
@@ -2745,10 +2773,18 @@ msgstr "数字最小长度"
 msgid "Minimum word length"
 msgstr "单词最小长度"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Modifier"
+msgstr "修饰符"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Modify Lines"
 msgstr "行修改"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Module"
+msgstr "模块"
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Move &Down"
@@ -2951,6 +2987,18 @@ msgstr "PDI — 结束方向隔离(&P)"
 msgid "PHP Tag"
 msgstr "PHP 标记"
 
+#: src/syntax/generated/style_profiles.h
+msgid "POD"
+msgstr "POD"
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Common)"
+msgstr "POD（普通）"
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Verbatim)"
+msgstr "POD（原文）"
+
 #: src/editor/special_insert.h
 msgid "PS — Para&graph Separator"
 msgstr "PS — 段落分隔符(&T)"
@@ -3004,6 +3052,10 @@ msgstr "圆括号 ()"
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
 msgstr "解析错误"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Perl Script"
+msgstr "Perl 脚本"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Placeholder"
@@ -3086,6 +3138,10 @@ msgstr "属性"
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr "Property List"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Prototype"
+msgstr "原型"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Pseudo Class"
@@ -3284,6 +3340,10 @@ msgstr "右页边距"
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right:"
 msgstr "右："
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Ruby Script"
+msgstr "Ruby 脚本"
 
 #. TRANSLATORS: IDD_RUN dialog title.
 #: src/app/run_command.cpp
@@ -3743,6 +3803,10 @@ msgstr "删除线"
 msgid "String"
 msgstr "字符串"
 
+#: src/syntax/generated/style_profiles.h
+msgid "String Array"
+msgstr "字符串数组"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
 msgstr "字符串"
@@ -3788,6 +3852,10 @@ msgid "Subscript"
 msgstr "下标"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Substitution"
+msgstr "替换"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Superscript"
 msgstr "上标"
 
@@ -3804,6 +3872,10 @@ msgstr "转至替换"
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
 msgstr "将文件编码从 ANSI 切换到非 ANSI (或反之)可能将不支持的字符替换为默认字符，并且编辑历史将被清除。要继续吗？"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol"
+msgstr "符号"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &after wrap:"
 msgstr "换行后的标记(&A)："
@@ -3811,6 +3883,14 @@ msgstr "换行后的标记(&A)："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &before wrap:"
 msgstr "换行前的标记(&B)："
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Array"
+msgstr "符号数组"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Table *var"
+msgstr "符号表 *var"
 
 #: src/app/dialogs/scheme_chooser.cpp
 msgid "Syntax schemes"
@@ -3905,6 +3985,10 @@ msgstr "任务列表"
 #: src/syntax/generated/style_profiles.h
 msgid "Task Marker"
 msgstr "任务标记"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Tcl Script"
+msgstr "Tcl 脚本"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Template Literal"

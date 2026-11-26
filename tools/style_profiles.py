@@ -21,12 +21,12 @@ def style_records(text, symbol, names):
             records.append(('Default', '', ['STYLE_DEFAULT']))
             continue
         line = entry[1]
-        identity = re.search(r'NP2StyleX_(\w+)', line)
+        identity = re.search(r'NP2(?:StyleX|STYLEX)_(\w+)', line)
         if not identity:
             continue
         key = names[identity[1]]
         value = re.search(r'L"([^"\n]*)"', line)[1]
-        ids = re.findall(r'\b(?:SCE_\w+|STYLE_\w+)\b', line.split('NP2StyleX_', 1)[0])
+        ids = re.findall(r'\b(?:SCE_\w+|STYLE_\w+)\b', re.split(r'NP2(?:StyleX|STYLEX)_', line, maxsplit=1)[0])
         records.append((key, value, ids))
     return records
 
@@ -34,7 +34,7 @@ def style_records(text, symbol, names):
 def generate(source):
     path = 'src/EditLexers/EditStyleX.h'
     resources = read_pinned(source, path)
-    names = dict(re.findall(r'#define NP2StyleX_(\w+)\s+EDITSTYLE_\w+\(\w+, L"([^"]+)"',
+    names = dict(re.findall(r'#define NP2(?:StyleX|STYLEX)_(\w+)\s+EDITSTYLE_\w+\(\w+, L"([^"]+)"',
                             resources.decode('utf-8')))
     output = provenance('style_profiles.py', path, resources) + ['// clang-format off']
     schemes = []
