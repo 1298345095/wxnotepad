@@ -304,11 +304,11 @@ def startup_id(fixture):
                   'token_issued': bool(identifier), 'delivered': True, 'active': app.state['active'],
                   'identifier': identifier}
         if identifier and app.state['backend'] == 'GdkX11Display':
-            windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid',
-                                                str(app.process.pid)], text=True).splitlines()
-            assert len(windows) == 1
-            property_value = subprocess.check_output(['xprop', '-id', windows[0], '_NET_STARTUP_ID'], text=True)
+            window = app.state['frame_x11_window']
+            assert int(window) > 0
+            property_value = subprocess.check_output(['xprop', '-id', window, '_NET_STARTUP_ID'], text=True)
             assert identifier in property_value, (identifier, property_value)
+            record['native_frame_window'] = window
             record['native_startup_id'] = property_value
         elif identifier:
             # The native protocol trace must contain the real issued token.
@@ -426,6 +426,81 @@ def policy(fixture):
                 if requester:
                     requester.stop()
         print(f'PASS: {code} forwarded {choice} is handled once, with original caret and disk/history protection', flush=True)
+
+
+def policy_pending(fixture):
+    code = fixture.args.language
+    a, b = fixture.working / 'pending-A.txt', fixture.working / 'pending-B.txt'
+    original = b'first\r\nsecond\r\n'
+    a.write_bytes(original)
+    b.write_bytes(b'other\r\nfile\r\n')
+    app = fixture.start(PREFERENCE[code], code, extra='FileWatchingMode=0\n', startup=a)
+    requester = None
+    try:
+        fixture.dirty(app)
+        before = dict(app.state)
+        requester = incoming(fixture, ('-r', '-s', 'json', '-ro', '-g', '2,1', str(b)), code)
+        window = fixture.dialogs.wait(app.process, SAVE_TITLES[code], SAVE_FRAGMENTS[code])
+        # A user's pending decision must outlive the transport's discovery timeout.
+        try:
+            early_exit = requester.process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            early_exit = None
+        answer_save(fixture, app, code, 'cancel', window)
+        status = requester.process.wait(timeout=5)
+        assert early_exit is None, f'requester exited with {early_exit} before the user answered Save'
+        assert status == 0
+        app.send('snapshot')
+        assert app.state['caret_position'] == '8'
+        for field in ('length', 'dirty', 'document_path', 'read_only', 'can_undo', 'encoding'):
+            assert app.state[field] == before[field], (field, before[field], app.state[field])
+        assert 'JSON' not in app.state['document_status']
+        assert a.read_bytes() == original and b.read_bytes() == b'other\r\nfile\r\n'
+        app.choose(menu_id(app.state, {'en': 'Undo', 'zh_CN': '撤销(U)', 'zh_TW': '復原(U)'}[code]))
+        assert app.state['dirty'] == '0' and app.state['can_redo'] == '1'
+        app.close()
+    finally:
+        app.stop()
+        if requester:
+            requester.stop()
+    print(f'PASS: {code} requester awaits the real Save decision and acknowledges Cancel exactly once', flush=True)
+
+
+def policy_disconnect(fixture):
+    a, b = fixture.working / 'disconnect-A.txt', fixture.working / 'disconnect-B.txt'
+    original = b'first\r\nsecond\r\n'
+    for endpoint in ('requester', 'receiver'):
+        a.write_bytes(original)
+        b.write_bytes(b'other\r\nfile\r\n')
+        app = fixture.start(extra='FileWatchingMode=0\n', startup=a)
+        requester = None
+        try:
+            fixture.dirty(app)
+            before = dict(app.state)
+            requester = incoming(fixture, ('-r', str(b)))
+            window = fixture.dialogs.wait(app.process, SAVE_TITLES['en'], SAVE_FRAGMENTS['en'])
+            if endpoint == 'requester':
+                requester.stop()
+                answer_save(fixture, app, 'en', 'cancel', window)
+                app.send('snapshot')
+                assert app.process.poll() is None
+                for field in ('length', 'dirty', 'document_path', 'read_only', 'can_undo', 'encoding'):
+                    assert app.state[field] == before[field], (field, before[field], app.state[field])
+                requester = incoming(fixture, ('-ns', str(a)))
+                assert requester.process.wait(timeout=5) == 0
+                app.choose(menu_id(app.state, 'Undo'))
+                assert app.state['dirty'] == '0' and app.state['can_redo'] == '1'
+                app.close()
+            else:
+                app.stop()
+                assert requester.process.wait(timeout=5) == 2
+                assert not (requester.folder / 'state').exists()
+            assert a.read_bytes() == original and b.read_bytes() == b'other\r\nfile\r\n'
+        finally:
+            app.stop()
+            if requester:
+                requester.stop()
+    print('PASS: pending modal sender disconnect preserves receiver; receiver disconnect exits requester without retry', flush=True)
 
 
 def busy(fixture):
@@ -745,13 +820,15 @@ def main():
     parser.add_argument('executable', type=Path)
     parser.add_argument('--cmake-dir', type=Path, required=True)
     parser.add_argument('--evidence', type=Path, required=True)
-    parser.add_argument('--scenario', choices=('settings', 'same', 'forward', 'matrix', 'policy', 'busy', 'aliases',
+    parser.add_argument('--scenario', choices=('settings', 'same', 'forward', 'matrix', 'policy', 'policy-pending',
+                                             'policy-disconnect', 'busy', 'aliases',
                                              'closing', 'sessions', 'activation', 'forward-current', 'force-new', 'startup-id'), default='settings')
     parser.add_argument('--language', choices=tuple(PREFERENCE), default='en')
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='window-routing-') as name:
         {'settings': settings_menu, 'same': same_file, 'forward': forward, 'matrix': matrix, 'policy': policy,
+         'policy-pending': policy_pending, 'policy-disconnect': policy_disconnect,
          'busy': busy, 'aliases': aliases, 'closing': closing, 'sessions': sessions,
          'activation': activation, 'forward-current': forward_current, 'force-new': force_new,
          'startup-id': startup_id}[args.scenario](Acceptance(args, Path(name).resolve()))
