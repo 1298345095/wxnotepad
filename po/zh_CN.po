@@ -51,7 +51,7 @@ msgstr "“%s”"
 msgid "\"%s\" is read only. Save to a different file?"
 msgstr "“%s”是只读的。是否保存到另一个文件？"
 
-#: src/app/main.cpp
+#: src/app/main.cpp src/app/new_window.cpp
 #, c-format
 msgid ""
 "\"%s\" not found.\n"
@@ -644,6 +644,10 @@ msgstr "新文件被打开时重置(&R)。"
 msgid "&Restart"
 msgstr "重新启动(&T)"
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Reuse Window"
+msgstr "重用窗口(&R)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_REVERT.
 #: src/app/editor_frame_commands.cpp
 msgid "&Revert\tF5"
@@ -843,6 +847,14 @@ msgstr "缩放(&Z)"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr "* 匹配零个或多个字符；? 恰好匹配一个字符。"
+
+#: src/app/main.cpp
+msgid ""
+"-n  Always open a new window.\n"
+"-ns  Match an existing window only for the same file.\n"
+"-r  Reuse an available window.\n"
+"-rs  Reuse without a file; otherwise match only the same file."
+msgstr "-n  始终打开新窗口。\n-ns  仅当打开同一文件时使用已有窗口。\n-r  重用可用窗口。\n-rs  无文件时重用窗口；否则仅匹配同一文件。"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
@@ -1539,7 +1551,7 @@ msgstr "无法关闭已写入完毕的临时文件。"
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问权限。"
 
-#: src/app/main.cpp
+#: src/app/main.cpp src/app/new_window.cpp
 msgid "Could not create the file."
 msgstr "无法创建文件。"
 
@@ -1573,6 +1585,7 @@ msgstr "无法使用所选程序打开文档"
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp src/app/main.cpp
+#: src/app/new_window.cpp
 msgid "Could not open file"
 msgstr "无法打开文件"
 
@@ -1677,7 +1690,7 @@ msgstr "无法写入 %s"
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
 
-#: src/app/main.cpp
+#: src/app/main.cpp src/app/new_window.cpp
 msgid "Create file?"
 msgstr "创建文件？"
 
@@ -1983,6 +1996,10 @@ msgstr "示例列表"
 #: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
 msgstr "执行文档(&D)\tCtrl+L"
+
+#: src/app/window_routing.cpp
+msgid "Existing wxnotepad window is busy or has an active dialog box. Would you like to open another wxnotepad window?"
+msgstr "已有 wxnotepad 窗口正忙或打开了对话框。是否打开另一个 wxnotepad 窗口？"
 
 #: src/app/dialogs/style_customization.cpp
 msgid "Export Schemes"
@@ -3545,7 +3562,7 @@ msgstr "关闭前保存对 %s 的修改？"
 msgid "Save changes to %s before creating a new document?"
 msgstr "创建新文档前保存对 %s 的修改？"
 
-#: src/app/editor_frame.cpp
+#: src/app/editor_frame.cpp src/app/new_window.cpp
 #, c-format
 msgid "Save changes to %s before opening another file?"
 msgstr "打开另一个文件前保存对 %s 的修改？"
@@ -3843,6 +3860,10 @@ msgstr "简体中文 (GB18030)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Simplified Chinese (GBK, GB2312)"
 msgstr "简体中文 (GBK, GB2312)"
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Single &File Instance"
+msgstr "单文件实例模式(&F)"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Single Quoted String"
@@ -4566,6 +4587,10 @@ msgstr "按空白"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
 msgstr "只匹配完整单词(&W)"
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Window O&ptions"
+msgstr "窗口选项(&P)"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Window Title Displa&y"

@@ -36,6 +36,8 @@ struct OriginalSettings {
     SyntaxExtensions schemeExtensions;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
+    bool reuseWindow = false;
+    bool singleFileInstance = true;
     wxString openWithDirectory;
     int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;

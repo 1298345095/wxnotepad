@@ -17,6 +17,7 @@ public:
     FontSettings ResetStyles();
     wxString DarkProfilePath() const;
     bool SaveUILanguage(int language);
+    bool SaveWindowRouting(bool reuseWindow, bool singleFileInstance);
     int OriginalRunCommandWidth(int screenWidth, int screenHeight) const;
     wxString SelectionActionTemplate(SelectionAction action);
     bool SaveSchemeTabs(SyntaxLanguage language);

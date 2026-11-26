@@ -58,6 +58,7 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
     if (operation == "save")
         result = (source.empty() ? frame.Save() : frame.SaveAs(source)).status == SaveStatus::Saved ? "ok" : "failed";
     if (operation == "close") result = "ok";
+    if (operation == "snapshot") result = "ok";
     if (operation == "menu") {
         long numericId = 0;
         int id = wxNOT_FOUND;
