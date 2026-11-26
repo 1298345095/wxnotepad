@@ -41,12 +41,17 @@ python -X utf8 tests/reference_capture/capture_dynamic_languages.py   --exe <pin
 ```
 
 The native fixture drives real menus, F12, native Open/Save As, folding and
-Tab Settings; checks exact independently read file bytes, reload/reopen,
+Tab Settings; checks exact independently read file bytes, source-encoding reload/reopen,
 first Save, Save As, scheme switches with history, file-variable precedence and
 theme/font state. Packaged processes check English, Simplified Chinese and
-Traditional Chinese identities, settings and independent Restart. Existing native
+Traditional Chinese identities, styles, clean history, settings, closed-file relaunch and independent Restart. Existing native
 customization, menu hierarchy, localized chooser and filter regressions also
 cover the three new schemes.
 
 Independent original provenance and red/green/platform evidence are retained in
 `F:/wxnotepad-evidence/launch-format-implementation-2026-11-26/281/`.
+
+The high-DPI Windows viewport can hide the end of the complete Ruby fixture.
+The native fixture scrolls that final byte into view for a real incremental
+paint and restores the viewport; the full original byte/style/line-state/fold
+assertions and existing paint/case deadlines remain unchanged.

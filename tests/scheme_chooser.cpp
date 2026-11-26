@@ -283,8 +283,8 @@ void PointerFavorites() {
     frame->Destroy();
 }
 void FavoriteCapacity() {
-    // Keep the original imported IDs. Batch36 and PowerShell38 are now delivered;
-    // the other 24 unavailable identities retain their original positions.
+    // Keep the original imported IDs. Perl31, Ruby33, Tcl35, Batch36 and
+    // PowerShell38 are delivered; the other 24 unavailable IDs retain their slots.
     const wxString importedIds = "7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 36 38 39 40 41 42 43 44";
     const wxString expected =
         "1 31 7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 33 35 36 38 15 39 40 41 42 43 44";
