@@ -170,12 +170,15 @@ void DocumentAndPopups(EditorFrame& frame) {
                     "quality/backend round trips retain fonts, bytes, selection, fold, save point and history");
         }
     }
-    for (const auto* scheme : {"Plain Text", "C/C++", "Dark", "Default"}) {
-        NativeSearch::Command(&frame, frame.GetMenuBar()->FindMenuItem("Scheme", scheme));
-        Require(editor->Send(Message::GetFontQuality) == 3 && TestEditor::Text(editor) == code &&
-                    editor->Send(Message::GetAnchor) == 6 && editor->Send(Message::GetCurrentPos) == 3 &&
-                    editor->Send(Message::CanRedo),
-                "scheme and Default/Dark round trips retain quality, bytes, selection and redo history");
+    for (int quality = 0; quality < 4; ++quality) {
+        NativeSearch::Command(&frame, QualityCommand(frame, quality));
+        for (const auto* scheme : {"Plain Text", "C/C++", "Dark", "Default"}) {
+            NativeSearch::Command(&frame, frame.GetMenuBar()->FindMenuItem("Scheme", scheme));
+            Require(editor->Send(Message::GetFontQuality) == quality && TestEditor::Text(editor) == code &&
+                        editor->Send(Message::GetAnchor) == 6 && editor->Send(Message::GetCurrentPos) == 3 &&
+                        editor->Send(Message::CanRedo),
+                    "scheme and Default/Dark round trips retain every quality, bytes, selection and redo history");
+        }
     }
     editor->Send(Message::Redo);
     Require(TestEditor::Text(editor) == code.substr(0, 3) + "edit" + code.substr(6),
