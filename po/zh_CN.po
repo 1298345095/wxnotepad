@@ -51,6 +51,15 @@ msgstr "“%s”"
 msgid "\"%s\" is read only. Save to a different file?"
 msgstr "“%s”是只读的。是否保存到另一个文件？"
 
+#: src/app/main.cpp
+#, c-format
+msgid ""
+"\"%s\" not found.\n"
+"Would you like to create this file?"
+msgstr ""
+"未找到“%s”。\n"
+"是否创建此文件？"
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s - wxnotepad"
@@ -1406,6 +1415,14 @@ msgstr "逗号 (,)"
 msgid "Command"
 msgstr "命令"
 
+#: src/app/main.cpp
+msgid "Command Line Error"
+msgstr "命令行错误"
+
+#: src/app/main.cpp
+msgid "Command Line Help"
+msgstr "命令行帮助"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Comment"
 msgstr "注释"
@@ -1522,6 +1539,10 @@ msgstr "无法关闭已写入完毕的临时文件。"
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问权限。"
 
+#: src/app/main.cpp
+msgid "Could not create the file."
+msgstr "无法创建文件。"
+
 #: src/document/document_session.cpp
 msgid "Could not determine the file size."
 msgstr "无法确定文件大小。"
@@ -1551,7 +1572,7 @@ msgid "Could not open document with program"
 msgstr "无法使用所选程序打开文档"
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
-#: src/app/editor_frame_file_watching.cpp
+#: src/app/editor_frame_file_watching.cpp src/app/main.cpp
 msgid "Could not open file"
 msgstr "无法打开文件"
 
@@ -1655,6 +1676,10 @@ msgstr "无法写入 %s"
 #: src/document/document_file.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
+
+#: src/app/main.cpp
+msgid "Create file?"
+msgstr "创建文件？"
 
 #. TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
 #: src/app/editor_frame_commands.cpp
@@ -2678,6 +2703,10 @@ msgstr "链接"
 msgid "Link Text"
 msgstr "链接文本"
 
+#: src/app/main.cpp
+msgid "Linux: -option and --option; / starts an absolute file path."
+msgstr "Linux：-选项和 --选项；/ 表示绝对文件路径的开头。"
+
 #: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
@@ -3027,6 +3056,11 @@ msgstr "使用此动作的命令打开所选文本。"
 #: src/syntax/generated/style_profiles.h
 msgid "Operator"
 msgstr "运算符"
+
+#: src/app/main.cpp
+#, c-format
+msgid "Option \"%s\" requires a parameter."
+msgstr "选项“%s”需要参数。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Ordered List"
@@ -4162,7 +4196,7 @@ msgstr "文件不是有效的 UTF-8。未采用其他编码。"
 msgid "The line endings in this file are not consistent:"
 msgstr "该文件中的换行符不一致:"
 
-#: src/document/document_session.cpp
+#: src/app/main.cpp src/document/document_session.cpp
 #, c-format
 msgid "The selected encoding (code page %u) is not migrated. The document was not changed."
 msgstr "所选编码(代码页 %u)尚未迁移。文档未作更改。"
@@ -4422,6 +4456,34 @@ msgstr "未命名"
 msgid "Update File Time"
 msgstr "更新文件时间"
 
+#: src/app/main.cpp
+msgid ""
+"Usage: wxnotepad [options] [file]\n"
+"\n"
+"-e encoding  Source encoding (original aliases, including ANSI and OEM).\n"
+"-s scheme  Syntax scheme extension or name.\n"
+"-g line[,character[,bytes]]  Character position; an odd third value counts bytes.\n"
+"-G line[,column[,tab-width]]  Display column; optional tab width (maximum 256).\n"
+"-ro  Read-only editing mode; disk permissions stay unchanged.\n"
+"-?  Show this help.\n"
+"\n"
+"Positions are one-based. A negative line jumps to the end; a negative column counts characters without expanding tabs."
+msgstr ""
+"用法：wxnotepad [选项] [文件]\n"
+"\n"
+"-e 编码  源编码（原版别名，包括 ANSI 和 OEM）。\n"
+"-s 方案  语法方案扩展名或名称。\n"
+"-g 行[,字符[,字节]]  字符位置；第三个值为奇数时按字节计数。\n"
+"-G 行[,列[,制表符宽度]]  显示列；可指定制表符宽度（最大 256）。\n"
+"-ro  只读编辑模式；不改变磁盘权限。\n"
+"-?  显示此帮助。\n"
+"\n"
+"位置从 1 开始。负行号跳至文件末尾；负列号按字符计数，不展开制表符。"
+
+#: src/app/main.cpp
+msgid "Use - or -- to end options and open the remaining single file path."
+msgstr "使用单独的 - 或 -- 结束选项，并将剩余内容作为单个文件路径打开。"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Use Default &Code Style\tShift+F12"
 msgstr "使用默认代码样式(&C)\tShift+F12"
@@ -4512,6 +4574,10 @@ msgstr "窗口标题显示(&Y)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"
 msgstr "Windows (CR+LF)"
+
+#: src/app/main.cpp
+msgid "Windows: /option, -option and --option."
+msgstr "Windows：/选项、-选项和 --选项。"
 
 #. TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).
 #: src/app/editor_frame_commands.cpp

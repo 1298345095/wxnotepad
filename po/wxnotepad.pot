@@ -45,6 +45,13 @@ msgstr ""
 msgid "\"%s\" is read only. Save to a different file?"
 msgstr ""
 
+#: src/app/main.cpp
+#, c-format
+msgid ""
+"\"%s\" not found.\n"
+"Would you like to create this file?"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s - wxnotepad"
@@ -1321,6 +1328,14 @@ msgstr ""
 msgid "Command"
 msgstr ""
 
+#: src/app/main.cpp
+msgid "Command Line Error"
+msgstr ""
+
+#: src/app/main.cpp
+msgid "Command Line Help"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Comment"
 msgstr ""
@@ -1430,6 +1445,10 @@ msgstr ""
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr ""
 
+#: src/app/main.cpp
+msgid "Could not create the file."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not determine the file size."
 msgstr ""
@@ -1459,7 +1478,7 @@ msgid "Could not open document with program"
 msgstr ""
 
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
-#: src/app/editor_frame_file_watching.cpp
+#: src/app/editor_frame_file_watching.cpp src/app/main.cpp
 msgid "Could not open file"
 msgstr ""
 
@@ -1562,6 +1581,10 @@ msgstr ""
 
 #: src/document/document_file.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
+msgstr ""
+
+#: src/app/main.cpp
+msgid "Create file?"
 msgstr ""
 
 #. TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
@@ -2548,6 +2571,10 @@ msgstr ""
 msgid "Link Text"
 msgstr ""
 
+#: src/app/main.cpp
+msgid "Linux: -option and --option; / starts an absolute file path."
+msgstr ""
+
 #: src/app/process_observer.cpp
 #, c-format
 msgid "Ln %llu, Col %llu"
@@ -2886,6 +2913,11 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Operator"
+msgstr ""
+
+#: src/app/main.cpp
+#, c-format
+msgid "Option \"%s\" requires a parameter."
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -3974,7 +4006,7 @@ msgstr ""
 msgid "The line endings in this file are not consistent:"
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/app/main.cpp src/document/document_session.cpp
 #, c-format
 msgid "The selected encoding (code page %u) is not migrated. The document was not changed."
 msgstr ""
@@ -4214,6 +4246,24 @@ msgstr ""
 msgid "Update File Time"
 msgstr ""
 
+#: src/app/main.cpp
+msgid ""
+"Usage: wxnotepad [options] [file]\n"
+"\n"
+"-e encoding  Source encoding (original aliases, including ANSI and OEM).\n"
+"-s scheme  Syntax scheme extension or name.\n"
+"-g line[,character[,bytes]]  Character position; an odd third value counts bytes.\n"
+"-G line[,column[,tab-width]]  Display column; optional tab width (maximum 256).\n"
+"-ro  Read-only editing mode; disk permissions stay unchanged.\n"
+"-?  Show this help.\n"
+"\n"
+"Positions are one-based. A negative line jumps to the end; a negative column counts characters without expanding tabs."
+msgstr ""
+
+#: src/app/main.cpp
+msgid "Use - or -- to end options and open the remaining single file path."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Use Default &Code Style\tShift+F12"
 msgstr ""
@@ -4301,6 +4351,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"
+msgstr ""
+
+#: src/app/main.cpp
+msgid "Windows: /option, -option and --option."
 msgstr ""
 
 #. TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).
