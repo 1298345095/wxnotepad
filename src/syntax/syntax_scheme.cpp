@@ -70,7 +70,8 @@ void ApplySyntaxStyles(EditorControl& editor, SyntaxLanguage language) {
     ApplyStyleProfile(editor, language);
 }
 
-void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
+void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect,
+                         uint32_t csvOptions) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
     editor.SetWordCompletionHandler([&editor, language](WordCompletionCondition condition) {
@@ -101,6 +102,12 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
         const auto& list = definition.keywords[index];
         if (list.attributes & SyntaxKeywordAttribute::NoLexer) continue;
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
+    }
+    if (language == SyntaxLanguage::Csv) {
+        const std::array<char, 4> options = {static_cast<char>(csvOptions), static_cast<char>(csvOptions >> 8U),
+                                             static_cast<char>(csvOptions >> 16U), 0};
+        editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                    reinterpret_cast<intptr_t>(options.data()));
     }
     ApplySyntaxStyles(editor, language);
     const auto guides = editor.Send(Message::GetIndentationGuides);

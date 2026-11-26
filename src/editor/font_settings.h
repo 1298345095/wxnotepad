@@ -30,6 +30,7 @@ struct FontSettings {
     std::array<SchemeFontStyle, static_cast<size_t>(std::to_underlying(SyntaxLanguage::Count))> schemes = [] {
         std::array<SchemeFontStyle, static_cast<size_t>(std::to_underlying(SyntaxLanguage::Count))> values{};
         values[static_cast<size_t>(std::to_underlying(SyntaxLanguage::PlainText))].useCode = false;
+        values[static_cast<size_t>(std::to_underlying(SyntaxLanguage::Csv))].useCode = false;
         return values;
     }();
     SchemeFontStyle& Scheme(SyntaxLanguage language);

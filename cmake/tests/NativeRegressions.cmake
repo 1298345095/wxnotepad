@@ -590,3 +590,32 @@ if(WIN32)
         endforeach()
     endforeach()
 endif()
+
+add_editor_test(syntax_csv original_csv_schemes 90)
+target_compile_definitions(syntax_csv PRIVATE "CSV_OPTIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/csv_options_reference.tsv\""
+    "CSV_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/csv_reference.tsv\"")
+if(WIN32)
+    add_test(NAME original_csv_schemes_gdi COMMAND syntax_csv)
+    set_tests_properties(original_csv_schemes_gdi PROPERTIES TIMEOUT 90 ENVIRONMENT "WXNOTEPAD_CSV_GDI=1")
+endif()
+add_dependencies(syntax_csv wxnotepad_catalogs)
+foreach(language IN ITEMS 1033 2052 1028)
+    add_test(NAME original_csv_layout_${language} COMMAND syntax_csv)
+    set_tests_properties(original_csv_layout_${language} PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_CSV_LANGUAGE=${language}")
+    if(WIN32)
+        add_test(NAME original_csv_layout_dpi96_${language} COMMAND syntax_csv)
+        set_tests_properties(original_csv_layout_dpi96_${language} PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_CSV_LANGUAGE=${language};WXNOTEPAD_CSV_DPI96=1")
+    endif()
+endforeach()
+add_test(NAME original_csv_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/csv_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_CURRENT_BINARY_DIR}")
+set_tests_properties(original_csv_process PROPERTIES TIMEOUT 120)
+if(WIN32)
+    add_test(NAME original_csv_process_gdi COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/csv_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_CURRENT_BINARY_DIR}" --gdi)
+    set_tests_properties(original_csv_process_gdi PROPERTIES TIMEOUT 120)
+endif()

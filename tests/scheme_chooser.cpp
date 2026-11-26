@@ -402,7 +402,7 @@ void KeyboardChooser() {
             "favorite-mode keyboard confirmation preserves current scheme");
     frame->Destroy();
 }
-using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 30>;
+using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 31>;
 
 void CheckLocalizedCaptions(wxTreeCtrl& tree, const LocalizedSchemeCaptions& captions, size_t column) {
     for (const auto& caption : captions) {
@@ -524,6 +524,7 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
         {"Ruby Script", "Ruby 脚本", "Ruby 指令碼"},
         {"Perl Script", "Perl 脚本", "Perl 指令碼"},
         {"Tcl Script", "Tcl 脚本", "Tcl 指令碼"},
+        {"CSV File", "CSV 文件", "CSV 檔案"},
     }};
     constexpr int SimplifiedChineseLanguage = 2052;
     constexpr int TraditionalChineseLanguage = 1028;

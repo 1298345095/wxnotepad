@@ -60,6 +60,7 @@ enum class SyntaxLanguage : uint8_t {
     Ruby,
     Perl,
     Tcl,
+    Csv,
     Count
 };
 using SyntaxExtensions = std::map<SyntaxLanguage, wxString>;

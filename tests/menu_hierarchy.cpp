@@ -4,6 +4,7 @@
 #include <array>
 #include "settings/settings_store.h"
 #include <wx/menu.h>
+#include <wx/modalhook.h>
 #include <stdexcept>
 
 namespace {
@@ -197,6 +198,7 @@ void CheckMenu(EditorFrame* frame) {
                     "C/C++",
                     "C# Source",
                     "CMake",
+                    "CSV File...",
                     "Diff File",
                     "Go",
                     "Ini Config File",
@@ -236,12 +238,22 @@ void CheckMenu(EditorFrame* frame) {
           {"Standard Encode", "URL Safe Encode", "Encode as HTML Embedded Image", "Decode", "Decode as Hex"});
 }
 void SchemeSelections(EditorFrame* frame) {
+    class CsvOptionsClose final : public wxModalDialogHook {
+    public:
+        CsvOptionsClose() { Register(); }
+        int Enter(wxDialog* dialog) override {
+            if (dialog->GetTitle() == "CSV Options") wxTheApp->CallAfter([dialog] { dialog->Close(); });
+            return wxID_NONE;
+        }
+    } csvOptions;
     auto* bar = frame->GetMenuBar();
     const int automatic = bar->FindMenuItem("Scheme", "Automatic");
     const auto check = [bar, automatic](std::optional<SyntaxLanguage> selected) {
         Require(bar->IsChecked(automatic) == !selected.has_value(), "Automatic reflects the language override");
         for (const auto& definition : SyntaxCatalog()) {
-            const int id = bar->FindMenuItem("Scheme", LanguageName(definition.language));
+            const auto title =
+                LanguageName(definition.language) + (definition.language == SyntaxLanguage::Csv ? "..." : "");
+            const int id = bar->FindMenuItem("Scheme", title);
             Require(id != wxNOT_FOUND && bar->FindItem(id)->IsCheckable(),
                     "each delivered scheme has a selectable leaf");
             Require(bar->IsChecked(id) == (selected == definition.language),
@@ -251,7 +263,9 @@ void SchemeSelections(EditorFrame* frame) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     check(std::nullopt);
     for (const auto& definition : SyntaxCatalog()) {
-        NativeSearch::Command(frame, bar->FindMenuItem("Scheme", LanguageName(definition.language)));
+        const auto title =
+            LanguageName(definition.language) + (definition.language == SyntaxLanguage::Csv ? "..." : "");
+        NativeSearch::Command(frame, bar->FindMenuItem("Scheme", title));
         check(definition.language);
     }
     NativeSearch::Command(frame, automatic);

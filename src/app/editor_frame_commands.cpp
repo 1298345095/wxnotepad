@@ -565,7 +565,15 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
         // Notepad4 checks the active scheme across all families. Native radio
         // groups are local to each submenu and would select inactive families.
         menu->AppendCheckItem(id, label);
-        Bind(wxEVT_MENU, [this, language](wxCommandEvent&) { ChooseLanguage(language); }, id);
+        Bind(
+            wxEVT_MENU,
+            [this, language](wxCommandEvent&) {
+                if (language == SyntaxLanguage::Csv)
+                    ChooseCsvLanguage();
+                else
+                    ChooseLanguage(language);
+            },
+            id);
         Bind(
             wxEVT_UPDATE_UI,
             [this, language](wxUpdateUIEvent& event) { event.Check(document_.LanguageOverride() == language); }, id);
@@ -582,7 +590,10 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     }
     languages->AppendSeparator();
     for (const auto* definition : SyntaxMenuMembers(SyntaxMenuFamily::Standalone))
-        addLanguage(languages, "&" + wxGetTranslation(definition->name), definition->language);
+        addLanguage(languages,
+                    "&" + wxGetTranslation(definition->name) +
+                        (definition->language == SyntaxLanguage::Csv ? "..." : ""),
+                    definition->language);
     return languages;
 }
 

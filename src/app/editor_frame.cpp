@@ -8,6 +8,7 @@
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/scheme_chooser.h"
+#include "app/dialogs/csv_options_dialog.h"
 #include "app/dialogs/style_customization.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
@@ -537,7 +538,10 @@ void EditorFrame::ShowSyntaxScheme(bool favorite) {
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
          SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
          preferences.schemeExtensions, preferences.favoriteSchemes});
-    if (language) ChooseLanguage(*language);
+    if (language == SyntaxLanguage::Csv) {
+        if (document_.Language() != SyntaxLanguage::Csv) ChooseCsvLanguage();
+    } else if (language)
+        ChooseLanguage(*language);
 }
 
 void EditorFrame::CustomizeStyles() {
@@ -552,6 +556,21 @@ void EditorFrame::CustomizeStyles() {
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
          SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
          preferences.schemeExtensions, preferences.favoriteSchemes});
+    editor_->SetFocus();
+}
+
+void EditorFrame::ChooseCsvLanguage() {
+    auto options = document_.CsvOptions();
+    const bool changed = ShowCsvOptionsDialog(this, options);
+    if (changed) document_.SetCsvOptions(options);
+    // Original cancel/no-change still selects CSV when changing schemes, while
+    // the active CSV scheme keeps its current selection/override state.
+    if (document_.Language() != SyntaxLanguage::Csv)
+        ChooseLanguage(SyntaxLanguage::Csv);
+    else if (changed) {
+        UpdateDocumentState();
+        UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    }
     editor_->SetFocus();
 }
 
