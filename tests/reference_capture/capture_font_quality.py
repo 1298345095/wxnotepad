@@ -58,6 +58,7 @@ def capture(args):
     try:
         app = Original(None, executable, desktop, "Default")
         app.reset(TEXT.encode("utf-8"), 0, 0)
+        app.send(4001, 0)  # Container styles; the plain-text lexer otherwise resets them during paint.
         app.send(2076, 0)  # No caret blink in controlled raster.
         app.send(2056, 0, app.put(b"Consolas\0"))
         app.send(2061, 0, 1200)
@@ -68,9 +69,11 @@ def capture(args):
         app.send(2063, 2, 700)
         app.send(2054, 2, 1)
         start = len(TEXT.splitlines(keepends=True)[0].encode("utf-8"))
-        app.send(2032, start)
+        app.send(2032, 0)
+        app.send(2033, start, 0)
         app.send(2033, len(TEXT.splitlines(keepends=True)[1].encode("utf-8")), 1)
         app.send(2033, len(TEXT.splitlines(keepends=True)[2].encode("utf-8")), 2)
+        app.send(2033, len("".join(TEXT.splitlines(keepends=True)[3:]).encode("utf-8")), 0)
         records = []
         for technology in (0, 1):
             app.command(40046 + technology)
@@ -84,6 +87,9 @@ def capture(args):
                     item == quality for item in range(4)]
                 assert user.RedrawWindow(app.editor, None, None, 0x185)
                 assert user.WaitForInputIdle(app.process.handle, 3000) == 0
+                styles = [app.send(2038, start),
+                          app.send(2038, start + len(TEXT.splitlines(keepends=True)[1].encode("utf-8")))]
+                assert styles == [1, 2], styles
                 dpi = user.GetDpiForWindow(app.editor)
                 if args.dpi96:
                     assert dpi == 96
@@ -93,11 +99,13 @@ def capture(args):
                     screenshot_windows(user, app.editor, output / filename, presented=True)
                 records.append({"dpi": dpi, "technology": technology, "quality": quality,
                                 "font": "Consolas", "point_size": 12, "image": filename,
+                                "painted_styles": styles,
                                 "width": app.send(2276, 0, app.put("English 中文 Café 😀\0".encode("utf-8"))),
                                 "text_hex": app.text().hex()})
         (output / "original.json").write_text(json.dumps({
             "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
             "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+            "capture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "dpi96_emulation": args.dpi96, "records": records}, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8")
     finally:

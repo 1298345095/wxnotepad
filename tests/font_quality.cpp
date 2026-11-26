@@ -5,6 +5,7 @@
 #include "measurement_workers.h"
 #include "native_paint_helpers.h"
 #include "file_helpers.h"
+#include <SciLexer.h>
 #include <array>
 #include <barrier>
 #include <cstdio>
@@ -92,6 +93,7 @@ void DocumentAndPopups(EditorFrame& frame) {
         for (int quality = 0; quality < 4; ++quality) {
             NativeSearch::Command(&frame, QualityCommand(frame, quality));
             TestEditor::ResetStream(editor, text.c_str(), 0, 0);
+            editor->Send(Message::SetLexer, SCLEX_CONTAINER);
             editor->Send(Message::SetCaretPeriod, 0);
             editor->Send(Message::StyleSetFont, 0, reinterpret_cast<intptr_t>("Consolas"));
             editor->Send(Message::StyleSetSizeFractional, 0, 1200);
@@ -101,13 +103,19 @@ void DocumentAndPopups(EditorFrame& frame) {
             editor->Send(Message::StyleSetFore, 1, 0x287828);
             editor->Send(Message::StyleSetWeight, 2, 700);
             editor->Send(Message::StyleSetItalic, 2, 1);
-            editor->Send(Message::StartStyling, first.size());
+            editor->Send(Message::StartStyling, 0);
+            editor->Send(Message::SetStyling, first.size(), 0);
             editor->Send(Message::SetStyling, comment.size(), 1);
             editor->Send(Message::SetStyling, emphasis.size(), 2);
+            editor->Send(Message::SetStyling, text.size() - first.size() - comment.size() - emphasis.size(), 0);
             editor->Send(Message::SetWrapMode, std::to_underlying(Scintilla::Wrap::Word));
             NativePaint::Complete(editor);
             Require(TestEditor::Text(editor) == text && editor->Send(Message::WrapCount, 3) > 1,
                     "each quality draws unchanged mixed-script plain, comment, bold-italic and wrapped text");
+            Require(editor->Send(Message::GetStyleIndexAt, first.size()) == 1 &&
+                        editor->Send(Message::GetStyleIndexAt, first.size() + comment.size()) == 2 &&
+                        editor->Send(Message::StyleGetWeight, 2) == 700 && editor->Send(Message::StyleGetItalic, 2),
+                    "actual painted comment and bold-italic spans retain their explicit styles");
             for (const auto position :
                  {text.find("English"), text.find("中"), text.find("Cafe") + 3, text.find("😀")}) {
                 const auto x = editor->Send(Message::PointXFromPosition, 0, position);
