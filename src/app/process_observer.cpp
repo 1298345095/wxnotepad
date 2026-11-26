@@ -21,6 +21,7 @@
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #include <gdk/gdkwayland.h>
+#include <gdk/gdkx.h>
 #endif
 
 namespace {
@@ -225,6 +226,12 @@ void ProcessObserver::Publish() {
                                  static_cast<long long>(frame_->Editor()->Send(GetCurrentPos)),
                                  static_cast<long long>(frame_->Editor()->Send(GetReadOnly)), frame_->GetClientSize().y,
                                  static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->GetHandle())));
+#ifdef __WXGTK__
+    auto* nativeFrame = gtk_widget_get_window(GTK_WIDGET(frame_->GetHandle()));
+    if (nativeFrame && GDK_IS_X11_WINDOW(nativeFrame))
+        contents += wxString::Format("frame_x11_window\t%llu\n",
+                                     static_cast<unsigned long long>(gdk_x11_window_get_xid(nativeFrame)));
+#endif
     const auto position = frame_->GetPosition();
     const auto size = frame_->GetSize();
     lastFrameSize_ = size;

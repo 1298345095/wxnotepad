@@ -49,6 +49,19 @@ open, busy rejection and closing rejection. GTK's native modal grab leaves
 the frame's logical enabled flag true, so busy detection includes wx's actual
 modal-dialog count.
 
+Linux discovery queries retain their three-second socket timeout. Delivery uses
+one wxIPC Execute and a completion Advise after the receiver finishes the
+ordinary open flow. The requester dispatches events until that reply or a
+disconnect, so a user's Save decision has no transport deadline. The former
+synchronous Request timed out while its receiver was still in Save/error dialogs;
+under twenty private sessions this could report exit 2 after the receiver had
+already opened the file. The localized `packaged_window_routing_policy_pending`
+cases leave the real Save dialog unanswered for five seconds, then Cancel and
+verify the completion result, unchanged document and retained undo history.
+The disconnect case terminates either endpoint while Save is pending. A sender
+disconnect defers connection deletion until the active receiver callback returns;
+a receiver disconnect ends the requester with uncertain delivery and no retry.
+
 Delivery and activation are separate observations. Windows grants foreground
 permission to the receiver and performs one wx `Raise` call, which calls
 `SetForegroundWindow`. Tests check the actual foreground HWND and native
@@ -68,7 +81,11 @@ settings or inherited as consumed XDG activation tokens by relaunched children.
 
 The native tests obtain IDs from the real
 `GdkAppLaunchContext.get_startup_notify_id` caller. On X11 the receiver's
-`_NET_STARTUP_ID` property exactly matches each issued ID. The private Weston
+`_NET_STARTUP_ID` property exactly matches each issued ID. The observer publishes
+the actual frame's read-only `frame_x11_window` XID, so this assertion addresses
+that frame rather than another visible GTK window with the same process ID.
+An earlier PID-selected observation found no property once under load; this
+identity correction does not establish the cause of that failure. The private Weston
 probe, using Python GI with `Gio.AppInfoCreateFlags.NONE` and a direct
 `get_startup_notify_id` call, returned `None`. This does not establish why no
 token was returned or a compositor/protocol refusal. Its no-token minimized case

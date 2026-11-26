@@ -16,6 +16,7 @@
 #include <windows.h>
 #else
 #include <wx/sckipc.h>
+#include <wx/evtloop.h>
 #include <wx/dir.h>
 #include <wx/stdpaths.h>
 #include <sys/stat.h>
@@ -230,10 +231,40 @@ bool PrivateDirectory(const wxString& path) {
 }
 
 class ClientConnection final : public wxTCPConnection {
+    wxEventLoop* completionLoop = nullptr;
+    DeliveryReply deliveryReply = DeliveryReply::Unacknowledged;
+    void Complete(DeliveryReply reply) {
+        deliveryReply = reply;
+        if (completionLoop) completionLoop->ScheduleExit();
+    }
+
 public:
     ClientConnection() = default;
-    void SetRequestTimeout() { m_sock->SetTimeout(3); }
-    bool OnDisconnect() override { return true; }
+    void SetRequestTimeout() {
+        constexpr long DiscoveryTimeoutSeconds = 3;
+        m_sock->SetTimeout(DiscoveryTimeoutSeconds);
+    }
+    DeliveryReply Deliver(const wxString& command) {
+        wxEventLoop loop;
+        completionLoop = &loop;
+        // Dispatch completion events instead of timing the user's modal decision.
+        wxTheApp->CallAfter([this, command] {
+            if (!Execute(command)) Complete(DeliveryReply::Unacknowledged);
+        });
+        loop.Run();
+        completionLoop = nullptr;
+        return deliveryReply;
+    }
+    bool OnAdvise(const wxString&, const wxString& item, const void* data, size_t size, wxIPCFormat format) override {
+        Complete(item == "delivery-result" && format == wxIPC_UTF8TEXT && data && size == 1
+                     ? DecodeReply(*static_cast<const unsigned char*>(data) - '0')
+                     : DeliveryReply::Unacknowledged);
+        return true;
+    }
+    bool OnDisconnect() override {
+        Complete(DeliveryReply::Unacknowledged);
+        return true;
+    }
 };
 class Client final : public wxTCPClient {
 public:
@@ -276,15 +307,31 @@ struct WindowRouting::Impl final : wxEvtHandler {
     struct Connection final : wxTCPConnection {
         Impl& owner;
         std::string reply;
+        bool executing = false;
+        bool disconnected = false;
         explicit Connection(Impl& receiver) : owner(receiver) {}
         const void* OnRequest(const wxString&, const wxString& item, size_t* size, wxIPCFormat format) override {
-            if (format != wxIPC_UTF8TEXT) return nullptr;
-            const auto response = item == "query" ? wxString::Format("%d\n", std::to_underlying(owner.State())) +
-                                                        (owner.frame ? owner.frame->DocumentPath() : wxString{})
-                                                  : wxString::Format("%d", std::to_underlying(owner.Handle(item)));
+            if (format != wxIPC_UTF8TEXT || item != "query") return nullptr;
+            const auto response = wxString::Format("%d\n", std::to_underlying(owner.State())) +
+                                  (owner.frame ? owner.frame->DocumentPath() : wxString{});
             reply = response.utf8_string();
             *size = reply.size();
             return reply.data();
+        }
+        bool OnExec(const wxString&, const wxString& command) override {
+            // A modal event loop must not delete this connection on disconnect
+            // while Handle is still using it to send its completion reply.
+            executing = true;
+            const auto result = wxString::Format("%d", std::to_underlying(owner.Handle(command))).utf8_string();
+            if (!disconnected) Advise("delivery-result", result.data(), result.size(), wxIPC_UTF8TEXT);
+            executing = false;
+            if (disconnected) delete this;
+            return true;
+        }
+        bool OnDisconnect() override {
+            disconnected = true;
+            if (!executing) delete this;
+            return true;
         }
     };
     struct Server final : wxTCPServer {
@@ -477,7 +524,6 @@ WindowRouting::Result WindowRouting::Route(const WindowRequest& request, bool re
     }
     if (!chosen) return Result::NewWindow;
     if (busy) return OpenAnotherWindow() ? Result::NewWindow : Result::Handled;
-    const auto reply = Exchange(*chosen, command);
-    return DeliveryResult(reply.length() == 1 ? DecodeReply(reply[0].GetValue() - '0') : DeliveryReply::Unacknowledged);
+    return DeliveryResult(static_cast<ClientConnection*>(chosen.get())->Deliver(command));
 #endif
 }
