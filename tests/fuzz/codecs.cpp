@@ -3,6 +3,7 @@
 #include "document/encoding/utf16_codec.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/chinese_codec.h"
+#include "document/encoding/japanese_korean_codec.h"
 #include "document/encoding/single_byte_codec.h"
 
 namespace {
@@ -31,6 +32,12 @@ void CheckLegacy(std::string_view text) {
             Fuzz::Check(DecodeSingleByte(encoded.bytes, encoding) == text,
                         "lossless single-byte encoding preserves Unicode");
     }
+    for (const auto encoding : {Windows932, Windows949}) {
+        const auto encoded = EncodeJapaneseKorean(text, encoding);
+        if (!encoded.loss)
+            Fuzz::Check(DecodeJapaneseKorean(encoded.bytes, encoding) == text,
+                        "lossless Japanese/Korean encoding preserves Unicode");
+    }
 }
 } // namespace
 
@@ -44,6 +51,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     for (const auto encoding : {Gb18030, Big5}) {
         CheckDecoded(DecodeChinese(bytes, encoding));
         CheckDecoded(DecodeChinese(bytes, encoding, true));
+    }
+    for (const auto encoding : {Windows932, Windows949}) {
+        CheckDecoded(DecodeJapaneseKorean(bytes, encoding));
+        CheckDecoded(DecodeJapaneseKorean(bytes, encoding, true));
     }
     for (const auto encoding : {Windows1252, Dos437}) {
         const auto decoded = DecodeSingleByte(bytes, encoding);
