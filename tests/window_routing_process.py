@@ -377,6 +377,65 @@ def matrix(fixture):
     print(f'PASS: {code} all 60 independent original settings/override/path routes, including SFI miss', flush=True)
 
 
+def capture_policy_failure(fixture, app, requester, choice, wait_started_ns, failure):
+    """Freeze owned process/file observations before cleanup or any new command."""
+    from app_observation import read_state
+    snapshot = {'choice': choice, 'monotonic_ns': time.monotonic_ns(),
+                'requester_wait_started_ns': wait_started_ns,
+                'failure_type': type(failure).__name__, 'failure': str(failure)}
+    for role, child in (('receiver', app), ('requester', requester)):
+        record = {'pid': child.process.pid, 'exit': child.process.poll()}
+        try:
+            record['state'] = {key: value for key, value in read_state(child.folder).items()
+                               if not key.startswith('menu.')}
+        except (OSError, ValueError) as error:
+            record['state_error'] = str(error)
+        for name, path in (('command', child.folder / 'command'), ('stderr', Path(child.log.name))):
+            try:
+                record[name] = path.read_text(encoding='utf-8', errors='replace')
+            except OSError as error:
+                record[name + '_error'] = str(error)
+        if sys.platform == 'linux':
+            for name in ('stat', 'status', 'wchan'):
+                try:
+                    record['proc_' + name] = (Path('/proc') / str(child.process.pid) / name).read_text()
+                except OSError as error:
+                    record['proc_' + name + '_error'] = str(error)
+            gcda_files = {}
+            try:
+                for descriptor in (Path('/proc') / str(child.process.pid) / 'fd').iterdir():
+                    try:
+                        target = os.readlink(descriptor)
+                        if target.endswith('.gcda'):
+                            gcda_files[descriptor.name] = {'path': target}
+                            try:
+                                info = Path('/proc') / str(child.process.pid) / 'fdinfo' / descriptor.name
+                                gcda_files[descriptor.name]['fdinfo'] = info.read_text()
+                            except OSError as error:
+                                gcda_files[descriptor.name]['fdinfo_error'] = str(error)
+                    except OSError:
+                        pass
+                record['gcda_files'] = gcda_files
+            except OSError as error:
+                record['gcda_files_error'] = str(error)
+        snapshot[role] = record
+    if sys.platform == 'linux':
+        pids = {str(app.process.pid), str(requester.process.pid)}
+        try:
+            owned_locks = []
+            for row in Path('/proc/locks').read_text().splitlines():
+                fields = row.split()
+                pid_field = 5 if fields[1] == '->' else 4
+                if fields[pid_field] in pids:
+                    owned_locks.append(row)
+            snapshot['owned_proc_locks'] = owned_locks
+        except OSError as error:
+            snapshot['proc_locks_error'] = str(error)
+    destination = fixture.logs / f'policy-{choice}-failure.json'
+    destination.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding='utf-8')
+    print(f'Owned policy failure snapshot: {destination}', flush=True)
+
+
 def policy(fixture):
     code = fixture.args.language
     a, b = fixture.working / 'policy-A.txt', fixture.working / 'policy-B.txt'
@@ -404,7 +463,15 @@ def policy(fixture):
                     error = fixture.dialogs.wait(app.process, ERROR_TITLES[code],
                                                  str(a) if sys.platform == 'win32' else ERROR_FRAGMENTS[code])
                     fixture.dialogs.answer(app.process, 'ok', window=error)
-                assert requester.process.wait(timeout=5) == 0
+                wait_started_ns = time.monotonic_ns()
+                try:
+                    assert requester.process.wait(timeout=5) == 0
+                except (subprocess.TimeoutExpired, AssertionError) as failure:
+                    try:
+                        capture_policy_failure(fixture, app, requester, choice, wait_started_ns, failure)
+                    except OSError as error:
+                        print(f'Could not retain owned policy failure snapshot: {error}', flush=True)
+                    raise
                 app.send('snapshot')
                 if choice in ('cancel', 'failed-save'):
                     assert app.state['caret_position'] == '8'

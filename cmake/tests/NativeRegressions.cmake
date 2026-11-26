@@ -688,7 +688,7 @@ foreach(language en zh_CN zh_TW)
     set_tests_properties(packaged_window_routing_matrix_${language} PROPERTIES TIMEOUT 120)
     add_test(NAME packaged_window_routing_policy_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-policy-${language}"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-policy-${language}"
         --scenario policy --language ${language})
     set_tests_properties(packaged_window_routing_policy_${language} PROPERTIES TIMEOUT 120)
     add_test(NAME packaged_window_routing_busy_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
