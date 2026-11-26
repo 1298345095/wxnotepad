@@ -145,19 +145,22 @@ void CheckMenu(EditorFrame* frame) {
     Order(bar->GetMenu(5),
           {"Insert Tabs as Spaces", "Tab Settings...", "Word Wrap Settings...", "Long Line Settings...",
            "Auto Completion Settings...", "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options",
-           "Appearance", "Window Title Display", "File Change Notification...", "AutoSave Settings...",
-           "Extra Esc Key Function", "Other Settings",
+           "Appearance", "Window Options", "Window Title Display", "Single File Instance",
+           "File Change Notification...", "AutoSave Settings...", "Extra Esc Key Function", "Other Settings",
 #ifdef __WXMSW__
            "Advanced Settings",
 #endif
            "Save Settings On Exit", "Save Settings Now"});
-    Groups(bar->GetMenu(5), {"Insert Tabs as Spaces", "Appearance", "File Change Notification...",
+    Groups(bar->GetMenu(5), {"Insert Tabs as Spaces", "Appearance", "Single File Instance",
 #ifdef __WXMSW__
                              "Advanced Settings"});
 #else
                              "Save Settings On Exit"});
 #endif
     auto* appearance = Submenu(bar->GetMenu(5), "Appearance");
+    // Pinned Notepad4.rc: Window Options precedes Window Title Display, and
+    // Single File Instance starts the following group before File Change Notification.
+    Order(Submenu(bar->GetMenu(5), "Window Options"), {"Reuse Window"});
     Order(Submenu(bar->GetMenu(5), "Window Title Display"),
           {"File Name Only", "File Name and Directory", "Full Path Name", "Text Excerpt"});
     // Pinned Notepad4.rc: customize and automatic scaling follow Show Toolbar.
@@ -168,8 +171,12 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(5), "Other Settings"), {"Remember Recent Files", "Remember Search Options"});
     Order(Submenu(bar->GetMenu(5), "Extra Esc Key Function"), {"None", "Minimize wxnotepad", "Exit wxnotepad"});
 #ifdef __WXMSW__
-    Order(Submenu(bar->GetMenu(5), "Advanced Settings"), {"Rendering Technology"});
-    Order(Submenu(Submenu(bar->GetMenu(5), "Advanced Settings"), "Rendering Technology"), {"Legacy GDI", "Direct2D"});
+    auto* advanced = Submenu(bar->GetMenu(5), "Advanced Settings");
+    // Pinned Notepad4.rc: Font Quality follows Rendering Technology and has
+    // its own Default command, separate from Scheme / Style Theme / Default.
+    Order(advanced, {"Rendering Technology", "Font Quality"});
+    Order(Submenu(advanced, "Rendering Technology"), {"Legacy GDI", "Direct2D"});
+    Order(Submenu(advanced, "Font Quality"), {"Default", "None", "Standard", "ClearType"});
 #endif
     Order(Submenu(bar->GetMenu(5), "Select and Edit Options"),
           {"Enable Multiple Selection", "Copy Selection As Find Text", "Copy Paste Buffer As Find Text",

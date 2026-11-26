@@ -20,6 +20,13 @@ CAPTIONS = {
     'zh_CN': ('默认(D)', '深色(K)'),
     'zh_TW': ('預設(D)', '深色(K)'),
 }
+# Reviewed displayed captions for the pinned Scheme / Style Theme hierarchy.
+# Font Quality has a separate, equally valid Default leaf under Settings.
+THEME_PATH = {
+    'en': ('Scheme', 'Style Theme'),
+    'zh_CN': ('语法高亮(M)', '样式主题(Y)'),
+    'zh_TW': ('語法(M)', '樣式佈景主題(Y)'),
+}
 LANGUAGES = {'en': 1033, 'zh_CN': 2052, 'zh_TW': 1028}
 DOCUMENT_FIELDS = ('length', 'dirty', 'encoding', 'bom', 'eol_mode', 'caret_position',
                    'selection_start', 'selection_end', 'zoom')
@@ -57,10 +64,27 @@ class ThemeAcceptance(Acceptance):
         (self.logs / 'tested-artifact.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
 
 
+def theme_id(state, code, dark):
+    scheme, theme = THEME_PATH[code]
+    roots = [key.split('.')[1] for key, value in state.items()
+             if key.startswith('menu_top.') and key.endswith('.label') and value.replace('&', '') == scheme]
+    assert len(roots) == 1, (scheme, roots)
+    entries = menus(state)
+    parents = [item['path'] for item in entries.values()
+               if item['path'].rsplit('/', 1)[0] == roots[0] and item['label'].replace('&', '') == theme]
+    assert len(parents) == 1, (scheme, theme, parents)
+    caption = CAPTIONS[code][dark]
+    found = [identity for identity, item in entries.items()
+             if item['path'].rsplit('/', 1)[0] == parents[0] and
+             item['label'].split('\t', 1)[0].replace('&', '') == caption]
+    assert len(found) == 1, (scheme, theme, caption, found)
+    return found[0]
+
+
 def checked(app, code, dark):
     entries = menus(app.state)
-    assert entries[menu_id(app.state, CAPTIONS[code][dark])]['checked'] == '1', app.state
-    assert entries[menu_id(app.state, CAPTIONS[code][not dark])]['checked'] == '0', app.state
+    assert entries[theme_id(app.state, code, dark)]['checked'] == '1', app.state
+    assert entries[theme_id(app.state, code, not dark)]['checked'] == '0', app.state
 
 
 def record(fixture, name, app):
@@ -82,7 +106,7 @@ def close(app):
 
 def change(fixture, app, code, dark, document, original, foreground=ORIGINAL_COMMENT_FOREGROUND_BGR):
     before = dict(app.state)
-    app.choose(menu_id(app.state, CAPTIONS[code][dark]))
+    app.choose(theme_id(app.state, code, dark))
     checked(app, code, dark)
     assert app.state['style_at_caret'] == str(CPP_LINE_COMMENT_STYLE), app.state
     assert app.state['style_foreground_at_caret'] == str(foreground), app.state
@@ -120,7 +144,7 @@ def basic(fixture):
             change(fixture, app, code, True, document, original)
             assert not dark_file.exists(), 'A missing user Dark profile needs no writable copy for selection'
             main_before = fixture.config.read_bytes()
-            app.choose(menu_id(app.state, CAPTIONS[code][True]))
+            app.choose(theme_id(app.state, code, True))
             assert fixture.config.read_bytes() == main_before and not dark_file.exists(), 'Same theme is a no-op'
             record(fixture, 'missing-dark-' + code, app)
         finally:
