@@ -74,6 +74,7 @@ struct OriginalSettings {
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;
     int renderingTechnology = std::to_underlying(Scintilla::Technology::DirectWrite);
+    int fontQuality = std::to_underlying(Scintilla::FontQuality::QualityLcdOptimized);
     CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;

@@ -226,6 +226,10 @@ msgstr "置中(&C)。"
 msgid "&Clear All\tAlt+F2"
 msgstr "全部清除(&C)\tAlt+F2"
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&ClearType"
+msgstr "&ClearType"
+
 # Original Notepad4 zh-Hant: IDD_INSERTTAG (closing tag); adapted where needed.
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Closing tag (can be edited):"
@@ -280,7 +284,7 @@ msgstr "自訂語法高亮(&C)...\tCtrl+F12"
 msgid "&Decode"
 msgstr "解碼(&D)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 msgid "&Default"
 msgstr "預設(&D)"
 
@@ -766,6 +770,10 @@ msgstr "略過空白行(&S)。"
 msgid "&Split Lines\tCtrl+I"
 msgstr "分割行(&S)\tCtrl+I"
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Standard"
+msgstr "標準(&S)"
+
 # Original Notepad4 zh-Hant: IDD_DEFEOLMODE/IDC_AUTOSTRIPBLANKS; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Strip trailing blanks when saving."
@@ -998,6 +1006,10 @@ msgstr "外觀(&R)"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "適用於一般文字搜尋。使用正規表示式時，請使用單詞邊界。"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Array @var"
+msgstr "陣列 @var"
 
 #. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
 #: src/app/editor_frame_commands.cpp
@@ -1822,6 +1834,10 @@ msgid "Dar&k"
 msgstr "深色(&K)"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Data Section"
+msgstr "資料區段"
+
+#: src/syntax/generated/style_profiles.h
 msgid "DateTime"
 msgstr "日期時間"
 
@@ -2176,6 +2192,10 @@ msgstr "程式碼折疊省略號"
 msgid "Folding Marker"
 msgstr "程式碼折疊"
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Font &Quality"
+msgstr "字型品質(&Q)"
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
@@ -2188,6 +2208,14 @@ msgstr "換行的文字"
 #: src/app/dialogs/style_customization.cpp
 msgid "For&e..."
 msgstr "顏色(&E)..."
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Body"
+msgstr "格式主體"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Identifier"
+msgstr "格式識別項"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Format Specifier"
@@ -2360,6 +2388,10 @@ msgid "Hard Line Break"
 msgstr "強制換行"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Hash %var"
+msgstr "雜湊 %var"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Header 1"
 msgstr "一級標題"
 
@@ -2393,8 +2425,16 @@ msgid "Headers and Footers"
 msgstr "頁首和頁尾"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Backticks)"
+msgstr "Here-doc（反引號）"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Here-doc (Delimiter)"
 msgstr "Here-doc（分隔符號）"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Double Quoted)"
+msgstr "Here-doc（雙引號）"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Here-doc (Single Quoted)"
@@ -2578,6 +2618,14 @@ msgstr "JSPX"
 msgid "JSX"
 msgstr "JSX"
 
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Japanese"
+msgstr "日文"
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Japanese (Shift-JIS)"
+msgstr "日文 (Shift-JIS)"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Java Source"
 msgstr "Java 原始碼"
@@ -2603,6 +2651,14 @@ msgstr "鍵"
 #: src/syntax/generated/style_profiles.h
 msgid "Keyword"
 msgstr "關鍵字"
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Korean"
+msgstr "韓文"
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Korean (Unified Hangul Code)"
+msgstr "韓文 (統一韓文編碼)"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Kotlin Source"
@@ -2913,10 +2969,18 @@ msgstr "最短數字長度"
 msgid "Minimum word length"
 msgstr "最短單詞長度"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Modifier"
+msgstr "修飾詞"
+
 # Original Notepad4 zh-Hant: IDD_MODIFYLINES title; adapted where needed.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Modify Lines"
 msgstr "行變更"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Module"
+msgstr "模組"
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "Move &Down"
@@ -3129,6 +3193,18 @@ msgstr "PDI — 結束方向隔離(&Q)"
 msgid "PHP Tag"
 msgstr "PHP 標記"
 
+#: src/syntax/generated/style_profiles.h
+msgid "POD"
+msgstr "POD"
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Common)"
+msgstr "POD（一般）"
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Verbatim)"
+msgstr "POD（原文）"
+
 #: src/editor/special_insert.h
 msgid "PS — Para&graph Separator"
 msgstr "PS — 段落分隔符號(&G)"
@@ -3182,6 +3258,10 @@ msgstr "圓括號 ()"
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
 msgstr "剖析錯誤"
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Perl Script"
+msgstr "Perl 指令碼"
 
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Pipe (|)"
@@ -3268,6 +3348,10 @@ msgstr "屬性"
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
 msgstr "屬性清單"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Prototype"
+msgstr "原型"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Pseudo Class"
@@ -3477,6 +3561,10 @@ msgstr "右邊界"
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Right:"
 msgstr "右："
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Ruby Script"
+msgstr "Ruby 指令碼"
 
 #. TRANSLATORS: IDD_RUN dialog title.
 #: src/app/run_command.cpp
@@ -3969,6 +4057,10 @@ msgstr "刪除線"
 msgid "String"
 msgstr "字串"
 
+#: src/syntax/generated/style_profiles.h
+msgid "String Array"
+msgstr "字串陣列"
+
 # Original Notepad4 zh-Hant: IDD_AUTOCOMPLETION/IDC_AUTO_COMPLETE_INSIDE_STRING; adapted where needed.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Strings"
@@ -4015,6 +4107,10 @@ msgid "Subscript"
 msgstr "下標"
 
 #: src/syntax/generated/style_profiles.h
+msgid "Substitution"
+msgstr "取代"
+
+#: src/syntax/generated/style_profiles.h
 msgid "Superscript"
 msgstr "上標"
 
@@ -4031,6 +4127,10 @@ msgstr "切換至取代"
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
 msgstr "將檔案編碼從 ANSI 切換到非 ANSI（或反之）可能將不支援的字元取代為預設字元，並且復原歷程將被清除。要繼續嗎？"
 
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol"
+msgstr "符號"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &after wrap:"
 msgstr "換行後的標記(&A)："
@@ -4038,6 +4138,14 @@ msgstr "換行後的標記(&A)："
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &before wrap:"
 msgstr "換行前的標記(&B)："
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Array"
+msgstr "符號陣列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Table *var"
+msgstr "符號表 *var"
 
 #: src/app/dialogs/scheme_chooser.cpp
 msgid "Syntax schemes"
@@ -4143,6 +4251,10 @@ msgstr "工作清單"
 msgid "Task Marker"
 msgstr "工作標記"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "Tcl Script"
+msgstr "Tcl 指令碼"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Template Literal"
 msgstr "範本常值"
@@ -4195,6 +4307,10 @@ msgstr "無法將文件編碼為 UTF-16LE。"
 #: src/document/document_session.cpp
 msgid "The file could not be decoded with the selected Chinese encoding."
 msgstr "無法使用所選中文編碼解碼檔案。"
+
+#: src/document/document_session.cpp
+msgid "The file could not be decoded with the selected Japanese or Korean encoding."
+msgstr "無法使用所選的日文或韓文編碼解碼檔案。"
 
 #: src/document/document_session.cpp
 msgid "The file is not valid GBK (CP936). The document was not changed."

@@ -173,7 +173,9 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
         std::getline(row, deleted, '\t');
         std::getline(row, textHex, '\t');
         std::getline(row, styleHex, '\t');
-        std::getline(row, foldText);
+        std::getline(row, foldText, '	');
+        std::string lineStates;
+        std::getline(row, lineStates);
         auto* editor = frame->Editor();
         const auto text = Unhex(textHex);
         if (state == "base") {
@@ -209,6 +211,17 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
                 throw TestEditor::Failure(foldMessage);
             }
             ++foldLine;
+        }
+        if (!lineStates.empty()) {
+            std::istringstream states(lineStates);
+            size_t stateLine = 0;
+            while (std::getline(states, line, ',')) {
+                Require(editor->Send(Message::GetLineState, stateLine) == std::stol(line),
+                        "every incremental line state must match the pinned original");
+                ++stateLine;
+            }
+            Require(stateLine == static_cast<size_t>(editor->Send(Message::GetLineCount)),
+                    "original line states cover the whole document");
         }
         ++rows;
     }

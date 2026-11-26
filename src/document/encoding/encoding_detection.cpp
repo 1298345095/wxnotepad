@@ -5,6 +5,7 @@
 #include "document/file_variables.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/chinese_codec.h"
+#include "document/encoding/japanese_korean_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include <wx/filename.h>
 #include <wx/intl.h>
@@ -57,6 +58,8 @@ constexpr auto fileEncodings = std::to_array<FileEncodingInfo>({
     {FileEncoding::Big5, 950, "Big5 (CP950)", "CP950"},
     {FileEncoding::Windows1252, 1252, "Windows-1252", "CP1252"},
     {FileEncoding::Dos437, 437, "DOS-437", "CP437"},
+    {FileEncoding::Windows932, 932, "Shift-JIS (CP932)", "CP932"},
+    {FileEncoding::Windows949, 949, "Windows-949 (UHC)", "CP949"},
 });
 
 int CodePageIndex(unsigned page) {
@@ -158,6 +161,9 @@ bool ValidLegacy(unsigned page, std::string_view bytes) {
     // numeric ISO-8859-1 converter name used before the original alias rewrite.
     if (page == 1252 || page == 437 || page == 28591) return true;
     if (page == 936) return DecodeGbk(bytes).has_value();
+    if (page == 932 || page == 949)
+        return DecodeJapaneseKorean(bytes, page == 932 ? FileEncoding::Windows932 : FileEncoding::Windows949, true)
+            .has_value();
     if (page == 54936 || page == 950)
         return DecodeChinese(bytes, page == 54936 ? FileEncoding::Gb18030 : FileEncoding::Big5, true).has_value();
     if (page == 65001) return IsUtf8(bytes);

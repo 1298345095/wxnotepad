@@ -275,6 +275,28 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             id);
     }
     advanced->AppendSubMenu(rendering, _("Ren&dering Technology"));
+    auto* qualityMenu = new wxMenu;
+    for (const auto& [label, quality] :
+         {std::pair{wxTRANSLATE("&Default"), Scintilla::FontQuality::QualityDefault},
+          std::pair{wxTRANSLATE("&None"), Scintilla::FontQuality::QualityNonAntialiased},
+          std::pair{wxTRANSLATE("&Standard"), Scintilla::FontQuality::QualityAntialiased},
+          std::pair{wxTRANSLATE("&ClearType"), Scintilla::FontQuality::QualityLcdOptimized}}) {
+        const int id = wxWindow::NewControlId();
+        qualityMenu->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, quality](wxCommandEvent&) {
+                editor_->Send(Scintilla::Message::SetFontQuality, std::to_underlying(quality));
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, quality](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetFontQuality) == std::to_underlying(quality));
+            },
+            id);
+    }
+    advanced->AppendSubMenu(qualityMenu, _("Font &Quality"));
     view->AppendSubMenu(advanced, _("A&dvanced Settings"));
 #endif
     AppendSettingsCommands(view);

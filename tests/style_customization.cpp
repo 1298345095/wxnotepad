@@ -319,6 +319,50 @@ void ImportExport(EditorFrame* frame, SettingsStore& settings) {
         Require(wxCopyFile(TestFiles::Filename(exported), wxFileName(evidence, "export.ini").GetFullPath()),
                 "retain actual scheme export for independent original interoperability capture");
 }
+void DynamicSchemeImportExport(EditorFrame* frame) {
+    for (const auto& [name, style] : {std::pair{"Ruby Script", SCE_RB_COMMENTLINE},
+                                      {"Perl Script", SCE_PL_COMMENTLINE},
+                                      {"Tcl Script", SCE_TCL_COMMENT}}) {
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", name));
+        const auto imported = TestFiles::TemporaryDirectory(std::string(name) + "-import.ini");
+        const auto exported = TestFiles::TemporaryDirectory(std::string(name) + "-export.ini");
+        const auto contents = std::string("[") + name + "]\nComment=fore:#AA5533\n";
+        TestFiles::WriteBytes(imported, contents);
+#ifdef __WXGTK__
+        NativeSearch::FeedbackResponse response;
+#endif
+        Picker picker;
+        picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
+            const auto editScheme = [&] {
+                SelectStyle(tree, name, "Comment");
+                Require(edit.GetValue().Contains("fore:#608060"),
+                        "each dynamic scheme exposes its original editable comment style");
+                FileButton(dialog, "Import schemes", "Import Schemes", TestFiles::Filename(imported));
+                NativeSearch::Click(&dialog, wxID_APPLY);
+                Require(frame->Editor()->Send(Message::StyleGetFore, style) == 0x3355aa,
+                        "imported original section applies to the real dynamic lexer style");
+                FileButton(dialog, "Export schemes", "Export Schemes", TestFiles::Filename(exported));
+            };
+#ifdef __WXGTK__
+            response.Respond(&dialog, wxID_OK, editScheme);
+#else
+            editScheme();
+            NativeSearch::Click(&dialog, wxID_OK);
+#endif
+        };
+        NativePaint::Complete(frame->Editor());
+        frame->SetTitle("wxnotepad dynamic customize keyboard");
+        NativeKeys::Shortcut(frame, WXK_F12, true, false, false, nullptr, "wxnotepad dynamic customize keyboard");
+        Require(picker.error.empty(), picker.error.utf8_str());
+        Require(picker.shown == 1 && frame->Editor()->Send(Message::StyleGetFore, style) == 0x3355aa,
+                "Ctrl+F12 and native acceptance commit each original dynamic scheme customization");
+        const auto saved = ReadIni(exported);
+        Require(saved.Contains(wxString("[") + name + "]") && saved.Contains("Comment=fore:#AA5533"),
+                "native export retains each dynamic scheme section and imported value");
+    }
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
+}
+
 void Grammar(EditorFrame* frame) {
     Picker picker;
     picker.action = [frame](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
@@ -588,6 +632,7 @@ public:
                     ImportCancelWithoutPreview(frame, *settings_);
                     Extensions(frame);
                     ImportExport(frame, *settings_);
+                    DynamicSchemeImportExport(frame);
                     Grammar(frame);
                     InvalidInheritedSize(frame);
                     RelativeFontChooser(frame);

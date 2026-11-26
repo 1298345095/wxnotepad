@@ -3,6 +3,7 @@
 #include <imm.h>
 #include <commctrl.h>
 #include <chrono>
+#include <array>
 #include <vector>
 
 namespace {
@@ -48,6 +49,15 @@ public:
         frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad native IME composition regression", wxDefaultPosition,
                              wxSize(440, 300));
         editor_ = new EditorControl(frame_);
+        if (argc == 3) {
+            const auto technology = wxAtoi(argv[1]);
+            const auto quality = wxAtoi(argv[2]);
+            editor_->Send(Message::SetTechnology, technology);
+            editor_->Send(Message::SetFontQuality, quality);
+            Require(editor_->Send(Message::GetTechnology) == technology &&
+                        editor_->Send(Message::GetFontQuality) == quality,
+                    "native Pinyin uses the requested actual backend and quality");
+        }
         auto* layout = new wxBoxSizer(wxVERTICAL);
         layout->Add(editor_, 1, wxEXPAND);
         focusTarget_ = new wxButton(frame_, wxID_ANY, "IME focus target");
@@ -178,6 +188,16 @@ private:
             }
                 Require(TestEditor::Text(editor_) == prefix_ + preedit_,
                         "uncommitted native preedit participates in editor text layout");
+                if (argc == 3) {
+                    constexpr std::array<BYTE, 4> Qualities{DEFAULT_QUALITY, NONANTIALIASED_QUALITY,
+                                                            ANTIALIASED_QUALITY, CLEARTYPE_QUALITY};
+                    const auto context = ImmGetContext(window_);
+                    LOGFONTW font{};
+                    const bool read = context && ImmGetCompositionFontW(context, &font);
+                    if (context) ImmReleaseContext(window_, context);
+                    Require(read && font.lfQuality == Qualities[static_cast<size_t>(wxAtoi(argv[2]))],
+                            "real uncommitted Pinyin uses the requested native composition font quality");
+                }
                 editor_->Refresh(false);
                 editor_->Update();
                 Require(editor_->Send(Message::WrapCount, 0) > 1,

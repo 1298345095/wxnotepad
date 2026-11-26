@@ -283,11 +283,11 @@ void PointerFavorites() {
     frame->Destroy();
 }
 void FavoriteCapacity() {
-    // Keep the original imported IDs. Batch36 and PowerShell38 are now delivered;
-    // the other 27 unavailable identities retain their original positions.
+    // Keep the original imported IDs. Perl31, Ruby33, Tcl35, Batch36 and
+    // PowerShell38 are delivered; the other 24 unavailable IDs retain their slots.
     const wxString importedIds = "7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 36 38 39 40 41 42 43 44";
     const wxString expected =
-        "1 36 7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 31 33 35 38 15 39 40 41 42 43 44";
+        "1 31 7 8 9 11 12 13 14 16 17 18 19 20 21 22 23 24 29 30 33 35 36 38 15 39 40 41 42 43 44";
     const auto ini = TestFiles::TemporaryDirectory("scheme-capacity.ini");
     TestFiles::WriteBytes(ini, "[Settings]\nSaveSettings=0\n[Styles]\nFavoriteSchemes=1 67 " +
                                    importedIds.utf8_string() + "\n");
@@ -402,7 +402,7 @@ void KeyboardChooser() {
             "favorite-mode keyboard confirmation preserves current scheme");
     frame->Destroy();
 }
-using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 28>;
+using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 31>;
 
 void CheckLocalizedCaptions(wxTreeCtrl& tree, const LocalizedSchemeCaptions& captions, size_t column) {
     for (const auto& caption : captions) {
@@ -521,6 +521,9 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
         {"Ini Config File", "Ini 配置文件", "Ini 設定檔案"},
         {"Makefile", "Makefile", "Makefile"},
         {"Diff File", "Diff 文件", "Diff 檔案"},
+        {"Ruby Script", "Ruby 脚本", "Ruby 指令碼"},
+        {"Perl Script", "Perl 脚本", "Perl 指令碼"},
+        {"Tcl Script", "Tcl 脚本", "Tcl 指令碼"},
         {"CSV File", "CSV 文件", "CSV 檔案"},
     }};
     constexpr int SimplifiedChineseLanguage = 2052;

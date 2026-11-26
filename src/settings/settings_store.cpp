@@ -207,6 +207,9 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     values.renderingTechnology = std::clamp(document_.ReadInt("RenderingTechnology", defaults.renderingTechnology),
                                             std::to_underlying(Scintilla::Technology::Default),
                                             std::to_underlying(Scintilla::Technology::DirectWrite1));
+    values.fontQuality = std::clamp(document_.ReadInt("FontQuality", defaults.fontQuality),
+                                    std::to_underlying(Scintilla::FontQuality::QualityDefault),
+                                    std::to_underlying(Scintilla::FontQuality::QualityLcdOptimized));
     int caretStyle = document_.ReadInt("CaretStyle", defaults.caret.lineWidth);
     values.caret.blockAfterSelection = caretStyle >= 100;
     caretStyle %= 100;
@@ -516,6 +519,7 @@ bool SettingsStore::Save(bool explicitSave) {
         document_.WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
 #ifdef __WXMSW__
         document_.WriteInt("RenderingTechnology", values.renderingTechnology, defaults.renderingTechnology);
+        document_.WriteInt("FontQuality", values.fontQuality, defaults.fontQuality);
 #endif
         document_.WriteInt("CaretStyle",
                            values.caret.lineWidth + (values.caret.overstrikeBlock ? 10 : 0) +

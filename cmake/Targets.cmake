@@ -21,6 +21,9 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexProps.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexMakefile.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexDiff.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexRuby.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPerl.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTCL.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSV.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSS.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexSQL.cxx"
@@ -113,6 +116,7 @@ add_library(editor_features STATIC
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/single_byte_codec.cpp
     src/document/encoding/chinese_codec.cpp
+    src/document/encoding/japanese_korean_codec.cpp
     src/document/encoding/utf16_codec.cpp
     src/document/encoding/wx_conversion.cpp
     src/document/encoding/encoding_detection.cpp

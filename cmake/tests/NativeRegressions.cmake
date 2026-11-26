@@ -512,6 +512,85 @@ if(WIN32 OR (UNIX AND NOT APPLE))
     set_tests_properties(original_style_native_font_locale PROPERTIES TIMEOUT 60)
 endif()
 
+add_editor_test(japanese_korean_encoding original_japanese_korean_encoding 90)
+target_compile_definitions(japanese_korean_encoding PRIVATE
+    "JAPANESE_KOREAN_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/encoding_279\"")
+add_test(NAME original_japanese_korean_encoding_native_keys COMMAND japanese_korean_encoding)
+set_tests_properties(original_japanese_korean_encoding_native_keys PROPERTIES TIMEOUT 90
+    ENVIRONMENT "WXNOTEPAD_JAPANESE_KOREAN_NATIVE_KEYS=1")
+foreach(language 2052 1028)
+    add_test(NAME original_japanese_korean_localized_${language} COMMAND japanese_korean_encoding)
+    set_tests_properties(original_japanese_korean_localized_${language} PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_JAPANESE_KOREAN_NATIVE_KEYS=1;WXNOTEPAD_JAPANESE_KOREAN_LANGUAGE=${language}")
+endforeach()
+add_dependencies(japanese_korean_encoding wxnotepad_catalogs)
+
+add_test(NAME original_japanese_korean_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/japanese_korean_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}"
+    --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/japanese-korean-process")
+set_tests_properties(original_japanese_korean_process PROPERTIES TIMEOUT 90)
+
+add_editor_test(syntax_dynamic_languages original_ruby_perl_tcl_schemes 90)
+set(dynamic_language_references
+    "DYNAMIC_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/dynamic_languages_reference.tsv\""
+    "DYNAMIC_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/dynamic_operations_reference.tsv\"")
+target_compile_definitions(syntax_dynamic_languages PRIVATE ${dynamic_language_references})
+if(WIN32)
+    add_test(NAME original_ruby_perl_tcl_dpi96 COMMAND syntax_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_dpi96 PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_DYNAMIC_DPI96=1")
+    add_gui_program(directwrite_dynamic_languages tests/syntax_dynamic_languages.cpp app_shell)
+    target_compile_definitions(directwrite_dynamic_languages PRIVATE WXNOTEPAD_TEST_DIRECTWRITE ${dynamic_language_references})
+    add_test(NAME original_ruby_perl_tcl_directwrite COMMAND directwrite_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_directwrite PROPERTIES TIMEOUT 90)
+    add_test(NAME original_ruby_perl_tcl_directwrite_dpi96 COMMAND directwrite_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_directwrite_dpi96 PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_DYNAMIC_DPI96=1")
+else()
+    add_test(NAME original_ruby_perl_tcl_scale2 COMMAND syntax_dynamic_languages)
+    set_tests_properties(original_ruby_perl_tcl_scale2 PROPERTIES TIMEOUT 90
+        ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+endif()
+add_test(NAME original_ruby_perl_tcl_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/dynamic_languages_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/dynamic-languages-process")
+set_tests_properties(original_ruby_perl_tcl_process PROPERTIES TIMEOUT 180)
+if(WIN32)
+    add_test(NAME original_ruby_perl_tcl_process_gdi COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/dynamic_languages_process.py" "$<TARGET_FILE:wxnotepad>" --gdi
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/dynamic-languages-process-gdi")
+    set_tests_properties(original_ruby_perl_tcl_process_gdi PROPERTIES TIMEOUT 180)
+endif()
+
+# Append to preserve existing test order and private-display shard membership.
+add_editor_test(font_quality original_font_quality_menu 60)
+target_include_directories(font_quality PRIVATE src/editor/platform
+    "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+if(WIN32)
+    target_sources(font_quality PRIVATE tests/font_quality_measurement.cpp)
+    target_compile_definitions(font_quality PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
+    target_link_libraries(font_quality PRIVATE imm32)
+endif()
+add_test(NAME original_font_quality_lifecycle COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/font_quality_process.py" "$<TARGET_FILE:font_quality>")
+set_tests_properties(original_font_quality_lifecycle PROPERTIES TIMEOUT 120)
+if(WIN32)
+    add_test(NAME original_font_quality_composition COMMAND font_quality --composition)
+    set_tests_properties(original_font_quality_composition PROPERTIES TIMEOUT 60)
+    add_test(NAME original_font_quality_menu_dpi96 COMMAND font_quality)
+    add_test(NAME original_font_quality_composition_dpi96 COMMAND font_quality --composition)
+    set_tests_properties(original_font_quality_menu_dpi96 original_font_quality_composition_dpi96 PROPERTIES
+        TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_FONT_QUALITY_DPI96=1")
+    foreach(technology RANGE 0 1)
+        foreach(quality RANGE 0 3)
+            add_test(NAME windows_font_quality_pinyin_${technology}_${quality} COMMAND ime_input ${technology} ${quality})
+            set_tests_properties(windows_font_quality_pinyin_${technology}_${quality} PROPERTIES
+                TIMEOUT 45 SKIP_RETURN_CODE 77)
+        endforeach()
+    endforeach()
+endif()
+
 add_editor_test(syntax_csv original_csv_schemes 90)
 target_compile_definitions(syntax_csv PRIVATE "CSV_OPTIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/csv_options_reference.tsv\""
     "CSV_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/csv_reference.tsv\"")

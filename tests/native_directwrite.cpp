@@ -54,7 +54,7 @@ Measurement Measure(core::Surface& surface, const core::Font& font, std::string_
     }
     return result;
 }
-void Metrics(wxWindow& window) {
+void Metrics(wxWindow& window, Scintilla::FontQuality quality = Scintilla::FontQuality::QualityDefault) {
     auto adapted = core::AllocateDirectWriteSurface();
     adapted->Init(&window);
     auto original = core::OriginalDirectWriteSurface();
@@ -79,8 +79,8 @@ void Metrics(wxWindow& window) {
                     // Original DWrite FontParameters take device pixels, not points.
                     fonts.push_back(core::Font::Allocate(core::FontParameters(
                         core::Platform::DefaultFont(), points * dpi / static_cast<double>(core::pointsPerInch), weight,
-                        Scintilla::FontStretch::Normal, style == FontStyle::Italic,
-                        Scintilla::FontQuality::QualityDefault, Scintilla::Technology::DirectWrite)));
+                        Scintilla::FontStretch::Normal, style == FontStyle::Italic, quality,
+                        Scintilla::Technology::DirectWrite)));
                     expected.emplace_back();
                     for (const auto sample : samples) {
                         const auto reference = Measure(*original, *fonts.back(), sample, utf8);
@@ -162,6 +162,9 @@ struct OriginalRenderingParams {
     }
 };
 void Raster(wxWindow& window, const std::filesystem::path& evidence, Scintilla::FontQuality quality) {
+    constexpr std::array Modes{D2D1_TEXT_ANTIALIAS_MODE_DEFAULT, D2D1_TEXT_ANTIALIAS_MODE_ALIASED,
+                               D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE};
+    const auto expectedMode = Modes[static_cast<size_t>(quality)];
     const OriginalRenderingParams parameters(window);
     std::printf("native rendering mode=%u pixel geometry=%u clearType=%g quality=%u\n",
                 static_cast<unsigned>(parameters.monitor->GetRenderingMode()),
@@ -191,6 +194,8 @@ void Raster(wxWindow& window, const std::filesystem::path& evidence, Scintilla::
             target->BeginDraw();
             if (rasterCase == RasterCase::OriginalDirect) {
                 Draw(*surface, *font);
+                Require(target->GetTextAntialiasMode() == expectedMode,
+                        "original native target applies the exact original quality antialias mode");
                 target->GetTextRenderingParams(originalApplied.GetAddressOf());
                 auto* expected = quality == Scintilla::FontQuality::QualityLcdOptimized && parameters.clearType
                                      ? parameters.clearType.Get()
@@ -220,6 +225,8 @@ void Raster(wxWindow& window, const std::filesystem::path& evidence, Scintilla::
             }
 #ifdef WXNOTEPAD_TEST_CLEARTYPE_CONTRAST
             if (rasterCase == RasterCase::AdaptedDirect) {
+                Require(ObservedDirectWriteTarget()->GetTextAntialiasMode() == expectedMode,
+                        "production native target applies the exact original quality antialias mode");
                 ComPtr<IDWriteRenderingParams> applied;
                 ObservedDirectWriteTarget()->GetTextRenderingParams(applied.GetAddressOf());
                 auto* expected = originalApplied.Get();
@@ -286,6 +293,17 @@ public:
                 Metrics(*frame);
                 Raster(*frame->Editor(), evidence, Scintilla::FontQuality::QualityDefault);
                 Raster(*frame->Editor(), {}, Scintilla::FontQuality::QualityLcdOptimized);
+                for (const auto quality :
+                     {Scintilla::FontQuality::QualityNonAntialiased, Scintilla::FontQuality::QualityAntialiased,
+                      Scintilla::FontQuality::QualityLcdOptimized}) {
+                    Metrics(*frame, quality);
+                    std::filesystem::path directory;
+                    if (!evidence.empty()) {
+                        directory = evidence / ("quality-" + std::to_string(static_cast<int>(quality)));
+                        std::filesystem::create_directories(directory);
+                    }
+                    Raster(*frame->Editor(), directory, quality);
+                }
 #ifdef WXNOTEPAD_TEST_CLEARTYPE_CONTRAST
                 constexpr UINT UpdatedClearTypeContrast = 2200;
                 SetControlledFontSmoothingContrast(UpdatedClearTypeContrast);

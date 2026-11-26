@@ -35,6 +35,9 @@ namespace {
 #include "syntax/generated/ini_scheme_data.h"
 #include "syntax/generated/make_scheme_data.h"
 #include "syntax/generated/diff_scheme_data.h"
+#include "syntax/generated/ruby_scheme_data.h"
+#include "syntax/generated/perl_scheme_data.h"
+#include "syntax/generated/tcl_scheme_data.h"
 #include "syntax/generated/csv_scheme_data.h"
 
 constexpr auto textExtensions = std::to_array<const char*>({"txt"});
@@ -963,6 +966,57 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      diffOriginal,
      {SyntaxMenuFamily::Standalone, 25}},
+    {wxTRANSLATE("Ruby Script"),
+     rubyExtensions,
+     rubyLists,
+     rubyStyles,
+     {},
+     SCLEX_RUBY,
+     SyntaxLanguage::Ruby,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_RB_COMMENTLINE,
+     false,
+     false,
+     "ruby",
+     rubyOriginal,
+     {SyntaxMenuFamily::Standalone, 85}},
+    {wxTRANSLATE("Perl Script"),
+     perlExtensions,
+     perlLists,
+     perlStyles,
+     {},
+     SCLEX_PERL,
+     SyntaxLanguage::Perl,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_PL_COMMENTLINE,
+     false,
+     false,
+     "perl",
+     perlOriginal,
+     {SyntaxMenuFamily::Standalone, 75}},
+    {wxTRANSLATE("Tcl Script"),
+     tclExtensions,
+     tclLists,
+     tclStyles,
+     {},
+     SCLEX_TCL,
+     SyntaxLanguage::Tcl,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_TCL_TASKMARKER,
+     false,
+     false,
+     "wish",
+     tclOriginal,
+     {SyntaxMenuFamily::Standalone, 105}},
     {wxTRANSLATE("CSV File"),
      csvExtensions,
      csvLists,
@@ -1071,6 +1125,12 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
 const char* SyntaxSettingsSection(SyntaxLanguage language) {
     switch (SyntaxSettingsLanguage(language)) {
         using enum SyntaxLanguage;
+    case Ruby:
+        return rubySettingsSection;
+    case Perl:
+        return perlSettingsSection;
+    case Tcl:
+        return tclSettingsSection;
     case Cpp:
         return "C/C++ Source";
     case Java:

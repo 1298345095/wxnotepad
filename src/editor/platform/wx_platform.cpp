@@ -16,6 +16,7 @@
 #include <wx/dcmemory.h>
 #ifdef __WXMSW__
 #include <wx/graphics.h>
+#include <wx/fontutil.h>
 #include "directwrite_surface.h"
 #endif
 #include <wx/display.h>
@@ -48,6 +49,18 @@ static PRectangle Area(wxRect r) {
 static wxColour Color(ColourRGBA c) {
     return wxColour(c.GetRed(), c.GetGreen(), c.GetBlue(), c.GetAlpha());
 }
+static wxFont CreateWxFont(const FontParameters& parameters) {
+    wxFont font(wxFontInfo(parameters.size)
+                    .FaceName(wxString::FromUTF8(parameters.faceName))
+                    .Weight(static_cast<wxFontWeight>(std::to_underlying(parameters.weight)))
+                    .Italic(parameters.italic));
+#ifdef __WXMSW__
+    auto native = *font.GetNativeFontInfo();
+    native.lf.lfQuality = WindowsFontQuality(parameters.extraFontFlag);
+    font.SetNativeFontInfo(native);
+#endif
+    return font;
+}
 class WxFont final : public Font {
 public:
     wxFont font;
@@ -56,11 +69,7 @@ public:
     bool languageSpecific;
 #endif
     explicit WxFont(const FontParameters& p)
-        : font(wxFontInfo(p.size)
-                   .FaceName(wxString::FromUTF8(p.faceName))
-                   .Weight(static_cast<wxFontWeight>(std::to_underlying(p.weight)))
-                   .Italic(p.italic)),
-          measurement(font, p.localeName)
+        : font(CreateWxFont(p)), measurement(font, p.localeName)
 #ifdef __WXGTK__
           ,
           languageSpecific(p.localeName[0] != '\0')

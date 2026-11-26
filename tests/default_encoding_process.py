@@ -29,7 +29,8 @@ def run(source, installed_directory):
                        ("UTF-16LE", 6), ("UTF-16BE with BOM", 2), ("UTF-16BE", 7),
                        ("Simplified Chinese (GBK, GB2312)", 936),
                        ("Simplified Chinese (GB18030)", 54936),
-                       ("Traditional Chinese (Big5, Big5-HKSCS)", 950)]
+                       ("Traditional Chinese (Big5, Big5-HKSCS)", 950),
+                       ("Japanese (Shift-JIS)", 932), ("Korean (Unified Hangul Code)", 949)]
             for mode in ("disabled", "exit", "explicit"):
                 for label, number in choices:
                     enabled = mode == "exit"

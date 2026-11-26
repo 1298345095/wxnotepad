@@ -7,6 +7,7 @@
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/chinese_codec.h"
+#include "document/encoding/japanese_korean_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include "document/encoding/single_byte_codec.h"
 #include "editor/platform/native_encoding.h"
@@ -60,6 +61,7 @@ LegacyEncoded EncodeLegacy(std::string_view bytes, FileEncoding encoding) {
     using enum FileEncoding;
     if (encoding == Gbk) return EncodeGbk(bytes);
     if (encoding == Windows1252 || encoding == Dos437) return EncodeSingleByte(bytes, encoding);
+    if (encoding == Windows932 || encoding == Windows949) return EncodeJapaneseKorean(bytes, encoding);
     return EncodeChinese(bytes, encoding);
 }
 
@@ -110,7 +112,8 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
                                                     bool nativeDefault, const NativeByteRanges& raw,
                                                     const EncodingLossDecision& decideLoss) {
     using enum FileEncoding;
-    if (encoding == Gbk || encoding == Windows1252 || encoding == Dos437 || encoding == Gb18030 || encoding == Big5) {
+    if (encoding == Gbk || encoding == Windows1252 || encoding == Dos437 || encoding == Gb18030 || encoding == Big5 ||
+        encoding == Windows932 || encoding == Windows949) {
         const bool validUtf8 = IsUtf8(bytes);
         if (!validUtf8 && !nativeDefault)
             return SaveResult{SaveStatus::Failed, _("The document contains invalid UTF-8.")};
@@ -196,6 +199,11 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
         bytes = *decoded;
     } else if (loaded.encoding == Windows1252 || loaded.encoding == Dos437) {
         bytes = DecodeSingleByte(bytes, loaded.encoding);
+    } else if (loaded.encoding == Windows932 || loaded.encoding == Windows949) {
+        const auto decoded = DecodeJapaneseKorean(bytes, loaded.encoding);
+        if (!decoded)
+            return wxString(_("The file could not be decoded with the selected Japanese or Korean encoding."));
+        bytes = *decoded;
     } else if (loaded.encoding == Gb18030 || loaded.encoding == Big5) {
         const auto decoded = DecodeChinese(bytes, loaded.encoding);
         if (!decoded) return wxString(_("The file could not be decoded with the selected Chinese encoding."));

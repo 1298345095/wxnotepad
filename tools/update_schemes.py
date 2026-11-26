@@ -13,7 +13,7 @@ SCHEMES = {'Rust': 'Rust', 'Go': 'Go', 'Lua': 'Lua', 'CPP': 'CPP',
            'TOML': 'TOML', 'YAML': 'YAML', 'CMake': 'CMake', 'Markdown': 'Markdown', 'SQL': 'SQL',
            'Java': 'Java', 'CSharp': 'CSharp', 'Kotlin': 'Kotlin',
            'Batch': 'Batch', 'PowerShell': 'PS1', 'AutoHotkey': 'AHK',
-           'INI': 'INI', 'Make': 'MAK', 'Diff': 'Diff', 'CSV': 'CSV'}
+           'INI': 'INI', 'Make': 'MAK', 'Diff': 'Diff', 'Ruby': 'Ruby', 'Perl': 'Perl', 'Tcl': 'Tcl', 'CSV': 'CSV'}
 SOURCE_FILES = {'INI': 'Default', 'Diff': 'Default', 'CSV': 'Default'}
 
 
