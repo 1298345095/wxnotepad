@@ -717,3 +717,12 @@ add_test(NAME packaged_window_routing_aliases COMMAND "${Python3_EXECUTABLE}" -X
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
     --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-aliases" --scenario aliases)
 set_tests_properties(packaged_window_routing_aliases PROPERTIES TIMEOUT 120)
+
+add_test(NAME packaged_startup_csv COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_csv_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}")
+set_tests_properties(packaged_startup_csv PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_window_routing_csv COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_csv_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --forward)
+set_tests_properties(packaged_window_routing_csv PROPERTIES TIMEOUT 120)

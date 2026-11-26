@@ -47,12 +47,15 @@ bool EditorFrame::NewWindow() {
 
 OpenStatus EditorFrame::ReceiveWindowRequest(const WindowRequest& request) {
     OpenStatus status = OpenStatus::Cancelled;
+    // TRANSLATORS: wxnotepad save/discard confirmation for original WM_COPYDATA replacement; %s is the document name.
     if (ConfirmDiscardChanges(_("Save changes to %s before opening another file?"))) {
         bool load = true;
         auto source = request.source;
         if (request.ordinaryFile && !wxFileExists(request.startup) && !wxDirExists(request.startup)) {
             load = wxMessageBox(
+                       // TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname received by IPC.
                        wxString::Format(_("\"%s\" not found.\nWould you like to create this file?"), request.startup),
+                       // TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
                        _("Create file?"), wxYES_NO | wxCANCEL | wxICON_QUESTION, this) == wxYES;
             if (load) {
                 const wxLogNull quiet;
@@ -62,7 +65,10 @@ OpenStatus EditorFrame::ReceiveWindowRequest(const WindowRequest& request) {
                     if (const auto native = NativeEncodingChoice()) source = *native;
                 }
                 if (!load)
-                    wxMessageBox(_("Could not create the file."), _("Could not open file"), wxOK | wxICON_ERROR, this);
+                    // TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
+                    wxMessageBox(_("Could not create the file."),
+                                 // TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+                                 _("Could not open file"), wxOK | wxICON_ERROR, this);
             }
         }
         if (load) {
@@ -70,6 +76,7 @@ OpenStatus EditorFrame::ReceiveWindowRequest(const WindowRequest& request) {
                                                     request.line, request.column, source);
             status = result.status;
             if (status == OpenStatus::Failed)
+                // TRANSLATORS: wxnotepad title for failure to load the requested file received by IPC.
                 wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
         }
     }
@@ -123,7 +130,9 @@ OpenResult EditorFrame::OpenRestartDocument(const wxString& path, std::optional<
         path.empty() ? OpenResult{OpenStatus::Opened, {}} : LoadFile(DocumentLoad::Open{path, decoding});
     if (result.status != OpenStatus::Opened) return result;
     if (selectAfterLoad) document_.SelectEncoding(*encoding);
-    if (language) ChooseLanguage(*language);
+    // Original GetRelaunchParameters also emits -s for CSV, so public named
+    // selection, IPC replacement and internal restart all use named sniffing.
+    if (language) ChooseLanguage(*language, true);
     if (line > 0 && column > 0) {
         const auto position =
             editor_->Send(Scintilla::Message::FindColumn, static_cast<uintptr_t>(line - 1), column - 1);

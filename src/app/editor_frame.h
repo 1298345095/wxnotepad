@@ -226,7 +226,7 @@ private:
     wxSize statusMeasuredSize_;
     int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
-    void ChooseLanguage(std::optional<SyntaxLanguage> language);
+    void ChooseLanguage(std::optional<SyntaxLanguage> language, bool namedScheme = false);
     void ChooseCsvLanguage();
     void ShowSyntaxScheme(bool favorite = false);
     void CustomizeStyles();

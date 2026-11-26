@@ -13,25 +13,42 @@
 bool ShowCsvOptionsDialog(wxWindow* parent, uint32_t& options) {
     // Pinned IDD_CSV_OPTIONS / Styles.cpp::SelectCSVOptionsDlgProc: fixed layout,
     // one visible OK button, close/Escape cancel, and no persisted format state.
+    // TRANSLATORS: Original IDD_CSV_OPTIONS dialog title.
     wxDialog dialog(parent, wxID_ANY, _("CSV Options"));
     dialog.SetEscapeId(wxID_CANCEL);
     const int margin = dialog.FromDIP(DialogLayout::MarginDip);
     const int gap = dialog.FromDIP(DialogLayout::GapDip);
     auto* contents = new wxBoxSizer(wxVERTICAL);
+    // TRANSLATORS: Original IDD_CSV_OPTIONS delimiter group caption.
     auto* delimiterGroup = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Delimiter"));
     auto* grid = new wxGridBagSizer(gap, gap);
-    constexpr auto delimiterLabels =
-        std::to_array<const char*>({wxTRANSLATE("Comma (,)"), wxTRANSLATE("Tab"), wxTRANSLATE("Pipe (|)"),
-                                    wxTRANSLATE("Semicolon (;)"), wxTRANSLATE("Space"), wxTRANSLATE("Other:")});
+    constexpr auto delimiterLabels = std::to_array<const char*>(
+        {// TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_COMMA; preserve the literal comma (,).
+         wxTRANSLATE("Comma (,)"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_TAB; a tab character delimiter.
+         wxTRANSLATE("Tab"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_PIPE; preserve the literal pipe (|).
+         wxTRANSLATE("Pipe (|)"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SEMICOLON; preserve the literal semicolon (;).
+         wxTRANSLATE("Semicolon (;)"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SPACE; a space character delimiter.
+         wxTRANSLATE("Space"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_OTHER; select a custom delimiter character.
+         wxTRANSLATE("Other:")});
     constexpr auto delimiterCharacters = std::to_array<unsigned char>({',', '\t', '|', ';', ' ', 0});
     std::array<wxRadioButton*, delimiterLabels.size()> delimiters{};
     const auto delimiter = static_cast<unsigned char>(options);
     const auto found = std::find(delimiterCharacters.begin(), delimiterCharacters.end() - 1, delimiter);
     const auto selected = static_cast<size_t>(found - delimiterCharacters.begin());
     for (size_t index = 0; index < delimiters.size(); ++index) {
-        const auto label = index == 1   ? wxGETTEXT_IN_CONTEXT("CSV delimiter", "Tab")
-                           : index == 4 ? wxGETTEXT_IN_CONTEXT("CSV delimiter", "Space")
-                                        : wxGetTranslation(delimiterLabels[index]);
+        const auto label =
+            index == 1
+                // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_TAB; a tab delimiter.
+                ? wxGETTEXT_IN_CONTEXT("CSV delimiter", "Tab")
+                : index == 4
+                      // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SPACE; a space delimiter.
+                      ? wxGETTEXT_IN_CONTEXT("CSV delimiter", "Space")
+                      : wxGetTranslation(delimiterLabels[index]);
         auto* radio = new wxRadioButton(delimiterGroup->GetStaticBox(), wxID_ANY, label, wxDefaultPosition,
                                         wxDefaultSize, index == 0 ? wxRB_GROUP : 0);
         radio->SetName(delimiterLabels[index]);
@@ -44,8 +61,10 @@ bool ShowCsvOptionsDialog(wxWindow* parent, uint32_t& options) {
         new wxTextCtrl(delimiterGroup->GetStaticBox(), wxID_ANY,
                        selected == delimiters.size() - 1 ? wxString(static_cast<wxChar>(delimiter)) : wxString{});
     custom->SetName("Custom delimiter");
+    // TRANSLATORS: New wxnotepad accessible name for original IDC_CSV_DELIMITER_OTHER_TEXT, the delimiter entry.
     AppLocalization::SetAccessibleName(*custom, _("Custom delimiter"));
     custom->Enable(selected == delimiters.size() - 1);
+    // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_MERGE_DELIMITER checkbox.
     auto* merge = new wxCheckBox(delimiterGroup->GetStaticBox(), wxID_ANY, _("Treat consecutive delimiters as one."));
     merge->SetName("Merge delimiters");
     merge->SetValue((options & CsvOption::MergeDelimiter) != 0);
@@ -54,9 +73,15 @@ bool ShowCsvOptionsDialog(wxWindow* parent, uint32_t& options) {
     delimiterGroup->Add(grid, 1, wxEXPAND | wxALL, gap);
     contents->Add(delimiterGroup, 0, wxEXPAND | wxALL, margin);
 
+    // TRANSLATORS: Original IDD_CSV_OPTIONS text-qualifier group caption.
     auto* qualifierGroup = new wxStaticBoxSizer(wxHORIZONTAL, &dialog, _("Text qualifier"));
-    constexpr auto qualifierLabels =
-        std::to_array<const char*>({wxTRANSLATE("Double quote"), wxTRANSLATE("Single quote"), wxTRANSLATE("None")});
+    constexpr auto qualifierLabels = std::to_array<const char*>(
+        {// TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_DOUBLE, double-quote text qualifier.
+         wxTRANSLATE("Double quote"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_SINGLE, single-quote text qualifier.
+         wxTRANSLATE("Single quote"),
+         // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_NONE, no text qualifier.
+         wxTRANSLATE("None")});
     constexpr auto qualifierCharacters = std::to_array<unsigned char>({'"', '\'', 0});
     std::array<wxRadioButton*, qualifierLabels.size()> qualifiers{};
     const auto qualifier = (options >> 8U) & 0x7fU;
@@ -72,6 +97,7 @@ bool ShowCsvOptionsDialog(wxWindow* parent, uint32_t& options) {
     }
     contents->Add(qualifierGroup, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, margin);
     auto* bottom = new wxBoxSizer(wxHORIZONTAL);
+    // TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_BACKSLASH_ESCAPE checkbox; backslash means the literal '\\'.
     auto* escape = new wxCheckBox(&dialog, wxID_ANY, _("Escape with backslash."));
     escape->SetName("Backslash escape");
     escape->SetValue(qualifier == 0 || (options & CsvOption::BackslashEscape) != 0);

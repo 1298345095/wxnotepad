@@ -182,6 +182,8 @@ std::optional<SyntaxLanguage> StartupScheme(const wxString& name, const SyntaxEx
 }
 
 wxString StartupHelp() {
+    // TRANSLATORS: New wxnotepad command-line help. Keep literal switches -e, -s, -g, -G, -ro, -? and
+    // encoding aliases ANSI/OEM unchanged; bracketed operands describe user-supplied values.
     wxString text = _("Usage: wxnotepad [options] [file]\n\n"
                       "-e encoding  Source encoding (original aliases, including ANSI and OEM).\n"
                       "-s scheme  Syntax scheme extension or name.\n"
@@ -191,15 +193,19 @@ wxString StartupHelp() {
                       "-?  Show this help.\n\n"
                       "Positions are one-based. A negative line jumps to the end; a negative column counts characters "
                       "without expanding tabs.");
+    // TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
     text += "\n\n" + _("-n  Always open a new window.\n"
                        "-ns  Match an existing window only for the same file.\n"
                        "-r  Reuse an available window.\n"
                        "-rs  Reuse without a file; otherwise match only the same file.");
 #ifdef __WXMSW__
+    // TRANSLATORS: New wxnotepad help; /option, -option and --option show literal option-prefix spellings.
     text += "\n\n" + _("Windows: /option, -option and --option.");
 #else
+    // TRANSLATORS: New wxnotepad help; -option and --option are option spellings, / is the literal path prefix.
     text += "\n\n" + _("Linux: -option and --option; / starts an absolute file path.");
 #endif
+    // TRANSLATORS: New wxnotepad help; preserve the literal option terminators - and --.
     text += "\n" + _("Use - or -- to end options and open the remaining single file path.");
     return text;
 }
@@ -231,20 +237,26 @@ public:
         settings_ = std::make_unique<SettingsStore>();
         AppLocalization::Initialize(settings_->values.uiLanguage);
         if (!options.missingParameter.empty()) {
+            // TRANSLATORS: New wxnotepad missing-operand error; %s is the literal option token, such as /s or -e.
             wxMessageBox(wxString::Format(_("Option \"%s\" requires a parameter."), options.missingParameter),
+                         // TRANSLATORS: New wxnotepad title for an invalid command-line option operand.
                          _("Command Line Error"), wxOK | wxICON_ERROR);
             startupExitCode_ = 2;
             return true;
         }
         if (options.unsupportedSourceCodePage) {
-            wxMessageBox(wxString::Format(
-                             _("The selected encoding (code page %u) is not migrated. The document was not changed."),
-                             *options.unsupportedSourceCodePage),
-                         _("Could not open file"), wxOK | wxICON_ERROR);
+            wxMessageBox(
+                wxString::Format(
+                    // TRANSLATORS: New wxnotepad unsupported-source-encoding error; %u is its numeric code page.
+                    _("The selected encoding (code page %u) is not migrated. The document was not changed."),
+                    *options.unsupportedSourceCodePage),
+                // TRANSLATORS: wxnotepad title for failure to load the requested file.
+                _("Could not open file"), wxOK | wxICON_ERROR);
             startupExitCode_ = 2;
             return true;
         }
         if (options.help) {
+            // TRANSLATORS: New wxnotepad title for the delivered command-line help.
             wxMessageBox(StartupHelp(), _("Command Line Help"), wxOK | wxICON_INFORMATION);
             startupExitCode_ = 0;
             return true;
@@ -281,7 +293,9 @@ public:
                            wxPATH_NORM_SHORTCUT);
             if (!path.FileExists() && !wxFileName::DirExists(path.GetFullPath())) {
                 const int choice = wxMessageBox(
+                    // TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.
                     wxString::Format(_("\"%s\" not found.\nWould you like to create this file?"), path.GetFullPath()),
+                    // TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
                     _("Create file?"), wxYES_NO | wxCANCEL | wxICON_QUESTION, frame);
                 if (choice == wxCANCEL) {
                     frame->Destroy();
@@ -297,8 +311,10 @@ public:
                         created = file.Create(path.GetFullPath(), false) && file.Close();
                     }
                     if (!created) {
-                        wxMessageBox(_("Could not create the file."), _("Could not open file"), wxOK | wxICON_ERROR,
-                                     frame);
+                        // TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
+                        wxMessageBox(_("Could not create the file."),
+                                     // TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+                                     _("Could not open file"), wxOK | wxICON_ERROR, frame);
                         skipLoad = true;
                     } else if (std::holds_alternative<DocumentLoad::NativeAnsiSource>(options.source)) {
                         // Original FileLoad's Create branch initializes ANSI
@@ -317,6 +333,7 @@ public:
             if (!opened) {
                 if (!options.ordinaryFile) return false;
                 if (result.status == OpenStatus::Failed)
+                    // TRANSLATORS: wxnotepad title for failure to load the requested file.
                     wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, frame);
             }
         }

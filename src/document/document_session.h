@@ -136,7 +136,7 @@ public:
     std::optional<SyntaxLanguage> LanguageOverride() const {
         return languageOverride_ ? std::optional(EffectiveLanguage()) : std::nullopt;
     }
-    void SelectLanguage(std::optional<SyntaxLanguage> language);
+    void SelectLanguage(std::optional<SyntaxLanguage> language, bool namedScheme = false);
     uint32_t CsvOptions() const { return csvOptions_; }
     void SetCsvOptions(uint32_t options);
     void SetSyntaxDetectionOptions(SyntaxDetectionOptions options) { detection_ = options; }

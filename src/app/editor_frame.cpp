@@ -574,8 +574,8 @@ void EditorFrame::ChooseCsvLanguage() {
     editor_->SetFocus();
 }
 
-void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
-    document_.SelectLanguage(language);
+void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language, bool namedScheme) {
+    document_.SelectLanguage(language, namedScheme);
     indentation_.Apply(*editor_, document_.Language());
     UpdateDocumentState();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);

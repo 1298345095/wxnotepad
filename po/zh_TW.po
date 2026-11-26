@@ -87,6 +87,8 @@ msgstr "「%s」"
 msgid "\"%s\" is read only. Save to a different file?"
 msgstr "「%s」是唯讀的。是否儲存到另一個檔案？"
 
+#. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.
+#. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname received by IPC.
 #: src/app/main.cpp src/app/new_window.cpp
 #, c-format
 msgid ""
@@ -235,6 +237,7 @@ msgstr "置中(&C)。"
 msgid "&Clear All\tAlt+F2"
 msgstr "全部清除(&C)\tAlt+F2"
 
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_CLEARTYPE; ClearType is the Windows rendering-mode name.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "&ClearType"
 msgstr "&ClearType"
@@ -293,6 +296,7 @@ msgstr "自訂語法高亮(&C)...\tCtrl+F12"
 msgid "&Decode"
 msgstr "解碼(&D)"
 
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_DEFAULT; default Windows font antialiasing.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 msgid "&Default"
 msgstr "預設(&D)"
@@ -567,6 +571,7 @@ msgid "&No Highlight"
 msgstr "不突顯(&N)"
 
 # Original Notepad4 zh-Hant: IDM_LINE_SELECTION_MODE_NONE; adapted where needed.
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_NONE; disable Windows font antialiasing.
 #: src/app/editor_frame_edit_commands.cpp
 #: src/app/editor_frame_settings_commands.cpp
 msgid "&None"
@@ -705,6 +710,7 @@ msgstr "開啟新檔案時重設(&R)。"
 msgid "&Restart"
 msgstr "重新啟動(&R)"
 
+#. TRANSLATORS: Original IDM_VIEW_REUSEWINDOW menu caption under Window Options.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "&Reuse Window"
 msgstr "重用視窗(&R)"
@@ -783,6 +789,7 @@ msgstr "略過空白行(&S)。"
 msgid "&Split Lines\tCtrl+I"
 msgstr "分割行(&S)\tCtrl+I"
 
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_STANDARD; grayscale Windows font antialiasing.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "&Standard"
 msgstr "標準(&S)"
@@ -919,13 +926,18 @@ msgstr "縮放(&Z)"
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr "* 符合零個或多個字元；? 符合一個字元。"
 
+#. TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
 #: src/app/main.cpp
 msgid ""
 "-n  Always open a new window.\n"
 "-ns  Match an existing window only for the same file.\n"
 "-r  Reuse an available window.\n"
 "-rs  Reuse without a file; otherwise match only the same file."
-msgstr "-n  始終開啟新視窗。\n-ns  僅當開啟相同檔案時使用現有視窗。\n-r  重用可用視窗。\n-rs  無檔案時重用視窗；否則僅比對相同檔案。"
+msgstr ""
+"-n  始終開啟新視窗。\n"
+"-ns  僅當開啟相同檔案時使用現有視窗。\n"
+"-r  重用可用視窗。\n"
+"-rs  無檔案時重用視窗；否則僅比對相同檔案。"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
@@ -1298,10 +1310,12 @@ msgstr[0] "CR：%llu 行。"
 msgid "CSS Style Sheet"
 msgstr "CSS 樣式表"
 
+#. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp
 msgid "CSV File"
 msgstr "CSV 檔案"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS dialog title.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "CSV Options"
 msgstr "CSV 選項"
@@ -1512,6 +1526,7 @@ msgstr "第 9 欄"
 msgid "Column Wrap"
 msgstr "斷行"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_COMMA; preserve the literal comma (,).
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Comma (,)"
 msgstr "逗號 (,)"
@@ -1520,10 +1535,12 @@ msgstr "逗號 (,)"
 msgid "Command"
 msgstr "命令"
 
+#. TRANSLATORS: New wxnotepad title for an invalid command-line option operand.
 #: src/app/main.cpp
 msgid "Command Line Error"
 msgstr "命令列錯誤"
 
+#. TRANSLATORS: New wxnotepad title for the delivered command-line help.
 #: src/app/main.cpp
 msgid "Command Line Help"
 msgstr "命令列說明"
@@ -1644,6 +1661,7 @@ msgstr "無法關閉已寫入完成的暫存檔案。"
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr "無法在目的檔案旁建立暫存檔案。請檢查資料夾及存取權限。"
 
+#. TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
 #: src/app/main.cpp src/app/new_window.cpp
 msgid "Could not create the file."
 msgstr "無法建立檔案。"
@@ -1676,6 +1694,11 @@ msgstr "無法載入桌面應用程式項目。"
 msgid "Could not open document with program"
 msgstr "無法使用所選程式開啟文件"
 
+#. TRANSLATORS: wxnotepad title for failure to load the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load the requested file received by IPC.
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
 #: src/app/editor_frame_file_watching.cpp src/app/main.cpp
 #: src/app/new_window.cpp
@@ -1764,6 +1787,7 @@ msgstr "無法執行命令：%s"
 msgid "Could not save file"
 msgstr "無法儲存檔案"
 
+#. TRANSLATORS: wxnotepad title for a settings-file write failure.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 #: src/app/language_commands.cpp
 msgid "Could not save settings"
@@ -1773,6 +1797,7 @@ msgstr "無法儲存設定"
 msgid "Could not start another wxnotepad process."
 msgstr "無法啟動另一個 wxnotepad 處理程序。"
 
+#. TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 #: src/app/language_commands.cpp
 #, c-format
@@ -1783,6 +1808,7 @@ msgstr "無法寫入 %s"
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "無法寫入完整檔案。請檢查可用空間及存取權限。"
 
+#. TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
 #: src/app/main.cpp src/app/new_window.cpp
 msgid "Create file?"
 msgstr "建立檔案？"
@@ -1838,6 +1864,7 @@ msgstr "自訂動作 &1\tCtrl+Shift+1"
 msgid "Custom Action &2\tCtrl+Shift+2"
 msgstr "自訂動作 &2\tCtrl+Shift+2"
 
+#. TRANSLATORS: New wxnotepad accessible name for original IDC_CSV_DELIMITER_OTHER_TEXT, the delimiter entry.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Custom delimiter"
 msgstr "自訂分隔符號"
@@ -1938,6 +1965,7 @@ msgstr "預設換行模式"
 msgid "Definition List"
 msgstr "定義清單"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS delimiter group caption.
 #: src/app/dialogs/csv_options_dialog.cpp src/syntax/generated/style_profiles.h
 msgid "Delimiter"
 msgstr "分隔符號"
@@ -1994,6 +2022,7 @@ msgstr "不要解析編碼標籤(&T)。"
 msgid "Double Quoted String"
 msgstr "雙引號字串"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_DOUBLE, double-quote text qualifier.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Double quote"
 msgstr "雙引號"
@@ -2086,6 +2115,7 @@ msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
 msgid "Escape Sequence"
 msgstr "逸出序列"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_BACKSLASH_ESCAPE checkbox; backslash means the literal '\\'.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Escape with backslash."
 msgstr "使用反斜線轉義"
@@ -2099,6 +2129,7 @@ msgstr "範例清單"
 msgid "Execute &Document\tCtrl+L"
 msgstr "執行文件(&D)\tCtrl+L"
 
+#. TRANSLATORS: Original IDS_ERR_PREVWINDISABLED; wxnotepad is the application name.
 #: src/app/window_routing.cpp
 msgid "Existing wxnotepad window is busy or has an active dialog box. Would you like to open another wxnotepad window?"
 msgstr "現有 wxnotepad 視窗忙碌中或開啟了對話方塊。是否開啟另一個 wxnotepad 視窗？"
@@ -2234,6 +2265,7 @@ msgstr "程式碼折疊省略號"
 msgid "Folding Marker"
 msgstr "程式碼折疊"
 
+#. TRANSLATORS: Original Notepad4.rc Font Quality submenu under Settings / Advanced Settings.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Font &Quality"
 msgstr "字型品質(&Q)"
@@ -2660,10 +2692,12 @@ msgstr "JSPX"
 msgid "JSX"
 msgstr "JSX"
 
+#. TRANSLATORS: Original IDS_ENCODINGGROUP_JAPANESE, encoding-selection tree category.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Japanese"
 msgstr "日文"
 
+#. TRANSLATORS: Original IDS_ENCODING_SHIFT_JIS; Shift-JIS names the Windows-932 encoding.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Japanese (Shift-JIS)"
 msgstr "日文 (Shift-JIS)"
@@ -2694,10 +2728,12 @@ msgstr "鍵"
 msgid "Keyword"
 msgstr "關鍵字"
 
+#. TRANSLATORS: Original IDS_ENCODINGGROUP_KOREAN, encoding-selection tree category.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Korean"
 msgstr "韓文"
 
+#. TRANSLATORS: Original IDS_ENCODING_UHC; Unified Hangul Code names the Windows-949 encoding.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Korean (Unified Hangul Code)"
 msgstr "韓文 (統一韓文編碼)"
@@ -2841,6 +2877,7 @@ msgstr "連結"
 msgid "Link Text"
 msgstr "連結文字"
 
+#. TRANSLATORS: New wxnotepad help; -option and --option are option spellings, / is the literal path prefix.
 #: src/app/main.cpp
 msgid "Linux: -option and --option; / starts an absolute file path."
 msgstr "Linux：-選項和 --選項；/ 表示絕對檔案路徑的開頭。"
@@ -3093,6 +3130,7 @@ msgstr "找不到符合項目"
 msgid "No wrap indent"
 msgstr "續行不縮排"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_NONE, no text qualifier.
 #: src/app/dialogs/csv_options_dialog.cpp
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "None"
@@ -3209,6 +3247,7 @@ msgstr "使用此動作的命令開啟所選文字。"
 msgid "Operator"
 msgstr "運算子"
 
+#. TRANSLATORS: New wxnotepad missing-operand error; %s is the literal option token, such as /s or -e.
 #: src/app/main.cpp
 #, c-format
 msgid "Option \"%s\" requires a parameter."
@@ -3223,6 +3262,7 @@ msgstr "有序清單"
 msgid "Other Sett&ings"
 msgstr "其他設定(&O)"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_OTHER; select a custom delimiter character.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Other:"
 msgstr "其他:"
@@ -3310,10 +3350,12 @@ msgstr "圓括號 ()"
 msgid "Parsing Error"
 msgstr "剖析錯誤"
 
+#. TRANSLATORS: Original lexPerl / NP2LEX_PERL scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp
 msgid "Perl Script"
 msgstr "Perl 指令碼"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_PIPE; preserve the literal pipe (|).
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Pipe (|)"
 msgstr "分隔號 (|)"
@@ -3613,6 +3655,7 @@ msgstr "右邊界"
 msgid "Right:"
 msgstr "右："
 
+#. TRANSLATORS: Original lexRuby / NP2LEX_RUBY scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp
 msgid "Ruby Script"
 msgstr "Ruby 指令碼"
@@ -3716,6 +3759,7 @@ msgid "Save changes to %s before creating a new document?"
 msgstr "建立新文件前是否儲存對 %s 的變更？"
 
 # Original Notepad4 zh-Hant: IDS_ASK_SAVE (open context); adapted where needed.
+#. TRANSLATORS: wxnotepad save/discard confirmation for original WM_COPYDATA replacement; %s is the document name.
 #: src/app/editor_frame.cpp src/app/new_window.cpp
 #, c-format
 msgid "Save changes to %s before opening another file?"
@@ -3926,6 +3970,7 @@ msgstr "選擇到上一個(&S)\tCtrl+Alt+Shift+F2"
 msgid "Selected Text"
 msgstr "選取的文字"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SEMICOLON; preserve the literal semicolon (;).
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Semicolon (;)"
 msgstr "分號 (;)"
@@ -4025,6 +4070,7 @@ msgstr "簡體中文 (GB18030)"
 msgid "Simplified Chinese (GBK, GB2312)"
 msgstr "簡體中文 (GBK, GB2312)"
 
+#. TRANSLATORS: Original IDM_VIEW_SINGLEFILEINSTANCE menu caption under Settings.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Single &File Instance"
 msgstr "單個實體模式(&F)"
@@ -4033,6 +4079,7 @@ msgstr "單個實體模式(&F)"
 msgid "Single Quoted String"
 msgstr "單引號字串"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_SINGLE, single-quote text qualifier.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Single quote"
 msgstr "單引號"
@@ -4069,11 +4116,13 @@ msgstr "來源檔案與目的檔案"
 msgid "Source encoding"
 msgstr "來源編碼"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SPACE; a space character delimiter.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Space"
 msgstr "Space"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SPACE; a space delimiter.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgctxt "CSV delimiter"
 msgid "Space"
@@ -4234,11 +4283,13 @@ msgstr "TOML 檔案"
 msgid "TSX"
 msgstr "TSX"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_TAB; a tab character delimiter.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Tab"
 msgstr "Tab"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_TAB; a tab delimiter.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgctxt "CSV delimiter"
 msgid "Tab"
@@ -4306,6 +4357,7 @@ msgstr "工作清單"
 msgid "Task Marker"
 msgstr "工作標記"
 
+#. TRANSLATORS: Original lexTcl / NP2LEX_TCL scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp
 msgid "Tcl Script"
 msgstr "Tcl 指令碼"
@@ -4323,6 +4375,7 @@ msgstr "文字區塊"
 msgid "Text File"
 msgstr "文字檔案"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS text-qualifier group caption.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Text qualifier"
 msgstr "文字限定詞"
@@ -4363,6 +4416,7 @@ msgstr "無法將文件編碼為 UTF-16LE。"
 msgid "The file could not be decoded with the selected Chinese encoding."
 msgstr "無法使用所選中文編碼解碼檔案。"
 
+#. TRANSLATORS: New wxnotepad source-decoding failure for Windows-932 or Windows-949 files.
 #: src/document/document_session.cpp
 msgid "The file could not be decoded with the selected Japanese or Korean encoding."
 msgstr "無法使用所選的日文或韓文編碼解碼檔案。"
@@ -4388,6 +4442,7 @@ msgstr "檔案不是有效的 UTF-8。未假設使用其他編碼。"
 msgid "The line endings in this file are not consistent:"
 msgstr "此檔案中的換行字元不一致："
 
+#. TRANSLATORS: New wxnotepad unsupported-source-encoding error; %u is its numeric code page.
 #: src/app/main.cpp src/document/document_session.cpp
 #, c-format
 msgid "The selected encoding (code page %u) is not migrated. The document was not changed."
@@ -4503,6 +4558,7 @@ msgstr "特徵"
 msgid "Transform &backslashes"
 msgstr "轉換反斜線(&T)"
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_MERGE_DELIMITER checkbox.
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Treat consecutive delimiters as one."
 msgstr "連續分隔符號視為單個處理"
@@ -4654,6 +4710,8 @@ msgstr "未命名"
 msgid "Update File Time"
 msgstr "更新檔案時間"
 
+#. TRANSLATORS: New wxnotepad command-line help. Keep literal switches -e, -s, -g, -G, -ro, -? and
+#. encoding aliases ANSI/OEM unchanged; bracketed operands describe user-supplied values.
 #: src/app/main.cpp
 msgid ""
 "Usage: wxnotepad [options] [file]\n"
@@ -4678,6 +4736,7 @@ msgstr ""
 "\n"
 "位置從 1 開始。負行號跳至檔案結尾；負欄號按字元計數，不展開定位字元。"
 
+#. TRANSLATORS: New wxnotepad help; preserve the literal option terminators - and --.
 #: src/app/main.cpp
 msgid "Use - or -- to end options and open the remaining single file path."
 msgstr "使用單獨的 - 或 -- 結束選項，並將剩餘內容作為單一檔案路徑開啟。"
@@ -4767,6 +4826,7 @@ msgstr "依空白"
 msgid "Whole &word"
 msgstr "完整單詞(&O)"
 
+#. TRANSLATORS: Original Notepad4.rc Window Options submenu under Settings.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Window O&ptions"
 msgstr "視窗選項(&P)"
@@ -4780,6 +4840,7 @@ msgstr "視窗標題顯示(&Y)"
 msgid "Windows (CR+LF)"
 msgstr "Windows (CR+LF)"
 
+#. TRANSLATORS: New wxnotepad help; /option, -option and --option show literal option-prefix spellings.
 #: src/app/main.cpp
 msgid "Windows: /option, -option and --option."
 msgstr "Windows：/選項、-選項和 --選項。"
