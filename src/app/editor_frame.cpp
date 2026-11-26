@@ -88,6 +88,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
+    editor_->Send(Scintilla::Message::SetFontQuality, preferences.fontQuality);
 #endif
     Bind(wxEVT_SHOW, [this, firstShow = true](wxShowEvent& event) mutable {
         if (event.IsShown()) {
@@ -366,6 +367,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
 #ifdef __WXMSW__
     settings_->values.renderingTechnology = static_cast<int>(editor_->Send(Scintilla::Message::GetTechnology));
+    settings_->values.fontQuality = static_cast<int>(editor_->Send(Scintilla::Message::GetFontQuality));
 #endif
     settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;

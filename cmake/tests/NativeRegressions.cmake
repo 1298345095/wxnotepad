@@ -562,3 +562,31 @@ if(WIN32)
         --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/dynamic-languages-process-gdi")
     set_tests_properties(original_ruby_perl_tcl_process_gdi PROPERTIES TIMEOUT 180)
 endif()
+
+# Append to preserve existing test order and private-display shard membership.
+add_editor_test(font_quality original_font_quality_menu 60)
+target_include_directories(font_quality PRIVATE src/editor/platform
+    "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+if(WIN32)
+    target_sources(font_quality PRIVATE tests/font_quality_measurement.cpp)
+    target_compile_definitions(font_quality PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
+    target_link_libraries(font_quality PRIVATE imm32)
+endif()
+add_test(NAME original_font_quality_lifecycle COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/font_quality_process.py" "$<TARGET_FILE:font_quality>")
+set_tests_properties(original_font_quality_lifecycle PROPERTIES TIMEOUT 120)
+if(WIN32)
+    add_test(NAME original_font_quality_composition COMMAND font_quality --composition)
+    set_tests_properties(original_font_quality_composition PROPERTIES TIMEOUT 60)
+    add_test(NAME original_font_quality_menu_dpi96 COMMAND font_quality)
+    add_test(NAME original_font_quality_composition_dpi96 COMMAND font_quality --composition)
+    set_tests_properties(original_font_quality_menu_dpi96 original_font_quality_composition_dpi96 PROPERTIES
+        TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_FONT_QUALITY_DPI96=1")
+    foreach(technology RANGE 0 1)
+        foreach(quality RANGE 0 3)
+            add_test(NAME windows_font_quality_pinyin_${technology}_${quality} COMMAND ime_input ${technology} ${quality})
+            set_tests_properties(windows_font_quality_pinyin_${technology}_${quality} PROPERTIES
+                TIMEOUT 45 SKIP_RETURN_CODE 77)
+        endforeach()
+    endforeach()
+endif()

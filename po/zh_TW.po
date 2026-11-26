@@ -226,6 +226,10 @@ msgstr "置中(&C)。"
 msgid "&Clear All\tAlt+F2"
 msgstr "全部清除(&C)\tAlt+F2"
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&ClearType"
+msgstr "&ClearType"
+
 # Original Notepad4 zh-Hant: IDD_INSERTTAG (closing tag); adapted where needed.
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Closing tag (can be edited):"
@@ -280,7 +284,7 @@ msgstr "自訂語法高亮(&C)...\tCtrl+F12"
 msgid "&Decode"
 msgstr "解碼(&D)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 msgid "&Default"
 msgstr "預設(&D)"
 
@@ -765,6 +769,10 @@ msgstr "略過空白行(&S)。"
 #: src/app/editor_frame_edit_commands.cpp
 msgid "&Split Lines\tCtrl+I"
 msgstr "分割行(&S)\tCtrl+I"
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Standard"
+msgstr "標準(&S)"
 
 # Original Notepad4 zh-Hant: IDD_DEFEOLMODE/IDC_AUTOSTRIPBLANKS; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -2134,6 +2142,10 @@ msgstr "程式碼折疊省略號"
 #: src/syntax/generated/style_profiles.h
 msgid "Folding Marker"
 msgstr "程式碼折疊"
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Font &Quality"
+msgstr "字型品質(&Q)"
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp

@@ -9,6 +9,8 @@ namespace Scintilla::Internal {
 bool DirectWriteAvailable() noexcept;
 void DropDirectWriteTarget(wxWindow& window);
 bool RefreshDirectWriteRenderingParams(wxWindow& window, bool force);
+// Share the pinned PlatWin mapping with wx GDI fonts and IME composition.
+unsigned char WindowsFontQuality(FontQuality quality) noexcept;
 std::shared_ptr<Font> AllocateDirectWriteFont(const FontParameters& parameters);
 std::unique_ptr<Surface> AllocateDirectWriteSurface();
 wxFont DirectWriteListFont(const Font& font, const wxWindow& window);

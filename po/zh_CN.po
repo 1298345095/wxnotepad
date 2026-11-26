@@ -188,6 +188,10 @@ msgstr "居中对齐(&C)。"
 msgid "&Clear All\tAlt+F2"
 msgstr "全部清除(&C)\tAlt+F2"
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&ClearType"
+msgstr "&ClearType"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG / IDC_MODIFY_LINE_TIP2.
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Closing tag (can be edited):"
@@ -242,7 +246,7 @@ msgstr "自定义语法高亮(&C)...\tCtrl+F12"
 msgid "&Decode"
 msgstr "解码(&D)"
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 msgid "&Default"
 msgstr "默认(&D)"
 
@@ -703,6 +707,10 @@ msgstr "跳过空行(&S)。"
 #: src/app/editor_frame_edit_commands.cpp
 msgid "&Split Lines\tCtrl+I"
 msgstr "行切分(&S)\tCtrl+I"
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Standard"
+msgstr "标准(&S)"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Strip trailing blanks when saving."
@@ -2026,6 +2034,10 @@ msgstr "代码折叠省略号"
 #: src/syntax/generated/style_profiles.h
 msgid "Folding Marker"
 msgstr "代码折叠标志"
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Font &Quality"
+msgstr "字体质量(&Q)"
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
