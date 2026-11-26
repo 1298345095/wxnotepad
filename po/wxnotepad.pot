@@ -178,6 +178,10 @@ msgstr ""
 msgid "&Clear All\tAlt+F2"
 msgstr ""
 
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&ClearType"
+msgstr ""
+
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Closing tag (can be edited):"
 msgstr ""
@@ -227,7 +231,7 @@ msgstr ""
 msgid "&Decode"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 msgid "&Default"
 msgstr ""
 
@@ -638,6 +642,10 @@ msgstr ""
 
 #: src/app/editor_frame_edit_commands.cpp
 msgid "&Split Lines\tCtrl+I"
+msgstr ""
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Standard"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1895,6 +1903,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Folding Marker"
+msgstr ""
+
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Font &Quality"
 msgstr ""
 
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.

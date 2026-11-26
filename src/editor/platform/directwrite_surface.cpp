@@ -205,6 +205,9 @@ wxFont DirectWriteListFont(const Font& font, const wxWindow& window) {
     const wxNativeFontInfo info(static_cast<const FontWin&>(font).lf, &window);
     return wxFont(info);
 }
+unsigned char WindowsFontQuality(FontQuality quality) noexcept {
+    return Win32MapFontQuality(quality);
+}
 bool FinishDirectWriteDrawing(Surface& surface) {
     return static_cast<WxDirectWriteSurface&>(surface).Finish();
 }

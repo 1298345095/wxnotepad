@@ -3,6 +3,7 @@
 // and licenses/Notepad4.txt for redistribution terms.
 #include "editor/editor_core.h"
 #include "editor/display_units.h"
+#include "directwrite_surface.h"
 #include <imm.h>
 #include <cwchar>
 
@@ -229,6 +230,7 @@ void EditorControl::Core::UpdateSystemCaret() {
     font.lfWeight = static_cast<LONG>(style.weight);
     font.lfItalic = style.italic;
     font.lfCharSet = DEFAULT_CHARSET;
+    font.lfQuality = core::WindowsFontQuality(vs.extraFontFlag);
     const auto name =
         wxString::FromUTF8(style.fontName ? style.fontName : core::Platform::DefaultFont()).ToStdWstring();
     std::wcsncpy(font.lfFaceName, name.c_str(), LF_FACESIZE - 1);
