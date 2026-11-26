@@ -9,19 +9,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: unicode-investigation-${{ github.ref }}
+  group: native-input-investigation-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   reproduce:
-    name: Compare key-release dispatch / ${{ matrix.profile }}
+    name: Trace search state and native dialog visibility
     strategy:
       fail-fast: false
       matrix:
         include:
-          - profile: optimized
-            build: cmake
-            configure: --compiler-cache
           - profile: coverage
             build: coverage-cmake
             configure: --coverage
@@ -60,20 +57,21 @@ jobs:
         run: |
           set -euo pipefail
           cmake --build .ci/build/${{ matrix.build }} --parallel --target search_continuation 2>&1 | tee .ci/reports/search-build.log
-      - name: Compare the original release loop with finite native dispatch
+      - name: Observe original and finite release ordering
         shell: bash
         run: python -X utf8 .github/scripts/unicode_investigation.py
       - name: Preserve investigation evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: search-release-${{ matrix.profile }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: search-trace-${{ matrix.profile }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
             .ci/build/${{ matrix.build }}/search_continuation
             .ci/build/${{ matrix.build }}/compile_commands.json
             tests/search_continuation.cpp
             tests/native_key_helpers_probe.h
+            src/app/editor_frame.h
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

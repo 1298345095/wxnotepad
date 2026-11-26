@@ -16,31 +16,11 @@ REPORTS = ROOT / '.ci/reports/search-release-investigation'
 SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
 PHASES = {
-    'original-control': {
+    'original-trace': {
         'tests': ['original_search_continuation'], 'runs': 1, 'timeout': 90,
     },
-    'red-continuous-release': {
+    'bounded-trace': {
         'tests': ['original_search_continuation'], 'runs': 1, 'timeout': 90,
-        'environment': {'WXNOTEPAD_CONTINUOUS_RELEASE': '1'},
-    },
-    'bounded-continuous-release': {
-        'tests': ['original_search_continuation'], 'runs': 2, 'timeout': 90,
-        'environment': {'WXNOTEPAD_CONTINUOUS_RELEASE': '1', 'WXNOTEPAD_BOUNDED_RELEASE': '1'},
-    },
-    'bounded-original': {
-        'tests': ['original_search_continuation'], 'runs': 2, 'timeout': 90,
-        'environment': {'WXNOTEPAD_BOUNDED_RELEASE': '1'},
-    },
-    'bounded-wayland': {
-        'tests': ['original_search_continuation'], 'runs': 1, 'timeout': 90, 'backend': 'wayland',
-        'environment': {'WXNOTEPAD_CONTINUOUS_RELEASE': '1', 'WXNOTEPAD_BOUNDED_RELEASE': '1'},
-    },
-    'bounded-held-feedback': {
-        'tests': ['native_search_feedback_release'], 'runs': 2, 'timeout': 90,
-        'environment': {'WXNOTEPAD_BOUNDED_RELEASE': '1'},
-    },
-    'bounded-held-feedback-wayland': {
-        'tests': ['native_search_feedback_release'], 'runs': 2, 'timeout': 90, 'backend': 'wayland',
         'environment': {'WXNOTEPAD_BOUNDED_RELEASE': '1'},
     },
 }

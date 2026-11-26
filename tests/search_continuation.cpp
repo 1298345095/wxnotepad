@@ -1,3 +1,4 @@
+#include "app/search_shortcuts.h"
 #include "diagnostics/print.h"
 #include "native_key_helpers_probe.h"
 #include "settings/settings_store.h"
@@ -8,8 +9,19 @@
 #include <wx/weakref.h>
 #include <array>
 #include <cstdio>
+#include <exception>
 #include <print>
 #include <stdexcept>
+
+struct SearchContinuationObservation {
+    struct QueryState {
+        bool hasFindText;
+        size_t length;
+    };
+    static QueryState Query(const EditorFrame& frame) {
+        return {frame.search_.HasFindText(), frame.search_.Request().query.length()};
+    }
+};
 
 namespace {
 using enum Scintilla::Message;
@@ -125,6 +137,178 @@ bool FindVisible(EditorFrame* frame) {
     return query && query->GetParent()->IsShown();
 }
 
+// Keep observations in memory until this scenario exits. No dispatch or layout
+// queries are introduced between the existing native gestures.
+class SelectionLimitTrace final : public wxEventFilter {
+public:
+    explicit SelectionLimitTrace(EditorFrame* frame) : frame_(frame), editor_(frame->Editor()) {
+        saveCommand_ = frame->GetMenuBar()->FindMenuItem("Search", "Save Find Text");
+        wxEvtHandler::AddFilter(this);
+    }
+    ~SelectionLimitTrace() override {
+        wxEvtHandler::RemoveFilter(this);
+        std::println(stderr,
+                     "[DEBUG-key-275] trace frame={} editor={} save_command={} forward_command={} "
+                     "events={} states={} dropped={} unwinding={}",
+                     static_cast<void*>(frame_), static_cast<void*>(editor_), saveCommand_,
+                     static_cast<int>(wxID_FORWARD), eventCount_, stateCount_, dropped_,
+                     std::uncaught_exceptions() != 0);
+        for (size_t index = 0; index < stateCount_; ++index) {
+            const auto& row = states_[index];
+            std::println(stderr,
+                         "[DEBUG-key-275] state seq={} stage={} anchor={} caret={} stream_bytes={} "
+                         "selection_mode={} has_find_text={} query_length={} query={} dialog={} "
+                         "wx_shown={} gtk_visible={} gtk_mapped={} gtk_window={}",
+                         row.sequence, row.stage, row.anchor, row.caret,
+                         row.caret >= row.anchor ? row.caret - row.anchor : row.anchor - row.caret, row.selectionMode,
+                         row.hasFindText, row.queryLength, row.query, row.dialog, row.wxShown, row.gtkVisible,
+                         row.gtkMapped, row.gtkWindow);
+        }
+        for (size_t index = 0; index < eventCount_; ++index) {
+            const auto& row = events_[index];
+            std::println(stderr,
+                         "[DEBUG-key-275] event seq={} stage={} kind={} id={} target={} parent={} "
+                         "key={} modifiers={} f3_classification={} wx_time={} show={} wx_shown={} "
+                         "gtk_visible={} gtk_mapped={} gdk_type={} gdk_keyval={} gdk_state={} "
+                         "gdk_time={} gdk_window={}",
+                         row.sequence, row.stage, row.kind, row.id, row.target, row.parent, row.key, row.modifiers,
+                         row.f3Classification, row.wxTime, row.show, row.wxShown, row.gtkVisible, row.gtkMapped,
+                         row.gdkType, row.gdkKeyval, row.gdkState, row.gdkTime, row.gdkWindow);
+        }
+        std::fflush(stderr);
+    }
+
+    void Capture(const char* stage) {
+        stage_ = stage;
+        if (stateCount_ == states_.size()) {
+            ++dropped_;
+            return;
+        }
+        auto& row = states_[stateCount_++];
+        row.sequence = ++sequence_;
+        row.stage = stage;
+        row.anchor = editor_->Send(GetAnchor);
+        row.caret = editor_->Send(GetCurrentPos);
+        row.selectionMode = editor_->Send(GetSelectionMode);
+        const auto queryState = SearchContinuationObservation::Query(*frame_);
+        row.hasFindText = queryState.hasFindText;
+        row.queryLength = queryState.length;
+        auto* query = FindQuery(frame_);
+        auto* dialog = query ? query->GetParent() : nullptr;
+        row.query = query;
+        row.dialog = dialog;
+        row.wxShown = dialog && dialog->IsShown();
+#ifdef __WXGTK__
+        if (dialog) {
+            auto* widget = GTK_WIDGET(dialog->GetHandle());
+            row.gtkVisible = gtk_widget_get_visible(widget);
+            row.gtkMapped = gtk_widget_get_mapped(widget);
+            row.gtkWindow = gtk_widget_get_window(widget);
+        }
+#endif
+    }
+
+    int FilterEvent(wxEvent& event) override {
+        const auto type = event.GetEventType();
+        const bool keyEvent = type == wxEVT_CHAR_HOOK || type == wxEVT_KEY_DOWN || type == wxEVT_KEY_UP;
+        if (!keyEvent && type != wxEVT_MENU && type != wxEVT_SHOW) return Event_Skip;
+        if (eventCount_ == events_.size()) {
+            ++dropped_;
+            return Event_Skip;
+        }
+        auto& row = events_[eventCount_++];
+        row.sequence = ++sequence_;
+        row.stage = stage_;
+        row.kind = type == wxEVT_CHAR_HOOK  ? "char_hook"
+                   : type == wxEVT_KEY_DOWN ? "key_down"
+                   : type == wxEVT_KEY_UP   ? "key_up"
+                   : type == wxEVT_MENU     ? "menu"
+                                            : "show";
+        row.id = event.GetId();
+        row.target = event.GetEventObject();
+        row.wxTime = event.GetTimestamp();
+        if (keyEvent) {
+            const auto& key = static_cast<wxKeyEvent&>(event);
+            row.key = key.GetKeyCode();
+            row.modifiers = key.GetModifiers();
+            if (row.key == WXK_F3) row.f3Classification = static_cast<int>(SearchShortcuts::ClassifyF3(row.modifiers));
+        } else if (type == wxEVT_SHOW) {
+            row.show = static_cast<wxShowEvent&>(event).IsShown();
+        }
+        if (auto* window = wxDynamicCast(event.GetEventObject(), wxWindow)) {
+            row.parent = window->GetParent();
+            row.wxShown = window->IsShown();
+#ifdef __WXGTK__
+            if (auto* widget = GTK_WIDGET(window->GetHandle())) {
+                row.gtkVisible = gtk_widget_get_visible(widget);
+                row.gtkMapped = gtk_widget_get_mapped(widget);
+            }
+#endif
+        }
+#ifdef __WXGTK__
+        if (auto* native = gtk_get_current_event()) {
+            row.gdkType = native->type;
+            row.gdkWindow = native->any.window;
+            if (native->type == GDK_KEY_PRESS || native->type == GDK_KEY_RELEASE) {
+                row.gdkKeyval = native->key.keyval;
+                row.gdkState = native->key.state;
+                row.gdkTime = native->key.time;
+            }
+            gdk_event_free(native);
+        }
+#endif
+        return Event_Skip;
+    }
+
+private:
+    struct State {
+        size_t sequence = 0;
+        const char* stage = nullptr;
+        intptr_t anchor = 0;
+        intptr_t caret = 0;
+        intptr_t selectionMode = 0;
+        bool hasFindText = false;
+        size_t queryLength = 0;
+        const void* query = nullptr;
+        const void* dialog = nullptr;
+        bool wxShown = false;
+        int gtkVisible = -1;
+        int gtkMapped = -1;
+        const void* gtkWindow = nullptr;
+    };
+    struct Event {
+        size_t sequence = 0;
+        const char* stage = nullptr;
+        const char* kind = nullptr;
+        int id = 0;
+        const void* target = nullptr;
+        const void* parent = nullptr;
+        int key = 0;
+        int modifiers = 0;
+        int f3Classification = -1;
+        long wxTime = 0;
+        int show = -1;
+        int wxShown = -1;
+        int gtkVisible = -1;
+        int gtkMapped = -1;
+        int gdkType = -1;
+        unsigned gdkKeyval = 0;
+        unsigned gdkState = 0;
+        unsigned gdkTime = 0;
+        const void* gdkWindow = nullptr;
+    };
+    EditorFrame* frame_;
+    EditorControl* editor_;
+    int saveCommand_ = wxID_NONE;
+    const char* stage_ = "setup";
+    size_t sequence_ = 0;
+    size_t stateCount_ = 0;
+    size_t eventCount_ = 0;
+    size_t dropped_ = 0;
+    std::array<State, 16> states_{};
+    std::array<Event, 256> events_{};
+};
+
 void SelectionSearch(EditorFrame* frame) {
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "dog cat dog", 1, 1);
@@ -185,26 +369,37 @@ void SelectionLimit(EditorFrame* frame) {
     constexpr intptr_t OneMiB = 1024 * 1024;
     const std::string text(OneMiB, 'a');
     auto* editor = frame->Editor();
+    SelectionLimitTrace trace(frame);
     ReportStage("selection limit ResetStream begin");
     TestEditor::ResetStream(editor, text.c_str(), 0, OneMiB);
     ReportStage("selection limit ResetStream complete; save begin");
+    trace.Capture("limit-save-before");
     {
 #ifdef __WXGTK__
         const PendingNativeActivity activity(editor);
 #endif
         NativeKeys::Shortcut(frame, WXK_F3, false, true);
     }
+    trace.Capture("limit-save-after");
     ReportStage("selection limit save complete; Find begin");
+    trace.Capture("limit-find-before");
     NativeKeys::Shortcut(frame, WXK_F3, false);
+    trace.Capture("limit-find-after");
     ReportStage("selection limit Find complete; Cancel begin");
     Require(FindVisible(frame) && FindQuery(frame)->IsEmpty(), "explicit save rejects a selection at the byte limit");
+    trace.Capture("cancel-before");
     NativeSearch::Click(FindQuery(frame)->GetParent(), wxID_CANCEL);
+    trace.Capture("cancel-after");
     ReportStage("selection limit Cancel complete; near-limit SetSel begin");
     editor->Send(SetSel, 0, OneMiB - 1);
     ReportStage("near-limit SetSel complete; save begin");
+    trace.Capture("near-save-before");
     NativeKeys::Shortcut(frame, WXK_F3, false, true);
+    trace.Capture("near-save-after");
     ReportStage("near-limit save complete; Find begin");
+    trace.Capture("near-find-before");
     NativeKeys::Shortcut(frame, WXK_F3, false);
+    trace.Capture("near-find-after");
     ReportStage("near-limit Find complete; validation begin");
     Require(!FindVisible(frame), "explicit save accepts a selection one byte below the limit");
     RequireSelection(editor, 0, OneMiB - 1, "the saved near-limit query selects the exact original range");
