@@ -1,4 +1,4 @@
-name: Unicode layout investigation
+name: Native layout and input investigation
 
 on:
   push:
@@ -14,11 +14,22 @@ concurrency:
 
 jobs:
   reproduce:
-    name: Verify viewport invalidation and cleaned regression fixtures
+    name: Compare key-release dispatch / ${{ matrix.profile }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: optimized
+            build: cmake
+            configure: --compiler-cache
+          - profile: coverage
+            build: coverage-cmake
+            configure: --coverage
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:
       PYTHONUTF8: '1'
+      WXNOTEPAD_SEARCH_PROBE_BUILD: ${{ matrix.build }}
       SCCACHE_GHA_ENABLED: 'true'
       SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
     steps:
@@ -43,25 +54,26 @@ jobs:
         shell: bash
         env:
           CXXFLAGS: '-g1'
-        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
-      - name: Build observed Unicode fixture
+        run: python -X utf8 .github/scripts/ci.py configure ${{ matrix.configure }}
+      - name: Build native search continuation probe
         shell: bash
         run: |
           set -euo pipefail
-          cmake --build .ci/build/cmake --parallel --target unicode_controls unicode_controls_clean 2>&1 | tee .ci/reports/unicode-build.log
-      - name: Repeat original registered assertion with retained observations
+          cmake --build .ci/build/${{ matrix.build }} --parallel --target search_continuation 2>&1 | tee .ci/reports/search-build.log
+      - name: Compare the original release loop with finite native dispatch
         shell: bash
         run: python -X utf8 .github/scripts/unicode_investigation.py
       - name: Preserve investigation evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: unicode-layout-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: search-release-${{ matrix.profile }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
-            .ci/build/cmake/unicode_controls
-            .ci/build/cmake/compile_commands.json
-            tests/unicode_controls.cpp
+            .ci/build/${{ matrix.build }}/search_continuation
+            .ci/build/${{ matrix.build }}/compile_commands.json
+            tests/search_continuation.cpp
+            tests/native_key_helpers_probe.h
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

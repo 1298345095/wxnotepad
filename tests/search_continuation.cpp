@@ -1,5 +1,5 @@
 #include "diagnostics/print.h"
-#include "native_key_helpers.h"
+#include "native_key_helpers_probe.h"
 #include "settings/settings_store.h"
 #include "steady_stopwatch.h"
 #include <wx/filename.h>
@@ -29,6 +29,8 @@ void Require(bool condition, const char* message) {
 class PendingNativeActivity final : public wxEvtHandler, public wxEventFilter {
 public:
     explicit PendingNativeActivity(EditorControl* editor) : editor_(editor) {
+        wxString continuousRelease;
+        continuousRelease_ = wxGetEnv("WXNOTEPAD_CONTINUOUS_RELEASE", &continuousRelease) && continuousRelease == "1";
         // The X11 focus preparation uses finite dispatch. Wayland retains its
         // existing compositor-transition drain and the full original scenario.
         if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle())))) {
@@ -53,13 +55,21 @@ public:
         if (observedPress_ && !observedRelease_ && event.GetEventType() == wxEVT_KEY_UP &&
             event.GetEventObject() == editor_ && static_cast<wxKeyEvent&>(event).GetKeyCode() == WXK_F3) {
             observedRelease_ = true;
-            // wxYield services queued wx callbacks after its native drain.
-            // Start this work there, after the key-up drain has returned, so
-            // only the shortcut's final dispatch sees the new ready source.
-            CallAfter([this] {
+            const auto keepReady = [this] {
                 source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
                 Require(source_ != 0, "keep real native activity queued after the actual shortcut release");
-            });
+            };
+            if (continuousRelease_) {
+                // The real X11 release keeps the native queue ready before its dispatch returns.
+                keepReady();
+                std::fprintf(stderr, "[DEBUG-key-275] actual_F3_release=1 continuous_source=%u\n", source_);
+                std::fflush(stderr);
+            } else {
+                // wxYield services queued wx callbacks after its native drain.
+                // Start this work there, after the key-up drain has returned, so
+                // only the shortcut's final dispatch sees the new ready source.
+                CallAfter(keepReady);
+            }
         }
         return Event_Skip;
     }
@@ -67,6 +77,7 @@ public:
 private:
     EditorControl* editor_;
     guint source_ = 0;
+    bool continuousRelease_ = false;
     bool observedPress_ = false;
     bool observedRelease_ = false;
 };

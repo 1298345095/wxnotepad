@@ -11,30 +11,37 @@ sys.path.insert(0, str(Path.cwd() / '.github/scripts'))
 import ci
 
 ROOT = ci.ROOT
-BUILD = ROOT / '.ci/build/cmake'
-REPORTS = ROOT / '.ci/reports/unicode-settled-investigation'
+BUILD = ROOT / '.ci/build' / os.environ['WXNOTEPAD_SEARCH_PROBE_BUILD']
+REPORTS = ROOT / '.ci/reports/search-release-investigation'
 SCRIPT = Path(__file__).resolve()
 SESSIONS = 4
 PHASES = {
-    'fixed-observed-normal': {
-        'tests': ['original_unicode_controls'], 'runs': 5, 'timeout': 90,
-        'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
+    'original-control': {
+        'tests': ['original_search_continuation'], 'runs': 1, 'timeout': 90,
     },
-    'fixed-observed-scale2': {
-        'tests': ['original_unicode_controls_scale2'], 'runs': 25, 'timeout': 90,
-        'environment': {'WXNOTEPAD_UNICODE_SETTLED': '1'},
+    'red-continuous-release': {
+        'tests': ['original_search_continuation'], 'runs': 1, 'timeout': 90,
+        'environment': {'WXNOTEPAD_CONTINUOUS_RELEASE': '1'},
     },
-    'clean-normal': {
-        'tests': ['investigation_unicode_clean'], 'runs': 10, 'timeout': 90,
+    'bounded-continuous-release': {
+        'tests': ['original_search_continuation'], 'runs': 2, 'timeout': 90,
+        'environment': {'WXNOTEPAD_CONTINUOUS_RELEASE': '1', 'WXNOTEPAD_BOUNDED_RELEASE': '1'},
     },
-    'clean-scale2': {
-        'tests': ['investigation_unicode_clean_scale2'], 'runs': 25, 'timeout': 90,
+    'bounded-original': {
+        'tests': ['original_search_continuation'], 'runs': 2, 'timeout': 90,
+        'environment': {'WXNOTEPAD_BOUNDED_RELEASE': '1'},
     },
-    'clean-wayland': {
-        'tests': ['investigation_unicode_clean'], 'runs': 6, 'timeout': 90, 'backend': 'wayland',
+    'bounded-wayland': {
+        'tests': ['original_search_continuation'], 'runs': 1, 'timeout': 90, 'backend': 'wayland',
+        'environment': {'WXNOTEPAD_CONTINUOUS_RELEASE': '1', 'WXNOTEPAD_BOUNDED_RELEASE': '1'},
     },
-    'clean-wayland-scale2': {
-        'tests': ['investigation_unicode_clean_scale2'], 'runs': 6, 'timeout': 90, 'backend': 'wayland',
+    'bounded-held-feedback': {
+        'tests': ['native_search_feedback_release'], 'runs': 2, 'timeout': 90,
+        'environment': {'WXNOTEPAD_BOUNDED_RELEASE': '1'},
+    },
+    'bounded-held-feedback-wayland': {
+        'tests': ['native_search_feedback_release'], 'runs': 2, 'timeout': 90, 'backend': 'wayland',
+        'environment': {'WXNOTEPAD_BOUNDED_RELEASE': '1'},
     },
 }
 
