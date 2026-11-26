@@ -23,8 +23,8 @@ user.WaitForInputIdle.argtypes = [w.HANDLE, w.DWORD]
 
 
 class Original:
-    def __init__(self, path, executable, desktop, desktop_name, encoding="utf-8"):
-        arguments = [str(executable), "/n", "/ns", "/e", encoding]
+    def __init__(self, path, executable, desktop, desktop_name, encoding="utf-8", arguments=()):
+        arguments = [str(executable), "/n", "/ns", "/e", encoding, *arguments]
         if path:
             arguments.append(str(path))
         self.process = Process(arguments, desktop_name)

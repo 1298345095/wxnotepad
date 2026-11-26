@@ -54,6 +54,9 @@ int EncodingSetting(EncodingChoice choice);
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding);
 std::optional<EncodingChoice> NativeEncodingChoice();
 std::optional<EncodingChoice> NativeOemEncodingChoice();
+// Original command-line aliases. An unknown alias leaves automatic detection;
+// a known unavailable codec carries its code page for explicit feedback.
+DetectedEncoding MatchSourceEncoding(std::string_view name);
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<FileEncoding> explicitEncoding, const EncodingOptions& options = {},
                                 std::optional<EncodingChoice> weakEncoding = std::nullopt);

@@ -590,3 +590,46 @@ if(WIN32)
         endforeach()
     endforeach()
 endif()
+
+add_test(NAME packaged_startup_options COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}")
+set_tests_properties(packaged_startup_options PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_encodings COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario encodings)
+set_tests_properties(packaged_startup_encodings PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_positions COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario positions)
+set_tests_properties(packaged_startup_positions PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_display_columns COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario display)
+set_tests_properties(packaged_startup_display_columns PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_readonly COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario readonly)
+set_tests_properties(packaged_startup_readonly PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_help COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario help)
+set_tests_properties(packaged_startup_help PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_missing_files COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario missing)
+set_tests_properties(packaged_startup_missing_files PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_failures COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario failures)
+set_tests_properties(packaged_startup_failures PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_encoding_identities COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario identities)
+set_tests_properties(packaged_startup_encoding_identities PROPERTIES TIMEOUT 120)
+if(UNIX)
+    add_test(NAME packaged_startup_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario installed)
+    set_tests_properties(packaged_startup_installed PROPERTIES TIMEOUT 120)
+endif()

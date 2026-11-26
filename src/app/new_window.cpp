@@ -68,16 +68,22 @@ bool EditorFrame::Restart() {
 
 OpenResult EditorFrame::OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                             std::optional<SyntaxLanguage> language, bool readOnly,
-                                            Scintilla::Position line, Scintilla::Position column) {
+                                            Scintilla::Position line, Scintilla::Position column,
+                                            DocumentLoad::SourceDecoding source) {
     // Original Unicode/ANSI switches apply after automatic loading. Legacy -e
     // selects source decoding, including the native OEM encoding identity.
+    const bool explicitSource = !std::holds_alternative<std::monostate>(source);
     const bool selectAfterLoad =
-        encoding && !encoding->systemOem &&
-        (encoding->systemDefault || encoding->encoding == FileEncoding::Utf8 ||
-         encoding->encoding == FileEncoding::Utf16Le || encoding->encoding == FileEncoding::Utf16Be);
-    const DocumentLoad::SourceDecoding decoding =
-        !selectAfterLoad && encoding ? DocumentLoad::SourceDecoding(*encoding) : DocumentLoad::SourceDecoding{};
-    const auto result = LoadFile(DocumentLoad::Open{path, decoding});
+        encoding && (explicitSource ||
+                     (!encoding->systemOem &&
+                      (encoding->systemDefault || encoding->encoding == FileEncoding::Utf8 ||
+                       encoding->encoding == FileEncoding::Utf16Le || encoding->encoding == FileEncoding::Utf16Be)));
+    const DocumentLoad::SourceDecoding decoding = explicitSource ? std::move(source)
+                                                  : !selectAfterLoad && encoding
+                                                      ? DocumentLoad::SourceDecoding(*encoding)
+                                                      : DocumentLoad::SourceDecoding{};
+    const auto result =
+        path.empty() ? OpenResult{OpenStatus::Opened, {}} : LoadFile(DocumentLoad::Open{path, decoding});
     if (result.status != OpenStatus::Opened) return result;
     if (selectAfterLoad) document_.SelectEncoding(*encoding);
     if (language) ChooseLanguage(*language);

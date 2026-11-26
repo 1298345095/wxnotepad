@@ -443,6 +443,13 @@ std::optional<EncodingChoice> NativeOemEncodingChoice() {
     return EncodingChoice(*choice.encoding, false, false, true);
 }
 
+DetectedEncoding MatchSourceEncoding(std::string_view name) {
+    const int index = MatchEncoding(name);
+    if (index == CPI_NONE) return {};
+    const auto native = NativeCodePage();
+    return Choice(index, native, OemCodePage(native), index == CPI_DEFAULT);
+}
+
 int NormalizeEncodingSetting(int value) {
     return PersistedEncodingSetting(DefaultEncoding(value));
 }

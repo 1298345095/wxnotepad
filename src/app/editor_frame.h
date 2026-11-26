@@ -67,7 +67,7 @@ public:
     bool OpenDocumentWith();
     OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                    std::optional<SyntaxLanguage> language, bool readOnly, Scintilla::Position line,
-                                   Scintilla::Position column);
+                                   Scintilla::Position column, DocumentLoad::SourceDecoding source = {});
 
 private:
     EditorControl* editor_;

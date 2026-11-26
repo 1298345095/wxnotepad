@@ -234,6 +234,13 @@ void ProcessObserver::Publish() {
     contents += wxString::Format("selection_start\t%lld\nselection_end\t%lld\n",
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionStart)),
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionEnd)));
+    contents += wxString::Format(
+        "first_visible_line\t%lld\ncaret_visible_line\t%lld\nlines_on_screen\t%lld\nx_offset\t%lld\n",
+        static_cast<long long>(frame_->Editor()->Send(GetFirstVisibleLine)),
+        static_cast<long long>(frame_->Editor()->Send(
+            VisibleFromDocLine, frame_->Editor()->Send(LineFromPosition, frame_->Editor()->Send(GetCurrentPos)))),
+        static_cast<long long>(frame_->Editor()->Send(LinesOnScreen)),
+        static_cast<long long>(frame_->Editor()->Send(GetXOffset)));
     contents += wxString::Format("can_undo\t%d\ncan_redo\t%d\n", frame_->Editor()->Send(CanUndo) != 0,
                                  frame_->Editor()->Send(CanRedo) != 0);
     contents += "fold_headers\t" + ObserveFoldHeaders(*frame_->Editor()) + "\n";

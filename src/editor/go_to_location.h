@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/string.h>
+#include <cstdint>
 
 class EditorControl;
 
@@ -11,3 +12,11 @@ GoToResult GoToLocation(EditorControl& editor, const wxString& line, const wxStr
 
 // Accepts a 1-based logical line, with the original empty-column default.
 bool GoToLogicalLine(EditorControl& editor, const wxString& input);
+
+struct InitialLocation {
+    intptr_t line;
+    intptr_t column;
+    unsigned columnType;
+};
+// Original command-line EditJumpTo permits zero lines and end-of-file jumps.
+void GoToInitialLocation(EditorControl& editor, InitialLocation location);

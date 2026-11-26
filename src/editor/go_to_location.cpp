@@ -54,3 +54,21 @@ GoToResult GoToLocation(EditorControl& editor, const wxString& line, const wxStr
 bool GoToLogicalLine(EditorControl& editor, const wxString& input) {
     return GoToLocation(editor, input, {}) == GoToResult::Moved;
 }
+
+void GoToInitialLocation(EditorControl& editor, InitialLocation location) {
+    using Scintilla::Message;
+    intptr_t position;
+    if (location.line < 0 || location.line > editor.Send(Message::GetLineCount)) {
+        position = editor.Send(Message::GetLength);
+    } else {
+        if (location.column < 0) {
+            location.columnType = std::to_underlying(Scintilla::ColumnType::Character);
+            location.column = -(location.column + 1);
+        } else {
+            --location.column;
+        }
+        const Scintilla::CharacterRangeFull range{location.line ? location.line - 1 : 0, location.column};
+        position = editor.Send(Message::FindColumnEx, location.columnType, reinterpret_cast<intptr_t>(&range));
+    }
+    editor.JumpToInitialPosition(position);
+}

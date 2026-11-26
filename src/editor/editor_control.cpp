@@ -403,6 +403,13 @@ void EditorControl::JumpToPosition(intptr_t position) {
     Send(Message::ChooseCaretX);
 }
 
+void EditorControl::JumpToInitialPosition(intptr_t position) {
+    JumpToPosition(position);
+    // Native startup configuration can still shrink the viewport before its
+    // first paint. Keep the requested caret visible through those size events.
+    initialPositionPending_ = true;
+}
+
 void EditorControl::SetAutoShrinkScrollWidth(bool enabled) {
     autoShrinkScrollWidth_ = enabled;
     core_->RequestScrollWidthUpdate();
@@ -724,6 +731,7 @@ void EditorControl::OnKeyDown(wxKeyEvent& event) {
 void EditorControl::OnPaint(wxPaintEvent&) {
     wxPaintDC dc(this);
     core_->Draw(dc);
+    initialPositionPending_ = false;
 }
 
 void EditorControl::OnIdle(wxIdleEvent& event) {
@@ -732,6 +740,7 @@ void EditorControl::OnIdle(wxIdleEvent& event) {
 
 void EditorControl::OnSize(wxSizeEvent& event) {
     core_->Resize();
+    if (initialPositionPending_) core_->WndProc(Message::ScrollCaret, 0, 0);
     Refresh(false);
     event.Skip();
 }
