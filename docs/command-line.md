@@ -37,5 +37,20 @@ No keeps an empty document, and Cancel exits. A read failure reports an error an
 keeps an empty document; it does not rewrite the target. Only one file is opened
 per invocation.
 
+The `e`, `s`, `g` and `G` options require a following parameter. A missing
+parameter shows a localized error and exits unsuccessfully without opening or
+creating a file. This fixes the original parser's defect of interpreting a
+missing-parameter option as a pathname. The original adjacent rule is retained:
+a nonnumeric `g` or `G` operand makes the remaining command line a single
+pathname, including the option prefix. Numeric prefixes still use the original
+position parser.
+
+`e ANSI` selects the native source interpretation. ASCII input adopts the
+explicit system codec; other bytes retain native ANSI identity on a legacy
+native code page. On a UTF-8 native Windows system, the original legacy ANSI
+recode rule applies. Native bytes that cannot be recoded remain available for
+an unchanged save. This source option is separate from internal restoration of
+the current document format.
+
 The named `--startup-*`, `--window-position`, `--read-only` and `--observe`
 arguments remain reserved for application relaunch and acceptance observation.
