@@ -20,10 +20,21 @@ constexpr int Iterations = 64;
 constexpr int BitmapWidth = 640;
 constexpr int BitmapHeight = 120;
 constexpr std::array PointSizes{8, 12, 22};
-constexpr std::array Utf8Samples{std::string_view("Wim 0123456789"), std::string_view("A中😀Z"),
-                                 std::string_view("Café"),           std::string_view("👩‍💻"),
-                                 std::string_view("AΩ中😀א"),        std::string_view("office ffi"),
-                                 std::string_view("a\tb"),           std::string_view("a\0b", 3)};
+constexpr std::array Utf8Samples{std::string_view("Wim 0123456789"),
+                                 std::string_view("A中😀Z"),
+                                 std::string_view("Café"),
+                                 std::string_view("👩‍💻"),
+                                 std::string_view("AΩ中😀א"),
+                                 std::string_view("office ffi"),
+                                 std::string_view("a\tb"),
+                                 std::string_view("a\0b", 3),
+                                 std::string_view("אבג"),
+                                 std::string_view("AאבגZ"),
+                                 std::string_view("שָׁלוֹם"),
+                                 std::string_view("السَّلَامُ"),
+                                 std::string_view("éa"),
+                                 std::string_view("👩‍💻Z"),
+                                 std::string_view("office fi fl ffi ffl AV To")};
 constexpr std::array Latin1Samples{std::string_view("Wim 0123456789"), std::string_view("A\x{c0}\x{e9}\x{ff}Z"),
                                    std::string_view("a\tb"), std::string_view("a\0b", 3)};
 
@@ -90,7 +101,15 @@ void NativeReference(wxDC& dc, std::string_view text, bool utf8, size_t sample, 
     Require(actual.width == expectedWidth, "text width must match the native drawing DC");
     // These independent scalar cases have known byte-to-native-unit offsets.
     // Complex shaping retains the pre-change serial numeric oracle instead.
+#ifdef __WXGTK__
+    // The GTK ASCII iterator path also retains native ligature/kerning extents.
+    const bool combiningReference = utf8 && text == "שָׁלוֹם";
+    if (utf8 && sample > 1 && !combiningReference &&
+        std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; }))
+        return;
+#else
     if (utf8 && sample > 1) return;
+#endif
     wxArrayInt extents;
     dc.GetPartialTextExtents(characters, extents);
     if (utf8 && sample == 1) {
@@ -100,6 +119,17 @@ void NativeReference(wxDC& dc, std::string_view text, bool utf8, size_t sample, 
         for (size_t byte = 0; byte < offsets.size(); ++byte)
             Require(offsets[byte] < extents.size() && actual.positions[byte] == extents[offsets[byte]],
                     "UTF-8 byte positions must match native scalar extents");
+#ifdef __WXGTK__
+    } else if (combiningReference) {
+        // Four known cursor clusters: shin with two marks, lamed, vav with
+        // holam, final mem. Compare their UTF-8 bytes with wxCairo's compact
+        // native cursor extents, including the RTL/italic cluster boundary.
+        constexpr std::array<size_t, 14> offsets{0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3};
+        Require(actual.positions.size() == offsets.size(), "the combining fixture has known UTF-8 byte offsets");
+        for (size_t byte = 0; byte < offsets.size(); ++byte)
+            Require(offsets[byte] < extents.size() && actual.positions[byte] == extents[offsets[byte]],
+                    "combining UTF-8 byte positions must match native cursor extents");
+#endif
     } else {
         Require(actual.positions.size() == extents.size(), "single-byte native extents cover every input byte");
         for (size_t byte = 0; byte < text.size(); ++byte)
@@ -123,22 +153,19 @@ void PrintMeasurement(const SurfaceCase& test, size_t font, size_t sample, const
     std::putchar('\n');
 }
 
-void BuildFontReference(wxFrame& frame, core::Surface& surface, SurfaceCase& test, int size, int style,
-                        bool serialOnly) {
+void BuildFontReference(wxFrame& frame, core::Surface& surface, SurfaceCase& test, int size, int style, bool serialOnly,
+                        const char* family = core::Platform::DefaultFont()) {
     const bool bold = style == 1;
     const bool italic = style == 2;
     const auto weight = bold ? Scintilla::FontWeight::Bold : Scintilla::FontWeight::Normal;
-    test.fonts.push_back({core::Font::Allocate(core::FontParameters(core::Platform::DefaultFont(), size, weight,
-                                                                    Scintilla::FontStretch::Normal, italic)),
-                          {}});
+    test.fonts.push_back(
+        {core::Font::Allocate(core::FontParameters(family, size, weight, Scintilla::FontStretch::Normal, italic)), {}});
     auto& font = test.fonts.back();
     // Each font's independent reference DC is used only on the GUI thread.
     wxBitmap referenceBitmap;
     auto reference = DrawingContext(frame, test.context, referenceBitmap);
-    reference->SetFont(wxFont(wxFontInfo(size)
-                                  .FaceName(core::Platform::DefaultFont())
-                                  .Weight(bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL)
-                                  .Italic(italic)));
+    reference->SetFont(wxFont(
+        wxFontInfo(size).FaceName(family).Weight(bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL).Italic(italic)));
     for (size_t sample = 0; sample < test.samples.size(); ++sample) {
         const auto measured = Measure(surface, *font.font, test.samples[sample], false);
         NativeReference(*reference, test.samples[sample], test.utf8, sample, measured);
@@ -178,6 +205,9 @@ void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
     for (const auto size : PointSizes)
         for (int style = 0; style < 3; ++style)
             BuildFontReference(frame, *surface, test, size, style, serialOnly);
+#ifdef __WXGTK__
+    BuildFontReference(frame, *surface, test, 12, 0, serialOnly, "sans-serif");
+#endif
     if (!serialOnly) CheckWorkers(*surface, test);
 }
 
