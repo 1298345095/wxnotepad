@@ -99,7 +99,7 @@ msgid "&Add ->"
 msgstr ""
 
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&All Levels\tShift+Alt+A"
 msgstr ""
 
@@ -139,11 +139,11 @@ msgstr ""
 msgid "&Base64"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Bookmark Margin\tCtrl+Shift+M"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Bookmark Matched Line"
 msgstr ""
 
@@ -174,7 +174,7 @@ msgstr ""
 msgid "&Center."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Clear All\tAlt+F2"
 msgstr ""
 
@@ -202,16 +202,16 @@ msgstr ""
 msgid "&Copy"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Copy\tCtrl+C"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Copy Line\tCtrl+Shift+C"
 msgstr ""
 
 #. TRANSLATORS: Toggle the fold block surrounding the caret (IDM_VIEW_FOLD_CURRENT_BLOCK).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Current Block\tAlt+C"
 msgstr ""
 
@@ -237,7 +237,7 @@ msgid "&Default Encoding\tCtrl+Alt+F"
 msgstr ""
 
 #. TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Default Levels\tShift+Alt+D"
 msgstr ""
 
@@ -254,11 +254,11 @@ msgid "&Default..."
 msgstr ""
 
 #. TRANSLATORS: IDR_POPUPMENU delete selection or the character at the caret.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_edit_commands.cpp
 msgid "&Delete"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&Direct2D"
 msgstr ""
 
@@ -274,11 +274,11 @@ msgstr ""
 msgid "&Don't show this message again."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Duplicate\tAlt+D"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Duplicate Line\tCtrl+D"
 msgstr ""
 
@@ -286,7 +286,7 @@ msgstr ""
 msgid "&Edit"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Enclose Selection"
 msgstr ""
 
@@ -294,7 +294,7 @@ msgstr ""
 msgid "&Encoding"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Encoding Identifier\tCtrl+F8"
 msgstr ""
 
@@ -310,11 +310,11 @@ msgstr ""
 msgid "&File"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&File Name"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&File Name Only"
 msgstr ""
 
@@ -322,7 +322,7 @@ msgstr ""
 msgid "&Find All"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Find...\tCtrl+F"
 msgstr ""
 
@@ -330,19 +330,19 @@ msgstr ""
 msgid "&Font..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Goto"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&HTML/XML Tag...\tAlt+X"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&Half Page"
 msgstr ""
 
@@ -354,7 +354,7 @@ msgstr ""
 msgid "&Import..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Indent"
 msgstr ""
 
@@ -363,7 +363,7 @@ msgstr ""
 msgid "&JavaScript"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Join Lines\tCtrl+J"
 msgstr ""
 
@@ -383,7 +383,7 @@ msgstr ""
 msgid "&Left."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&Legacy GDI"
 msgstr ""
 
@@ -396,15 +396,15 @@ msgstr ""
 msgid "&Line (empty or 1 - %lld):"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Lines"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Long Line Marker\tCtrl+Shift+L"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Lower Case\tCtrl+U"
 msgstr ""
 
@@ -417,15 +417,15 @@ msgstr ""
 msgid "&Merge duplicate lines."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Millisecond (ms)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&Minimize wxnotepad"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Modify Lines...\tAlt+M"
 msgstr ""
 
@@ -437,7 +437,7 @@ msgstr ""
 msgid "&More...\tF9"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Nanosecond (ns)"
 msgstr ""
 
@@ -445,19 +445,21 @@ msgstr ""
 msgid "&New\tCtrl+N"
 msgstr ""
 
-#: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_commands.cpp
+#: src/app/dialogs/document_dialogs.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&No"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&No Blink"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&No Highlight"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&None"
 msgstr ""
 
@@ -465,20 +467,20 @@ msgstr ""
 msgid "&None."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Normal"
 msgstr ""
 
 #. TRANSLATORS: Disable hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_OFF).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Off"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Old Visual Studio"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&One Page"
 msgstr ""
 
@@ -499,11 +501,11 @@ msgstr ""
 msgid "&Opening tag (with attributes):"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Other Timestamps"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Pad With Spaces\tAlt+P"
 msgstr ""
 
@@ -512,7 +514,7 @@ msgstr ""
 msgid "&Paste"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Paste\tCtrl+V"
 msgstr ""
 
@@ -538,7 +540,7 @@ msgstr ""
 msgid "&Redo"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr ""
 
@@ -563,7 +565,7 @@ msgstr ""
 msgid "&Reset"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Reset Zoom\tCtrl+\\"
 msgstr ""
 
@@ -610,19 +612,19 @@ msgstr ""
 msgid "&Search"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Select All\tAlt+F6"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Selection"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Sentence Case\tCtrl+Alt+O"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Show Hex Code"
 msgstr ""
 
@@ -634,7 +636,7 @@ msgstr ""
 msgid "&Skip empty lines."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Split Lines\tCtrl+I"
 msgstr ""
 
@@ -646,11 +648,11 @@ msgstr ""
 msgid "&Syntax Scheme...\tF12"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&Tab Settings..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "&Text Excerpt"
 msgstr ""
 
@@ -659,12 +661,12 @@ msgstr ""
 msgid "&Text File"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Toggle\tCtrl+F2"
 msgstr ""
 
 #. TRANSLATORS: View submenu for expanding or collapsing code folds (IDM_VIEW_FOLD_*).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Toggle Folds"
 msgstr ""
 
@@ -672,7 +674,7 @@ msgstr ""
 msgid "&Tools"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&UTC Date Time"
 msgstr ""
 
@@ -681,15 +683,15 @@ msgstr ""
 msgid "&Undo"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Unescape C Chars\tCtrl+Alt+R"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Unindent"
 msgstr ""
 
@@ -697,7 +699,7 @@ msgstr ""
 msgid "&Unix/macOS (LF)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Upper Case\tCtrl+Shift+U"
 msgstr ""
 
@@ -705,7 +707,7 @@ msgstr ""
 msgid "&View"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&Visual Studio"
 msgstr ""
 
@@ -722,11 +724,11 @@ msgstr ""
 msgid "&Windows (CR+LF)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "&With...\tAlt+Q"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr ""
 
@@ -743,7 +745,7 @@ msgstr ""
 msgid "&Yes"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "&Zoom"
 msgstr ""
 
@@ -751,11 +753,11 @@ msgstr ""
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "1/&4 Page"
 msgstr ""
 
@@ -763,7 +765,7 @@ msgstr ""
 msgid "<- &Remove"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "A&dvanced Settings"
 msgstr ""
 
@@ -808,7 +810,7 @@ msgstr ""
 msgid "Alias"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Alig&n Lines...\tAlt+J"
 msgstr ""
 
@@ -840,7 +842,7 @@ msgstr ""
 msgid "Annotation"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Appea&rance"
 msgstr ""
 
@@ -879,15 +881,15 @@ msgstr ""
 msgid "Attribute"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Auto &Completion Settings..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Auto &Indent"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Auto Completion I&gnore Case"
 msgstr ""
 
@@ -903,7 +905,7 @@ msgstr ""
 msgid "Auto close HTML and XML tags"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr ""
 
@@ -917,7 +919,7 @@ msgid "AutoSave Settings"
 msgstr ""
 
 #. TRANSLATORS: IDD_AUTOSAVE settings menu command; configure periodic backup copies.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "AutoSave Settings..."
 msgstr ""
 
@@ -929,7 +931,7 @@ msgstr ""
 msgid "Automatically insert"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Background &Color\tCtrl+Shift+I"
 msgstr ""
 
@@ -977,11 +979,11 @@ msgstr ""
 msgid "Black on white"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Block (&INS Mode)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Block (&OVR Mode)"
 msgstr ""
 
@@ -993,7 +995,7 @@ msgstr ""
 msgid "Boo&kmark matched line"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Boo&kmarks"
 msgstr ""
 
@@ -1048,11 +1050,11 @@ msgstr ""
 msgid "C# Source"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "C&aret Style"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "C&haracter to Hex\tCtrl+Alt+X"
 msgstr ""
 
@@ -1119,7 +1121,7 @@ msgstr ""
 msgid "Ch %s / %s"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Change &History Marker"
 msgstr ""
 
@@ -1149,7 +1151,7 @@ msgstr ""
 msgid "Character"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Character Info"
 msgstr ""
 
@@ -1157,7 +1159,7 @@ msgstr ""
 msgid "Chinese"
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Choose a file as the save destination."
 msgstr ""
 
@@ -1190,7 +1192,7 @@ msgstr ""
 msgid "Classic Mac OS (CR)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Clear Clip&board"
 msgstr ""
 
@@ -1243,7 +1245,7 @@ msgstr ""
 msgid "Column"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Column &Wrap..."
 msgstr ""
 
@@ -1263,7 +1265,7 @@ msgstr ""
 msgid "Comments"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Complete &Word\tAlt+/"
 msgstr ""
 
@@ -1275,11 +1277,11 @@ msgstr ""
 msgid "Complete words inside"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Compress &Whitespace\tAlt+W"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Con&vert"
 msgstr ""
 
@@ -1303,28 +1305,28 @@ msgstr ""
 msgid "Control Character"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Cop&y to Clipboard"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Copy &All\tAlt+A"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Copy A&dd\tCtrl+E"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Copy Paste Buffer As Find Text"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Copy Selection As Find Text"
 msgstr ""
 
 #. TRANSLATORS: Copies styled text to the clipboard in Rich Text Format (IDM_EDIT_COPYRTF).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Copy as &RTF"
 msgstr ""
 
@@ -1334,7 +1336,7 @@ msgid "Could not access %s"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 #, c-format
 msgid "Could not change file attributes: %s"
 msgstr ""
@@ -1351,16 +1353,16 @@ msgid "Could not change read-only protection for %s. %s"
 msgstr ""
 
 #. TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 #, c-format
 msgid "Could not change the file owner's write permission: %s"
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Could not close the completed temporary file."
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr ""
 
@@ -1411,7 +1413,7 @@ msgstr ""
 msgid "Could not open the containing folder."
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Could not open the destination for writing."
 msgstr ""
 
@@ -1435,13 +1437,13 @@ msgid "Could not print \"%s\"."
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 #, c-format
 msgid "Could not read file attributes: %s"
 msgstr ""
 
 #. TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 #, c-format
 msgid "Could not read file permissions: %s"
 msgstr ""
@@ -1459,7 +1461,7 @@ msgstr ""
 msgid "Could not reload file"
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 #, c-format
 msgid "Could not replace the destination: %s"
 msgstr ""
@@ -1479,7 +1481,8 @@ msgstr ""
 msgid "Could not save file"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/language_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
+#: src/app/language_commands.cpp
 msgid "Could not save settings"
 msgstr ""
 
@@ -1487,12 +1490,13 @@ msgstr ""
 msgid "Could not start another wxnotepad process."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp src/app/language_commands.cpp
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
+#: src/app/language_commands.cpp
 #, c-format
 msgid "Could not write %s"
 msgstr ""
 
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr ""
 
@@ -1501,24 +1505,24 @@ msgstr ""
 msgid "Cu&t"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Cu&t Line\tCtrl+Shift+X"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Current &Date"
 msgstr ""
 
 #. TRANSLATORS: Toggle all blocks at the caret's fold depth (IDM_VIEW_FOLD_CURRENT_LEVEL).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Current &Level"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Current Date &Time"
 msgstr ""
 
@@ -1559,7 +1563,7 @@ msgstr ""
 msgid "Customize Toolbar"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "D&elete Line\tCtrl+Shift+D"
 msgstr ""
 
@@ -1587,11 +1591,11 @@ msgstr ""
 msgid "Default"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Default &Code Font...\tAlt+F12"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Default &Text Font..."
 msgstr ""
 
@@ -1688,7 +1692,7 @@ msgstr ""
 msgid "Double quotes"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Draw Block Caret in &Selection"
 msgstr ""
 
@@ -1697,7 +1701,7 @@ msgstr ""
 msgid "E&xit\tAlt+F4"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "E&xit wxnotepad"
 msgstr ""
 
@@ -1713,7 +1717,7 @@ msgstr ""
 msgid "Emphasis"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Enable &Multiple Selection"
 msgstr ""
 
@@ -1754,11 +1758,11 @@ msgstr ""
 msgid "Enumeration"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Esca&pe C Chars\tCtrl+Alt+E"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
 msgstr ""
 
@@ -1779,7 +1783,7 @@ msgstr ""
 msgid "Export Schemes"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Extra Esc &Key Function"
 msgstr ""
 
@@ -1800,7 +1804,7 @@ msgstr ""
 msgid "File"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "File &Change Notification...\tAlt+F5"
 msgstr ""
 
@@ -1812,15 +1816,15 @@ msgstr ""
 msgid "File Change Notification"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "File Name and &Directory"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "File Name and &Ext.\tShift+F9"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr ""
 
@@ -1851,7 +1855,7 @@ msgstr ""
 msgid "Find &Next"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Find &Next\tF3"
 msgstr ""
 
@@ -1859,7 +1863,7 @@ msgstr ""
 msgid "Find &Previous"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Find &Previous\tShift+F3"
 msgstr ""
 
@@ -1867,7 +1871,7 @@ msgstr ""
 msgid "Find &what:"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Find Matching &Brace\tCtrl+B"
 msgstr ""
 
@@ -1914,20 +1918,20 @@ msgstr ""
 msgid "Formatted String"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Full &Path Name"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr ""
 
 #. TRANSLATORS: Appearance submenu for full screen preferences (IDM_VIEW_FULLSCREEN_*).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Full Scree&n Mode"
 msgstr ""
 
@@ -1968,43 +1972,43 @@ msgstr ""
 msgid "Go To Line"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto &Next\tF2"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto &Next Block\tAlt+."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto &Previous\tShift+F2"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto &Previous Block\tAlt+,"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto &Selection Start\tCtrl+Shift+,"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto Blo&ck Start\tAlt+["
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto Bloc&k End\tAlt+]"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto N&ext Sibling Block\tCtrl+Alt+."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto P&revious Sibling Block\tCtrl+Alt+,"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Goto Selec&tion End\tCtrl+Shift+."
 msgstr ""
 
@@ -2110,24 +2114,24 @@ msgstr ""
 msgid "Hex String"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr ""
 
 #. TRANSLATORS: Hide the title bar in full screen (IDM_VIEW_FULLSCREEN_HIDE_TITLE).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Hide &Title"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Highlight &Subline"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Highlight C&urrent Line"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Highlight Current &Block"
 msgstr ""
 
@@ -2143,7 +2147,7 @@ msgstr ""
 msgid "HotString"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "I&nsert"
 msgstr ""
 
@@ -2179,7 +2183,7 @@ msgstr ""
 msgid "In line number margin"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "In&vert Case\tCtrl+Alt+U"
 msgstr ""
 
@@ -2187,7 +2191,7 @@ msgstr ""
 msgid "Inconsistent Line Endings"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Indentation &Guides\tCtrl+Shift+G"
 msgstr ""
 
@@ -2224,7 +2228,7 @@ msgstr ""
 msgid "Insert HTML/XML Tag"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Insert Tabs as &Spaces"
 msgstr ""
 
@@ -2274,7 +2278,7 @@ msgstr ""
 msgid "JavaScript"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Join &Paragraphs\tCtrl+Shift+J"
 msgstr ""
 
@@ -2350,13 +2354,13 @@ msgid "Less Style Sheet"
 msgstr ""
 
 #. TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 #, c-format
 msgid "Level &%d\tAlt+%d"
 msgstr ""
 
 #. TRANSLATORS: The tenth fold depth, with 0 as the menu mnemonic (IDM_VIEW_FOLD_LEVEL10).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Level 1&0"
 msgstr ""
 
@@ -2372,7 +2376,7 @@ msgstr ""
 msgid "Line"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Line &Numbers\tCtrl+Shift+N"
 msgstr ""
 
@@ -2396,19 +2400,19 @@ msgstr ""
 msgid "Line Removal"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Line Selection &Mode"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Line Width &1"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Line Width &2"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Line Width &3"
 msgstr ""
 
@@ -2443,7 +2447,7 @@ msgstr ""
 msgid "Long Line Marker"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Long Line Settings..."
 msgstr ""
 
@@ -2495,7 +2499,7 @@ msgstr ""
 msgid "Margins (millimeters)"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Mark &Occurrences"
 msgstr ""
 
@@ -2513,11 +2517,11 @@ msgstr ""
 msgid "Markdown"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Match &Case"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Match &Whole Word Only"
 msgstr ""
 
@@ -2545,11 +2549,11 @@ msgstr ""
 msgid "Maximum recent files"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Merge Blank Lines\tAlt+B"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Merge Duplicate Lines"
 msgstr ""
 
@@ -2569,7 +2573,7 @@ msgstr ""
 msgid "Method Definition"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Micro&second (us)"
 msgstr ""
 
@@ -2589,7 +2593,7 @@ msgstr ""
 msgid "Move &Down"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Move &Down\tAlt+Down"
 msgstr ""
 
@@ -2597,7 +2601,7 @@ msgstr ""
 msgid "Move &Up"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Move &Up\tAlt+Up"
 msgstr ""
 
@@ -2617,7 +2621,7 @@ msgstr ""
 msgid "Near text"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "New &GUID"
 msgstr ""
 
@@ -2670,12 +2674,12 @@ msgid "OEM United States (DOS-437)"
 msgstr ""
 
 #. TRANSLATORS: Enter full screen when starting the editor (IDM_VIEW_FULLSCREEN_ON_START).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "On &Startup"
 msgstr ""
 
 #. TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Only the file owner can change the owner's write permission."
 msgstr ""
 
@@ -2759,11 +2763,11 @@ msgstr ""
 msgid "Ordered List"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Other Sett&ings"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Outline &Frame\tCtrl+Shift+F"
 msgstr ""
 
@@ -2936,7 +2940,7 @@ msgstr ""
 msgid "Python Script"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr ""
 
@@ -3025,11 +3029,11 @@ msgstr ""
 msgid "Reload With Encoding"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Remember &Recent Files"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Remember &Search Options"
 msgstr ""
 
@@ -3037,11 +3041,11 @@ msgstr ""
 msgid "Remove &unique lines."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Remove Blank Lines\tAlt+R"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Remove Duplicate Lines"
 msgstr ""
 
@@ -3049,12 +3053,12 @@ msgstr ""
 msgid "Remove recent file?"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Ren&dering Technology"
 msgstr ""
 
 #. TRANSLATORS: Replace the next match with the initialized replacement (IDM_EDIT_REPLACENEXT).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Repl&ace Next\tF4"
 msgstr ""
 
@@ -3118,11 +3122,11 @@ msgstr ""
 msgid "Rust Source"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "S&ort Lines...\tAlt+O"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "S&wap\tCtrl+K"
 msgstr ""
 
@@ -3149,7 +3153,7 @@ msgid "SVG"
 msgstr ""
 
 #. TRANSLATORS: Store the selection as the next search term (IDM_EDIT_SAVEFIND).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Sa&ve Find Text\tAlt+F3"
 msgstr ""
 
@@ -3174,11 +3178,11 @@ msgstr ""
 msgid "Save Copy"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Save Settings &Now"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Save Settings On E&xit"
 msgstr ""
 
@@ -3229,7 +3233,7 @@ msgid "Save file"
 msgstr ""
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "Save the document before changing file permissions."
 msgstr ""
 
@@ -3265,11 +3269,11 @@ msgstr ""
 msgid "Scheme styles"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Script She&bang Line"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Scroll Past &Last Line"
 msgstr ""
 
@@ -3311,15 +3315,15 @@ msgstr ""
 msgid "Select &All"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select &All\tCtrl+A"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select &Lines (Expand Selection)\tCtrl+Shift+Space"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select &Word\tCtrl+Alt+Space"
 msgstr ""
 
@@ -3331,7 +3335,7 @@ msgstr ""
 msgid "Select Encoding"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr ""
 
@@ -3346,7 +3350,7 @@ msgid ""
 "Preview applies the settings to the document. Cancel restores the original styles."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Select and &Edit Options"
 msgstr ""
 
@@ -3358,23 +3362,23 @@ msgstr ""
 msgid "Select source &encoding to reload file:"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select to Document En&d"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select to Document Star&t"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select to Matching B&race\tCtrl+Shift+B"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select to Ne&xt\tCtrl+Alt+F2"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr ""
 
@@ -3398,7 +3402,7 @@ msgstr ""
 msgid "Sett&ings"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Settings saved"
 msgstr ""
 
@@ -3412,15 +3416,15 @@ msgstr ""
 msgid "Shell Script"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Show &Menu\tAlt+F11"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Show &Toolbar\tCtrl+F11"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
 msgstr ""
 
@@ -3429,27 +3433,27 @@ msgid "Show &edge line."
 msgstr ""
 
 #. TRANSLATORS: View submenu for hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_*).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Show CallTip"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Show Character &Info"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Show Code &Folding\tCtrl+Shift+Alt+F"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Show Stat&usbar\tShift+F11"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Show Wrap S&ymbols\tCtrl+Shift+0"
 msgstr ""
 
@@ -3513,7 +3517,7 @@ msgstr ""
 msgid "Space after comment"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Spec&ial"
 msgstr ""
 
@@ -3541,19 +3545,19 @@ msgstr ""
 msgid "Strings"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Strip &First Character\tAlt+Z"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Strip &Last Character\tAlt+L"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Strip &Trailing Blanks\tAlt+T"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Strip Leading Blan&ks"
 msgstr ""
 
@@ -3609,11 +3613,11 @@ msgstr ""
 msgid "System Language"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "T&oggle Line Comment\tCtrl+/"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "T&ranspose\tAlt+S"
 msgstr ""
 
@@ -3646,11 +3650,11 @@ msgstr ""
 msgid "Tab Width (1–256):"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Tabify Indent\tCtrl+Alt+T"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Tabify Selection\tCtrl+Shift+T"
 msgstr ""
 
@@ -3768,7 +3772,7 @@ msgstr ""
 
 #. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
 #. TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
-#: src/document/document_session.cpp
+#: src/document/document_file.cpp
 msgid "This command changes a file, not a directory."
 msgstr ""
 
@@ -3781,41 +3785,42 @@ msgstr ""
 msgid "This operation can't be perfomed within a rectangular selection."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "This operation can't be performed (lines too long)."
 msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
 #: src/app/dialogs/insert_tag_dialog.cpp
 #: src/app/dialogs/modify_lines_dialog.cpp src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "This operation can't be performed within a rectangular selection."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Time/Date (&Long Form)\tCtrl+Shift+F5"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Time/Date (&Short Form)\tCtrl+F5"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Title &Case\tCtrl+Alt+I"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "To &Binary\tCtrl+Alt+B"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "To &Decimal\tCtrl+Alt+D"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "To &Hexadecimal\tCtrl+Alt+H"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "To &Octet"
 msgstr ""
 
@@ -3824,17 +3829,17 @@ msgstr ""
 msgid "Toggle &Fold"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr ""
 
 #. TRANSLATORS: Toggle full screen; Esc exits it (IDM_VIEW_TOGGLE_FULLSCREEN).
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Toggle Full &Screen\tF11 [Esc]"
 msgstr ""
 
 #. TRANSLATORS: Linux menu displays Esc in the caption because only F11 is an accelerator.
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Toggle Full &Screen [Esc]\tF11"
 msgstr ""
 
@@ -3860,15 +3865,15 @@ msgstr ""
 msgid "Transform &backslashes"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Triple &Backticks\tCtrl+9"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Triple &Double Quotes\tCtrl+6"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Triple &Single Quotes\tCtrl+3"
 msgstr ""
 
@@ -3896,11 +3901,11 @@ msgstr ""
 msgid "TypeScript"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "URL &Decode\tCtrl+Shift+R"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "URL &Encode\tCtrl+Shift+E"
 msgstr ""
 
@@ -3908,7 +3913,7 @@ msgstr ""
 msgid "URL &Safe Encode"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "URL Component Encode"
 msgstr ""
 
@@ -3928,15 +3933,15 @@ msgstr ""
 msgid "UTF-8 with BOM"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Un&icode Control Character"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Undo Redo &Remember Selection"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Unescape HTML/&XML Chars\tAlt+Shift+H"
 msgstr ""
 
@@ -3944,7 +3949,7 @@ msgstr ""
 msgid "Unicode"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Unicode &Control Character"
 msgstr ""
 
@@ -3952,7 +3957,7 @@ msgstr ""
 msgid "Union"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Unix Timesta&mp"
 msgstr ""
 
@@ -3976,11 +3981,11 @@ msgstr ""
 msgid "Unordered List"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Untabify Indent\tCtrl+Alt+S"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_edit_commands.cpp
 msgid "Untabify Selection\tCtrl+Shift+S"
 msgstr ""
 
@@ -4048,7 +4053,7 @@ msgstr ""
 msgid "Visible rows"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Visual &Brace Matching\tCtrl+Shift+V"
 msgstr ""
 
@@ -4073,7 +4078,7 @@ msgstr ""
 msgid "Whole &word"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Window Title Displa&y"
 msgstr ""
 
@@ -4094,7 +4099,7 @@ msgstr ""
 msgid "Word Wrap Settings"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_settings_commands.cpp
 msgid "Word Wrap Settings..."
 msgstr ""
 
@@ -4211,27 +4216,27 @@ msgstr ""
 msgid "Zoom"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Zoom &Level..."
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_view_commands.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/dialogs/zoom_level_dialog.cpp
 msgid "Zoom Level"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/dialogs/zoom_level_dialog.cpp
 msgid "Zoom level"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#: src/app/dialogs/zoom_level_dialog.cpp
 #, c-format
 msgid "Zoom level (%d%% to %d%%):"
 msgstr ""

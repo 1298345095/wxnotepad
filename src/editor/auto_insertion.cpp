@@ -69,9 +69,9 @@ std::optional<AutoInsertCharacter> AutoInsertIndex(int ch) {
 }
 } // namespace
 
-void EditorControl::SetAutoInsertMask(int mask) {
+void TypingAssistance::SetAutoInsertMask(int mask) {
     autoInsertMask_ = mask;
-    Send(Scintilla::Message::SetAutoInsertMask, mask);
+    editor_.Send(Scintilla::Message::SetAutoInsertMask, mask);
 }
 
 bool EditorControl::IsOpenBraceMatched(intptr_t position, intptr_t startPosition) {
@@ -85,35 +85,35 @@ bool EditorControl::IsOpenBraceMatched(intptr_t position, intptr_t startPosition
 
 // Port of Notepad4 89b8b36 EditAutoCloseBraceQuote and EditIsOpenBraceMatched.
 // Called from the original core's character notification, after its insertion.
-void EditorControl::AutoInsertCharacter(int ch) {
+void TypingAssistance::InsertMatchingCharacter(int ch) {
     using Scintilla::Message;
     const auto character = AutoInsertIndex(ch);
     if (!character) return;
     const int index = *character;
     if (!(autoInsertMask_ & (1U << index))) return;
-    const auto position = Send(Message::GetCurrentPos);
-    const int previous = static_cast<int>(Send(Message::GetCharAt, position - 2));
-    const int next = static_cast<int>(Send(Message::GetCharAt, position));
-    const int previousStyle = static_cast<int>(Send(Message::GetStyleIndexAt, position - 2));
-    const int nextStyle = static_cast<int>(Send(Message::GetStyleIndexAt, position));
-    const auto& styles = completionStyles_;
+    const auto position = editor_.Send(Message::GetCurrentPos);
+    const int previous = static_cast<int>(editor_.Send(Message::GetCharAt, position - 2));
+    const int next = static_cast<int>(editor_.Send(Message::GetCharAt, position));
+    const int previousStyle = static_cast<int>(editor_.Send(Message::GetStyleIndexAt, position - 2));
+    const int nextStyle = static_cast<int>(editor_.Send(Message::GetStyleIndexAt, position));
+    const auto& styles = styles_;
     if (InCharacterLiteral(styles, previousStyle, nextStyle)) return;
-    if (ch != ',' && IsEscapedInsertion(*this, styles, position)) return;
+    if (ch != ',' && IsEscapedInsertion(editor_, styles, position)) return;
     // Original GenerateAutoInsertMask(): matching ASCII closing character offsets.
     ch += (169U >> (2 * index)) & 3;
     if (index == SquareBracket && styles.lexer == SCLEX_SMALI) return;
     if (index == AngleBracket && !CompletionStyleContains(styles.genericTypes, previousStyle)) return;
-    if (index == SingleQuote && !CanCloseSingleQuote(*this, styles, previous, previousStyle)) return;
+    if (index == SingleQuote && !CanCloseSingleQuote(editor_, styles, previous, previousStyle)) return;
     if (index == Backtick && (styles.lexer == SCLEX_VERILOG || styles.lexer == SCLEX_VHDL)) return;
     if (index == Comma) {
         ch = ' ';
         if (next == ' ' || next == '\t' || (previous == '\'' && next == '\'') || (previous == '"' && next == '"'))
             return;
     }
-    if (index < AngleBracket && IsOpenBraceMatched(position - 1, position)) return;
+    if (index < AngleBracket && editor_.IsOpenBraceMatched(position - 1, position)) return;
     const char insertion[] = {static_cast<char>(ch), '\0'};
-    Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(insertion));
+    editor_.Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(insertion));
     const auto caret = index == Comma ? position + 1 : position;
-    Send(Message::SetSel, caret, caret);
-    if (index < AngleBracket) Send(Message::Colourise, 0, position + 1);
+    editor_.Send(Message::SetSel, caret, caret);
+    if (index < AngleBracket) editor_.Send(Message::Colourise, 0, position + 1);
 }

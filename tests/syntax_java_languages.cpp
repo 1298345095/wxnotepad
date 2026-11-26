@@ -1,3 +1,4 @@
+#include "syntax/syntax_detection.h"
 #include "diagnostics/print.h"
 #include "syntax_language_test_helpers.h"
 #include <print>

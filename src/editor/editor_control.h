@@ -4,7 +4,7 @@
 #include "editor/align_lines.h"
 #include "editor/completion_styles.h"
 #include "editor/color_calltip_mode.h"
-#include "editor/word_completion.h"
+#include "editor/typing_assistance.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
 #include "editor/caret_appearance.h"
@@ -112,21 +112,19 @@ public:
     void RemoveDuplicateLines();
     void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
-    void SetCompletionSettings(const WordCompletionSettings& settings) { completionSettings_ = settings; }
-    const WordCompletionSettings& GetCompletionSettings() const { return completionSettings_; }
-    WordCompletionState& CompletionState() { return completionState_; }
+    void SetCompletionSettings(const WordCompletionSettings& settings) { typing_.SetCompletionSettings(settings); }
+    const WordCompletionSettings& GetCompletionSettings() const { return typing_.CompletionSettings(); }
+    WordCompletionState& CompletionState() { return typing_.CompletionState(); }
     void SetWordCompletionHandler(std::function<void(WordCompletionCondition)> handler) {
-        Send(Scintilla::Message::AutoCCancel);
-        completionState_ = {};
-        wordCompletionHandler_ = std::move(handler);
+        typing_.SetCompletionHandler(std::move(handler));
     }
-    void SetAutoInsertMask(int mask);
+    void SetAutoInsertMask(int mask) { typing_.SetAutoInsertMask(mask); }
     bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
     void SetFontSettings(const FontSettings& settings);
     const FontSettings& Fonts() const;
-    void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
-    bool AutoIndentEnabled() const { return autoIndent_; }
-    void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
+    void SetCompletionStyles(CompletionStyles styles) { typing_.SetStyles(std::move(styles)); }
+    bool AutoIndentEnabled() const { return typing_.AutoIndentEnabled(); }
+    void SetAutoIndent(bool enabled) { typing_.SetAutoIndent(enabled); }
     void Copy();
     // Original EditCopyAppend; false reports a nonempty rectangular selection.
     bool CopyAdd();
@@ -198,6 +196,8 @@ private:
     void ShowColorCallTip(intptr_t position);
     void QueueColorCallTipEdit();
     void EditColorCallTip(ColorCallTipRange range);
+    // Keep automatic-typing state alive until the notifying core has shut down.
+    TypingAssistance typing_{*this};
     std::unique_ptr<Core> core_;
     // Select the replacement using the main selection's original direction.
     void ReplaceRangeAndSelect(intptr_t start, intptr_t end, std::string_view replacement);
@@ -212,22 +212,12 @@ private:
     bool codeFoldingVisible_ = true;
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
-    WordCompletionSettings completionSettings_;
-    WordCompletionState completionState_;
-    std::function<void(WordCompletionCondition)> wordCompletionHandler_;
-    int autoInsertMask_ = AutoInsertMask_Default;
     std::shared_ptr<const FontSettings> fontSettings_;
-    CompletionStyles completionStyles_;
-    void AutoInsertCharacter(int ch);
-    // False retains the original failed-tag member-arrow completion path.
-    bool AutoCloseTag();
-    bool autoIndent_ = true;
     bool autoShrinkScrollWidth_ = false;
     Scintilla::Wrap wordWrapMode_ = Scintilla::Wrap::Auto;
     WrapContinuationIndent wordWrapIndent_ = WrapContinuationIndent::None;
     void ApplyWrapIndent();
     bool matchBraces_ = true;
-    void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
     CaretAppearance caretAppearance_;

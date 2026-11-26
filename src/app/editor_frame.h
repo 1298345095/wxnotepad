@@ -10,6 +10,7 @@
 #include "editor/indentation_settings.h"
 #include "editor/align_lines.h"
 #include "app/file_change_monitor.h"
+#include "app/word_wrap_state.h"
 #include "app/status_fields.h"
 
 class EditorControl;
@@ -85,6 +86,7 @@ private:
     OriginalSettings defaults_;
     wxPrintData printerData_;
     IndentationSettings indentation_;
+    WordWrapState wordWrap_;
     DocumentSession document_;
     FileWatchingOptions fileWatchingOptions_;
     FileChangeMonitor fileChangeMonitor_;
@@ -117,13 +119,7 @@ private:
     bool warnLineEndings_ = true;
     bool unicodeControlCharactersVisible_ = false;
     void ApplyUnicodeControlCharacter();
-    bool showWordWrapSymbols_ = false;
-    int wordWrapSymbols_ = 2;
-    // A loaded file's truncate-lines variable can override this global preference.
-    bool wordWrap_ = false;
-    void ToggleWordWrap();
     void ShowWordWrapSettings();
-    void ApplyWrapSymbols();
     void CreateMenus();
     void CreateDefaultToolbar();
     wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;

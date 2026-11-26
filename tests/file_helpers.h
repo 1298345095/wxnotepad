@@ -6,7 +6,7 @@
 #include <wx/filename.h>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
+#include <array>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -58,7 +58,16 @@ inline std::filesystem::path Utf8Path(std::string_view text) {
 inline std::string Bytes(const std::filesystem::path& path) {
     std::ifstream input(path, std::ios::binary);
     if (!input.is_open()) throw std::runtime_error("saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+    // Read blocks without an instrumented iterator step for every byte.
+    // Reading to EOF also preserves callers observing a growing child-process log.
+    std::array<char, 64 * 1024> buffer;
+    std::string bytes;
+    while (input) {
+        input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+        bytes.append(buffer.data(), static_cast<size_t>(input.gcount()));
+    }
+    if (input.bad() || !input.eof()) throw std::runtime_error("saved file must be read completely");
+    return bytes;
 }
 inline void WriteBytes(const std::filesystem::path& path, std::string_view bytes) {
     std::ofstream output(path, std::ios::binary);

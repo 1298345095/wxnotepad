@@ -31,11 +31,8 @@ private:
     FontSettings loadedFonts_;
     SyntaxExtensions loadedExtensions_;
     void WriteExtensions();
-    static void ReadCustomColours(const IniDocument& document, FontSettings& profile);
     FontSettings LoadStyleProfile(StyleTheme theme);
-    void WriteStyleProfile(IniDocument& document);
     bool SaveStyleProfile();
-    static wxString ReadStyle(const IniDocument& document, const char* key, const char* fallback, const char* section);
     int recentFileCapacity_ = OriginalSettingLimits::MinRecentFiles;
     wxString ReadDateTimeFormat(const wxString& key) const;
     std::vector<wxString> ReadRecentFiles() const;

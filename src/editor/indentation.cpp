@@ -66,21 +66,21 @@ void EditorControl::IndentLines(bool forwards) {
 // Adapted from Notepad4 EditAutoC.cpp::EditAutoIndent, pinned 89b8b36.
 // Copyright and license: licenses/Notepad4.txt. Delimiter/colon/comment rules
 // are scheme independent; Makefile also has the original keyword/fold path.
-void EditorControl::AutoIndent() {
+void TypingAssistance::IndentNewLine() {
     using Scintilla::Message;
-    const auto position = Send(Message::GetCurrentPos);
-    const auto line = Send(Message::LineFromPosition, position);
+    const auto position = editor_.Send(Message::GetCurrentPos);
+    const auto line = editor_.Send(Message::LineFromPosition, position);
     if (line <= 0) return;
-    const auto previousStart = Send(Message::PositionFromLine, line - 1);
-    const auto previousEnd = Send(Message::GetLineEndPosition, line - 1);
-    if (previousEnd == previousStart && (Send(Message::MarkerGet, line - 1) & EditorMarker::BookmarkMask)) {
-        Send(Message::MarkerDelete, line - 1, EditorMarker::Bookmark);
-        Send(Message::MarkerAdd, line, EditorMarker::Bookmark);
+    const auto previousStart = editor_.Send(Message::PositionFromLine, line - 1);
+    const auto previousEnd = editor_.Send(Message::GetLineEndPosition, line - 1);
+    if (previousEnd == previousStart && (editor_.Send(Message::MarkerGet, line - 1) & EditorMarker::BookmarkMask)) {
+        editor_.Send(Message::MarkerDelete, line - 1, EditorMarker::Bookmark);
+        editor_.Send(Message::MarkerAdd, line, EditorMarker::Bookmark);
     }
-    const auto length = Send(Message::LineLength, line - 1);
+    const auto length = editor_.Send(Message::LineLength, line - 1);
     if (length < 2) return;
     std::string previous(static_cast<size_t>(length) + 1, '\0');
-    Send(Message::GetLine, line - 1, reinterpret_cast<intptr_t>(previous.data()));
+    editor_.Send(Message::GetLine, line - 1, reinterpret_cast<intptr_t>(previous.data()));
     const auto contentLength = static_cast<size_t>(previousEnd - previousStart);
     const char last = contentLength ? previous[contentLength - 1] : '\0';
     const bool delimiter = last == '{' || last == '[' || last == '(';
@@ -91,15 +91,16 @@ void EditorControl::AutoIndent() {
     std::string insertion = previous.substr(0, first);
     const auto leading = static_cast<intptr_t>(insertion.size());
     std::string_view keywordEnd;
-    if (!indent && completionStyles_.lexer == SCLEX_MAKEFILE && first < contentLength &&
-        Send(Message::GetStyleIndexAt, previousStart + leading) == completionStyles_.autoIndentWordStyle) {
+    if (!indent && styles_.lexer == SCLEX_MAKEFILE && first < contentLength &&
+        editor_.Send(Message::GetStyleIndexAt, previousStart + leading) == styles_.autoIndentWordStyle) {
         keywordEnd = MakeKeywordEnd(std::string_view(previous).substr(first, contentLength - first));
         indent = !keywordEnd.empty();
-        if (indent && !(Send(Message::GetFoldLevel, line) & std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) {
-            const auto parent = Send(Message::GetFoldParent, line);
+        if (indent &&
+            !(editor_.Send(Message::GetFoldLevel, line) & std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) {
+            const auto parent = editor_.Send(Message::GetFoldParent, line);
             if (parent >= 0 && parent + 1 == line) {
-                const auto child = Send(Message::GetLastChild, parent, -1);
-                if (Send(Message::LineLength, child)) keywordEnd = {};
+                const auto child = editor_.Send(Message::GetLastChild, parent, -1);
+                if (editor_.Send(Message::LineLength, child)) keywordEnd = {};
             } else {
                 indent = false;
                 keywordEnd = {};
@@ -112,15 +113,15 @@ void EditorControl::AutoIndent() {
             insertion += " *";
             caret += 2;
         } else {
-            const auto padding = IndentPadding(*this);
+            const auto padding = IndentPadding(editor_);
             insertion += padding;
             caret += static_cast<intptr_t>(padding.size());
         }
-        AppendClosingLine(*this, line, delimiter, std::string_view(previous.data(), static_cast<size_t>(leading)),
+        AppendClosingLine(editor_, line, delimiter, std::string_view(previous.data(), static_cast<size_t>(leading)),
                           keywordEnd, insertion);
     }
     if (!insertion.empty()) {
-        Send(Message::AddText, insertion.size(), reinterpret_cast<intptr_t>(insertion.data()));
-        if (indent) Send(Message::SetSel, caret, caret);
+        editor_.Send(Message::AddText, insertion.size(), reinterpret_cast<intptr_t>(insertion.data()));
+        if (indent) editor_.Send(Message::SetSel, caret, caret);
     }
 }

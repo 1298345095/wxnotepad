@@ -33,27 +33,27 @@ bool IsPreprocessorLine(EditorControl& editor, intptr_t position) {
 }
 } // namespace
 
-bool EditorControl::AutoCloseTag() {
+bool TypingAssistance::CloseTag() {
     using Scintilla::Message;
-    const auto position = Send(Message::GetCurrentPos);
+    const auto position = editor_.Send(Message::GetCurrentPos);
     const auto start = std::max<intptr_t>(0, position - TagLookBackBytes);
     const auto size = position - start;
     if (size < 3 || !(completionSettings_.completeOption & WordCompletionOption::CloseTags)) return false;
-    const auto& styles = completionStyles_;
-    int currentStyle = static_cast<int>(Send(Message::GetStyleIndexAt, position));
+    const auto& styles = styles_;
+    int currentStyle = static_cast<int>(editor_.Send(Message::GetStyleIndexAt, position));
     if (styles.angleBracketGeneric &&
         (currentStyle == 0 || currentStyle == styles.operatorStyle || currentStyle == styles.operatorStyle2))
         return false;
-    if (styles.lexer == SCLEX_CPP && IsPreprocessorLine(*this, position)) return false;
+    if (styles.lexer == SCLEX_CPP && IsPreprocessorLine(editor_, position)) return false;
     std::array<char, TagLookBackBytes + 1> text{};
     for (intptr_t index = 0; index < size; ++index)
-        text[index] = static_cast<char>(Send(Message::GetCharAt, start + index));
+        text[index] = static_cast<char>(editor_.Send(Message::GetCharAt, start + index));
     if (text[size - 2] == '/') return false;
     intptr_t opening = size - 2;
     while (opening > 0 && text[opening] != '<' && text[opening] != '>')
         --opening;
     if (text[opening] != '<') return false;
-    const auto style = Send(Message::GetStyleIndexAt, start + opening);
+    const auto style = editor_.Send(Message::GetStyleIndexAt, start + opening);
     if (style &&
         (style == styles.operatorStyle || style == styles.operatorStyle2 ||
          (styles.lexer == SCLEX_HTML && (style == js_style(SCE_JS_OPERATOR) || style == js_style(SCE_JS_OPERATOR2)))))
@@ -64,7 +64,7 @@ bool EditorControl::AutoCloseTag() {
     if (tag.empty()) return false;
     if (tag.size() > 1 && !styles.xml && IsVoidTag(tag)) return true;
     const auto insertion = "</" + tag + ">";
-    Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(insertion.c_str()));
-    Send(Message::SetSel, position, position);
+    editor_.Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(insertion.c_str()));
+    editor_.Send(Message::SetSel, position, position);
     return true;
 }

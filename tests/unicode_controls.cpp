@@ -11,6 +11,9 @@
 #include <cstdio>
 #include <print>
 #include <stdexcept>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 
 namespace {
 void Require(bool value, const char* message) {
@@ -85,12 +88,78 @@ void Table(EditorFrame* frame, int command) {
 void Geometry(EditorFrame* frame, int command) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    frame->SetSize(360, 300);
+    const auto requested = frame->FromDIP(wxSize(360, 300));
+    frame->SetClientSize(requested);
+    frame->Layout();
+    const auto settled = [frame, editor, requested] {
+        if (frame->GetClientSize() != requested || editor->GetSize() != requested) return false;
+#ifdef __WXGTK__
+        const auto drawingSizeIs = [](GdkWindow* window, const wxSize& size) {
+            return window && gdk_window_get_width(window) == size.x && gdk_window_get_height(window) == size.y;
+        };
+        GtkAllocation allocation;
+        gtk_widget_get_allocation(GTK_WIDGET(editor->GetHandle()), &allocation);
+        return wxSize(allocation.width, allocation.height) == requested &&
+               drawingSizeIs(frame->GTKGetDrawingWindow(), requested);
+#else
+        return true;
+#endif
+    };
+    const auto paint = [&] { NativePaint::Complete(editor, settled); };
+    paint();
+    // Exercise wrapping before pixel reads can hide a delayed native resize.
+    std::string line;
+    for (int repeat = 0; repeat < 80; ++repeat)
+        line += "a\xe2\x81\xa0"
+                "b ";
+    TestEditor::ResetStream(editor, line.c_str());
+    const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
+    NativeSearch::Command(frame, wrap);
+    for (const auto zoom : {100, 150}) {
+        editor->Send(SetZoom, zoom);
+        paint();
+        const auto visibleRows = editor->Send(WrapCount, 0);
+        const auto before = DocumentState(frame);
+        NativeSearch::Command(frame, command);
+        paint();
+        const auto hiddenRows = editor->Send(WrapCount, 0);
+        Require(visibleRows > hiddenRows && DocumentState(frame) == before,
+                "representation widths reflow wrapped rows at normal and enlarged zoom without changing the document");
+        NativeSearch::Command(frame, command);
+        paint();
+        const auto restoredRows = editor->Send(WrapCount, 0);
+        if (restoredRows != visibleRows) {
+            const auto frameSize = frame->GetSize();
+            const auto frameClient = frame->GetClientSize();
+            const auto editorSize = editor->GetSize();
+            const auto editorClient = editor->GetClientSize();
+            std::println(stderr,
+                         "Wrap restore: zoom={} visible={} hidden={} restored={} requested={}x{} frame={}x{} "
+                         "frame_client={}x{} editor={}x{} editor_client={}x{}",
+                         zoom, static_cast<long long>(visibleRows), static_cast<long long>(hiddenRows),
+                         static_cast<long long>(restoredRows), requested.x, requested.y, frameSize.x, frameSize.y,
+                         frameClient.x, frameClient.y, editorSize.x, editorSize.y, editorClient.x, editorClient.y);
+        }
+        Require(restoredRows == visibleRows, "showing names restores the original wrapped layout");
+    }
+    NativeSearch::Command(frame, wrap);
+    editor->Send(SetZoom, 100);
+    editor->Send(SetXOffset, 100);
+    paint();
+    Require(editor->Send(GetXOffset) > 0, "unwrapped representations participate in horizontal scrolling");
+    TestEditor::RequireVirtualRectangleUnchanged(
+        editor,
+        [frame, command] {
+            NativeSearch::Command(frame, command);
+            NativeSearch::Command(frame, command);
+        },
+        "representation toggles preserve rectangular selections and virtual space");
     TestEditor::ResetStream(editor,
                             "A\xe2\x81\xa0"
                             "B",
                             5, 5);
-    NativeFold::Paint(editor);
+    editor->Send(SetXOffset, 0);
+    paint();
     const int left = static_cast<int>(editor->Send(PointXFromPosition, 0, 1));
     const int right = static_cast<int>(editor->Send(PointXFromPosition, 0, 4));
     const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, 1));
@@ -102,42 +171,10 @@ void Geometry(EditorFrame* frame, int command) {
                 editor->Send(PositionFromPointClose, right - 1, top + height / 2) == 4,
             "hit-testing the representation returns character boundaries, never a UTF-8 continuation byte");
     NativeSearch::Command(frame, command);
-    NativeFold::Paint(editor);
+    paint();
     Require(NativePaint::Read(editor, area) != visible,
             "the named representation changes actual native widget pixels when hidden");
     NativeSearch::Command(frame, command);
-    std::string line;
-    for (int repeat = 0; repeat < 80; ++repeat)
-        line += "a\xe2\x81\xa0"
-                "b ";
-    TestEditor::ResetStream(editor, line.c_str());
-    const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
-    NativeSearch::Command(frame, wrap);
-    for (const auto zoom : {100, 150}) {
-        editor->Send(SetZoom, zoom);
-        NativeFold::Paint(editor);
-        const auto visibleRows = editor->Send(WrapCount, 0);
-        const auto before = DocumentState(frame);
-        NativeSearch::Command(frame, command);
-        NativeFold::Paint(editor);
-        Require(visibleRows > editor->Send(WrapCount, 0) && DocumentState(frame) == before,
-                "representation widths reflow wrapped rows at normal and enlarged zoom without changing the document");
-        NativeSearch::Command(frame, command);
-        NativeFold::Paint(editor);
-        Require(editor->Send(WrapCount, 0) == visibleRows, "showing names restores the original wrapped layout");
-    }
-    NativeSearch::Command(frame, wrap);
-    editor->Send(SetZoom, 100);
-    editor->Send(SetXOffset, 100);
-    NativeFold::Paint(editor);
-    Require(editor->Send(GetXOffset) > 0, "unwrapped representations participate in horizontal scrolling");
-    TestEditor::RequireVirtualRectangleUnchanged(
-        editor,
-        [frame, command] {
-            NativeSearch::Command(frame, command);
-            NativeSearch::Command(frame, command);
-        },
-        "representation toggles preserve rectangular selections and virtual space");
     std::puts(
         "PASS: actual representation pixels, hit-testing, wrapping, zoom, horizontal scroll and rectangular selection");
 }
@@ -262,6 +299,8 @@ public:
 #endif
         settings_.values = OriginalSettings{};
         settings_.values.wordWrap = false;
+        // The geometry fixture owns its width independently of native menu minimums.
+        settings_.values.showMenu = false;
         auto* frame = new EditorFrame(&settings_);
         TestEditor::UseFixedWidthFont(frame->Editor());
         TestRenderer::Select(frame->Editor());

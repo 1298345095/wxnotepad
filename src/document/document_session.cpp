@@ -1,4 +1,6 @@
 #include "document/document_session.h"
+#include "document/backup_file.h"
+#include "document/document_file.h"
 #include <utility>
 #include "editor/editor_control.h"
 #include "editor/editor_ids.h"
@@ -11,147 +13,19 @@
 #include "ScintillaTypes.h"
 #include "UniConversion.h"
 #include <wx/translation.h>
-#include <wx/datetime.h>
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/log.h>
-#include <wx/stdpaths.h>
-#include <wx/utils.h>
-#include <cstdio>
 #include <algorithm>
 #include <array>
 #include <limits>
 #ifdef __WXMSW__
-#include <filesystem>
-#include <shlobj.h>
 #include <windows.h>
-#else
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #endif
 
 namespace {
-wxString BackupPath(const wxString& source, bool automatic) {
-    // Notepad4 extracts from the first dot of the full path, then removes
-    // the automatic timestamp suffix at the last space in the constructed name.
-    const auto dot = source.find('.');
-    const auto extension = dot == wxString::npos ? wxString(".bak") : source.Mid(dot);
-    const auto time = wxDateTime::UNow();
-    auto backup = source + time.Format(" %Y%m%d %H%M%S");
-    if (automatic)
-        return backup + wxString::Format(" %03u%lu", static_cast<unsigned>(time.GetMillisecond()), wxGetProcessId()) +
-               extension;
-    if (const auto space = extension.rfind(' '); space != wxString::npos)
-        backup += wxString::Format(" %03u%lu", static_cast<unsigned>(time.GetMillisecond()), wxGetProcessId()) +
-                  extension.Left(space);
-    return backup + extension;
-}
-
-wxString DefaultBackupDirectory() {
-    wxFileName directory;
-#ifdef __WXMSW__
-    PWSTR local = nullptr;
-    if (SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &local) != S_OK)
-        return wxFileName(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath(), "AutoSave").GetFullPath();
-    directory = wxFileName::DirName(local);
-    CoTaskMemFree(local);
-#else
-    wxString root;
-    if (wxGetEnv("XDG_DATA_HOME", &root) && wxFileName(root).IsAbsolute()) {
-        directory = wxFileName::DirName(root);
-    } else {
-        directory = wxFileName::DirName(wxGetHomeDir());
-        directory.AppendDir(".local");
-        directory.AppendDir("share");
-    }
-#endif
-    directory.AppendDir("Notepad4");
-    directory.AppendDir("AutoSave");
-    return directory.GetPath();
-}
-
-std::string_view BackupMetadataEnding(Scintilla::EndOfLine mode) {
-    using enum Scintilla::EndOfLine;
-    if (mode == Lf) return "\n";
-    if (mode == Cr) return "\r";
-    return "\r\n";
-}
-
-enum class BackupCreation { OpenFailed, WriteFailed, Complete };
-
-BackupCreation CreateBackup(const wxString& path, std::string_view bytes) {
-#ifdef __WXMSW__
-    const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return BackupCreation::OpenFailed;
-    DWORD written = 0;
-    const bool complete = bytes.size() <= MAXDWORD &&
-                          WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr) &&
-                          written == bytes.size();
-    CloseHandle(file);
-#else
-    wxFile file;
-    if (!file.Create(path, false)) return BackupCreation::OpenFailed;
-    const bool written = file.Write(bytes.data(), bytes.size()) == bytes.size();
-    const bool complete = file.Close() && written;
-#endif
-    // Only a failure to create the file permits the caller to try a fallback.
-    if (!complete) wxRemoveFile(path);
-    return complete ? BackupCreation::Complete : BackupCreation::WriteFailed;
-}
-
 // Original MAX_NON_UTF8_SIZE bounds EditConvertText's native conversion.
 constexpr intptr_t NativeConversionLimit = (intptr_t{1} << 30) - 16;
-// The original ignores query/restore failures: a successful content save stays
-// successful. Preserve every settable time around the existing safe-write path.
-#ifdef __WXMSW__
-using FileTimes = FILE_BASIC_INFO;
-std::optional<FILETIME> ReadAccessTime(const wxString& path) {
-    WIN32_FILE_ATTRIBUTE_DATA attributes{};
-    if (!GetFileAttributesExW(path.wc_str(), GetFileExInfoStandard, &attributes)) return std::nullopt;
-    if (attributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-        // Path attributes describe a final symbolic link itself; the command's
-        // normal CreateFile follows it. Capture the same target's access time.
-        std::error_code error;
-        const auto target = std::filesystem::canonical(std::filesystem::path(path.ToStdWstring()), error);
-        if (error || !GetFileAttributesExW(target.c_str(), GetFileExInfoStandard, &attributes)) return std::nullopt;
-    }
-    return attributes.ftLastAccessTime;
-}
-std::optional<FileTimes> ReadFileTimes(const wxString& path) {
-    const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return std::nullopt;
-    FileTimes times{};
-    const bool read = GetFileInformationByHandleEx(file, FileBasicInfo, &times, sizeof(times)) != 0;
-    CloseHandle(file);
-    return read ? std::optional<FileTimes>(times) : std::nullopt;
-}
-bool SetFileTimes(const wxString& path, FileTimes times) {
-    const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return false;
-    const bool set = SetFileInformationByHandle(file, FileBasicInfo, &times, sizeof(times)) != 0;
-    CloseHandle(file);
-    return set;
-}
-#else
-struct FileTimes {
-    timespec access;
-    timespec modified;
-};
-std::optional<FileTimes> ReadFileTimes(const wxString& path) {
-    struct stat info{};
-    if (::stat(path.utf8_str(), &info) != 0) return std::nullopt;
-    return FileTimes{info.st_atim, info.st_mtim};
-}
-bool SetFileTimes(const wxString& path, const FileTimes& times) {
-    const std::array fields{times.access, times.modified};
-    return ::utimensat(AT_FDCWD, path.utf8_str(), fields.data(), 0) == 0;
-}
-#endif
-
 LineEndingCounts CountLineEndings(std::string_view bytes) {
     LineEndingCounts counts;
     for (size_t i = 0; i < bytes.size(); ++i) {
@@ -180,65 +54,6 @@ Scintilla::EndOfLine SelectEol(const LineEndingCounts& counts, Scintilla::EndOfL
     if (preferred == maximum) return configured;
     if (counts.crlf == maximum) return CrLf;
     return counts.lf == maximum ? Lf : Cr;
-}
-
-struct PendingSave {
-    wxString path;
-    wxFile file;
-    ~PendingSave() {
-        file.Close();
-        if (!path.empty()) wxRemoveFile(path);
-    }
-};
-
-wxString PrepareSave(const wxString& destination, PendingSave& temporary) {
-    // Errors are returned to the application instead of opening wx log dialogs.
-    wxLogNull quiet;
-    if (wxDirExists(destination)) return _("Choose a file as the save destination.");
-    if (wxFileExists(destination)) {
-        wxFile existing(destination, wxFile::read_write);
-        if (!existing.IsOpened()) return _("Could not open the destination for writing.");
-    }
-    temporary.path = wxFileName::CreateTempFileName(destination + ".wxnotepad-", &temporary.file);
-    if (temporary.path.empty())
-        return _("Could not create a temporary file beside the destination. Check the folder and access permissions.");
-    return {};
-}
-
-wxString WriteSafely(const wxString& destination, const std::string& bytes, PendingSave& temporary) {
-    wxLogNull quiet;
-    if (temporary.path.empty()) {
-        const auto error = PrepareSave(destination, temporary);
-        if (!error.empty()) return error;
-    }
-    if (temporary.file.Write(bytes.data(), bytes.size()) != bytes.size() || !temporary.file.Flush())
-        return _("Could not write the complete file. Check free space and access permissions.");
-    if (!temporary.file.Close()) return _("Could not close the completed temporary file.");
-#ifdef __WXMSW__
-    const bool replaced = MoveFileExW(temporary.path.wc_str(), destination.wc_str(),
-                                      MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#else
-    const bool replaced = ::rename(temporary.path.utf8_str(), destination.utf8_str()) == 0;
-#endif
-    if (!replaced) {
-        const wxString detail(wxSysErrorMsg());
-        return wxString::Format(_("Could not replace the destination: %s"), detail);
-    }
-    temporary.path.clear();
-    return {};
-}
-
-wxString PrepareSaveCopy(const wxString& destination) {
-    // Original Save Copy opens/creates the destination before cleanup and
-    // legacy-loss confirmation. Cancel keeps a new empty file, while an
-    // existing file retains its bytes.
-    wxLogNull quiet;
-    wxFile file;
-    if (wxDirExists(destination)) return _("Choose a file as the save destination.");
-    const bool opened =
-        wxFileExists(destination) ? file.Open(destination, wxFile::read_write) : file.Create(destination, false);
-    if (!opened || !file.Close()) return _("Could not open the destination for writing.");
-    return {};
 }
 
 LegacyEncoded EncodeLegacy(std::string_view bytes, FileEncoding encoding) {
@@ -525,67 +340,15 @@ wxString DocumentSession::FileNameText(FileNamePart part) const {
 }
 
 bool DocumentSession::RefreshReadOnlyFile() {
-    readOnlyFile_ = false;
-    readOnlyFileFlag_ = false;
-    readOnlyFileChangeError_.clear();
-    if (path_.empty()) {
-        // TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
-        readOnlyFileChangeError_ = _("Save the document before changing file permissions.");
-        return false;
-    }
-#ifdef __WXMSW__
-    const auto attributes = GetFileAttributesW(path_.wc_str());
-    if (attributes == INVALID_FILE_ATTRIBUTES)
-        // TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
-        readOnlyFileChangeError_ = wxString::Format(_("Could not read file attributes: %s"), wxSysErrorMsg());
-    else if (attributes & FILE_ATTRIBUTE_DIRECTORY)
-        // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
-        readOnlyFileChangeError_ = _("This command changes a file, not a directory.");
-    else
-        readOnlyFile_ = readOnlyFileFlag_ = (attributes & FILE_ATTRIBUTE_READONLY) != 0;
-#else
-    struct stat state{};
-    if (stat(path_.fn_str(), &state) != 0)
-        // TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
-        readOnlyFileChangeError_ = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
-    else if (!S_ISREG(state.st_mode))
-        // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
-        readOnlyFileChangeError_ = _("This command changes a file, not a directory.");
-    else {
-        readOnlyFileFlag_ = (state.st_mode & S_IWUSR) == 0;
-        readOnlyFile_ = state.st_uid == geteuid() ? readOnlyFileFlag_ : !wxFileName::IsFileWritable(path_);
-        if (state.st_uid != geteuid())
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
-            readOnlyFileChangeError_ = _("Only the file owner can change the owner's write permission.");
-    }
-#endif
+    const auto state = DocumentFiles::ReadReadOnlyState(path_);
+    readOnlyFile_ = state.readOnly;
+    readOnlyFileFlag_ = state.flag;
+    readOnlyFileChangeError_ = state.changeError;
     return readOnlyFile_;
 }
 
 wxString DocumentSession::ToggleReadOnlyFile() {
-    RefreshReadOnlyFile();
-    wxString error = readOnlyFileChangeError_;
-    if (error.empty()) {
-#ifdef __WXMSW__
-        const auto attributes = GetFileAttributesW(path_.wc_str());
-        if (attributes == INVALID_FILE_ATTRIBUTES ||
-            !SetFileAttributesW(path_.wc_str(), attributes ^ FILE_ATTRIBUTE_READONLY))
-            // TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
-            error = wxString::Format(_("Could not change file attributes: %s"), wxSysErrorMsg());
-#else
-        struct stat state{};
-        if (stat(path_.fn_str(), &state) != 0)
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
-            error = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
-        else if (state.st_uid != geteuid())
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
-            error = _("Only the file owner can change the owner's write permission.");
-        else if (chmod(path_.fn_str(),
-                       (state.st_mode & (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)) ^ S_IWUSR) != 0)
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
-            error = wxString::Format(_("Could not change the file owner's write permission: %s"), wxSysErrorMsg());
-#endif
-    }
+    const auto error = DocumentFiles::ToggleReadOnly(path_);
     RefreshReadOnlyFile();
     // Original IDM_FILE_READONLY_FILE releases F10 when the disk file becomes writable.
     if (!readOnlyFile_ && readOnlyFileChangeError_.empty()) editor_.Send(Scintilla::Message::SetReadOnly, 0);
@@ -626,7 +389,7 @@ DocumentSession::~DocumentSession() {
 }
 
 wxString DocumentSession::BackupDirectory() {
-    return DefaultBackupDirectory();
+    return DocumentBackups::Directory();
 }
 
 void DocumentSession::StartBackupTimer(bool reset) {
@@ -697,48 +460,27 @@ wxString DocumentSession::WriteBackup(bool automatic) {
     // In Notepad4 an ANSI document is held in its native code page. Recover
     // that buffer using the editor's preserved native bytes and current text.
     if (systemDefaultEncoding_) bytes = NativeBytesFromRanges(bytes, 0, *editor_.RawNativeBytes());
-    const wxLogNull quiet;
-    const bool untitled = path_.empty();
-    const auto sibling = BackupPath(untitled ? wxString("Untitled") : path_, automatic);
-    if (!untitled) {
-        const auto result = CreateBackup(sibling, bytes);
-        if (result != BackupCreation::OpenFailed) return result == BackupCreation::Complete ? sibling : wxString{};
-    }
-
-    const auto directory = DefaultBackupDirectory();
-    if (!wxDirExists(directory)) wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-    const auto backup = wxFileName(directory, wxFileName(sibling).GetFullName()).GetFullPath();
-    if (untitled) return CreateBackup(backup, bytes) == BackupCreation::Complete ? backup : wxString{};
-    auto metadata = ("AutoSave for " + path_).utf8_string();
-    auto output = systemDefaultEncoding_ ? NativeDefaultEncodingBytes(metadata) : std::move(metadata);
-    output += BackupMetadataEnding(static_cast<Scintilla::EndOfLine>(editor_.Send(GetEOLMode)));
-    output += bytes;
-    return CreateBackup(backup, output) == BackupCreation::Complete ? backup : wxString{};
+    return DocumentBackups::Write(path_, bytes, automatic, systemDefaultEncoding_,
+                                  static_cast<Scintilla::EndOfLine>(editor_.Send(GetEOLMode)));
 }
 
 SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLossDecision& decideLoss,
                                    std::optional<SaveFileType> fileType, bool copy, SaveTimeMode timeMode) {
     if (copy) {
-        const auto error = PrepareSaveCopy(destination);
+        const auto error = DocumentFiles::PrepareSaveCopy(destination);
         if (!error.empty()) return {SaveStatus::Failed, error};
     }
-    PendingSave temporary;
-    std::optional<FileTimes> originalTimes;
+    DocumentFiles::SaveTransaction transaction(timeMode == SaveTimeMode::Original);
     if (timeMode == SaveTimeMode::Original) {
-        const auto error = PrepareSave(destination, temporary);
+        const auto error = transaction.Prepare(destination);
         if (!error.empty()) return {SaveStatus::Failed, error};
-        // OPEN_ALWAYS in the original captures a new file's initial timestamps.
-        // Our new file is the safe-write sibling until replacement commits it.
-        originalTimes = ReadFileTimes(wxFileExists(destination) ? destination : temporary.path);
     }
     // Original EditSaveFile opens the destination before changing text. Prepare
     // the safe-write sibling at that point, without truncating the destination.
     if ((saveCleanup_.fixLineEndings || saveCleanup_.fixTrailingBlanks) &&
         !editor_.Send(Scintilla::Message::GetReadOnly)) {
-        if (temporary.path.empty()) {
-            const auto error = PrepareSave(destination, temporary);
-            if (!error.empty()) return {SaveStatus::Failed, error};
-        }
+        const auto error = transaction.Prepare(destination);
+        if (!error.empty()) return {SaveStatus::Failed, error};
         ApplySaveCleanup();
     }
     const auto length = static_cast<size_t>(editor_.Send(Scintilla::Message::GetLength));
@@ -748,9 +490,8 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLo
     const auto raw = editor_.RawNativeBytes();
     const auto encoded = EncodeForSave(std::move(bytes), encoding_, hasBom_, systemDefaultEncoding_, *raw, decideLoss);
     if (const auto* result = std::get_if<SaveResult>(&encoded)) return *result;
-    const auto error = WriteSafely(destination, std::get<std::string>(encoded), temporary);
+    const auto error = transaction.Commit(destination, std::get<std::string>(encoded));
     if (!error.empty()) return {SaveStatus::Failed, error};
-    if (originalTimes) SetFileTimes(destination, *originalTimes);
     // Original EditSaveFile/FileSave leave the live identity, scheme and save
     // point alone for Save Copy; optional cleanup above remains in its history.
     if (copy) {
@@ -797,34 +538,7 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
 }
 
 bool DocumentSession::UpdateFileTime() {
-    if (path_.empty()) return false;
-#ifdef __WXMSW__
-    // Opening the update handle can expose a newer access time than the
-    // pre-operation path attributes. Preserve that observed value separately.
-    const auto originalAccess = ReadAccessTime(path_);
-    const auto file = CreateFileW(path_.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return false;
-    FILE_BASIC_INFO times{};
-    bool updated = GetFileInformationByHandleEx(file, FileBasicInfo, &times, sizeof(times)) != 0;
-    if (updated) {
-        if (originalAccess) {
-            times.LastAccessTime.LowPart = originalAccess->dwLowDateTime;
-            times.LastAccessTime.HighPart = static_cast<LONG>(originalAccess->dwHighDateTime);
-        }
-        GetSystemTimePreciseAsFileTime(reinterpret_cast<FILETIME*>(&times.LastWriteTime));
-        updated = SetFileInformationByHandle(file, FileBasicInfo, &times, sizeof(times)) != 0;
-    }
-    CloseHandle(file);
-#else
-    const int file = ::open(path_.utf8_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (file < 0) return false;
-    // Preserve access time; ctime follows the filesystem's metadata-update rules.
-    const std::array<timespec, 2> times{{{0, UTIME_OMIT}, {0, UTIME_NOW}}};
-    const bool updated = ::futimens(file, times.data()) == 0;
-    ::close(file);
-#endif
-    return updated;
+    return DocumentFiles::UpdateWriteTime(path_);
 }
 
 void DocumentSession::ApplySaveCleanup() {

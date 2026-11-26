@@ -3,6 +3,7 @@
 #include "syntax/syntax_scheme.h"
 #include "document/document_session.h"
 #include "file_helpers.h"
+#include <wx/timer.h>
 #include <wx/wx.h>
 #include <initializer_list>
 #include "auto_close_tags_reference.h"
@@ -57,84 +58,75 @@ std::string BytesFromHex(std::string_view hex) {
         bytes += static_cast<char>(std::stoi(std::string(hex.substr(position, 2)), nullptr, 16));
     return bytes;
 }
-void EncodedFiles(EditorFrame* frame) {
+void EncodedFile(EditorFrame* frame, size_t index) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    for (const auto& item : AutoCloseTagsEncodingReference::cases) {
-        const auto path =
-            TestFiles::TemporaryDirectory(item.language == SyntaxLanguage::Html ? "tags.html" : "tags.xml");
-        const auto before = BytesFromHex(item.beforeBytes);
-        TestFiles::WriteBytes(path, before);
-        DocumentSession document(*editor);
-        if (document.Load(DocumentLoad::Open{TestFiles::Filename(path), item.encoding}).status != OpenStatus::Opened)
-            throw std::runtime_error("encoded tag fixture opens");
-        ApplySyntaxLanguage(*editor, item.language);
-        editor->Send(GotoPos, editor->Send(GetLength));
-        editor->Send(Colourise, 0, -1);
-        Character(frame, '>', false);
-        State(editor, item.after);
-        if (document.Encoding() != item.encoding || document.HasBom() != item.bom ||
-            editor->Send(GetEOLMode) != item.eol)
-            throw std::runtime_error("tag closure preserves encoding, BOM and EOL metadata");
-        if (document.Save().status != SaveStatus::Saved || TestFiles::Bytes(path) != BytesFromHex(item.saved))
-            throw std::runtime_error("tag closure saves exact original encoded bytes");
-    }
+    const auto& item = AutoCloseTagsEncodingReference::cases[index];
+    const auto path = TestFiles::TemporaryDirectory(item.language == SyntaxLanguage::Html ? "tags.html" : "tags.xml");
+    const auto before = BytesFromHex(item.beforeBytes);
+    TestFiles::WriteBytes(path, before);
+    DocumentSession document(*editor);
+    if (document.Load(DocumentLoad::Open{TestFiles::Filename(path), item.encoding}).status != OpenStatus::Opened)
+        throw std::runtime_error("encoded tag fixture opens");
+    ApplySyntaxLanguage(*editor, item.language);
+    editor->Send(GotoPos, editor->Send(GetLength));
+    editor->Send(Colourise, 0, -1);
+    Character(frame, '>', false);
+    State(editor, item.after);
+    if (document.Encoding() != item.encoding || document.HasBom() != item.bom || editor->Send(GetEOLMode) != item.eol)
+        throw std::runtime_error("tag closure preserves encoding, BOM and EOL metadata");
+    if (document.Save().status != SaveStatus::Saved || TestFiles::Bytes(path) != BytesFromHex(item.saved))
+        throw std::runtime_error("tag closure saves exact original encoded bytes");
 }
-void OriginalCases(EditorFrame* frame) {
+void OriginalCase(EditorFrame* frame, size_t index) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    unsigned index = 0;
-    for (const auto& item : AutoCloseTagsReference::cases) {
-        std::println("case {:d} language={:d} ch={:d}", index++, static_cast<int>(std::to_underlying(item.language)),
-                     item.character);
-        editor->Send(SetReadOnly, 0);
-        ApplySyntaxLanguage(*editor, item.language);
-        editor->Send(SetUndoSelectionHistory, 0);
-        editor->Send(SetText, 0, reinterpret_cast<intptr_t>(item.before));
-        editor->Send(SetSel, item.anchor, item.position);
-        if (item.extraCaret >= 0) editor->Send(AddSelection, item.extraCaret, item.extraAnchor);
-        editor->Send(SetOvertype, item.overtype);
-        editor->Send(EmptyUndoBuffer);
-        editor->Send(SetSavePoint);
-        editor->Send(SetUndoSelectionHistory, 3);
-        editor->Send(Colourise, 0, -1);
-        editor->Send(SetReadOnly, item.readOnly);
-        Character(frame, item.character, std::string_view(item.before) == "<div" && !item.readOnly);
-        State(editor, item.after);
-        for (const auto& state : item.undo) {
-            editor->Send(Undo);
-            State(editor, state);
-        }
-        for (const auto& state : item.redo) {
-            editor->Send(Redo);
-            State(editor, state);
-        }
-        DocumentSession document(*editor);
-        const auto path = TestFiles::TemporaryDirectory("auto-close-tags.txt");
-        if (document.SaveCopy(TestFiles::Filename(path)).status != SaveStatus::Saved ||
-            TestFiles::Bytes(path) != item.saved)
-            throw std::runtime_error("saved bytes reproduce independently captured original file");
-    }
+    const auto& item = AutoCloseTagsReference::cases[index];
+    std::println("case {:d} language={:d} ch={:d}", index, static_cast<int>(std::to_underlying(item.language)),
+                 item.character);
     editor->Send(SetReadOnly, 0);
+    ApplySyntaxLanguage(*editor, item.language);
+    editor->Send(SetUndoSelectionHistory, 0);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(item.before));
+    editor->Send(SetSel, item.anchor, item.position);
+    if (item.extraCaret >= 0) editor->Send(AddSelection, item.extraCaret, item.extraAnchor);
+    editor->Send(SetOvertype, item.overtype);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(SetUndoSelectionHistory, 3);
+    editor->Send(Colourise, 0, -1);
+    editor->Send(SetReadOnly, item.readOnly);
+    Character(frame, item.character, std::string_view(item.before) == "<div" && !item.readOnly);
+    State(editor, item.after);
+    for (const auto& state : item.undo) {
+        editor->Send(Undo);
+        State(editor, state);
+    }
+    for (const auto& state : item.redo) {
+        editor->Send(Redo);
+        State(editor, state);
+    }
+    DocumentSession document(*editor);
+    const auto path = TestFiles::TemporaryDirectory("auto-close-tags.txt");
+    if (document.SaveCopy(TestFiles::Filename(path)).status != SaveStatus::Saved ||
+        TestFiles::Bytes(path) != item.saved)
+        throw std::runtime_error("saved bytes reproduce independently captured original file");
 }
 class AutoCloseTagsApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
-        frame->ShowWithoutActivating();
-        CallAfter([this, frame] {
-            NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
-                try {
-                    if (!presented) throw std::runtime_error("owned editor must be presented for native typing");
-                    OriginalCases(frame);
-                    EncodedFiles(frame);
-                    std::puts("PASS: original character notifications, styles, read-only state and Undo/Redo");
-                    result_ = 0;
-                } catch (const std::exception& error) {
-                    DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
+        frame_ = new EditorFrame;
+        frame_->ShowWithoutActivating();
+        timer_.SetOwner(this);
+        Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Step(); }, timer_.GetId());
+        CallAfter([this] {
+            NativeKeys::AfterPresentation(frame_, [this](bool presented) {
+                if (presented) {
+                    Step();
+                    return;
                 }
-                frame->Destroy();
-                ExitMainLoop();
+                DiagnosticPrint::Print(stderr, "FAIL: owned editor must be presented for native typing\n");
+                Finish();
             });
         });
         return true;
@@ -146,6 +138,36 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    void Step() {
+        try {
+            if (next_ < AutoCloseTagsReference::cases.size()) {
+                OriginalCase(frame_, next_++);
+                if (next_ == AutoCloseTagsReference::cases.size())
+                    frame_->Editor()->Send(Scintilla::Message::SetReadOnly, 0);
+            } else {
+                EncodedFile(frame_, next_++ - AutoCloseTagsReference::cases.size());
+            }
+            if (next_ < AutoCloseTagsReference::cases.size() + AutoCloseTagsEncodingReference::cases.size()) {
+                // Return to the native loop between independent cases so input,
+                // painting and accessibility requests can run.
+                if (!timer_.StartOnce(1)) throw std::runtime_error("schedule the next automatic tag-closure case");
+                return;
+            }
+            std::puts("PASS: original character notifications, styles, read-only state and Undo/Redo");
+            result_ = 0;
+        } catch (const std::exception& error) {
+            DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
+        }
+        Finish();
+    }
+    void Finish() {
+        timer_.Stop();
+        frame_->Destroy();
+        ExitMainLoop();
+    }
+    EditorFrame* frame_ = nullptr;
+    wxTimer timer_;
+    size_t next_ = 0;
     int result_ = 1;
 };
 } // namespace

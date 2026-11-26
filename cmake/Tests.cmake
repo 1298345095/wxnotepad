@@ -11,3 +11,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/tests/Application.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/tests/Editor.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/tests/SyntaxAndSearch.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/tests/NativeRegressions.cmake")
+
+add_gui_program(syntax_detection tests/syntax_detection.cpp editor_runtime)
+add_test(NAME syntax_detection_contracts COMMAND syntax_detection)
+set_tests_properties(syntax_detection_contracts PROPERTIES TIMEOUT 30)

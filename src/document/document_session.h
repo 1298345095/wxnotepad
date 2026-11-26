@@ -5,7 +5,7 @@
 #include "settings/auto_save_options.h"
 #include <cstdint>
 #include "ScintillaTypes.h"
-#include "syntax/syntax_catalog.h"
+#include "syntax/syntax_detection.h"
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
 #include "editor/native_byte_history.h"

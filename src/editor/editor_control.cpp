@@ -91,7 +91,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     // The wx member-function binding disconnects when this editor is destroyed.
     wxGetTopLevelParent(this)->Bind(wxEVT_MOVE, &EditorControl::OnHostMove, this);
 #endif
-    SetAutoInsertMask(autoInsertMask_);
+    SetAutoInsertMask(AutoInsertMask_Default);
     // Notepad4 89b8b36 Notepad4.cpp startup / GetFoldDisplayEllipsis:
     // editor storage is UTF-8, independently of the document's file encoding.
     Send(Message::FoldDisplayTextSetStyle,
@@ -481,7 +481,7 @@ bool EditorControl::CanPasteText(bool clipboardHasText) const noexcept {
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     if (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer) {
         core_->WndProc(Message::AutoCCancel, 0, 0);
-        completionState_ = {};
+        typing_.ResetCompletionState();
     }
     if (occurrences_ &&
         (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer))

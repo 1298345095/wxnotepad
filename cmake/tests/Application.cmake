@@ -133,7 +133,7 @@ set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
 
 # This test reaches feature interfaces without linking the frame or its dialogs.
 add_gui_program(feature_sessions tests/feature_sessions.cpp editor_features)
-target_sources(feature_sessions PRIVATE tests/document_load.cpp)
+target_sources(feature_sessions PRIVATE tests/document_load.cpp tests/document_files.cpp)
 add_test(NAME feature_session_contracts COMMAND feature_sessions)
 set_tests_properties(feature_session_contracts PROPERTIES TIMEOUT 30)
 

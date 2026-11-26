@@ -9,6 +9,10 @@
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/modalhook.h>
+#include <wx/timer.h>
+#include <wx/weakref.h>
+#include <chrono>
+#include <functional>
 #include <algorithm>
 #include <cstdio>
 #include <print>
@@ -23,6 +27,15 @@
 // Native operations target only widgets owned by each independent search test.
 // Test cases and expected document bytes remain in their own GUI processes.
 namespace NativeSearch {
+#ifdef __WXGTK__
+inline void DispatchX11Iteration() {
+    gtk_main_iteration_do(FALSE);
+#if wxUSE_EXCEPTIONS
+    // Native callbacks store exceptions until control returns to C++.
+    wxTheApp->RethrowStoredException();
+#endif
+}
+#endif
 inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
 #ifdef __WXGTK__
     // Wayland operations also settle compositor surface transitions. Preserve
@@ -31,7 +44,7 @@ inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
         wxYield();
         return;
     }
-    gtk_main_iteration_do(FALSE);
+    DispatchX11Iteration();
     wxTheApp->ProcessPendingEvents();
     wxTheApp->ProcessIdle();
 #else
@@ -39,15 +52,109 @@ inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
 #endif
 }
 inline void Click(wxWindow* dialog, int id);
+#ifdef __WXGTK__
+// The modal response observes the opening shortcut's real key-up and deadline
+// only while that stack scope is alive.
+class OpeningShortcut final : public wxTrackable {
+public:
+    using Clock = std::chrono::steady_clock;
+    OpeningShortcut(const bool& released, Clock::time_point deadline)
+        : released_(released), deadline_(deadline), previous_(current_) {
+        current_ = this;
+    }
+    ~OpeningShortcut() { current_ = previous_; }
+    OpeningShortcut(const OpeningShortcut&) = delete;
+    OpeningShortcut& operator=(const OpeningShortcut&) = delete;
+    static OpeningShortcut* Current() { return current_; }
+    bool Released() const { return released_; }
+    Clock::time_point Deadline() const { return deadline_; }
+
+private:
+    const bool& released_;
+    Clock::time_point deadline_;
+    OpeningShortcut* previous_;
+    inline static thread_local OpeningShortcut* current_ = nullptr;
+};
+
+class FeedbackResponse final : public wxEvtHandler {
+public:
+    FeedbackResponse() { Bind(wxEVT_TIMER, &FeedbackResponse::OnTimer, this, timer_.GetId()); }
+    ~FeedbackResponse() override { timer_.Stop(); }
+    void Respond(wxDialog* dialog, int response, std::function<void()> beforeClick = {}) {
+        timer_.Stop();
+        dialog_ = dialog;
+        response_ = response;
+        opening_ = OpeningShortcut::Current();
+        hadOpening_ = opening_.get() != nullptr;
+        beforeClick_ = std::move(beforeClick);
+        Schedule();
+    }
+    void Cancel(wxDialog* dialog) {
+        if (dialog_.get() != dialog) return;
+        timer_.Stop();
+        dialog_.Release();
+        opening_.Release();
+        hadOpening_ = false;
+        beforeClick_ = {};
+    }
+
+private:
+    void Schedule() {
+        // Native timers can run inside ShowModal even while paint keeps wx's
+        // lower-priority pending-callback idle source from running.
+        if (!timer_.StartOnce(10)) {
+            Cancel(dialog_.get());
+            throw std::runtime_error("schedule the native search feedback response");
+        }
+    }
+    void OnTimer(wxTimerEvent&) {
+        auto* dialog = dialog_.get();
+        // A later modal hook can preempt ShowModal before its exit guard exists.
+        if (!dialog || !dialog->IsModal() || (hadOpening_ && !opening_)) {
+            Cancel(dialog);
+            return;
+        }
+        if (opening_ && !opening_->Released()) {
+            if (OpeningShortcut::Clock::now() >= opening_->Deadline())
+                throw std::runtime_error("search feedback must receive its opening shortcut's native release");
+            Schedule();
+            return;
+        }
+        const int response = response_;
+        auto beforeClick = std::move(beforeClick_);
+        Cancel(dialog);
+        if (beforeClick) beforeClick();
+        Click(dialog, response);
+    }
+    wxTimer timer_{this};
+    wxWeakRef<wxDialog> dialog_;
+    int response_ = wxID_OK;
+    wxWeakRef<OpeningShortcut> opening_;
+    bool hadOpening_ = false;
+    std::function<void()> beforeClick_;
+};
+#endif
 // Document-result fixtures accept feedback at the native modal boundary. The
 // search_wrap fixture separately drives the real choices and suppression state.
 class AcceptFeedback final : public wxModalDialogHook {
 public:
     AcceptFeedback() { Register(); }
     int Enter(wxDialog* dialog) override {
-        if (dialog->GetName() == "Search feedback") wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });
+        if (dialog->GetName() == "Search feedback") {
+#ifdef __WXGTK__
+            response_.Respond(dialog, wxID_OK);
+#else
+            wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });
+#endif
+        }
         return wxID_NONE;
     }
+#ifdef __WXGTK__
+    void Exit(wxDialog* dialog) override { response_.Cancel(dialog); }
+
+private:
+    FeedbackResponse response_;
+#endif
 };
 #ifdef __WXMSW__
 inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std::pair<int, BYTE>> modifiers) {

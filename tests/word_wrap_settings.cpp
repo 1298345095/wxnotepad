@@ -312,6 +312,15 @@ void Exercise(EditorFrame* frame, SettingsStore& settings) {
     Require(frame->Open(path).status == OpenStatus::Opened && editor->Send(GetWrapMode) == 0 &&
                 editor->Send(GetWrapStartIndent) == 6,
             "original truncate-lines file variable overrides wrapping and file indentation");
+    const auto overriddenWrap = WrapState(editor);
+    // Open expands Windows TEMP's 8.3 aliases before storing the document path.
+    const auto loadedPath = frame->DocumentPath();
+    Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled, "Open without a source reports cancellation");
+    Require(WrapState(editor) == overriddenWrap, "cancelling Open retains the active file's wrapping override");
+    Require(frame->DocumentPath() == loadedPath, "cancelling Open retains the loaded document's path");
+    Require(frame->Open(path + ".missing").status == OpenStatus::Failed, "Open with a missing source reports failure");
+    Require(WrapState(editor) == overriddenWrap, "failed Open retains the active file's wrapping override");
+    Require(frame->DocumentPath() == loadedPath, "failed Open retains the loaded document's path");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
     Require(settings.values.wordWrap && settings.values.wordWrapMode == 2,
             "saving preferences does not promote a document's truncate-lines override to the global setting");

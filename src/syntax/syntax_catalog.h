@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <string_view>
 #include <optional>
 #include <limits>
 #include <vector>
@@ -60,28 +59,9 @@ enum class SyntaxLanguage : uint8_t {
     Diff,
     Count
 };
-namespace SyntaxDetectionLimits {
-// Original Styles.cpp lookup lengths, excluding the terminating NUL.
-inline constexpr std::size_t PrefixBytes = 255;
-inline constexpr std::size_t DocTypeBytes = 3999;
-} // namespace SyntaxDetectionLimits
-
 using SyntaxExtensions = std::map<SyntaxLanguage, wxString>;
 wxString SyntaxExtensionsFor(SyntaxLanguage language, const SyntaxExtensions& extensions = {});
 std::vector<wxString> SyntaxExtensionList(SyntaxLanguage language, const SyntaxExtensions& extensions = {});
-struct SyntaxDetectionOptions {
-    bool autoSelect = true;
-    bool noCgiGuess = false;
-    bool noHtmlGuess = false;
-    SyntaxLanguage defaultLanguage = SyntaxLanguage::PlainText;
-    SyntaxExtensions extensions;
-    wxString favoriteSchemes;
-};
-struct DetectedSyntax {
-    // Original pLex is chosen before the independent np2LexLangIndex sniff.
-    SyntaxLanguage schemeLanguage;
-    std::optional<SyntaxLanguage> markupDialect = std::nullopt;
-};
 struct SyntaxStyle {
     int id;
     unsigned int foreground;
@@ -194,11 +174,6 @@ inline constexpr size_t FavoriteConfigCharacters = 127;
 } // namespace SyntaxSchemeLimits
 std::vector<SyntaxLanguage> FavoriteSyntaxSchemes(const wxString& configuration);
 std::vector<int> OriginalFavoriteSchemeIds(const wxString& configuration);
-SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& extensions = {},
-                               const wxString& favoriteSchemes = {});
-std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
-std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
-                                             SyntaxDetectionOptions options = {});
 wxString LanguageName(SyntaxLanguage language);
 bool LanguageCanFold(SyntaxLanguage language);
 std::span<const SyntaxStyle> MarkupEmbeddedStyles();

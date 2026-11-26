@@ -1,7 +1,7 @@
 #pragma once
 
 class wxWindow;
-struct OriginalSettings;
+struct WordWrapOptions;
 
-// Commits only after native OK; the frame supplies the live shared preferences.
-bool ShowWordWrapSettingsDialog(wxWindow* parent, OriginalSettings& settings);
+// Commits only after native OK; the caller applies the accepted choices.
+bool ShowWordWrapSettingsDialog(wxWindow* parent, WordWrapOptions& options);
