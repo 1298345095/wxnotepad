@@ -156,17 +156,11 @@ def session(phase, number, helper, manifest):
                                          directory / 'ctest')
     if set(names) != set(requested):
         raise RuntimeError(f'Registered selection changed: {names}')
-    trace_paths = {name: traces / f'{name}.bin' for name in requested}
+    trace_path = traces / f'{SEARCH}.bin'
+    trace_paths = {SEARCH: trace_path} if SEARCH in requested else {}
     with (workspace / 'CTestTestfile.cmake').open('a', encoding='utf-8') as stream:
         for previous, following in zip(requested, requested[1:]):
             stream.write(f'set_tests_properties({following} PROPERTIES DEPENDS {previous})\n')
-        for name, path in trace_paths.items():
-            value = f'WXNOTEPAD_PAINT_TRACE={path.as_posix()}'
-            delimiter = '='
-            while f']{delimiter}]' in value:
-                delimiter += '='
-            stream.write(f'set_property(TEST {name} APPEND PROPERTY ENVIRONMENT '
-                         f'[{delimiter}[{value}]{delimiter}])\n')
     command = ['ctest', '--test-dir', workspace, '-C', 'Release', '--parallel', '1',
                '-V', '--output-on-failure', '--no-tests=error',
                '-R', '^(' + '|'.join(requested) + ')$',
@@ -179,6 +173,7 @@ def session(phase, number, helper, manifest):
     write_json(directory / 'plan.json', plan)
     environment = dict(os.environ, GIO_LAUNCH_DESKTOP=str(helper),
                        WXNOTEPAD_DISPLAY_LOG_DIR=str(directory / 'display'),
+                       WXNOTEPAD_PAINT_TRACE=str(trace_path),
                        GCOV_PREFIX=str(directory / 'coverage'), GCOV_PREFIX_STRIP='0')
     isolated = [sys.executable, ROOT / 'tools/xvfb_session.py', 'dbus-run-session', '--',
                 sys.executable, ROOT / 'tools/clipboard_isolated.py', selected['backend'],
