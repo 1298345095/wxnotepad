@@ -1,4 +1,4 @@
-"""Compare native accessibility replies while the unchanged 444 cases execute."""
+"""Compare native accessibility replies while all 400 tag cases and 24 encoding cases execute."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
@@ -15,10 +15,10 @@ import ci
 ROOT = ci.ROOT
 BUILD = ROOT / '.ci/build/coverage-cmake'
 REPORTS = ROOT / '.ci/reports/atspi-investigation'
-SOURCE = ROOT / 'tests/auto_insertion.cpp'
+SOURCE = ROOT / 'tests/auto_close_tags.cpp'
 FIXTURES = ROOT / '.github/scripts/fixtures'
 SCRIPT = Path(__file__).resolve()
-TEST = 'original_auto_insertion'
+TEST = 'original_auto_close_tags'
 PHASES = {
     'original-x11': {'backend': 'x11', 'variant': 'original', 'expect': 'timeout', 'sessions': 2},
     'fixed-x11': {'backend': 'x11', 'variant': 'fixed', 'expect': 'responsive', 'sessions': 2},
@@ -39,20 +39,20 @@ def build():
               'sources': {}, 'binaries': {}}
     try:
         for variant in ('original', 'fixed'):
-            source = FIXTURES / f'auto_insertion_{variant}_probe.cpp'
+            source = FIXTURES / f'auto_close_tags_{variant}_probe.cpp'
             content = source.read_bytes()
             record['sources'][variant] = hashlib.sha256(content).hexdigest()
             SOURCE.write_bytes(content)
-            ci.run(['cmake', '--build', BUILD, '--parallel', '--target', 'auto_insertion'],
+            ci.run(['cmake', '--build', BUILD, '--parallel', '--target', 'auto_close_tags'],
                    REPORTS / f'build-{variant}.log')
-            destination = BUILD / f'auto_insertion-{variant}-probe'
-            shutil.copy2(BUILD / 'auto_insertion', destination)
+            destination = BUILD / f'auto_close_tags-{variant}-probe'
+            shutil.copy2(BUILD / 'auto_close_tags', destination)
             record['binaries'][variant] = {'path': str(destination),
                                           'sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
     finally:
         SOURCE.write_bytes(clean)
         write_json(REPORTS / 'build.json', record)
-    ci.run(['cmake', '--build', BUILD, '--parallel', '--target', 'auto_insertion'],
+    ci.run(['cmake', '--build', BUILD, '--parallel', '--target', 'auto_close_tags'],
            REPORTS / 'build-clean.log')
     listing = json.loads(subprocess.check_output(
         ['ctest', '--test-dir', BUILD, '-C', 'Release', '--show-only=json-v1', '-R', f'^{TEST}$'],
@@ -60,10 +60,10 @@ def build():
     if len(listing) != 1 or listing[0]['name'] != TEST:
         raise RuntimeError('Unexpected registered test')
     properties = {item['name']: item['value'] for item in listing[0].get('properties', [])}
-    if properties.get('TIMEOUT') != 90:
-        raise RuntimeError(f'Expected original 90s test guard, got {properties}')
+    if 'TIMEOUT' in properties:
+        raise RuntimeError(f'Expected unchanged test registration without a per-test TIMEOUT, got {properties}')
     record['registration'] = listing[0]
-    record['clean_binary_sha256'] = hashlib.sha256((BUILD / 'auto_insertion').read_bytes()).hexdigest()
+    record['clean_binary_sha256'] = hashlib.sha256((BUILD / 'auto_close_tags').read_bytes()).hexdigest()
     write_json(REPORTS / 'build.json', record)
     return 0
 
@@ -88,9 +88,9 @@ def session(phase, number, helper, registration):
         environment[name] = value
     if 'variant' in selected:
         command = ['/usr/bin/python3', ROOT / '.github/scripts/atspi_ping_probe.py',
-                   '--executable', BUILD / f'auto_insertion-{selected["variant"]}-probe',
+                   '--executable', BUILD / f'auto_close_tags-{selected["variant"]}-probe',
                    '--expect', selected['expect'], '--report-dir', directory / 'peer',
-                   '--timeout', '90']
+                   '--timeout', '90', '--cases', '424']
         outer_timeout = 110
     else:
         [(workspace, names)] = ci.test_shards(BUILD, f'^{TEST}$', 1, directory / 'ctest')
@@ -102,7 +102,8 @@ def session(phase, number, helper, registration):
         outer_timeout = 100
     plan = {'phase': phase, 'backend': selected['backend'], 'session': number,
             'command': [str(item) for item in command], 'working_directory': str(working),
-            'case_timeout': 90, 'outer_timeout': outer_timeout}
+            'diagnostic_gui_watchdog': 90 if 'variant' in selected else None,
+            'outer_timeout': outer_timeout}
     write_json(directory / 'plan.json', plan)
     started = time.monotonic()
     isolated = [sys.executable, ROOT / 'tools/xvfb_session.py', 'dbus-run-session', '--',

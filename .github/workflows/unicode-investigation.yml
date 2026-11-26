@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   compare:
-    name: Verify AT-SPI replies during all auto-insertion cases
+    name: Verify AT-SPI replies during all automatic tag-closure cases
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:
@@ -43,7 +43,7 @@ jobs:
         env:
           CXXFLAGS: '-g1'
         run: python -X utf8 .github/scripts/ci.py configure --coverage
-      - name: Build original, fixed and clean auto-insertion fixtures
+      - name: Build original, fixed and clean automatic tag-closure fixtures
         run: python -X utf8 .github/scripts/atspi_investigation.py build
       - name: Verify expected baseline timeout and responsive fixed cases
         run: python -X utf8 .github/scripts/atspi_investigation.py run
@@ -51,15 +51,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: atspi-responsiveness-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: atspi-tags-responsiveness-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
-            .ci/build/coverage-cmake/auto_insertion*
+            .ci/build/coverage-cmake/auto_close_tags*
             .ci/build/coverage-cmake/compile_commands.json
             .github/scripts/atspi_investigation.py
             .github/scripts/atspi_ping_probe.py
-            .github/scripts/fixtures/auto_insertion_*_probe.cpp
-            tests/auto_insertion.cpp
+            .github/scripts/fixtures/auto_close_tags_*_probe.cpp
+            tests/auto_close_tags.cpp
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

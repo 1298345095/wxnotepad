@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-"""Observe real AT-SPI Peer.Ping replies while auto_insertion runs its 444 cases.
+"""Observe real AT-SPI Peer.Ping replies while a native fixture runs every case.
 
 Run inside the repository's private display/D-Bus wrapper. The executable must
 be one of the diagnostic copies with flushed case-loop-begin/complete markers.
-The GUI retains its own 90-second limit; the caller allows separate monitor
-startup/cleanup time. No accessibility desktop enumeration is used. Stdout and
+A diagnostic watchdog bounds the GUI at 90 seconds; the caller allows separate
+monitor startup/cleanup time. No accessibility desktop enumeration is used. Stdout and
 stderr have independent pipes, buffers and logs; only stdout carries protocol.
 """
 
@@ -26,7 +26,6 @@ gi.require_version('Gio', '2.0')
 from gi.repository import Gio, GLib
 
 
-CASE_COUNT = 444
 PING_TIMEOUT_MS = 10_000
 PING_INTERVAL_SECONDS = 1.0
 BUS = 'org.freedesktop.DBus'
@@ -174,12 +173,12 @@ class PingProbe:
         if stream != 'stdout':
             return
         if match := BEGIN.fullmatch(text):
-            if self.begin_ns is not None or int(match[1]) != CASE_COUNT:
+            if self.begin_ns is not None or int(match[1]) != self.args.cases:
                 self.protocol_errors.append('invalid or repeated begin marker')
             self.begin_ns = time.monotonic_ns()
             self.emit('case_loop_begin', total=int(match[1]))
         elif match := COMPLETE.fullmatch(text):
-            if self.begin_ns is None or self.complete_ns is not None or int(match[1]) != CASE_COUNT:
+            if self.begin_ns is None or self.complete_ns is not None or int(match[1]) != self.args.cases:
                 self.protocol_errors.append('invalid or repeated complete marker')
             if match[2] is None:
                 self.protocol_errors.append('complete marker must include max_case_ms')
@@ -292,7 +291,7 @@ class PingProbe:
         finished_ns = time.monotonic_ns()
         latency_ms = (finished_ns - request['sent_ns']) / 1_000_000
         # Read flushed completion markers before classifying an error; shutdown
-        # after 444 successes must not become an apparent mid-loop NoReply.
+        # after all cases succeed must not become an apparent mid-loop NoReply.
         self.read_output()
         live_owner = None
         owner_error = None
@@ -387,7 +386,7 @@ class PingProbe:
     def summary(self):
         exit_code = self.process.returncode if self.process else None
         complete = (exit_code == 0 and self.begin_ns is not None and self.complete_ns is not None and
-                    self.case_indices == list(range(CASE_COUNT)) and self.pass_seen and
+                    self.case_indices == list(range(self.args.cases)) and self.pass_seen and
                     not self.fail_lines and not self.protocol_errors)
         middle = [row for row in self.pings if row['mid_case_loop']]
         replies = [row for row in middle if row['kind'] == 'reply']
@@ -395,11 +394,11 @@ class PingProbe:
         other = [row for row in middle if row['kind'] != 'reply' and not row['qualifying_timeout']]
         reasons = []
         if not complete:
-            reasons.append('GUI must exit 0 with both markers, cases 0..443, and the unchanged PASS output')
+            reasons.append(f'GUI must exit 0 with both markers, cases 0..{self.args.cases - 1}, and the unchanged PASS output')
         if self.name is None:
             reasons.append('No unique a11y name was bound to the real GUI PID')
         if self.deadline_expired.is_set():
-            reasons.append('GUI exceeded its original application timeout')
+            reasons.append('GUI exceeded its diagnostic application watchdog')
         if self.interrupted is not None:
             reasons.append(f'Monitor interrupted by signal {self.interrupted}')
         if self.fatal_error:
@@ -420,7 +419,8 @@ class PingProbe:
                 'backend': os.environ.get('GDK_BACKEND'), 'gui_exit_code': exit_code,
                 'application_timeout_seconds': self.args.timeout,
                 'application_deadline_expired': self.deadline_expired.is_set(),
-                'all_444_cases_passed': complete, 'case_lines': len(self.case_indices),
+                'all_cases_passed': complete, 'expected_case_count': self.args.cases,
+                'case_lines': len(self.case_indices),
                 'begin_observed_ns': self.begin_ns, 'complete_observed_ns': self.complete_ns,
                 'max_case_ms': self.max_case_ms, 'mid_loop_replies': len(replies),
                 'mid_loop_timeouts': len(missed), 'mid_loop_other_errors': len(other),
@@ -471,9 +471,12 @@ def main():
     parser.add_argument('--expect', choices=('timeout', 'responsive'), required=True)
     parser.add_argument('--report-dir', type=Path, required=True)
     parser.add_argument('--timeout', type=float, default=90)
+    parser.add_argument('--cases', type=int, default=444)
     args = parser.parse_args()
     if not 0 < args.timeout <= 90:
-        parser.error('--timeout must be positive and cannot exceed the original 90-second limit')
+        parser.error('--timeout must be positive and cannot exceed the 90-second diagnostic limit')
+    if args.cases <= 0:
+        parser.error('--cases must be positive')
     if not args.executable.is_file() or not os.access(args.executable, os.X_OK):
         parser.error('--executable must name an existing executable file')
     return PingProbe(args).run()

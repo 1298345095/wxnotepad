@@ -1,0 +1,195 @@
+#include "diagnostics/print.h"
+#include "native_key_helpers.h"
+#include "syntax/syntax_scheme.h"
+#include "document/document_session.h"
+#include "file_helpers.h"
+#include <wx/timer.h>
+#include <wx/wx.h>
+#include <initializer_list>
+#include "auto_close_tags_reference.h"
+#include "auto_close_tags_encoding_reference.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdio>
+#include <print>
+#include <stdexcept>
+#include <utility>
+namespace {
+using CaseClock = std::chrono::steady_clock;
+CaseClock::duration maxCaseDuration{};
+class CaseDuration final {
+public:
+    ~CaseDuration() { maxCaseDuration = std::max(maxCaseDuration, CaseClock::now() - started_); }
+
+private:
+    CaseClock::time_point started_ = CaseClock::now();
+};
+void Character(EditorFrame* frame, int ch, bool native) {
+    auto* editor = frame->Editor();
+#ifdef __WXMSW__
+    (void)native;
+    SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_CHAR, ch, 0);
+    return;
+#else
+    if (native) {
+        NativeKeys::Shortcut(frame, '.', false, false, true);
+        return;
+    }
+#endif
+    wxKeyEvent event(wxEVT_CHAR);
+    event.m_keyCode = ch;
+    event.m_uniChar = ch;
+    event.SetEventObject(editor);
+    editor->GetEventHandler()->ProcessEvent(event);
+}
+void State(EditorControl* editor, const AutoCloseTagsReference::State& state) {
+    using enum Scintilla::Message;
+    if (NativeSearch::Text(editor) != state.text) {
+        std::println(stderr, "actual='{}' expected='{}'", NativeSearch::Text(editor).c_str(), state.text);
+        throw std::runtime_error("character notification must reproduce original text");
+    }
+    if (editor->Send(GetAnchor) != state.anchor || editor->Send(GetCurrentPos) != state.caret)
+        throw std::runtime_error("original anchor and caret direction");
+    if (editor->Send(GetSelections) != static_cast<intptr_t>(state.selections.size()))
+        throw std::runtime_error("original selection count");
+    size_t index = 0;
+    for (const auto& selection : state.selections) {
+        if (editor->Send(GetSelectionNAnchor, index) != selection.anchor ||
+            editor->Send(GetSelectionNCaret, index) != selection.caret)
+            throw std::runtime_error("original additional selection positions");
+        ++index;
+    }
+    if (bool(editor->Send(GetModify)) != state.modified || bool(editor->Send(CanUndo)) != state.canUndo ||
+        bool(editor->Send(CanRedo)) != state.canRedo)
+        throw std::runtime_error("original modification and history state");
+}
+std::string BytesFromHex(std::string_view hex) {
+    std::string bytes;
+    for (size_t position = 0; position < hex.size(); position += 2)
+        bytes += static_cast<char>(std::stoi(std::string(hex.substr(position, 2)), nullptr, 16));
+    return bytes;
+}
+void EncodedFile(EditorFrame* frame, size_t index) {
+    const CaseDuration duration;
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    const auto& item = AutoCloseTagsEncodingReference::cases[index];
+    std::println("case {:d} language={:d} ch=62", AutoCloseTagsReference::cases.size() + index,
+                 static_cast<int>(std::to_underlying(item.language)));
+    const auto path = TestFiles::TemporaryDirectory(item.language == SyntaxLanguage::Html ? "tags.html" : "tags.xml");
+    const auto before = BytesFromHex(item.beforeBytes);
+    TestFiles::WriteBytes(path, before);
+    DocumentSession document(*editor);
+    if (document.Load(DocumentLoad::Open{TestFiles::Filename(path), item.encoding}).status != OpenStatus::Opened)
+        throw std::runtime_error("encoded tag fixture opens");
+    ApplySyntaxLanguage(*editor, item.language);
+    editor->Send(GotoPos, editor->Send(GetLength));
+    editor->Send(Colourise, 0, -1);
+    Character(frame, '>', false);
+    State(editor, item.after);
+    if (document.Encoding() != item.encoding || document.HasBom() != item.bom || editor->Send(GetEOLMode) != item.eol)
+        throw std::runtime_error("tag closure preserves encoding, BOM and EOL metadata");
+    if (document.Save().status != SaveStatus::Saved || TestFiles::Bytes(path) != BytesFromHex(item.saved))
+        throw std::runtime_error("tag closure saves exact original encoded bytes");
+}
+void OriginalCase(EditorFrame* frame, size_t index) {
+    const CaseDuration duration;
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    const auto& item = AutoCloseTagsReference::cases[index];
+    std::println("case {:d} language={:d} ch={:d}", index, static_cast<int>(std::to_underlying(item.language)),
+                 item.character);
+    editor->Send(SetReadOnly, 0);
+    ApplySyntaxLanguage(*editor, item.language);
+    editor->Send(SetUndoSelectionHistory, 0);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(item.before));
+    editor->Send(SetSel, item.anchor, item.position);
+    if (item.extraCaret >= 0) editor->Send(AddSelection, item.extraCaret, item.extraAnchor);
+    editor->Send(SetOvertype, item.overtype);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(SetUndoSelectionHistory, 3);
+    editor->Send(Colourise, 0, -1);
+    editor->Send(SetReadOnly, item.readOnly);
+    Character(frame, item.character, std::string_view(item.before) == "<div" && !item.readOnly);
+    State(editor, item.after);
+    for (const auto& state : item.undo) {
+        editor->Send(Undo);
+        State(editor, state);
+    }
+    for (const auto& state : item.redo) {
+        editor->Send(Redo);
+        State(editor, state);
+    }
+    DocumentSession document(*editor);
+    const auto path = TestFiles::TemporaryDirectory("auto-close-tags.txt");
+    if (document.SaveCopy(TestFiles::Filename(path)).status != SaveStatus::Saved ||
+        TestFiles::Bytes(path) != item.saved)
+        throw std::runtime_error("saved bytes reproduce independently captured original file");
+}
+class AutoCloseTagsApp final : public wxApp {
+public:
+    bool OnInit() override {
+        frame_ = new EditorFrame;
+        frame_->ShowWithoutActivating();
+        timer_.SetOwner(this);
+        Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Step(); }, timer_.GetId());
+        CallAfter([this] {
+            NativeKeys::AfterPresentation(frame_, [this](bool presented) {
+                if (presented) {
+                    std::println("[ATSPI-PROBE] case-loop-begin total=424");
+                    std::fflush(stdout);
+                    Step();
+                    return;
+                }
+                DiagnosticPrint::Print(stderr, "FAIL: owned editor must be presented for native typing\n");
+                Finish();
+            });
+        });
+        return true;
+    }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+    int OnExit() override { return result_; }
+
+private:
+    void Step() {
+        try {
+            if (next_ < AutoCloseTagsReference::cases.size()) {
+                OriginalCase(frame_, next_++);
+                if (next_ == AutoCloseTagsReference::cases.size())
+                    frame_->Editor()->Send(Scintilla::Message::SetReadOnly, 0);
+            } else {
+                EncodedFile(frame_, next_++ - AutoCloseTagsReference::cases.size());
+            }
+            if (next_ < AutoCloseTagsReference::cases.size() + AutoCloseTagsEncodingReference::cases.size()) {
+                // Return to the native loop between independent cases so input,
+                // painting and accessibility requests can run.
+                if (!timer_.StartOnce(1)) throw std::runtime_error("schedule the next automatic tag-closure case");
+                return;
+            }
+            std::puts("PASS: original character notifications, styles, read-only state and Undo/Redo");
+            std::println("[ATSPI-PROBE] case-loop-complete total=424 max_case_ms={}",
+                         std::chrono::duration_cast<std::chrono::milliseconds>(maxCaseDuration).count());
+            std::fflush(stdout);
+
+            result_ = 0;
+        } catch (const std::exception& error) {
+            DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
+        }
+        Finish();
+    }
+    void Finish() {
+        timer_.Stop();
+        frame_->Destroy();
+        ExitMainLoop();
+    }
+    EditorFrame* frame_ = nullptr;
+    wxTimer timer_;
+    size_t next_ = 0;
+    int result_ = 1;
+};
+} // namespace
+wxIMPLEMENT_APP(AutoCloseTagsApp);
