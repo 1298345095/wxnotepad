@@ -17,6 +17,7 @@ class EditorControl;
 class FindReplaceDialog;
 class SettingsStore;
 class wxMenu;
+struct WindowRequest;
 #ifdef __WXMSW__
 class ExplorerSelections;
 #endif
@@ -63,6 +64,7 @@ public:
     bool OpenContainingFolder();
     void AppendOpenTargetCommands(wxMenu* menu);
     bool Restart();
+    OpenStatus ReceiveWindowRequest(const WindowRequest& request);
     bool ExecuteDocument();
     bool OpenDocumentWith();
     OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,

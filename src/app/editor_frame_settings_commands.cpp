@@ -185,8 +185,39 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     AppendAppearanceOptions(view);
+    auto* windowOptions = new wxMenu;
+    const auto appendRouting = [this](wxMenu* menu, const wxString& label, bool reuse) {
+        const int id = wxWindow::NewControlId();
+        menu->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, reuse](wxCommandEvent&) {
+                auto& values = settings_ ? settings_->values : defaults_;
+                const bool nextReuse = reuse ? !values.reuseWindow : values.reuseWindow;
+                const bool nextSingle = reuse ? values.singleFileInstance : !values.singleFileInstance;
+                if (settings_) {
+                    if (!settings_->SaveWindowRouting(nextReuse, nextSingle))
+                        wxMessageBox(wxString::Format(_("Could not write %s"), settings_->Path()),
+                                     _("Could not save settings"), wxOK | wxICON_ERROR, this);
+                } else {
+                    values.reuseWindow = nextReuse;
+                    values.singleFileInstance = nextSingle;
+                }
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, reuse](wxUpdateUIEvent& event) {
+                const auto& values = settings_ ? settings_->values : defaults_;
+                event.Check(reuse ? values.reuseWindow : values.singleFileInstance);
+            },
+            id);
+    };
+    appendRouting(windowOptions, _("&Reuse Window"), true);
+    view->AppendSubMenu(windowOptions, _("Window O&ptions"));
     AppendWindowTitleOptions(view);
     view->AppendSeparator();
+    appendRouting(view, _("Single &File Instance"), false);
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);

@@ -5,6 +5,7 @@
 #include "editor/go_to_location.h"
 #include "app/process_observer.h"
 #include "app/new_window.h"
+#include "app/window_routing.h"
 #include "settings/settings_store.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
@@ -17,22 +18,14 @@
 #include <algorithm>
 
 namespace {
-struct StartupOptions {
-    wxString startup;
+struct StartupOptions : WindowRequest {
     wxString observation;
     std::optional<wxString> windowPosition;
-    std::optional<EncodingChoice> encoding;
-    std::optional<SyntaxLanguage> scheme;
     wxString schemeName;
-    DocumentLoad::SourceDecoding source;
     std::optional<unsigned> unsupportedSourceCodePage;
     wxString missingParameter;
-    std::optional<InitialLocation> initialLocation;
-    bool readOnly = false;
     bool help = false;
-    bool ordinaryFile = false;
-    Scintilla::Position line = 0;
-    Scintilla::Position column = 0;
+    std::optional<std::pair<bool, bool>> routing;
 
     bool ParseEncoding(const wxString& value) {
         long setting = 0;
@@ -138,6 +131,9 @@ struct StartupOptions {
                                                 : DocumentLoad::SourceDecoding{};
             } else if (option.CmpNoCase("s") == 0 && i < argc) {
                 schemeName = argv[i++];
+            } else if (option.CmpNoCase("n") == 0 || option.CmpNoCase("ns") == 0 || option.CmpNoCase("r") == 0 ||
+                       option.CmpNoCase("rs") == 0) {
+                routing = std::pair{option.Lower().StartsWith("r"), option.length() == 2};
             } else if (option.CmpNoCase("ro") == 0) {
                 readOnly = true;
             } else if (option == "?") {
@@ -195,6 +191,10 @@ wxString StartupHelp() {
                       "-?  Show this help.\n\n"
                       "Positions are one-based. A negative line jumps to the end; a negative column counts characters "
                       "without expanding tabs.");
+    text += "\n\n" + _("-n  Always open a new window.\n"
+                       "-ns  Match an existing window only for the same file.\n"
+                       "-r  Reuse an available window.\n"
+                       "-rs  Reuse without a file; otherwise match only the same file.");
 #ifdef __WXMSW__
     text += "\n\n" + _("Windows: /option, -option and --option.");
 #else
@@ -208,9 +208,21 @@ wxString StartupHelp() {
 class NotepadApp final : public wxApp {
     std::unique_ptr<SettingsStore> settings_;
     std::unique_ptr<ProcessObserver> observer_;
+    std::unique_ptr<WindowRouting> routing_;
     std::optional<int> startupExitCode_;
+    wxString desktopStartupId_;
+    wxString waylandActivationToken_;
 
 public:
+    bool Initialize(int& count, wxChar** arguments) override {
+#ifdef __WXGTK__
+        // GDK stashes DESKTOP_STARTUP_ID and unsets it during initialization.
+        wxGetEnv("DESKTOP_STARTUP_ID", &desktopStartupId_);
+        wxGetEnv("XDG_ACTIVATION_TOKEN", &waylandActivationToken_);
+        wxUnsetEnv("XDG_ACTIVATION_TOKEN");
+#endif
+        return wxApp::Initialize(count, arguments);
+    }
     bool OnInit() override {
         WXNOTE_TRACE("process.start");
         StartupOptions options;
@@ -238,9 +250,26 @@ public:
             return true;
         }
         SetAppearance(Appearance::System);
-        auto* frame = new EditorFrame(settings_.get());
+        options.startupId = WindowRouting::StartupId(desktopStartupId_, waylandActivationToken_);
+        WindowRouting::SetStartupId(options.startupId);
+        desktopStartupId_.clear();
+        waylandActivationToken_.clear();
+        if (!options.startup.empty()) {
+            wxFileName path(options.startup);
+            path.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
+                           wxPATH_NORM_SHORTCUT);
+            options.startup = path.GetFullPath();
+        }
         if (!options.schemeName.empty())
             options.scheme = StartupScheme(options.schemeName, settings_->values.schemeExtensions);
+        const auto [reuse, single] =
+            options.routing.value_or(std::pair{settings_->values.reuseWindow, settings_->values.singleFileInstance});
+        const auto routed = WindowRouting::Route(options, reuse, single);
+        if (routed != WindowRouting::Result::NewWindow) {
+            startupExitCode_ = routed == WindowRouting::Result::Handled ? 0 : 2;
+            return true;
+        }
+        auto* frame = new EditorFrame(settings_.get());
         if (options.windowPosition && !ApplyInitialWindowPosition(*frame, *options.windowPosition)) return false;
         bool skipLoad = options.startup.empty();
         if (options.ordinaryFile) {
@@ -296,6 +325,8 @@ public:
         if (options.initialLocation && opened) GoToInitialLocation(*frame->Editor(), *options.initialLocation);
         frame->Show();
         frame->Editor()->SetFocus();
+        routing_ = std::make_unique<WindowRouting>(*frame);
+        if (!routing_->IsOk()) return false;
         // An external acceptance fixture can observe independently relaunched
         // processes through the same opt-in shown-application seam.
         if (wxString observationRoot; options.observation.empty() &&

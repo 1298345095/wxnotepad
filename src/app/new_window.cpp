@@ -2,12 +2,16 @@
 #include <utility>
 #include "app/editor_frame.h"
 #include "app/native_launch.h"
+#include "app/window_routing.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
 #include <wx/stdpaths.h>
 #include <wx/toplevel.h>
 #include <wx/msgdlg.h>
 #include <wx/translation.h>
+#include <wx/file.h>
+#include <wx/filename.h>
+#include <wx/log.h>
 #include <limits>
 #include <array>
 #include <vector>
@@ -39,6 +43,39 @@ bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argume
 
 bool EditorFrame::NewWindow() {
     return LaunchWindow(false);
+}
+
+OpenStatus EditorFrame::ReceiveWindowRequest(const WindowRequest& request) {
+    OpenStatus status = OpenStatus::Cancelled;
+    if (ConfirmDiscardChanges(_("Save changes to %s before opening another file?"))) {
+        bool load = true;
+        auto source = request.source;
+        if (request.ordinaryFile && !wxFileExists(request.startup) && !wxDirExists(request.startup)) {
+            load = wxMessageBox(
+                       wxString::Format(_("\"%s\" not found.\nWould you like to create this file?"), request.startup),
+                       _("Create file?"), wxYES_NO | wxCANCEL | wxICON_QUESTION, this) == wxYES;
+            if (load) {
+                const wxLogNull quiet;
+                wxFile file;
+                load = file.Create(request.startup, false) && file.Close();
+                if (load && std::holds_alternative<DocumentLoad::NativeAnsiSource>(source)) {
+                    if (const auto native = NativeEncodingChoice()) source = *native;
+                }
+                if (!load)
+                    wxMessageBox(_("Could not create the file."), _("Could not open file"), wxOK | wxICON_ERROR, this);
+            }
+        }
+        if (load) {
+            const auto result = OpenRestartDocument(request.startup, request.encoding, request.scheme, request.readOnly,
+                                                    request.line, request.column, source);
+            status = result.status;
+            if (status == OpenStatus::Failed)
+                wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
+        }
+    }
+    // Original WM_COPYDATA jumps even when Save/Discard/Open was cancelled.
+    if (request.initialLocation) GoToInitialLocation(*editor_, *request.initialLocation);
+    return status;
 }
 
 bool EditorFrame::OpenInNewWindow() {
@@ -120,7 +157,7 @@ bool EditorFrame::LaunchWindow(bool currentFile) {
     const wxString executable = wxStandardPaths::Get().GetExecutablePath();
     const wxString position = wxString::Format("%d,%d,%d,%d,%d", normal.GetX(), normal.GetY(), normal.GetWidth(),
                                                normal.GetHeight(), IsMaximized());
-    std::vector<wxString> arguments{executable, "--window-position", position};
+    std::vector<wxString> arguments{executable, "-n", "--window-position", position};
     if (currentFile && !document_.Path().empty()) {
         if (editor_->Send(Scintilla::Message::GetReadOnly)) arguments.emplace_back("--read-only");
         arguments.emplace_back("--startup-encoding");

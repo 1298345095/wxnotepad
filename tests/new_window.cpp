@@ -244,16 +244,19 @@ public:
     bool OnInit() override {
         settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
-        const bool child = argc > 1 && wxString(argv[1]) == "--window-position";
-        if (child && (argc != 3 || !ApplyInitialWindowPosition(*frame, argv[2]))) return false;
+        const bool child = argc > 1 && wxString(argv[1]) == "-n";
+        if (child &&
+            (argc != 4 || wxString(argv[2]) != "--window-position" || !ApplyInitialWindowPosition(*frame, argv[3])))
+            return false;
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame, child](bool ready) {
             try {
                 Require(ready, "test frame must reach native presentation");
                 if (child) {
-                    Require(argc == 3, "child must receive only its requested window position");
+                    Require(argc == 4 && wxString(argv[1]) == "-n" && wxString(argv[2]) == "--window-position",
+                            "child must receive force-new and only its requested window position");
 #ifndef __WXMSW__
-                    const auto requested = wxSplit(wxString(argv[2]), ',');
+                    const auto requested = wxSplit(wxString(argv[3]), ',');
                     Require(requested.size() == 5 && requested[2] == "640" && requested[3] == "480",
                             "child must receive the matching normal-size request");
 #endif

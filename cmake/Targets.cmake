@@ -175,6 +175,7 @@ add_library(app_shell STATIC
     src/app/desktop_launch.cpp
     src/app/document_tools.cpp
     src/app/new_window.cpp
+    src/app/window_routing.cpp
     src/app/open_targets.cpp
     src/app/run_command.cpp
     src/app/selection_actions.cpp
@@ -184,6 +185,9 @@ add_library(app_shell STATIC
     src/app/dialogs/toolbar_customization_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
+if(NOT WIN32)
+    target_link_libraries(app_shell PUBLIC wx::net)
+endif()
 if(NOT WIN32)
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)
     string(REGEX REPLACE "(..)" "0x\\1," WXNOTEPAD_ICON_DATA "${WXNOTEPAD_ICON_HEX}")
