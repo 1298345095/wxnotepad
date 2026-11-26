@@ -3,7 +3,7 @@
 File > Encoding changes the live document's destination format. The delivered
 direct choices retain the original order: ANSI (when its native codec is
 delivered), UTF-8, UTF-8 BOM, UTF-16LE BOM and UTF-16BE BOM. More (F9) offers those formats,
-BOM-less UTF-16LE/UTF-16BE, GBK, GB18030, Big5, Windows-1252 and DOS-437 in their original catalog groups and
+BOM-less UTF-16LE/UTF-16BE, GBK, GB18030, Big5, Windows-1252, DOS-437, CP932 and CP949 in their original catalog groups and
 names. It selects the current identity and retains it on cancellation. F9
 neither reloads nor saves the file; F8 below continues to select the source
 codec for a disk reload.
@@ -125,7 +125,7 @@ the selected codec and BOM; the #59 legacy-loss and #60 reopen rules remain in
 the same session flow.
 
 File > Reload > With Encoding (F8) offers UTF-8, UTF-16LE, UTF-16BE, GBK,
-GB18030, Big5, Windows-1252 and DOS-437 as explicit
+GB18030, Big5, Windows-1252, DOS-437, Windows-932 and Windows-949 as explicit
 source codecs. Its initial selection normalizes loaded BOM variants to their
 source codec; a native ANSI identity starts without an explicit source choice.
 A native OEM identity also starts without an explicit source choice.
@@ -188,6 +188,44 @@ CP54936 uses the original zero-flags conversion and represents the complete
 Unicode scalar stream. Both codecs use the existing transactional Save, Save
 As, first Save, Save Copy and Save with Original Time paths.
 
+## Original Japanese and Korean repertoires
+
+Japanese Shift-JIS is the original Windows CP932 identity, including half-width
+katakana, Windows extension kanji, private-use assignments and the Windows
+backslash/yen and wave-dash mappings. Korean Unified Hangul Code is Windows
+CP949, including extended Hangul beyond EUC-KR. Their explicit numeric defaults
+are `932` and `949`; native ANSI/OEM identities remain distinct even when they
+resolve to those same pages. Both are available in F8 source reload, F9 current
+encoding, Default Encoding, status and Encoding Identifier. Original identifiers
+are `Shift-JIS` and `Windows-949`; all pinned catalog aliases are retained.
+No additional Japanese or Korean detection guess is introduced.
+
+Windows uses the original conversion API sequence. Linux reuses wx/iconv CP932
+and CP949 with only independently measured differences: CP932's 0x80 and four
+single-byte private-use mappings, and CP949's 0x80/0xFF plus its 188 private-use
+characters in the C9 and FE rows. Invalid/truncated CP932 sequences become
+U+30FB; CP949 uses `?`. Invalid lead pairs consume their non-NUL trail together,
+and an embedded NUL remains a separate code unit. Strict detector validation
+retains Windows' stricter treatment of the private-use single bytes.
+
+Save retains the original no-best-fit pass and loss confirmation. A best-fit-only
+yen sign therefore prompts and becomes `?` after acceptance; an unrepresentable
+supplementary scalar becomes two question marks. Cancellation retains rich
+text, selection, Undo/Redo, current encoding and the original disk bytes.
+Save Copy retains its existing original behavior of creating an empty new
+destination before loss confirmation. Save Backup and periodic backups retain
+the original UTF-8 editor-buffer boundary for explicit legacy encodings, without
+converting through the selected file codec. Default settings and Restart use the
+same encoding identities and file conversion paths.
+
+The independent original application fixtures in
+`tests/fixtures/encoding_279` cover every single-byte and two-byte input, its
+complete decoded Unicode and actual Save output. They were cross-checked with
+independent Windows API observations of the pinned conversion sequence; those
+observations also compared all BMP scalar encodes against glibc. Smaller real
+file tests cover empty/ASCII, malformed/truncated data, embedded NUL, mixed EOL,
+F8/F9 and native loss cancellation, save variants, backups and save-point history.
+
 ## Remaining codec catalog
 
 Catalog metadata is retained in
@@ -198,7 +236,7 @@ choices are reported rather than relabeled. The remaining original codecs are:
 | --- | --- |
 | Unicode | UTF-7 (65000) |
 | Windows | 1250–1251, 1253–1258, 874 |
-| Asian | Shift-JIS 932, UHC 949, EUC-JP 20932, Johab 1361, EUC-KR 51949, Chinese CNS 20000 |
+| Asian | EUC-JP 20932, Johab 1361, EUC-KR 51949, Chinese CNS 20000 |
 | ISO | 28591–28600, 28603–28606, Arabic logical 38596, Hebrew logical 38598 |
 | KOI8 | 20866, 21866 |
 | OEM | 850, 858, 852, 720, 864, 775, 855, 866, 863, 737, 869, 862, 861, 865, 860, 857 |

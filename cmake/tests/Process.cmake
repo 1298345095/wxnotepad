@@ -70,6 +70,11 @@ set_tests_properties(original_markup_settings PROPERTIES TIMEOUT 90)
 add_test(NAME original_encoding_settings COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/encoding_process.py" "$<TARGET_FILE:wxnotepad>")
 set_tests_properties(original_encoding_settings PROPERTIES TIMEOUT 60)
+add_test(NAME original_japanese_korean_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/japanese_korean_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}"
+    --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/japanese-korean-process")
+set_tests_properties(original_japanese_korean_process PROPERTIES TIMEOUT 90)
 add_test(NAME original_indentation_settings COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/indentation_process.py" "$<TARGET_FILE:wxnotepad>")
 set_tests_properties(original_indentation_settings PROPERTIES TIMEOUT 60)

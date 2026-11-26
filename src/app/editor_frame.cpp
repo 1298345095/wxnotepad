@@ -47,6 +47,8 @@ wxString DocumentEncodingLabel(const DocumentSession& document) {
         case Gbk:
         case Gb18030:
         case Big5:
+        case Windows932:
+        case Windows949:
             return wxString::Format("ANSI (CP%u)", info->codePage);
         default:
             return "ANSI (" + name + ")";

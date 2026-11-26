@@ -20,6 +20,8 @@ def run(executable):
         config = folder / "Notepad4.ini"
         fixture = folder / "fallback.txt"
         cases = [
+            ("DefaultEncoding=932", b"\xb6\xfa\x40\r\n", "CP932", 0, 8, None),
+            ("DefaultEncoding=949", b"\xb0\xa1\x81\x41\r\n", "CP949", 0, 8, None),
             ("DefaultEncoding=936", b"\xd6\xd0\xce\xc4\r\n", "CP936", 0, 8, None),
             ("DefaultEncoding=54936", b"\xd6\xd0\x81\x30\x81\x30\r\n", "CP54936", 0, 7, None),
             ("DefaultEncoding=950", b"\xa4\xa4\r\n", "CP950", 0, 5, None),
@@ -57,7 +59,8 @@ def run(executable):
                 if seed == "DefaultEncoding=3" or seed.startswith("DefaultEncoding=-4294967296"):
                     assert "DefaultEncoding=" not in config.read_text(encoding="utf-16")
                 elif seed.splitlines()[0] in {"DefaultEncoding=1252", "DefaultEncoding=437",
-                                             "DefaultEncoding=54936", "DefaultEncoding=950"}:
+                                             "DefaultEncoding=54936", "DefaultEncoding=950",
+                                             "DefaultEncoding=932", "DefaultEncoding=949"}:
                     saved = config.read_text(encoding="utf-16")
                     assert seed.splitlines()[0] in saved, saved
                 print(f"PASS: fresh-process {seed!r} -> {encoding}, BOM={bom}, exact Save")
