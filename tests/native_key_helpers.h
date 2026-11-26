@@ -330,8 +330,6 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
 inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& focusFile, const wxString& request,
                                           int expectedKey, bool received,
                                           const KeyReleaseObserver::Observation& lastEvent) {
-    auto* widget = GTK_WIDGET(frame->GetHandle());
-    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
     const auto failedAt = g_get_monotonic_time();
     wxString pending;
     wxFFile observed(focusFile, "rb");
@@ -595,6 +593,7 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
 #else
     using Clock = std::chrono::steady_clock;
 #ifdef __WXGTK__
+    const bool x11 = GDK_IS_X11_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame->GetHandle())));
     ShortcutPresentation presentation(frame);
 #endif
     auto* editor = frame->Editor();
@@ -618,8 +617,13 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     NativeSearch::OpeningShortcut openingShortcut(received, keyDeadline);
 #endif
     while (!received && Clock::now() < keyDeadline) {
-        // A busy native queue must still let us check release and its deadline.
-        NativeSearch::DispatchEvents(frame);
+        // Let native priorities deliver the release before forcing idle work.
+#ifdef __WXGTK__
+        if (x11)
+            NativeSearch::DispatchX11Iteration();
+        else
+#endif
+            NativeSearch::DispatchEvents(frame);
         wxMilliSleep(10);
     }
     if (!received) {

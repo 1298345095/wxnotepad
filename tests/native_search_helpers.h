@@ -27,6 +27,15 @@
 // Native operations target only widgets owned by each independent search test.
 // Test cases and expected document bytes remain in their own GUI processes.
 namespace NativeSearch {
+#ifdef __WXGTK__
+inline void DispatchX11Iteration() {
+    gtk_main_iteration_do(FALSE);
+#if wxUSE_EXCEPTIONS
+    // Native callbacks store exceptions until control returns to C++.
+    wxTheApp->RethrowStoredException();
+#endif
+}
+#endif
 inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
 #ifdef __WXGTK__
     // Wayland operations also settle compositor surface transitions. Preserve
@@ -35,11 +44,7 @@ inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
         wxYield();
         return;
     }
-    gtk_main_iteration_do(FALSE);
-#if wxUSE_EXCEPTIONS
-    // Native callbacks store exceptions until control returns to C++.
-    wxTheApp->RethrowStoredException();
-#endif
+    DispatchX11Iteration();
     wxTheApp->ProcessPendingEvents();
     wxTheApp->ProcessIdle();
 #else

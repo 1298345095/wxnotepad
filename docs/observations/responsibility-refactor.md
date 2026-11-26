@@ -198,7 +198,49 @@ traces, the same feedback window's native Map acknowledgement preceded Click.
 `SelectionLimit` retains the 50 ms caret period on X11 after `ResetStream`. It
 keeps the 1 MiB input, all 83 assertions, 13 scenarios and 60-second limit. Each
 scenario owns a fresh frame, so this pressure ends with scenario 7; Wayland keeps
-its existing period. The measured pressure cases leave over 27 seconds of margin.
+its existing period. Those two measured pressure sessions completed within the
+original 60-second limit; their remaining time describes that comparison.
+
+
+### Native release priority under coverage
+
+The next [formal X11 coverage run](https://github.com/1298345095/wxnotepad/actions/runs/45754274268/job/139689086449)
+failed the second Alt+F3 release assertion in scenario 7 after 24.307 seconds.
+Its original three-second input deadline expired; the 60-second CTest timeout
+was not reached. That artifact had no X11 release/driver snapshot.
+
+The [four-session observation](https://github.com/1298345095/wxnotepad/actions/runs/45758226385)
+passed all eight searches across 50 ms and measured system-default 600 ms caret
+periods. It did not reproduce the three-second failure. In seven near-limit Save
+waits, the helper explicitly ran 449–485 ms of pending work before real key-up,
+including one 201–217 ms paint. The actual selection-save function took only
+4–5 ms. These measurements separate expensive pending work from the search
+operation itself; they do not establish when input entered the original failed
+process's native queue.
+
+The helper appended full `ProcessPendingEvents()` and `ProcessIdle()` after
+every native iteration, ahead of the next opportunity to dispatch input.
+wxGTK already schedules both through its low-priority native idle source.
+`DispatchX11Iteration()` now owns one GTK iteration and the existing boundary
+for stored exceptions. The X11 release loop uses that operation, then retains the
+original full final dispatch and actual Map acknowledgement after release.
+Wayland keeps its compositor-transition path. The three-second input deadline,
+60-second CTest limit, full 1 MiB scenario and 50 ms X11 pressure remain.
+
+X11 now also uses the existing release-failure snapshot and driver-history
+collection previously enabled only for Wayland. The snapshot remains on the
+failure path and records the owned editor, focus, last key event and request.
+
+The [candidate comparison](https://github.com/1298345095/wxnotepad/actions/runs/45759252340)
+completed 12 sessions and 18 registered CTests, all with actual passing results.
+The four controls also passed. All 14 candidate tests passed: four concurrent
+X11 pressure searches and their held-key feedback checks, two Wayland searches
+and feedback checks, and Escape on both backends. For the near-limit X11 Save,
+real release arrived in 1.298–1.367 seconds in the controls and 0.724–0.786 seconds
+in the candidates. Across all 16 measured candidate X11 shortcuts, explicit
+pending/idle calls before real release were zero and every release arrived
+within the original deadline. The original final dispatch still processes
+pending work after release; window Map and modal response checks remain active.
 
 ## Verification
 
