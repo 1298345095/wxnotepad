@@ -104,6 +104,8 @@ def fixture(text):
 
 def native_search(text):
     text = replace_once(text, '#pragma once\n', '#pragma once\n#include "diagnostics/longline_probe.h"\n')
+    iteration_target = ('0' if 'inline void DispatchX11Iteration() {\n' in text
+                        else 'reinterpret_cast<std::intptr_t>(window)')
     iteration = ('    gtk_main_iteration_do(FALSE);\n'
                  '#if wxUSE_EXCEPTIONS\n'
                  '    // Native callbacks store exceptions until control returns to C++.\n'
@@ -112,7 +114,7 @@ def native_search(text):
     text = replace_once(text, iteration,
                         '    {\n'
                         '        const LonglineProbe::Scope iterationTiming(LonglineProbe::Kind::GtkIterationBegin,\n'
-                        '            LonglineProbe::Kind::GtkIterationEnd, reinterpret_cast<std::intptr_t>(window));\n'
+                        f'            LonglineProbe::Kind::GtkIterationEnd, {iteration_target});\n'
                         + iteration + '    }\n')
     for method, kind in (('ProcessPendingEvents', 'PendingEvents'), ('ProcessIdle', 'ProcessIdle')):
         call = f'    wxTheApp->{method}();\n'
@@ -273,7 +275,10 @@ def main():
                 'trace_environment': 'WXNOTEPAD_PAINT_TRACE', 'trace_path_is_exact': True,
                 'record_capacity': 32768, 'record_bytes': 80,
                 'dispatch_payloads': {
-                    'gtk_iteration_begin': 'window; span includes the existing native-exception rethrow boundary',
+                    'gtk_iteration_begin': (
+                        '0 (the native-only helper has no window argument); span includes the existing native-exception rethrow boundary'
+                        if 'inline void DispatchX11Iteration() {\n' in contents[paths[3]] else
+                        'window; span includes the existing native-exception rethrow boundary'),
                     'pending_events_begin': 'window; existing wx ProcessPendingEvents call only',
                     'process_idle_begin': 'window; existing wx ProcessIdle call only',
                     'save_find_begin': 'selectWord, editor, unused, unused',

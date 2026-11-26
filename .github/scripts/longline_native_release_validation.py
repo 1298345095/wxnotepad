@@ -1,4 +1,4 @@
-"""Observe native key-release budgets under four concurrent coverage sessions."""
+"""Compare native-priority release waiting under four concurrent coverage sessions."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
@@ -16,21 +16,29 @@ import decode_longline_probe
 
 ROOT = ci.ROOT
 BUILD = ROOT / '.ci/build/coverage-cmake'
-REPORTS = ROOT / '.ci/reports/longline-release-investigation'
-FIXTURES = ROOT / '.github/scripts/fixtures/longline-release'
+REPORTS = ROOT / '.ci/reports/longline-native-release-validation'
+FIXTURES = ROOT / '.github/scripts/fixtures/longline-native-release'
 SCRIPT = Path(__file__).resolve()
 SOURCES = ('tests/search_continuation.cpp', 'tests/native_key_helpers.h',
            'src/editor/editor_core.cpp', 'tests/native_search_helpers.h',
            'src/diagnostics/longline_probe.h', 'src/search/search_session.cpp')
-VARIANTS = ('pressure50', 'system600')
+VARIANTS = ('control', 'candidate')
 SEARCH = 'original_search_continuation'
-DEADLINES = {SEARCH: 60}
-TARGETS = ('search_continuation',)
+FEEDBACK = 'native_search_feedback_release'
+ESCAPE = 'original_extra_escape'
+DEADLINES = {SEARCH: 60, FEEDBACK: 60, ESCAPE: 60}
+TARGETS = ('search_continuation', 'extra_escape')
 PHASES = {
-    'current-pressure-x11': {'variant': 'pressure50', 'backend': 'x11', 'sessions': 4,
-                            'tests': (SEARCH,)},
-    'current-system-x11': {'variant': 'system600', 'backend': 'x11', 'sessions': 4,
-                          'tests': (SEARCH,)},
+    'control-x11': {'variant': 'control', 'backend': 'x11', 'sessions': 4,
+                    'tests': (SEARCH,)},
+    'candidate-pressure-x11': {'variant': 'candidate', 'backend': 'x11', 'sessions': 4,
+                               'tests': (SEARCH, FEEDBACK)},
+    'candidate-wayland': {'variant': 'candidate', 'backend': 'wayland', 'sessions': 2,
+                          'tests': (SEARCH, FEEDBACK)},
+    'candidate-extra-x11': {'variant': 'candidate', 'backend': 'x11', 'sessions': 1,
+                            'tests': (ESCAPE,)},
+    'candidate-extra-wayland': {'variant': 'candidate', 'backend': 'wayland', 'sessions': 1,
+                                'tests': (ESCAPE,)},
 }
 FEEDBACK_KINDS = ('feedback_enter', 'feedback_queued', 'feedback_fired',
                   'feedback_click_begin', 'feedback_click_end', 'feedback_exit')
@@ -178,6 +186,8 @@ def session(phase, number, helper, manifest):
         record['tests'] = [{'name': case.get('name'), 'seconds': float(case.get('time', 0)),
                             'status': case.get('status'),
                             'failed': case.find('failure') is not None,
+                            'failure_message': (case.find('failure').get('message')
+                                                if case.find('failure') is not None else None),
                             'skipped': case.find('skipped') is not None}
                            for case in root.iter('testcase')]
         if len(record['tests']) != len(requested) or {item['name'] for item in record['tests']} != set(requested):
@@ -188,7 +198,18 @@ def session(phase, number, helper, manifest):
                          for path in (directory / 'session.log', directory / 'attempts/run-001.log'))
         record['registry_warnings'] = [line for line in logs.splitlines()
                                        if 'Disabling unresponsive app' in line or 'Re-enabling app' in line]
-        record['timed_out'] = '***Timeout' in logs
+        attempts = summary['results']
+        record['probe_attempts'] = [{key: attempt[key] for key in ('status', 'exit_code', 'seconds')}
+                                    for attempt in attempts]
+        record['timed_out'] = ('***Timeout' in logs or
+                               any(attempt['status'] == 'timeout' for attempt in attempts))
+        record['release_deadline_failure'] = (
+            not record['success'] and not record['timed_out'] and
+            record['exit_code'] == 1 and len(attempts) == 1 and
+            attempts[0]['status'] == 'completed' and attempts[0]['exit_code'] == 8 and
+            len(record['tests']) == 1 and record['tests'][0]['name'] == SEARCH and
+            record['tests'][0]['failed'] and record['tests'][0]['failure_message'] == 'Failed' and
+            'FAIL: native shortcut release must reach the owned editor or its dialog' in logs)
         record['traces'] = {}
         for name, path in trace_paths.items():
             if not path.is_file():
@@ -242,19 +263,31 @@ def run():
     complete = (len(results) == expected_sessions and
                 sum(len(record.get('tests', [])) for record in results) == expected_tests and
                 all('collection_error' not in record for record in results))
+    candidates = [record for record in results if record['variant'] == 'candidate']
+    controls = [record for record in results if record['variant'] == 'control']
     phase_passes = {phase: sum(record['success'] for record in results if record['phase'] == phase)
                     for phase in PHASES}
-    success = complete and all(record['success'] for record in results)
+    control_release_failures = sum(record.get('release_deadline_failure', False) for record in controls)
+    # The control retains a timing-dependent defect. Preserve every original
+    # CTest outcome; only its known release assertion is an expected failure.
+    expected_controls = all(record['success'] or record.get('release_deadline_failure', False)
+                            for record in controls)
+    candidate_success = all(record['success'] for record in candidates)
+    success = complete and expected_controls and candidate_success
     write_json(REPORTS / 'summary.json', {'phases': PHASES, 'results': results,
                                         'expected_sessions': expected_sessions, 'expected_tests': expected_tests,
                                         'complete_collection': complete, 'phase_passes': phase_passes,
-                                        'all_registered_tests_passed': success})
+                                        'control_release_failures': control_release_failures,
+                                        'control_outcomes_expected': expected_controls,
+                                        'candidate_success': candidate_success,
+                                        'comparison_success': success})
     return 0 if success else 1
+
 
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == '--session':
         raise SystemExit(inside_session(Path(sys.argv[2])))
     if len(sys.argv) != 2 or sys.argv[1] not in ('build', 'run'):
-        raise SystemExit('Usage: longline_release_investigation.py build|run')
+        raise SystemExit('Usage: longline_native_release_validation.py build|run')
     raise SystemExit(build() if sys.argv[1] == 'build' else run())

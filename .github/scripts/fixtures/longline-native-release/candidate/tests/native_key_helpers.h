@@ -648,6 +648,7 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
 #else
     using Clock = std::chrono::steady_clock;
 #ifdef __WXGTK__
+    const bool x11 = GDK_IS_X11_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame->GetHandle())));
     ShortcutPresentation presentation(frame);
 #endif
     auto* editor = frame->Editor();
@@ -688,8 +689,13 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         const auto dispatchTiming = LonglineProbe::Event(
             LonglineProbe::Kind::DispatchBegin, 0, received);
         observeBudget(2);
-        // A busy native queue must still let us check release and its deadline.
-        NativeSearch::DispatchEvents(frame);
+        // Let native priorities deliver the release before forcing idle work.
+#ifdef __WXGTK__
+        if (x11)
+            NativeSearch::DispatchX11Iteration();
+        else
+#endif
+            NativeSearch::DispatchEvents(frame);
         observeBudget(3);
         LonglineProbe::Event(LonglineProbe::Kind::DispatchEnd, dispatchTiming, received);
         wxMilliSleep(10);

@@ -178,6 +178,11 @@ void SelectionLimit(EditorFrame* frame) {
     auto* editor = frame->Editor();
     ReportStage("selection limit ResetStream begin");
     TestEditor::ResetStream(editor, text.c_str(), 0, OneMiB);
+#ifdef __WXGTK__
+    // Keep X11 paints active while testing shortcut and nested-modal progress.
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle()))))
+        editor->Send(SetCaretPeriod, 50);
+#endif
     ReportStage("selection limit ResetStream complete; save begin");
     {
 #ifdef __WXGTK__

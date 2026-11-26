@@ -2,20 +2,20 @@
   "source_root": "/workspace/scratch/1c46ea145285/wxnotepad",
   "inputs": {
     "tests/search_continuation.cpp": {
-      "source": "/workspace/scratch/1c46ea145285/wxnotepad/.ci/reports/unicode-root-cause/diagnostic-source/search_continuation_release_system600.cpp",
-      "sha256": "b63f5b977d2840518ec8115de8ba583d0e1b0d0f9d3192cad52159ade191054c"
+      "source": "/workspace/scratch/1c46ea145285/wxnotepad/tests/search_continuation.cpp",
+      "sha256": "9200a2d151a82f2ba7e521b51f835ff2e9569545b64b1f491696fd15eb084d0f"
     },
     "tests/native_key_helpers.h": {
-      "source": "/workspace/scratch/1c46ea145285/wxnotepad/.ci/reports/unicode-root-cause/diagnostic-source/native_key_helpers_deadline.h",
-      "sha256": "5dcd329855fd366d378a73522d07d2b4c5269e63ca717c8ae8c6b9250c074a61"
+      "source": "/workspace/scratch/1c46ea145285/wxnotepad/.ci/reports/unicode-root-cause/diagnostic-source/native_key_helpers_native_release_observed_v1.h",
+      "sha256": "1abc394345d2d1d54b90aab167384d10eae3749e53fe9e845bb6107f6ff17271"
     },
     "src/editor/editor_core.cpp": {
       "source": "/workspace/scratch/1c46ea145285/wxnotepad/src/editor/editor_core.cpp",
       "sha256": "f8d9d2b18e8b2a1756d044a6aba0a6db27b847b79cf68ce671f851946b249ac3"
     },
     "tests/native_search_helpers.h": {
-      "source": "/workspace/scratch/1c46ea145285/wxnotepad/tests/native_search_helpers.h",
-      "sha256": "d0155c5cca977ee8df0443d589ee3c2fc64edbd7300fddc64202053edcb08e31"
+      "source": "/workspace/scratch/1c46ea145285/wxnotepad/.ci/reports/unicode-root-cause/diagnostic-source/native_search_helpers_native_release.h",
+      "sha256": "b0779460062886eb64d9de58592f065583241307ca3d98eb1c78840827325fa3"
     },
     "src/search/search_session.cpp": {
       "source": "/workspace/scratch/1c46ea145285/wxnotepad/src/search/search_session.cpp",
@@ -23,10 +23,10 @@
     }
   },
   "outputs": {
-    "tests/search_continuation.cpp": "4ff5d136f6170a5df49c17c28ed9b16b0785722c009274f1bdfae29f92ccde9b",
-    "tests/native_key_helpers.h": "c560579986f0a11076094c9086cff8a989af02a985f520e867378f815739add7",
+    "tests/search_continuation.cpp": "e13a078c05a97c7a8b979ee45719f85d853e9a366fee49211b53fd2931a4644b",
+    "tests/native_key_helpers.h": "1cd3fd1d583c9cce7a594cfe73d8162e58c3f5237a4f7027c40332f71d672137",
     "src/editor/editor_core.cpp": "ec0b6d8333f258b09ec30c02ebd54f0fc13d8ed88ff1b6a9e42925d84ad3c71f",
-    "tests/native_search_helpers.h": "1f356dc1d82914afaf971be7e652d520b4cdc2de447b046868c5b9e71b44ddd8",
+    "tests/native_search_helpers.h": "2a420673e7264ce7ce5fc1443c5668e7bf55a5d5f30245b5c9d742d88d1e2285",
     "src/search/search_session.cpp": "783e23ac0ec14212b27bc662e809805763b54271ee5ebb0440d819332c82d717",
     "src/diagnostics/longline_probe.h": "bc8314e793740e94df7be934f43253e2c0271c195e2a3187cd6268edfcd819cb"
   },
@@ -46,7 +46,7 @@
   "record_capacity": 32768,
   "record_bytes": 80,
   "dispatch_payloads": {
-    "gtk_iteration_begin": "window; span includes the existing native-exception rethrow boundary",
+    "gtk_iteration_begin": "0 (the native-only helper has no window argument); span includes the existing native-exception rethrow boundary",
     "pending_events_begin": "window; existing wx ProcessPendingEvents call only",
     "process_idle_begin": "window; existing wx ProcessIdle call only",
     "save_find_begin": "selectWord, editor, unused, unused",

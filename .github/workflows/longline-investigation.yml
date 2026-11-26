@@ -1,4 +1,4 @@
-name: Native long-line release deadline observation
+name: Native long-line release priority validation
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   compare:
-    name: Observe real input, synchronous work and release deadlines
+    name: Validate native release priority under coverage load
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:
@@ -43,23 +43,23 @@ jobs:
         env:
           CXXFLAGS: '-g1'
         run: python -X utf8 .github/scripts/ci.py configure --coverage
-      - name: Build two observed release-budget variants
-        run: python -X utf8 .github/scripts/longline_release_investigation.py build
-      - name: Observe four concurrent native search sessions per caret period
-        run: python -X utf8 .github/scripts/longline_release_investigation.py run
+      - name: Build control and native-priority variants
+        run: python -X utf8 .github/scripts/longline_native_release_validation.py build
+      - name: Compare four concurrent X11 sessions and native regressions
+        run: python -X utf8 .github/scripts/longline_native_release_validation.py run
       - name: Preserve all timing and assertion evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: longline-release-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: longline-native-release-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
             .ci/build/coverage-cmake/compile_commands.json
-            .github/scripts/longline_release_investigation.py
+            .github/scripts/longline_native_release_validation.py
             .github/scripts/prepare_longline_probe.py
             .github/scripts/decode_longline_probe.py
             .github/scripts/longline_probe.h
-            .github/scripts/fixtures/longline-release/
+            .github/scripts/fixtures/longline-native-release/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
