@@ -490,7 +490,9 @@ void EditorControl::Core::Resize() {
     // Original ScintillaWin::SizeWindow leaves wrapping to paint for both
     // native technologies, preserving the physical viewport on resize.
 #ifndef __WXMSW__
-    if (Wrapping()) UpdateWrapLayout();
+    // GTK can deliver a scrollbar allocation after an explicit scroll. Rewrap
+    // without revealing the caret, preserving that requested viewport.
+    if (Wrapping()) WrapLines(WrapScope::wsAll);
 #endif
 }
 
