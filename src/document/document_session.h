@@ -6,6 +6,7 @@
 #include <cstdint>
 #include "ScintillaTypes.h"
 #include "syntax/syntax_detection.h"
+#include "syntax/csv_options.h"
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
 #include "editor/native_byte_history.h"
@@ -132,6 +133,8 @@ public:
         return languageOverride_ ? std::optional(EffectiveLanguage()) : std::nullopt;
     }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
+    uint32_t CsvOptions() const { return csvOptions_; }
+    void SetCsvOptions(uint32_t options);
     void SetSyntaxDetectionOptions(SyntaxDetectionOptions options) { detection_ = options; }
 
 private:
@@ -169,6 +172,7 @@ private:
     // independently name a document-type dialect for canonical Web/XML choices.
     std::optional<SyntaxLanguage> markupDialect_;
     SyntaxDetectionOptions detection_;
+    uint32_t csvOptions_ = CsvOption::Default;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
     void ApplyEmptySchemeDefaults(bool overrideEncoding);

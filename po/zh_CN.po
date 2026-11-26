@@ -1178,6 +1178,14 @@ msgstr[0] "CR: %llu 行。"
 msgid "CSS Style Sheet"
 msgstr "CSS 样式表"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "CSV File"
+msgstr "CSV 文件"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "CSV Options"
+msgstr "CSV 选项"
+
 #: src/syntax/generated/style_profiles.h
 msgid "CallTip"
 msgstr "调用提示"
@@ -1334,9 +1342,53 @@ msgstr "列"
 msgid "Column &Wrap..."
 msgstr "段落切分(&W)..."
 
+#: src/syntax/generated/style_profiles.h
+msgid "Column 1"
+msgstr "第 1 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 10"
+msgstr "第 10 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 2"
+msgstr "第 2 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 3"
+msgstr "第 3 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 4"
+msgstr "第 4 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 5"
+msgstr "第 5 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 6"
+msgstr "第 6 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 7"
+msgstr "第 7 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 8"
+msgstr "第 8 列"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 9"
+msgstr "第 9 列"
+
 #: src/app/dialogs/column_wrap_dialog.cpp
 msgid "Column Wrap"
 msgstr "段落切分"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Comma (,)"
+msgstr "逗号 (,)"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Command"
@@ -1643,6 +1695,10 @@ msgstr "自定义动作 &1\tCtrl+Shift+1"
 msgid "Custom Action &2\tCtrl+Shift+2"
 msgstr "自定义动作 &2\tCtrl+Shift+2"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Custom delimiter"
+msgstr "自定义分隔符"
+
 #: src/app/editor_frame_toolbar.cpp
 msgid "Customi&ze Toolbar..."
 msgstr "自定义工具栏(&Z)..."
@@ -1732,7 +1788,7 @@ msgstr "默认换行模式"
 msgid "Definition List"
 msgstr "定义列表"
 
-#: src/syntax/generated/style_profiles.h
+#: src/app/dialogs/csv_options_dialog.cpp src/syntax/generated/style_profiles.h
 msgid "Delimiter"
 msgstr "分隔符"
 
@@ -1786,6 +1842,10 @@ msgstr "不解析编码标记(&T)。"
 #: src/syntax/generated/style_profiles.h
 msgid "Double Quoted String"
 msgstr "双引号字符串"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Double quote"
+msgstr "双引号"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Double quotes"
@@ -1869,6 +1929,10 @@ msgstr "转义 HTML/XML 字符(&M)\tAlt+Shift+X"
 #: src/syntax/generated/style_profiles.h
 msgid "Escape Sequence"
 msgstr "转义序列"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Escape with backslash."
+msgstr "使用反斜线转义"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Example List"
@@ -2787,6 +2851,7 @@ msgstr "未找到匹配"
 msgid "No wrap indent"
 msgstr "续行不缩进"
 
+#: src/app/dialogs/csv_options_dialog.cpp
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "None"
 msgstr "无"
@@ -2907,6 +2972,10 @@ msgstr "有序列表"
 msgid "Other Sett&ings"
 msgstr "其他设置(&O)"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Other:"
+msgstr "其他:"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_HIGHLIGHTCURRENTLINE_FRAME.
 #: src/app/editor_frame_view_commands.cpp
 msgid "Outline &Frame\tCtrl+Shift+F"
@@ -2977,6 +3046,10 @@ msgstr "圆括号 ()"
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
 msgstr "解析错误"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Pipe (|)"
+msgstr "竖线 (|)"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Placeholder"
@@ -3552,6 +3625,10 @@ msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
 msgid "Selected Text"
 msgstr "选中文本"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Semicolon (;)"
+msgstr "分号 (;)"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Send Key"
 msgstr "发送按键"
@@ -3649,6 +3726,10 @@ msgstr "简体中文 (GBK, GB2312)"
 msgid "Single Quoted String"
 msgstr "单引号字符串"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Single quote"
+msgstr "单引号"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Single quotes"
 msgstr "单引号"
@@ -3681,8 +3762,14 @@ msgid "Source encoding"
 msgstr "源编码"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
 msgid "Space"
 msgstr "空格键"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
+msgid "Space"
+msgstr "空格"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Space after comma"
@@ -3817,8 +3904,14 @@ msgid "TSX"
 msgstr "TSX"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
 msgid "Tab"
 msgstr "制表键"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
+msgid "Tab"
+msgstr "制表符"
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tab Indents"
@@ -3891,6 +3984,10 @@ msgstr "文本块"
 #: src/syntax/syntax_catalog.cpp
 msgid "Text File"
 msgstr "文本文件"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Text qualifier"
+msgstr "文本限定符"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -4064,6 +4161,10 @@ msgstr "特征"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Transform &backslashes"
 msgstr "转义反斜线(&T)"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Treat consecutive delimiters as one."
+msgstr "连续分隔符号视为单个处理"
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_BT.
 #: src/app/editor_frame_edit_commands.cpp

@@ -35,6 +35,7 @@ namespace {
 #include "syntax/generated/ini_scheme_data.h"
 #include "syntax/generated/make_scheme_data.h"
 #include "syntax/generated/diff_scheme_data.h"
+#include "syntax/generated/csv_scheme_data.h"
 
 constexpr auto textExtensions = std::to_array<const char*>({"txt"});
 constexpr auto cppExtensions = std::to_array<const char*>({"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"});
@@ -962,6 +963,23 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      diffOriginal,
      {SyntaxMenuFamily::Standalone, 25}},
+    {wxTRANSLATE("CSV File"),
+     csvExtensions,
+     csvLists,
+     csvStyles,
+     {},
+     SCLEX_CSV,
+     SyntaxLanguage::Csv,
+     true,
+     nullptr,
+     nullptr,
+     nullptr,
+     0,
+     false,
+     false,
+     nullptr,
+     csvOriginal,
+     {SyntaxMenuFamily::Standalone, 20}},
 });
 
 } // namespace
@@ -1105,6 +1123,8 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return makeSettingsSection;
     case Diff:
         return diffSettingsSection;
+    case Csv:
+        return csvSettingsSection;
     default:
         return "Text File";
     }

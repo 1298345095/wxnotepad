@@ -21,6 +21,7 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexProps.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexMakefile.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexDiff.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSV.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCSS.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexSQL.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
@@ -116,6 +117,7 @@ add_library(editor_features STATIC
     src/document/encoding/wx_conversion.cpp
     src/document/encoding/encoding_detection.cpp
     src/search/search_session.cpp
+    src/syntax/csv_options.cpp
     src/syntax/syntax_scheme.cpp)
 # The GBK compatibility codec reuses the pinned Unicode conversion utilities.
 target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src")
@@ -139,6 +141,7 @@ add_library(app_shell STATIC
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/scheme_chooser.cpp
+    src/app/dialogs/csv_options_dialog.cpp
     src/app/dialogs/style_customization.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
     src/app/dialogs/insert_tag_dialog.cpp

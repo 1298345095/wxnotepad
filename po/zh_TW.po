@@ -1265,6 +1265,14 @@ msgstr[0] "CR：%llu 行。"
 msgid "CSS Style Sheet"
 msgstr "CSS 樣式表"
 
+#: src/syntax/syntax_catalog.cpp
+msgid "CSV File"
+msgstr "CSV 檔案"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "CSV Options"
+msgstr "CSV 選項"
+
 #: src/syntax/generated/style_profiles.h
 msgid "CallTip"
 msgstr "呼叫提示"
@@ -1426,10 +1434,54 @@ msgstr "欄"
 msgid "Column &Wrap..."
 msgstr "斷行(&W)..."
 
+#: src/syntax/generated/style_profiles.h
+msgid "Column 1"
+msgstr "第 1 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 10"
+msgstr "第 10 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 2"
+msgstr "第 2 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 3"
+msgstr "第 3 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 4"
+msgstr "第 4 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 5"
+msgstr "第 5 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 6"
+msgstr "第 6 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 7"
+msgstr "第 7 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 8"
+msgstr "第 8 欄"
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 9"
+msgstr "第 9 欄"
+
 # Original Notepad4 zh-Hant: IDD_COLUMNWRAP title; adapted where needed.
 #: src/app/dialogs/column_wrap_dialog.cpp
 msgid "Column Wrap"
 msgstr "斷行"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Comma (,)"
+msgstr "逗號 (,)"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Command"
@@ -1736,6 +1788,10 @@ msgstr "自訂動作 &1\tCtrl+Shift+1"
 msgid "Custom Action &2\tCtrl+Shift+2"
 msgstr "自訂動作 &2\tCtrl+Shift+2"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Custom delimiter"
+msgstr "自訂分隔符號"
+
 #: src/app/editor_frame_toolbar.cpp
 msgid "Customi&ze Toolbar..."
 msgstr "自訂工具列(&Z)..."
@@ -1828,7 +1884,7 @@ msgstr "預設換行模式"
 msgid "Definition List"
 msgstr "定義清單"
 
-#: src/syntax/generated/style_profiles.h
+#: src/app/dialogs/csv_options_dialog.cpp src/syntax/generated/style_profiles.h
 msgid "Delimiter"
 msgstr "分隔符號"
 
@@ -1883,6 +1939,10 @@ msgstr "不要解析編碼標籤(&T)。"
 #: src/syntax/generated/style_profiles.h
 msgid "Double Quoted String"
 msgstr "雙引號字串"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Double quote"
+msgstr "雙引號"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Double quotes"
@@ -1971,6 +2031,10 @@ msgstr "轉義 HT&ML/XML 字元\tAlt+Shift+X"
 #: src/syntax/generated/style_profiles.h
 msgid "Escape Sequence"
 msgstr "逸出序列"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Escape with backslash."
+msgstr "使用反斜線轉義"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Example List"
@@ -2919,6 +2983,7 @@ msgstr "找不到符合項目"
 msgid "No wrap indent"
 msgstr "續行不縮排"
 
+#: src/app/dialogs/csv_options_dialog.cpp
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "None"
 msgstr "無"
@@ -3043,6 +3108,10 @@ msgstr "有序清單"
 msgid "Other Sett&ings"
 msgstr "其他設定(&O)"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Other:"
+msgstr "其他:"
+
 # Original Notepad4 zh-Hant: IDM_VIEW_HIGHLIGHTCURRENTLINE_FRAME; adapted where needed.
 #: src/app/editor_frame_view_commands.cpp
 msgid "Outline &Frame\tCtrl+Shift+F"
@@ -3113,6 +3182,10 @@ msgstr "圓括號 ()"
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
 msgstr "剖析錯誤"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Pipe (|)"
+msgstr "分隔號 (|)"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Placeholder"
@@ -3714,6 +3787,10 @@ msgstr "選擇到上一個(&S)\tCtrl+Alt+Shift+F2"
 msgid "Selected Text"
 msgstr "選取的文字"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Semicolon (;)"
+msgstr "分號 (;)"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Send Key"
 msgstr "傳送按鍵"
@@ -3813,6 +3890,10 @@ msgstr "簡體中文 (GBK, GB2312)"
 msgid "Single Quoted String"
 msgstr "單引號字串"
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Single quote"
+msgstr "單引號"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Single quotes"
 msgstr "單引號"
@@ -3846,8 +3927,14 @@ msgid "Source encoding"
 msgstr "來源編碼"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
 msgid "Space"
 msgstr "Space"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
+msgid "Space"
+msgstr "空格"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Space after comma"
@@ -3985,8 +4072,14 @@ msgid "TSX"
 msgstr "TSX"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
 msgid "Tab"
 msgstr "Tab"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
+msgid "Tab"
+msgstr "定位字元"
 
 # Original Notepad4 zh-Hant: IDD_TABSETTINGS/IDC_TAB_INDENT; adapted where needed.
 #: src/app/dialogs/tab_settings_dialog.cpp
@@ -4062,6 +4155,10 @@ msgstr "文字區塊"
 #: src/syntax/syntax_catalog.cpp
 msgid "Text File"
 msgstr "文字檔案"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Text qualifier"
+msgstr "文字限定詞"
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
 #: src/app/run_command.cpp
@@ -4234,6 +4331,10 @@ msgstr "特徵"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Transform &backslashes"
 msgstr "轉換反斜線(&T)"
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Treat consecutive delimiters as one."
+msgstr "連續分隔符號視為單個處理"
 
 # Original Notepad4 zh-Hant: CMD_ENCLOSE_TRIPLE_BT (current application's shortcut retained); adapted where needed.
 #: src/app/editor_frame_edit_commands.cpp

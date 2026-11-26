@@ -225,6 +225,7 @@ private:
     int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
+    void ChooseCsvLanguage();
     void ShowSyntaxScheme(bool favorite = false);
     void CustomizeStyles();
     bool ConfirmDiscardChanges(const wxString& action);

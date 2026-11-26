@@ -402,7 +402,7 @@ void KeyboardChooser() {
             "favorite-mode keyboard confirmation preserves current scheme");
     frame->Destroy();
 }
-using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 27>;
+using LocalizedSchemeCaptions = std::array<std::array<const char*, 3>, 28>;
 
 void CheckLocalizedCaptions(wxTreeCtrl& tree, const LocalizedSchemeCaptions& captions, size_t column) {
     for (const auto& caption : captions) {
@@ -521,6 +521,7 @@ void LocalizedLayout(EditorFrame* frame, SettingsStore& settings, int language) 
         {"Ini Config File", "Ini 配置文件", "Ini 設定檔案"},
         {"Makefile", "Makefile", "Makefile"},
         {"Diff File", "Diff 文件", "Diff 檔案"},
+        {"CSV File", "CSV 文件", "CSV 檔案"},
     }};
     constexpr int SimplifiedChineseLanguage = 2052;
     constexpr int TraditionalChineseLanguage = 1028;

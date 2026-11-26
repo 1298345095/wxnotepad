@@ -506,6 +506,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLo
 void DocumentSession::CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType) {
     const auto previousLanguage = Language();
     const auto previousDialect = EffectiveLanguage();
+    const auto previousCsvOptions = csvOptions_;
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
         if (selected) {
@@ -531,9 +532,10 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
     if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
-    if (previousLanguage != Language() || previousDialect != EffectiveLanguage()) {
+    if (previousLanguage != Language() || previousDialect != EffectiveLanguage() ||
+        (Language() == SyntaxLanguage::Csv && previousCsvOptions != csvOptions_)) {
         ApplyEmptySchemeDefaults(false);
-        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
     }
 }
 
@@ -636,7 +638,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
         markupDialect_.reset();
         unknownLanguage = !DetectAutomaticLanguage();
         ApplyEmptySchemeDefaults(false);
-        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
     }
     return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
@@ -712,9 +714,16 @@ bool DocumentSession::SelectEncoding(EncodingChoice choice, const EncodingChange
     return true;
 }
 
+void DocumentSession::SetCsvOptions(uint32_t options) {
+    if (csvOptions_ == options) return;
+    csvOptions_ = options;
+    if (Language() == SyntaxLanguage::Csv) ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
+}
+
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     const auto previous = Language();
     const auto previousDialect = EffectiveLanguage();
+    const auto previousCsvOptions = csvOptions_;
     markupDialect_.reset();
     // Pinned Styles.cpp::Style_SelectLexer sniffs only the canonical Web/XML
     // choices; explicit dialect choices retain the user's selected language.
@@ -725,9 +734,10 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     }
     languageOverride_ = language;
     if (!language) DetectAutomaticLanguage();
-    if (previous != Language() || previousDialect != EffectiveLanguage()) {
+    if (previous != Language() || previousDialect != EffectiveLanguage() ||
+        (Language() == SyntaxLanguage::Csv && previousCsvOptions != csvOptions_)) {
         ApplyEmptySchemeDefaults(SyntaxSettingsLanguage(previous) != SyntaxSettingsLanguage(Language()));
-        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
     }
 }
 
@@ -773,5 +783,11 @@ bool DocumentSession::DetectAutomaticLanguage() {
     const auto detected = DetectLanguage(path_, prefix.data(), detection_);
     automaticLanguage_ = detected ? detected->schemeLanguage : detection_.defaultLanguage;
     markupDialect_ = detected ? detected->markupDialect : std::nullopt;
+    if (automaticLanguage_ == SyntaxLanguage::Csv) {
+        auto path = path_;
+        if (wxFileName(path).GetExt().CmpNoCase("in") == 0) path = path.BeforeLast('.');
+        const bool tsv = wxFileName(path).GetExt().CmpNoCase("tsv") == 0;
+        csvOptions_ = SniffCsvOptions(editor_, csvOptions_, tsv);
+    }
     return detected.has_value();
 }

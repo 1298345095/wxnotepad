@@ -1099,6 +1099,14 @@ msgstr[1] ""
 msgid "CSS Style Sheet"
 msgstr ""
 
+#: src/syntax/syntax_catalog.cpp
+msgid "CSV File"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "CSV Options"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "CallTip"
 msgstr ""
@@ -1249,8 +1257,52 @@ msgstr ""
 msgid "Column &Wrap..."
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Column 1"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 10"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 2"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 3"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 4"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 5"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 6"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 7"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 8"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 9"
+msgstr ""
+
 #: src/app/dialogs/column_wrap_dialog.cpp
 msgid "Column Wrap"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Comma (,)"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -1547,6 +1599,10 @@ msgstr ""
 msgid "Custom Action &2\tCtrl+Shift+2"
 msgstr ""
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Custom delimiter"
+msgstr ""
+
 #: src/app/editor_frame_toolbar.cpp
 msgid "Customi&ze Toolbar..."
 msgstr ""
@@ -1635,7 +1691,7 @@ msgstr ""
 msgid "Definition List"
 msgstr ""
 
-#: src/syntax/generated/style_profiles.h
+#: src/app/dialogs/csv_options_dialog.cpp src/syntax/generated/style_profiles.h
 msgid "Delimiter"
 msgstr ""
 
@@ -1686,6 +1742,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Double Quoted String"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Double quote"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1768,6 +1828,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Escape Sequence"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Escape with backslash."
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2647,6 +2711,7 @@ msgstr ""
 msgid "No wrap indent"
 msgstr ""
 
+#: src/app/dialogs/csv_options_dialog.cpp
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "None"
 msgstr ""
@@ -2767,6 +2832,10 @@ msgstr ""
 msgid "Other Sett&ings"
 msgstr ""
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Other:"
+msgstr ""
+
 #: src/app/editor_frame_view_commands.cpp
 msgid "Outline &Frame\tCtrl+Shift+F"
 msgstr ""
@@ -2835,6 +2904,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Pipe (|)"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -3386,6 +3459,10 @@ msgstr ""
 msgid "Selected Text"
 msgstr ""
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Semicolon (;)"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Send Key"
 msgstr ""
@@ -3477,6 +3554,10 @@ msgstr ""
 msgid "Single Quoted String"
 msgstr ""
 
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Single quote"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Single quotes"
 msgstr ""
@@ -3506,6 +3587,12 @@ msgid "Source encoding"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Space"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
 msgid "Space"
 msgstr ""
 
@@ -3635,6 +3722,12 @@ msgid "TSX"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Tab"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
 msgid "Tab"
 msgstr ""
 
@@ -3705,6 +3798,10 @@ msgstr ""
 #. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
 #: src/syntax/syntax_catalog.cpp
 msgid "Text File"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Text qualifier"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
@@ -3863,6 +3960,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Transform &backslashes"
+msgstr ""
+
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Treat consecutive delimiters as one."
 msgstr ""
 
 #: src/app/editor_frame_edit_commands.cpp
