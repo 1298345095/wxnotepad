@@ -601,6 +601,12 @@ def closing(fixture):
     try:
         endpoint = endpoint_for(app)
         app.begin('close')
+        wait_for_close_withdrawal(app, endpoint)
+        (fixture.logs / 'closing-transition.json').write_text(json.dumps({
+            'receiver_pid': app.process.pid, 'endpoint': str(endpoint),
+            'close_sequence': app.sequence, 'command_consumed': True,
+            'endpoint_withdrawn': not endpoint.exists(), 'receiver_exit_at_barrier': app.process.poll()
+        }, indent=2), encoding='utf-8')
         requester = incoming(fixture, ('-ns', str(target)), code)
         assert app.process.wait(timeout=10) == 0
         if endpoint:
@@ -622,13 +628,70 @@ def closing(fixture):
 
 def endpoint_for(app):
     if sys.platform == 'win32':
-        return None
+        return WindowsRoutingEndpoint(app.process.pid)
     candidates = list(Path(os.environ['XDG_RUNTIME_DIR']).glob(f'wxnotepad-*/{app.process.pid}.sock'))
     assert len(candidates) == 1, ('Process must own one private Unix listener', candidates)
     endpoint = candidates[0]
     assert endpoint.is_socket() and endpoint.parent.stat().st_uid == os.getuid()
     assert endpoint.parent.stat().st_mode & 0o077 == 0
     return endpoint
+
+
+class WindowsRoutingEndpoint:
+    """Read only this process's actual hidden native routing window."""
+    window_class = 'wxnotepad.WindowRouting.1'
+
+    def __init__(self, pid):
+        import ctypes
+        from ctypes import wintypes
+        self.ctypes, self.types, self.pid = ctypes, wintypes, pid
+        self.user = ctypes.WinDLL('user32', use_last_error=True)
+        self.user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        self.user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+        callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        self.user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
+        windows = []
+
+        @callback
+        def visit(window, unused):
+            if self.owns(window):
+                windows.append(window)
+            return True
+
+        self.user.EnumWindows(visit, 0)
+        assert len(windows) == 1, ('Process must own one native routing window', pid, windows)
+        self.window = windows[0]
+
+    def owns(self, window):
+        owner = self.types.DWORD()
+        self.user.GetWindowThreadProcessId(window, self.ctypes.byref(owner))
+        name = self.ctypes.create_unicode_buffer(64)
+        self.user.GetClassNameW(window, name, len(name))
+        return owner.value == self.pid and name.value == self.window_class
+
+    def exists(self):
+        return self.owns(self.window)
+
+    def __str__(self):
+        return f'{self.window_class}:pid={self.pid}:hwnd={self.window}'
+
+
+def wait_for_close_withdrawal(app, endpoint):
+    from app_observation import read_state
+    deadline = time.monotonic() + 15
+    state = {}
+    while time.monotonic() < deadline:
+        try:
+            state = read_state(app.folder)
+        except OSError:
+            pass
+        consumed = not (app.folder / 'command').exists() and state.get('sequence') == str(app.sequence)
+        # Publication and even its ACK precede frame.Close(). Require the real
+        # listener to withdraw before asserting the closing route's new window.
+        if consumed and state.get('result') == 'ok' and not endpoint.exists():
+            return
+        time.sleep(.01)
+    raise AssertionError(('Close did not consume its command and withdraw its owned endpoint', str(endpoint), state))
 
 
 def activation(fixture):
