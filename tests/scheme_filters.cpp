@@ -126,6 +126,8 @@ public:
                 // undelivered original 2nd Text File as in the cases above.
                 Case("50 48 45", {"All Files", "Python", "Plain Text", "Diff File", "Ini Config File", "Makefile"},
                      {"Python", "Plain Text", "Diff File", "Ini Config File", "Makefile", "All Files"});
+                Case("33 31 35", {"All Files", "Python", "Plain Text", "Ruby Script", "Perl Script", "Tcl Script"},
+                     {"Python", "Plain Text", "Ruby Script", "Perl Script", "Tcl Script", "All Files"});
                 Case({}, {"All Files", "Python", "Plain Text"}, {"Python", "Plain Text", "All Files"});
                 result_ = 0;
             } catch (const std::exception& error) {

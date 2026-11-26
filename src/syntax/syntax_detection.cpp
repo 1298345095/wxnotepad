@@ -51,6 +51,9 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
     for (const auto* shell : {"bash", "dash", "ash", "zsh", "ksh", "sh"}) {
         if (letters.starts_with(shell)) return Bash;
     }
+    if (letters.starts_with("ruby")) return Ruby;
+    if (letters.starts_with("perl")) return Perl;
+    if (letters.starts_with("tcl") || letters.starts_with("wish")) return Tcl;
     if (letters.starts_with("node")) return JavaScript;
     if (letters.starts_with("lua") || letters.starts_with("wlua")) return Lua;
     return std::nullopt;
@@ -285,6 +288,8 @@ SyntaxLanguage LanguageForPath(const wxString& path, const SyntaxExtensions& ext
     for (const auto* build : {"mozconfig", "apkbuild", "pkgbuild"}) {
         if (name.CmpNoCase(build) == 0) return Bash;
     }
+    for (const auto* ruby : {"rakefile", "podfile", "steepfile"})
+        if (name.CmpNoCase(ruby) == 0) return Ruby;
     return PlainText;
 }
 
@@ -305,6 +310,7 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
+    if ((extension == "cgi" || extension == "fcgi") && interpreter) return DetectedSyntax{*interpreter};
     const auto language =
         templateConfig ? PlainText : LanguageForPath(path, options.extensions, options.favoriteSchemes);
     if (language != PlainText) {
@@ -313,9 +319,8 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
         return DetectedSyntax{language};
     }
     if (extension == "txt") return DetectedSyntax{language};
-    // CGI sniffing precedes associated extensions; unmatched names are sniffed
-    // only after original filename matches. Config files are sniffed too.
-    if ((extension == "cgi" || extension == "fcgi") && interpreter) return DetectedSyntax{*interpreter};
+    // Unmatched names are sniffed after original filename matches. Config
+    // files are sniffed too. CGI interpreter sniffing already preceded associations.
     const auto match = templateConfig ? FilenameMatch::Config : OriginalFilenameMatch(path);
     if (match == FilenameMatch::Associated) return DetectedSyntax{PlainText};
     if (auto markup = SniffMarkupFamily(prefix, match, options.noHtmlGuess)) {

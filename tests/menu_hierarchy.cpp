@@ -205,10 +205,13 @@ void CheckMenu(EditorFrame* frame) {
                     "Kotlin Source",
                     "Lua",
                     "Makefile",
+                    "Perl Script",
                     "PowerShell Script",
                     "Python",
+                    "Ruby Script",
                     "Rust",
                     "SQL Query",
+                    "Tcl Script",
                     "TOML",
                     "YAML"});
     Groups(schemes, {"Syntax Scheme...", "Use Default Code Style", "Automatic", "AutoHotkey Script"});
