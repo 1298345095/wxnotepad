@@ -1,0 +1,318 @@
+name: Windows heap investigation
+
+on:
+  push:
+    branches: [codex/diagnose-directwrite-heap-2026-11-26]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-heap-investigation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  investigate:
+    name: DirectWrite dynamic languages heap investigation
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: '1'
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
+      - name: Set up compiler cache
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.19.0
+      - name: Configure the prepared original core
+        shell: bash
+        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
+      - name: Build only the original DirectWrite dynamic language target with symbols
+        shell: python {0}
+        run: |
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          sys.path.insert(0, '.github/scripts')
+          import ci
+
+          cmake = (ci.BUILD / 'cmake').resolve()
+          ci.run(ci.cmake_command([
+              '-S', ci.ROOT, '-B', cmake,
+              '-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /Z7',
+              '-DCMAKE_EXE_LINKER_FLAGS_RELEASE=/INCREMENTAL:NO /DEBUG:FULL /OPT:REF /OPT:ICF /MAP',
+          ]), 'heap-configure.log')
+          ci.run(ci.cmake_command([
+              '--build', cmake, '--config', 'Release', '--parallel', str(os.cpu_count() or 1),
+              '--target', 'directwrite_dynamic_languages',
+          ]), 'heap-build.log')
+
+          reports = ci.REPORTS / 'heap'
+          reports.mkdir(parents=True, exist_ok=True)
+          expression = '^original_ruby_perl_tcl_directwrite$'
+          listing = json.loads(subprocess.check_output([
+              'ctest', '--test-dir', str(cmake), '-C', 'Release',
+              '--show-only=json-v1', '-R', expression,
+          ], text=True, encoding='utf-8'))
+          (reports / 'registered-test.json').write_text(json.dumps(listing, indent=2) + '\n', encoding='utf-8')
+          cases = listing['tests']
+          if len(cases) != 1 or cases[0]['name'] != 'original_ruby_perl_tcl_directwrite':
+              raise SystemExit('Expected exactly the original registered DirectWrite case')
+          case = cases[0]
+          properties = {item['name']: item['value'] for item in case['properties']}
+          expected = cmake / 'directwrite_dynamic_languages.exe'
+          if case.get('command') != [str(expected).replace('\\', '/')]:
+              if len(case.get('command', [])) != 1 or Path(case['command'][0]).resolve() != expected:
+                  raise SystemExit('The registered case must execute the original target without arguments')
+          if properties.get('TIMEOUT') != 90 or properties.get('DISABLED', False):
+              raise SystemExit('The original case must remain enabled with its 90-second timeout')
+          manifest = {
+              'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'case': case['name'], 'expression': expression, 'timeout_seconds': 90,
+              'windows_test_jobs': 1, 'baseline_runs': 3, 'full_pageheap_runs': 12, 'files': [],
+          }
+          for extension in ('exe', 'pdb', 'map'):
+              path = cmake / f'directwrite_dynamic_languages.{extension}'
+              if not path.is_file():
+                  raise SystemExit(f'Required matching binary evidence is missing: {path}')
+              manifest['files'].append({
+                  'path': str(path.relative_to(ci.ROOT)), 'bytes': path.stat().st_size,
+                  'sha256': hashlib.file_digest(path.open('rb'), 'sha256').hexdigest(),
+              })
+          (reports / 'binary-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(manifest, indent=2), flush=True)
+      - name: Prepare the original Windows display conditions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          $heapDisplayBounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $heapDisplayBounds | ConvertTo-Json | Set-Content .ci/reports/heap/windows-display.json
+          if ($heapDisplayBounds.Width -lt 1920 -or $heapDisplayBounds.Height -lt 1080) {
+            throw 'The original 1920x1080 native test display was not established.'
+          }
+      - name: Prepare the original Windows foreground policy
+        shell: bash
+        run: python -X utf8 .github/scripts/windows_foreground.py prepare --state-file .ci/reports/heap/foreground.json
+      - name: Check the installed debuggers and configure target-only full crash dumps
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $heapDebuggerDirectory = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits/10/Debuggers/x64'
+          $heapGflags = Join-Path $heapDebuggerDirectory 'gflags.exe'
+          $heapCdb = Join-Path $heapDebuggerDirectory 'cdb.exe'
+          foreach ($heapTool in @($heapGflags, $heapCdb)) {
+            if (-not (Test-Path -LiteralPath $heapTool -PathType Leaf)) {
+              throw "Required installed Windows debugging tool is missing: $heapTool"
+            }
+          }
+          @($heapGflags, $heapCdb) | ForEach-Object {
+            $heapInfo = Get-Item -LiteralPath $_
+            [pscustomobject]@{path=$heapInfo.FullName; version=$heapInfo.VersionInfo.FileVersion}
+          } | ConvertTo-Json | Set-Content .ci/reports/heap/debugger-tools.json
+          "HEAP_GFLAGS=$heapGflags" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "HEAP_CDB=$heapCdb" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $heapBefore = & $heapGflags /p 2>&1 | Out-String
+          $heapBefore | Set-Content .ci/reports/heap/gflags-before.txt
+          if ($LASTEXITCODE -ne 0 -or $heapBefore -match 'directwrite_dynamic_languages\.exe') {
+            throw 'The baseline requires successful gflags inspection and no existing target PageHeap setting.'
+          }
+
+          $heapDumpDirectory = Join-Path $env:GITHUB_WORKSPACE '.ci/reports/heap/dumps'
+          New-Item -ItemType Directory -Path $heapDumpDirectory -Force | Out-Null
+          $heapWerKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\directwrite_dynamic_languages.exe'
+          $heapWerExisted = Test-Path -LiteralPath $heapWerKey
+          if ($heapWerExisted) {
+            & reg.exe export ($heapWerKey -replace '^HKLM:', 'HKEY_LOCAL_MACHINE') .ci/reports/heap/wer-before.reg /y
+            if ($LASTEXITCODE -ne 0) { throw 'Could not preserve the existing target WER configuration.' }
+          }
+          @{key=$heapWerKey; existed=$heapWerExisted} | ConvertTo-Json | Set-Content .ci/reports/heap/wer-state.json
+          New-Item -Path $heapWerKey -Force | Out-Null
+          New-ItemProperty -Path $heapWerKey -Name DumpFolder -Value $heapDumpDirectory -PropertyType ExpandString -Force | Out-Null
+          New-ItemProperty -Path $heapWerKey -Name DumpType -Value 2 -PropertyType DWord -Force | Out-Null
+          New-ItemProperty -Path $heapWerKey -Name DumpCount -Value 3 -PropertyType DWord -Force | Out-Null
+          Get-ItemProperty -Path $heapWerKey | Select-Object PSChildName, DumpFolder, DumpType, DumpCount |
+            ConvertTo-Json | Set-Content .ci/reports/heap/wer-effective.json
+      - name: Run three original cases then twelve cases with full PageHeap, stopping at the first failure
+        shell: python {0}
+        run: |
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import time
+          import xml.etree.ElementTree as ET
+
+          sys.path.insert(0, '.github/scripts')
+          import ci
+
+          reports = ci.REPORTS / 'heap'
+          cmake = (ci.BUILD / 'cmake').resolve()
+          manifest = json.loads((reports / 'binary-manifest.json').read_text(encoding='utf-8'))
+          image = 'directwrite_dynamic_languages.exe'
+          summary = {'case': manifest['case'], 'timeout_seconds': 90, 'windows_test_jobs': 1,
+                     'baseline_requested': 3, 'full_pageheap_requested': 12, 'runs': [], 'success': False}
+
+          def publish():
+              (reports / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
+
+          def run_phase(phase, attempts):
+              for attempt in range(1, attempts + 1):
+                  destination = reports / phase / f'run-{attempt:03}'
+                  record = {'phase': phase, 'attempt': attempt, 'status': 'running',
+                            'reports': str(destination.relative_to(ci.ROOT))}
+                  summary['runs'].append(record)
+                  publish()
+                  started = time.monotonic()
+                  try:
+                      ci.test('windows', cmake, manifest['expression'], 1, report_directory=destination)
+                      junit = ET.parse(destination / 'windows-tests.xml').getroot()
+                      cases = list(junit.iter('testcase'))
+                      if len(cases) != 1 or cases[0].get('name') != manifest['case']:
+                          raise RuntimeError('The expected original case was not executed exactly once')
+                      if any(list(cases[0].iter(tag)) for tag in ('failure', 'error', 'skipped')):
+                          raise RuntimeError('The original case did not pass; preserve this attempt and stop')
+                      record['status'] = 'passed'
+                  except BaseException as error:
+                      record.update(status='failed', failure_type=type(error).__name__, failure=str(error))
+                      raise
+                  finally:
+                      record['seconds'] = round(time.monotonic() - started, 3)
+                      publish()
+
+          publish()
+          run_phase('baseline', 3)
+          # Record ownership before changing the single image's persistent flag.
+          (reports / 'pageheap-requested.txt').write_text(image + '\n', encoding='utf-8')
+          enabled = subprocess.run([os.environ['HEAP_GFLAGS'], '/p', '/enable', image, '/full'],
+                                   capture_output=True, text=True, encoding='utf-8', errors='replace', check=False)
+          (reports / 'gflags-enable.txt').write_text(enabled.stdout + enabled.stderr, encoding='utf-8')
+          enabled.check_returncode()
+          queried = subprocess.run([os.environ['HEAP_GFLAGS'], '/p'], capture_output=True,
+                                   text=True, encoding='utf-8', errors='replace', check=False)
+          details = queried.stdout + queried.stderr
+          (reports / 'gflags-full.txt').write_text(details, encoding='utf-8')
+          queried.check_returncode()
+          target_lines = [line for line in details.splitlines() if image.casefold() in line.casefold()]
+          if len(target_lines) != 1 or 'full traces' not in target_lines[0].casefold():
+              raise SystemExit('gflags did not confirm full PageHeap with traces for the exact target image')
+          print(target_lines[0], flush=True)
+          summary['full_pageheap_verified'] = target_lines[0]
+          publish()
+          run_phase('full-pageheap', 12)
+          summary['success'] = True
+          publish()
+      - name: Restore the target PageHeap setting
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path .ci/reports/heap/pageheap-requested.txt) {
+            & $env:HEAP_GFLAGS /p /disable directwrite_dynamic_languages.exe 2>&1 |
+              Out-File .ci/reports/heap/gflags-disable.txt -Encoding utf8
+            if ($LASTEXITCODE -ne 0) { throw 'Could not disable the investigation PageHeap setting.' }
+            $heapAfter = & $env:HEAP_GFLAGS /p 2>&1 | Out-String
+            $heapAfter | Set-Content .ci/reports/heap/gflags-after.txt
+            if ($LASTEXITCODE -ne 0 -or $heapAfter -match 'directwrite_dynamic_languages\.exe') {
+              throw 'The investigation PageHeap setting was not removed.'
+            }
+          }
+      - name: Restore the original Windows foreground policy
+        if: always()
+        shell: bash
+        run: python -X utf8 .github/scripts/windows_foreground.py restore --state-file .ci/reports/heap/foreground.json
+      - name: Restore the target WER configuration
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path .ci/reports/heap/wer-state.json) {
+            $heapWerState = Get-Content .ci/reports/heap/wer-state.json -Raw | ConvertFrom-Json
+            if (Test-Path -LiteralPath $heapWerState.key) {
+              Remove-Item -LiteralPath $heapWerState.key -Recurse -Force
+            }
+            if ($heapWerState.existed) {
+              & reg.exe import .ci/reports/heap/wer-before.reg
+              if ($LASTEXITCODE -ne 0) { throw 'Could not restore the original target WER configuration.' }
+            }
+            @{restored=$true; original_key_existed=$heapWerState.existed} |
+              ConvertTo-Json | Set-Content .ci/reports/heap/wer-restored.json
+          }
+      - name: Analyze any new full dumps with the matching binary and PDB
+        if: always()
+        shell: python {0}
+        run: |
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import time
+
+          reports = Path('.ci/reports/heap').resolve()
+          reports.mkdir(parents=True, exist_ok=True)
+          cmake = Path('.ci/build/cmake').resolve()
+          records = []
+          for dump in sorted((reports / 'dumps').glob('directwrite_dynamic_languages.exe.*.dmp')):
+              record = {'dump': dump.name, 'bytes': dump.stat().st_size,
+                        'sha256': hashlib.file_digest(dump.open('rb'), 'sha256').hexdigest()}
+              log = dump.with_suffix('.analysis.txt')
+              symbols = f'{cmake};srv*{reports / "symbols"}*https://msdl.microsoft.com/download/symbols'
+              command = [os.environ['HEAP_CDB'], '-z', str(dump), '-y', symbols, '-i', str(cmake),
+                         '-c', '.lines; !analyze -v; .ecxr; kv; lm; !heap -s; q']
+              record['command'] = command
+              started = time.monotonic()
+              try:
+                  with log.open('wb') as output:
+                      result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT,
+                                              timeout=180, check=False)
+                  record.update(status='completed', exit_code=result.returncode)
+              except subprocess.TimeoutExpired:
+                  record['status'] = 'analysis_timeout'
+              finally:
+                  record['seconds'] = round(time.monotonic() - started, 3)
+                  records.append(record)
+                  (reports / 'dump-analysis.json').write_text(json.dumps(records, indent=2) + '\n', encoding='utf-8')
+          if not records:
+              (reports / 'dump-analysis.json').write_text('[]\n', encoding='utf-8')
+          if any(record['status'] != 'completed' or record.get('exit_code') != 0 for record in records):
+              raise SystemExit('One or more dump analyses did not complete; inspect their retained logs')
+      - name: Preserve investigation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-heap-investigation-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/build/cmake/Testing/Temporary/
+            .ci/build/cmake/directwrite_dynamic_languages.exe
+            .ci/build/cmake/directwrite_dynamic_languages.pdb
+            .ci/build/cmake/directwrite_dynamic_languages.map
+            .ci/build/cmake/CMakeCache.txt
+            .ci/build/cmake/compile_commands.json
+            .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
+            .ci/build/original-core/wxnotepad-source.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
