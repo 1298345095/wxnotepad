@@ -1457,6 +1457,10 @@ msgid "Command"
 msgstr "命令"
 
 #: src/app/main.cpp
+msgid "Command Line Error"
+msgstr "命令列錯誤"
+
+#: src/app/main.cpp
 msgid "Command Line Help"
 msgstr "命令列說明"
 
@@ -3122,6 +3126,11 @@ msgstr "使用此動作的命令開啟所選文字。"
 #: src/syntax/generated/style_profiles.h
 msgid "Operator"
 msgstr "運算子"
+
+#: src/app/main.cpp
+#, c-format
+msgid "Option \"%s\" requires a parameter."
+msgstr "選項「%s」需要參數。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Ordered List"

@@ -189,7 +189,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
-    if (loaded.systemDefault && loaded.encoding != Utf8) {
+    if (loaded.systemDefault && (loaded.encoding != Utf8 || nativeAnsiCodePage)) {
         // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
         // through Unicode, just like the native Base64 Decode boundary.
         bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw, nativeAnsiCodePage);
@@ -243,8 +243,10 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path,
     else if (const auto* codec = std::get_if<FileEncoding>(&decoding))
         encoding = *codec;
     const auto* quick = std::get_if<QuickReloadEncoding>(&decoding);
-    const auto detected = quick ? DetectQuickReloadEncoding(bytes, *quick, options)
-                                : DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    const auto detected = std::holds_alternative<DocumentLoad::NativeAnsiSource>(decoding)
+                              ? DetectAnsiSourceEncoding(bytes)
+                          : quick ? DetectQuickReloadEncoding(bytes, *quick, options)
+                                  : DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
     if (!detected.encoding)
         return wxString::Format(
             _("The selected encoding (code page %u) is not migrated. The document was not changed."),

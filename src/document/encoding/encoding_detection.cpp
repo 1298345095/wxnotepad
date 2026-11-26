@@ -450,6 +450,16 @@ DetectedEncoding MatchSourceEncoding(std::string_view name) {
     return Choice(index, native, OemCodePage(native), index == CPI_DEFAULT);
 }
 
+DetectedEncoding DetectAnsiSourceEncoding(std::string_view bytes) {
+    // Share the original native-UTF8/legacy recode rule with Quick Reload.
+    // EditLoadFile also promotes its ASCII/UTF7 analysis result to the
+    // explicit system codec, independent of ASCII/ANSI preferences.
+    auto detected = DetectQuickReloadEncoding(bytes, QuickReloadEncoding::Ansi, {});
+    if (std::ranges::all_of(bytes, [](unsigned char ch) { return ch < 128; })) detected.systemDefault = false;
+    if (detected.systemDefault && !detected.nativeAnsiCodePage) detected.nativeAnsiCodePage = NativeCodePage();
+    return detected;
+}
+
 int NormalizeEncodingSetting(int value) {
     return PersistedEncodingSetting(DefaultEncoding(value));
 }

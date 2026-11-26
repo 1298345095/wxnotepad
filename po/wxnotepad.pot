@@ -1277,6 +1277,10 @@ msgid "Command"
 msgstr ""
 
 #: src/app/main.cpp
+msgid "Command Line Error"
+msgstr ""
+
+#: src/app/main.cpp
 msgid "Command Line Help"
 msgstr ""
 
@@ -2844,6 +2848,11 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Operator"
+msgstr ""
+
+#: src/app/main.cpp
+#, c-format
+msgid "Option \"%s\" requires a parameter."
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h

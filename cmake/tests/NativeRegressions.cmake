@@ -633,3 +633,8 @@ if(UNIX)
         --cmake-dir "${CMAKE_BINARY_DIR}" --scenario installed)
     set_tests_properties(packaged_startup_installed PROPERTIES TIMEOUT 120)
 endif()
+
+add_test(NAME packaged_startup_missing_parameters COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario missing-parameters)
+set_tests_properties(packaged_startup_missing_parameters PROPERTIES TIMEOUT 120)

@@ -26,6 +26,7 @@ struct StartupOptions {
     wxString schemeName;
     DocumentLoad::SourceDecoding source;
     std::optional<unsigned> unsupportedSourceCodePage;
+    wxString missingParameter;
     std::optional<InitialLocation> initialLocation;
     bool readOnly = false;
     bool help = false;
@@ -102,6 +103,11 @@ struct StartupOptions {
             else if (argument.StartsWith("/"))
                 option = argument.Mid(1);
 #endif
+            if ((option.CmpNoCase("e") == 0 || option.CmpNoCase("s") == 0 || option == "g" || option == "G") &&
+                i == argc) {
+                missingParameter = argument;
+                return false;
+            }
             if (argument == "-" || argument == "--") {
                 if (i == argc || !startup.empty()) return false;
                 startup = argv[i++];
@@ -126,10 +132,10 @@ struct StartupOptions {
                 const auto detected = MatchSourceEncoding(wxString(argv[i++]).utf8_string());
                 unsupportedSourceCodePage = detected.unsupportedCodePage;
                 if (unsupportedSourceCodePage) return false;
-                source = detected.encoding
-                             ? DocumentLoad::SourceDecoding(EncodingChoice(*detected.encoding, detected.bom,
-                                                                           detected.systemDefault, detected.systemOem))
-                             : DocumentLoad::SourceDecoding{};
+                source = detected.systemDefault ? DocumentLoad::SourceDecoding(DocumentLoad::NativeAnsiSource{})
+                         : detected.encoding    ? DocumentLoad::SourceDecoding(EncodingChoice(
+                                                      *detected.encoding, detected.bom, false, detected.systemOem))
+                                                : DocumentLoad::SourceDecoding{};
             } else if (option.CmpNoCase("s") == 0 && i < argc) {
                 schemeName = argv[i++];
             } else if (option.CmpNoCase("ro") == 0) {
@@ -137,7 +143,16 @@ struct StartupOptions {
             } else if (option == "?") {
                 help = true;
             } else if ((option == "g" || option == "G") && i < argc) {
-                if (!ParseInitialLocation(argv[i++], option == "G")) return false;
+                if (ParseInitialLocation(argv[i], option == "G")) {
+                    ++i;
+                } else {
+                    // Original nonnumeric g/G operands fall back to the whole
+                    // remaining pathname, including the option's prefix.
+                    startup = argument;
+                    ordinaryFile = true;
+                    while (i < argc)
+                        startup += " " + wxString(argv[i++]);
+                }
             } else {
                 if (!startup.empty() || argument.StartsWith("-")) return false;
                 startup = argument;
@@ -200,9 +215,15 @@ public:
         WXNOTE_TRACE("process.start");
         StartupOptions options;
         const bool parsed = options.Parse(argc, argv);
-        if (!parsed && !options.unsupportedSourceCodePage) return false;
+        if (!parsed && !options.unsupportedSourceCodePage && options.missingParameter.empty()) return false;
         settings_ = std::make_unique<SettingsStore>();
         AppLocalization::Initialize(settings_->values.uiLanguage);
+        if (!options.missingParameter.empty()) {
+            wxMessageBox(wxString::Format(_("Option \"%s\" requires a parameter."), options.missingParameter),
+                         _("Command Line Error"), wxOK | wxICON_ERROR);
+            startupExitCode_ = 2;
+            return true;
+        }
         if (options.unsupportedSourceCodePage) {
             wxMessageBox(wxString::Format(
                              _("The selected encoding (code page %u) is not migrated. The document was not changed."),
@@ -250,6 +271,10 @@ public:
                         wxMessageBox(_("Could not create the file."), _("Could not open file"), wxOK | wxICON_ERROR,
                                      frame);
                         skipLoad = true;
+                    } else if (std::holds_alternative<DocumentLoad::NativeAnsiSource>(options.source)) {
+                        // Original FileLoad's Create branch initializes ANSI
+                        // directly; an existing empty file goes through recoding.
+                        if (const auto native = NativeEncodingChoice()) options.source = *native;
                     }
                 }
             }

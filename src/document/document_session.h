@@ -37,9 +37,13 @@ struct SaveResult {
 };
 enum class OpenStatus { Opened, Cancelled, Failed };
 namespace DocumentLoad {
+// The public ANSI source alias follows the original legacy recode decision;
+// it is distinct from selecting the editor's native current format.
+struct NativeAnsiSource {};
 // Automatic detection, an explicit codec or native identity, or a quick
 // command's source. Detection supplies the loaded document's BOM.
-using SourceDecoding = std::variant<std::monostate, FileEncoding, EncodingChoice, QuickReloadEncoding>;
+using SourceDecoding =
+    std::variant<std::monostate, FileEncoding, EncodingChoice, QuickReloadEncoding, NativeAnsiSource>;
 struct Open {
     std::optional<wxString> source;
     SourceDecoding decoding{};

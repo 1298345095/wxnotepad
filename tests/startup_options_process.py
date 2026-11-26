@@ -1,6 +1,7 @@
 """Exercise ordinary command-line opening through the real packaged application."""
 import argparse
 from contextlib import contextmanager
+import ctypes
 import json
 import os
 from pathlib import Path
@@ -275,6 +276,58 @@ def failures(executable, root):
     print('PASS: localized unavailable-codec and read failures preserve bytes, report failure and retain no partial load', flush=True)
 
 
+def missing_parameters(executable, root):
+    dialogs = Dialogs(root / 'dialogs')
+    prefixes = ('/', '-', '--') if sys.platform == 'win32' else ('-', '--')
+    for code, preference, title, message in (
+            ('en', 1033, 'Command Line Error', 'Option "%s" requires a parameter.'),
+            ('zh_CN', 2052, '命令行错误', '选项“%s”需要参数。'),
+            ('zh_TW', 1028, '命令列錯誤', '選項「%s」需要參數。')):
+        settings(executable.parent / 'Notepad4.ini', preference)
+        for prefix in prefixes:
+            for option in ('e', 's', 'g', 'G'):
+                argument = prefix + option
+                folder = root / f'{code}-{len(prefix)}-{ord(prefix[0])}-{option}'
+                # Case-sensitive option names need distinct Windows log paths.
+                folder = folder.with_name(folder.name + str(ord(option)))
+                before = set(root.iterdir())
+                app = pending_start(executable, folder,
+                                    environment(executable, root / 'children', code), (argument,), root)
+                try:
+                    window = dialogs.wait(app.process, title, message=message % argument)
+                    assert message % argument in '\n'.join(dialogs.texts(window))
+                    dialogs.answer(app.process, 'ok', window=window)
+                    assert app.process.wait(timeout=10) != 0
+                    assert not (folder / 'state').exists()
+                    assert not any(path.is_file() for path in set(root.iterdir()) - before)
+                finally:
+                    app.stop()
+    # Preserve the adjacent original nonnumeric g/G pathname fallback using
+    # owned relative filenames. No drive-root pathname is created or probed.
+    settings(executable.parent / 'Notepad4.ini', 1033)
+    for option in ('g', 'G'):
+        target = root / f'-{option} nonnumeric-{ord(option)}.txt'
+        data = b'original pathname fallback\r\n'
+        target.write_bytes(data)
+        app = start(executable, root / f'fallback-{ord(option)}', environment(executable, root / 'children'),
+                    arguments=('-' + option, target.name[3:]), cwd=root)
+        try:
+            assert Path(app.state['document_path']) == target, summary(app.state)
+            assert app.state['length'] == str(len(data)) and app.state['dirty'] == '0', summary(app.state)
+            assert target.read_bytes() == data
+            app.close()
+        finally:
+            app.stop()
+    print('PASS: localized missing operands fail without pathname fallback; nonnumeric g/G retains original fallback', flush=True)
+
+
+def native_ansi_page():
+    if sys.platform != 'win32':
+        return 65001  # The private native runtime uses C.UTF-8.
+    native = ctypes.WinDLL('kernel32', use_last_error=True)
+    return native.GetACP()
+
+
 def identities(executable, root):
     settings(executable.parent / 'Notepad4.ini', 1033, 'LoadASCIIasUTF8=0\n')
     for index, (alias, source, current, encoding, expected) in enumerate((
@@ -301,14 +354,41 @@ def identities(executable, root):
                     arguments=('-e', identity, str(target)), cwd=root)
         try:
             status = [text for key, text in app.state.items() if key.startswith('status.') and key.endswith('.text')]
-            assert any(text.startswith(identity + ' (') for text in status), (identity, status)
+            if identity == 'ANSI':
+                # Original EditLoadFile promotes its ASCII/UTF7 analysis result
+                # from ANSI to the explicit system codec before loading.
+                page = native_ansi_page()
+                expected = {65001: 'UTF-8', 936: 'CP936', 950: 'CP950', 1252: 'CP1252', 932: 'CP932', 949: 'CP949'}[page]
+                assert app.state['encoding'] == expected, summary(app.state)
+                assert not any(text.startswith('ANSI (') for text in status), status
+            else:
+                assert any(text.startswith(identity + ' (') for text in status), (identity, status)
             assert app.state['dirty'] == '0'
             app.send('save')
             assert target.read_bytes() == b'native ASCII\r\n'
             app.close()
         finally:
             app.stop()
-    print('PASS: independent source/current encodings and native ANSI/OEM format identities', flush=True)
+    # Independent original native-details capture: CP936 non-ASCII input keeps
+    # ANSI identity, including its valid GBK and invalid lead-byte cases.
+    # The private C.UTF-8 runtime must also retain invalid native bytes on save.
+    page = native_ansi_page()
+    native_cases = (b'\xd6\xd0\xce\xc4\r\n', b'\x81') if page == 936 else ((b'\x81',) if sys.platform != 'win32' else ())
+    for index, data in enumerate(native_cases):
+        target = root / f'native-bytes-{index}.txt'
+        target.write_bytes(data)
+        app = start(executable, root / f'native-{index}', environment(executable, root / 'children'),
+                    arguments=('-e', 'ANSI', str(target)), cwd=root)
+        try:
+            status = [text for key, text in app.state.items() if key.startswith('status.') and key.endswith('.text')]
+            assert any(text.startswith('ANSI (') for text in status), status
+            assert app.state['dirty'] == '0'
+            app.send('save')
+            assert target.read_bytes() == data
+            app.close()
+        finally:
+            app.stop()
+    print('PASS: independent source/current encodings, ANSI ASCII promotion and native ANSI/OEM byte identities', flush=True)
 
 
 def installed(executable, root):
@@ -351,7 +431,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('executable', type=Path)
     parser.add_argument('--cmake-dir', type=Path, required=True)
-    parser.add_argument('--scenario', choices=('paths', 'encodings', 'positions', 'display', 'readonly', 'help', 'missing', 'failures', 'identities', 'installed'), default='paths')
+    parser.add_argument('--scenario', choices=('paths', 'encodings', 'positions', 'display', 'readonly', 'help', 'missing', 'failures', 'missing-parameters', 'identities', 'installed'), default='paths')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='wxnotepad-launch-') as name:
         root = Path(name).resolve()
@@ -361,7 +441,7 @@ def main():
         else:
             {'paths': paths, 'encodings': encodings, 'positions': positions, 'readonly': readonly,
              'help': help_message, 'missing': missing_files, 'failures': failures,
-             'identities': identities, 'installed': installed}[args.scenario](executable, root)
+             'missing-parameters': missing_parameters, 'identities': identities, 'installed': installed}[args.scenario](executable, root)
 
 
 if __name__ == '__main__':
