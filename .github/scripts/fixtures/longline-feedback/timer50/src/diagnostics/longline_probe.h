@@ -27,6 +27,7 @@ enum class Kind : std::uint64_t {
     CaretTickBegin = 40, CaretTickEnd, IdleBegin, IdleEnd,
     NativeIdleAdded = 50, NativeIdleRemoved,
     MapShown = 60, MapAcknowledged, MapWaitBegin, MapWaitEnd,
+    FeedbackEnter = 70, FeedbackQueued, FeedbackFired, FeedbackClickBegin, FeedbackClickEnd, FeedbackExit,
 };
 
 struct Header {

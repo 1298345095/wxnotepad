@@ -57,14 +57,10 @@ public:
         if (observedPress_ && !observedRelease_ && event.GetEventType() == wxEVT_KEY_UP &&
             event.GetEventObject() == editor_ && static_cast<wxKeyEvent&>(event).GetKeyCode() == WXK_F3) {
             observedRelease_ = true;
-            // wxYield services queued wx callbacks after its native drain.
-            // Start this work there, after the key-up drain has returned, so
-            // only the shortcut's final dispatch sees the new ready source.
-            CallAfter([this] {
-                source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
-                Require(source_ != 0, "keep real native activity queued after the actual shortcut release");
-                LonglineProbe::Event(LonglineProbe::Kind::NativeIdleAdded, 0, source_);
-            });
+            // Keep native work ready as soon as the real key-up is observed.
+            source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
+            Require(source_ != 0, "keep real native activity queued after the actual shortcut release");
+            LonglineProbe::Event(LonglineProbe::Kind::NativeIdleAdded, 0, source_);
         }
         return Event_Skip;
     }
@@ -182,7 +178,6 @@ void SelectionLimit(EditorFrame* frame) {
     auto* editor = frame->Editor();
     ReportStage("selection limit ResetStream begin");
     TestEditor::ResetStream(editor, text.c_str(), 0, OneMiB);
-    editor->Send(SetCaretPeriod, 50);
     ReportStage("selection limit ResetStream complete; save begin");
     {
 #ifdef __WXGTK__
@@ -434,6 +429,9 @@ public:
         for (auto* child : dialog->GetChildren()) {
             if (auto* label = wxDynamicCast(child, wxStaticText)) messages.push_back(label->GetLabel());
         }
+#ifdef __WXGTK__
+        response_.Respond(dialog, response, [this] { responseBeforeRelease |= !released; });
+#else
         wxTheApp->CallAfter([this, dialog] {
             // Closing the modal while F3 is still held can leave Wayland with
             // no keyboard target for its release. Share the caller's deadline.
@@ -444,8 +442,15 @@ public:
             responseBeforeRelease |= !released;
             NativeSearch::Click(dialog, response);
         });
+#endif
         return wxID_NONE;
     }
+#ifdef __WXGTK__
+    void Exit(wxDialog* dialog) override { response_.Cancel(dialog); }
+
+private:
+    NativeSearch::FeedbackResponse response_;
+#endif
 };
 
 void FeedbackTransitions(EditorFrame* frame) {

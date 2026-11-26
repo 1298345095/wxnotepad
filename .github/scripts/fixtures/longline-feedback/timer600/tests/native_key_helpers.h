@@ -1,4 +1,5 @@
 #pragma once
+#include "diagnostics/longline_probe.h"
 
 #include "native_search_helpers.h"
 #include <print>
@@ -151,12 +152,18 @@ private:
                 ++showEpoch;
             else
                 acknowledgedEpoch = showEpoch;
+            LonglineProbe::Event(LonglineProbe::Kind::MapShown, 0,
+                reinterpret_cast<std::intptr_t>(window.get()),
+                showEpoch, acknowledgedEpoch, shown);
         }
         bool Complete() const { return showEpoch == acknowledgedEpoch || !window || !window->IsShown(); }
         static void AfterEvent(GtkWidget* widget, GdkEvent* event, gpointer data) {
             if (event->type == GDK_MAP && event->any.window == gtk_widget_get_window(widget)) {
                 auto& entry = *static_cast<Window*>(data);
                 entry.acknowledgedEpoch = entry.showEpoch;
+                LonglineProbe::Event(LonglineProbe::Kind::MapAcknowledged, 0,
+                    reinterpret_cast<std::intptr_t>(entry.window.get()),
+                    entry.showEpoch, entry.acknowledgedEpoch, event->type);
             }
         }
         wxWeakRef<wxWindow> window;
@@ -212,6 +219,9 @@ public:
             UnshiftedPunctuation(static_cast<wxKeyEvent&>(event).GetKeyCode()) == key_ &&
             (!intended_ || event.GetEventObject() == intended_)) {
             received_ = true;
+            LonglineProbe::Event(LonglineProbe::Kind::Release, 0, key_,
+                static_cast<wxKeyEvent&>(event).GetModifiers(),
+                reinterpret_cast<std::intptr_t>(event.GetEventObject()));
             if (signal_) *signal_ = true;
         }
         return Event_Skip;
@@ -569,6 +579,7 @@ inline wxString KeyName(int key) {
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
                      bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad",
                      [[maybe_unused]] std::chrono::steady_clock::time_point* releaseDeadline = nullptr) {
+    const LonglineProbe::Shortcut shortcutTiming(key, control, alt, shift);
     const NativeTrace::Gesture trace(*frame->Editor(), key,
                                      (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
@@ -599,11 +610,14 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
 #endif
     auto* editor = frame->Editor();
     wxString focusFile;
+    const auto focusTiming = LonglineProbe::Event(LonglineProbe::Kind::FocusBegin);
     FocusEditor(frame, focusName, focusFile);
+    LonglineProbe::Event(LonglineProbe::Kind::FocusEnd, focusTiming);
     bool received = false;
     const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
     KeyReleaseObserver observer(key, received, releaseSignal, punctuation ? editor : nullptr);
     wxString request;
+    const auto requestTiming = LonglineProbe::Event(LonglineProbe::Kind::RequestBegin);
     {
         wxFFile file(focusFile, "wb");
         const auto name = KeyName(key);
@@ -612,11 +626,18 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         if (wxGetEnv("WXNOTEPAD_NATIVE_KEY_DELAY_MS", &delay)) request = "key-delay:" + delay + ":" + request.Mid(4);
         file.Write(NativeTrace::Request(request));
     }
+    LonglineProbe::Event(LonglineProbe::Kind::RequestEnd, requestTiming);
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     if (releaseDeadline) *releaseDeadline = keyDeadline;
+#ifdef __WXGTK__
+    NativeSearch::OpeningShortcut openingShortcut(received, keyDeadline);
+#endif
     while (!received && Clock::now() < keyDeadline) {
+        const auto dispatchTiming = LonglineProbe::Event(
+            LonglineProbe::Kind::DispatchBegin, 0, received);
         // A busy native queue must still let us check release and its deadline.
         NativeSearch::DispatchEvents(frame);
+        LonglineProbe::Event(LonglineProbe::Kind::DispatchEnd, dispatchTiming, received);
         wxMilliSleep(10);
     }
     if (!received) {
@@ -626,12 +647,17 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         throw std::runtime_error("native shortcut release must reach the owned editor or its dialog");
     }
 #endif
+    const auto finalTiming = LonglineProbe::Event(LonglineProbe::Kind::FinalDispatchBegin);
     NativeSearch::DispatchEvents(frame);
+    LonglineProbe::Event(LonglineProbe::Kind::FinalDispatchEnd, finalTiming);
 #ifdef __WXGTK__
+    const auto mapTiming = LonglineProbe::Event(LonglineProbe::Kind::MapWaitBegin,
+        0, presentation.Complete());
     while (!presentation.Complete() && Clock::now() < keyDeadline) {
         NativeSearch::DispatchEvents(frame);
         wxMilliSleep(10);
     }
+    LonglineProbe::Event(LonglineProbe::Kind::MapWaitEnd, mapTiming, presentation.Complete());
     if (!presentation.Complete())
         throw std::runtime_error("native shortcut must finish mapping its owned shown windows");
 #endif

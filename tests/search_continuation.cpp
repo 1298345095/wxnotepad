@@ -53,13 +53,9 @@ public:
         if (observedPress_ && !observedRelease_ && event.GetEventType() == wxEVT_KEY_UP &&
             event.GetEventObject() == editor_ && static_cast<wxKeyEvent&>(event).GetKeyCode() == WXK_F3) {
             observedRelease_ = true;
-            // wxYield services queued wx callbacks after its native drain.
-            // Start this work there, after the key-up drain has returned, so
-            // only the shortcut's final dispatch sees the new ready source.
-            CallAfter([this] {
-                source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
-                Require(source_ != 0, "keep real native activity queued after the actual shortcut release");
-            });
+            // Keep native work ready as soon as the real key-up is observed.
+            source_ = g_idle_add(+[](gpointer) -> gboolean { return G_SOURCE_CONTINUE; }, nullptr);
+            Require(source_ != 0, "keep real native activity queued after the actual shortcut release");
         }
         return Event_Skip;
     }

@@ -7,6 +7,7 @@
 #include <wx/eventfilter.h>
 #include <wx/ffile.h>
 #include <wx/timer.h>
+#include <wx/weakref.h>
 #include <chrono>
 #include <algorithm>
 #include <functional>
@@ -101,6 +102,90 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
 #endif
     wxTheApp->CallAfter([callback = std::move(callback)] { callback(true); });
 }
+
+#ifdef __WXGTK__
+// A shown flag precedes X11 MapNotify. Keep each shortcut's newly shown owned
+// windows observed until GTK and wx have both finished handling that event.
+class ShortcutPresentation final : public wxEventFilter {
+public:
+    explicit ShortcutPresentation(EditorFrame* frame)
+        : owner_(frame), enabled_(GDK_IS_X11_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame->GetHandle())))) {
+        if (!enabled_) return;
+        for (auto* window : wxTopLevelWindows)
+            Watch(window, window->IsShown());
+        wxEvtHandler::AddFilter(this);
+    }
+    ~ShortcutPresentation() override {
+        if (enabled_) wxEvtHandler::RemoveFilter(this);
+    }
+    bool Complete() const {
+        return std::all_of(windows_.begin(), windows_.end(), [](const auto& entry) { return entry->Complete(); });
+    }
+    int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_CREATE || event.GetEventType() == wxEVT_SHOW) {
+            auto* window = wxDynamicCast(event.GetEventObject(), wxWindow);
+            if (auto* entry = Watch(window); entry && event.GetEventType() == wxEVT_SHOW)
+                entry->Shown(static_cast<wxShowEvent&>(event).IsShown());
+        }
+        return Event_Skip;
+    }
+
+private:
+    struct Window {
+        Window(wxWindow* value, bool initiallyShown) : window(value), acknowledgedEpoch(initiallyShown ? 1 : 0) {
+            auto* widget = GTK_WIDGET(value->GetHandle());
+            g_weak_ref_init(&native, G_OBJECT(widget));
+            // event-after runs after the widget's map handlers, including wx's
+            // GTKHandleMapped and GTK's late-map handling.
+            handler = g_signal_connect(widget, "event-after", G_CALLBACK(AfterEvent), this);
+        }
+        ~Window() {
+            if (auto* widget = g_weak_ref_get(&native)) {
+                g_signal_handler_disconnect(widget, handler);
+                g_object_unref(widget);
+            }
+            g_weak_ref_clear(&native);
+        }
+        void Shown(bool shown) {
+            if (shown)
+                ++showEpoch;
+            else
+                acknowledgedEpoch = showEpoch;
+        }
+        bool Complete() const { return showEpoch == acknowledgedEpoch || !window || !window->IsShown(); }
+        static void AfterEvent(GtkWidget* widget, GdkEvent* event, gpointer data) {
+            if (event->type == GDK_MAP && event->any.window == gtk_widget_get_window(widget)) {
+                auto& entry = *static_cast<Window*>(data);
+                entry.acknowledgedEpoch = entry.showEpoch;
+            }
+        }
+        wxWeakRef<wxWindow> window;
+        GWeakRef native{};
+        gulong handler = 0;
+        // Deferred X11 Show sets IsShown before it sends wxEVT_SHOW. A window
+        // first seen hidden or newly created must still await that first map.
+        std::size_t showEpoch = 1;
+        std::size_t acknowledgedEpoch = 0;
+    };
+    Window* Watch(wxWindow* window, bool initiallyShown = false) {
+        if (!window || !window->IsTopLevel() || !window->GetHandle()) return nullptr;
+        bool owned = false;
+        for (auto* parent = window; parent; parent = parent->GetParent())
+            if (parent == owner_.get()) {
+                owned = true;
+                break;
+            }
+        if (!owned) return nullptr;
+        for (const auto& entry : windows_)
+            if (entry->window.get() == window) return entry.get();
+        windows_.push_back(std::make_unique<Window>(window, initiallyShown));
+        return windows_.back().get();
+    }
+    wxWeakRef<wxWindow> owner_;
+    bool enabled_;
+    std::vector<std::unique_ptr<Window>> windows_;
+};
+#endif
 
 class KeyReleaseObserver final : public wxEventFilter {
 public:
@@ -509,6 +594,9 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     }
 #else
     using Clock = std::chrono::steady_clock;
+#ifdef __WXGTK__
+    ShortcutPresentation presentation(frame);
+#endif
     auto* editor = frame->Editor();
     wxString focusFile;
     FocusEditor(frame, focusName, focusFile);
@@ -527,7 +615,8 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     if (releaseDeadline) *releaseDeadline = keyDeadline;
     while (!received && Clock::now() < keyDeadline) {
-        wxYield();
+        // A busy native queue must still let us check release and its deadline.
+        NativeSearch::DispatchEvents(frame);
         wxMilliSleep(10);
     }
     if (!received) {
@@ -538,5 +627,13 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     }
 #endif
     NativeSearch::DispatchEvents(frame);
+#ifdef __WXGTK__
+    while (!presentation.Complete() && Clock::now() < keyDeadline) {
+        NativeSearch::DispatchEvents(frame);
+        wxMilliSleep(10);
+    }
+    if (!presentation.Complete())
+        throw std::runtime_error("native shortcut must finish mapping its owned shown windows");
+#endif
 }
 } // namespace NativeKeys

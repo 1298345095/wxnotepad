@@ -16,9 +16,11 @@ KINDS = {
     40: 'caret_tick_begin', 41: 'caret_tick_end', 42: 'idle_begin', 43: 'idle_end',
     50: 'native_idle_added', 51: 'native_idle_removed',
     60: 'map_shown', 61: 'map_acknowledged', 62: 'map_wait_begin', 63: 'map_wait_end',
+    70: 'feedback_enter', 71: 'feedback_queued', 72: 'feedback_fired',
+    73: 'feedback_click_begin', 74: 'feedback_click_end', 75: 'feedback_exit',
 }
 BEGIN_END = {1: 2, 10: 11, 12: 13, 14: 15, 16: 17, 19: 20,
-             30: 31, 33: 34, 40: 41, 42: 43, 62: 63}
+             30: 31, 33: 34, 40: 41, 42: 43, 62: 63, 73: 74}
 
 
 def decode(path, manifest=None):
@@ -55,6 +57,8 @@ def decode(path, manifest=None):
             row['shown' if kind == 60 else 'gdk_event_type'] = bool(d) if kind == 60 else d
         if kind in (62, 63):
             row['complete'] = bool(a)
+        if kind in (70, 71, 72, 73, 75):
+            row['dialog'] = hex(a)
         events.append(row)
         if kind in BEGIN_END:
             open_spans[seq] = (kind, row)
@@ -73,7 +77,7 @@ def decode(path, manifest=None):
                           'values_begin': begin['values'], 'values_end': row['values']})
     counts = Counter(row['kind'] for row in events)
     durations = {}
-    for kind in ('draw', 'paint', 'dispatch', 'focus', 'final_dispatch', 'caret_tick', 'idle', 'map_wait'):
+    for kind in ('draw', 'paint', 'dispatch', 'focus', 'final_dispatch', 'caret_tick', 'idle', 'map_wait', 'feedback_click'):
         matching = [item for item in spans if item['kind'] == kind]
         durations[kind] = {'completed': len(matching),
                            'wall_ms_total': round(sum(item['wall_ms'] for item in matching), 4),

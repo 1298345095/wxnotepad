@@ -3,6 +3,7 @@
 Usage: prepare_longline_probe.py --source-root REPO --output-dir FRESH_TREE
                                 [--helper-path CANDIDATE_HELPER]
                                 [--search-path CANDIDATE_FIXTURE]
+                                [--native-search-path CANDIDATE_FEEDBACK_HELPER]
 """
 import argparse
 import hashlib
@@ -101,6 +102,63 @@ def fixture(text):
     return text
 
 
+def native_search(text):
+    text = replace_once(text, '#pragma once\n', '#pragma once\n#include "diagnostics/longline_probe.h"\n')
+    legacy = '        if (dialog->GetName() == "Search feedback") wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });\n'
+    if legacy in text:
+        text = replace_once(text, legacy,
+                            '        if (dialog->GetName() == "Search feedback") {\n'
+                            '            wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });\n'
+                            '        }\n')
+    text = replace_once(text, '        if (dialog->GetName() == "Search feedback") {\n',
+                        '        if (dialog->GetName() == "Search feedback") {\n'
+                        '            LonglineProbe::Event(LonglineProbe::Kind::FeedbackEnter, 0,\n'
+                        '                reinterpret_cast<std::intptr_t>(dialog), dialog->IsShown(), dialog->IsModal());\n')
+    text = replace_once(text, '            wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });\n',
+                        '            wxTheApp->CallAfter([dialog] {\n'
+                        '                LonglineProbe::Event(LonglineProbe::Kind::FeedbackFired, 0,\n'
+                        '                    reinterpret_cast<std::intptr_t>(dialog), -1, dialog->IsModal(), -1);\n'
+                        '                Click(dialog, wxID_OK);\n'
+                        '            });\n'
+                        '            LonglineProbe::Event(LonglineProbe::Kind::FeedbackQueued, 0,\n'
+                        '                reinterpret_cast<std::intptr_t>(dialog), 0);\n')
+    text = replace_once(text, 'inline void Click(wxWindow* dialog, int id) {\n',
+                        'inline void Click(wxWindow* dialog, int id) {\n'
+                        '    const LonglineProbe::Scope clickTiming(LonglineProbe::Kind::FeedbackClickBegin,\n'
+                        '        LonglineProbe::Kind::FeedbackClickEnd, reinterpret_cast<std::intptr_t>(dialog),\n'
+                        '        id, dialog->IsShown(), dialog->GetName() == "Search feedback");\n')
+    if 'class FeedbackResponse final' in text:
+        queued = ('        if (!timer_.StartOnce(10)) {\n'
+                  '            Cancel(dialog_.get());\n'
+                  '            throw std::runtime_error("schedule the native search feedback response");\n'
+                  '        }\n')
+        text = replace_once(text, queued, queued +
+                            '        LonglineProbe::Event(LonglineProbe::Kind::FeedbackQueued, 0,\n'
+                            '            reinterpret_cast<std::intptr_t>(dialog_.get()), 1,\n'
+                            '            !opening_ || opening_->Released());\n')
+        text = replace_once(text, '        auto* dialog = dialog_.get();\n',
+                            '        auto* dialog = dialog_.get();\n'
+                            '        LonglineProbe::Event(LonglineProbe::Kind::FeedbackFired, 0,\n'
+                            '            reinterpret_cast<std::intptr_t>(dialog), !opening_ || opening_->Released(),\n'
+                            '            dialog && dialog->IsModal(), opening_ ?\n'
+                            '                std::chrono::duration_cast<std::chrono::microseconds>(\n'
+                            '                    opening_->Deadline() - OpeningShortcut::Clock::now()).count() : -1);\n')
+        text = replace_once(text, '    void Exit(wxDialog* dialog) override { response_.Cancel(dialog); }\n',
+                            '    void Exit(wxDialog* dialog) override {\n'
+                            '        LonglineProbe::Event(LonglineProbe::Kind::FeedbackExit, 0,\n'
+                            '            reinterpret_cast<std::intptr_t>(dialog));\n'
+                            '        response_.Cancel(dialog);\n'
+                            '    }\n')
+    else:
+        text = replace_once(text, '        return wxID_NONE;\n    }\n};\n#ifdef __WXMSW__\n',
+                            '        return wxID_NONE;\n    }\n'
+                            '    void Exit(wxDialog* dialog) override {\n'
+                            '        LonglineProbe::Event(LonglineProbe::Kind::FeedbackExit, 0,\n'
+                            '            reinterpret_cast<std::intptr_t>(dialog));\n'
+                            '    }\n};\n#ifdef __WXMSW__\n')
+    return text
+
+
 def core(text):
     text = '#include "diagnostics/longline_probe.h"\n' + text
     text = replace_once(text, 'void EditorControl::Core::Draw(wxDC& dc) {\n',
@@ -140,12 +198,14 @@ def main():
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--helper-path', type=Path)
     parser.add_argument('--search-path', type=Path)
+    parser.add_argument('--native-search-path', type=Path)
     args = parser.parse_args()
     source = args.source_root.resolve()
     output = args.output_dir.resolve()
     if output.exists():
         parser.error('--output-dir must be fresh')
-    paths = ['tests/search_continuation.cpp', 'tests/native_key_helpers.h', 'src/editor/editor_core.cpp']
+    paths = ['tests/search_continuation.cpp', 'tests/native_key_helpers.h', 'src/editor/editor_core.cpp',
+             'tests/native_search_helpers.h']
     contents = {}
     hashes = {}
     for relative in paths:
@@ -154,11 +214,13 @@ def main():
             path = args.search_path
         if relative == paths[1] and args.helper_path:
             path = args.helper_path
+        if relative == paths[3] and args.native_search_path:
+            path = args.native_search_path
         raw = path.read_bytes()
         contents[relative] = raw.decode('utf-8')
         hashes[relative] = {'source': str(path.resolve()), 'sha256': hashlib.sha256(raw).hexdigest()}
     generated = {paths[0]: fixture(contents[paths[0]]), paths[1]: helper(contents[paths[1]]),
-                 paths[2]: core(contents[paths[2]])}
+                 paths[2]: core(contents[paths[2]]), paths[3]: native_search(contents[paths[3]])}
     generated['src/diagnostics/longline_probe.h'] = Path(__file__).with_name('longline_probe.h').read_text()
     for relative, text in generated.items():
         destination = output / relative
@@ -169,7 +231,14 @@ def main():
                 'outputs': {relative: hashlib.sha256(text.encode()).hexdigest() for relative, text in generated.items()},
                 'stage_names': {stage_hash(label): label for label in stages},
                 'trace_environment': 'WXNOTEPAD_PAINT_TRACE', 'trace_path_is_exact': True,
-                'record_capacity': 8192, 'record_bytes': 80}
+                'record_capacity': 8192, 'record_bytes': 80,
+                'feedback_payloads': {
+                    'feedback_enter': 'dialog, shown, modal, unused',
+                    'feedback_queued': 'dialog, route(0=CallAfter/1=timer), released_if_timer, unused',
+                    'feedback_fired': 'dialog, released_or_minus_one_for_CallAfter, modal, remaining_release_deadline_us_or_minus_one',
+                    'feedback_click_begin': 'dialog, button_id, shown, is_search_feedback',
+                    'feedback_click_end': 'uncaught_exceptions, unused, unused, unused',
+                    'feedback_exit': 'dialog, unused, unused, unused'}}
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     print(json.dumps({'output_dir': str(output), 'files': list(generated)}))
 
