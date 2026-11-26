@@ -46,18 +46,6 @@ add_editor_test(chinese_encoding original_chinese_encoding 90)
 add_test(NAME original_chinese_encoding_native_keys COMMAND chinese_encoding)
 set_tests_properties(original_chinese_encoding_native_keys PROPERTIES TIMEOUT 90
     ENVIRONMENT "WXNOTEPAD_CHINESE_NATIVE_KEYS=1")
-add_editor_test(japanese_korean_encoding original_japanese_korean_encoding 90)
-target_compile_definitions(japanese_korean_encoding PRIVATE
-    "JAPANESE_KOREAN_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/encoding_279\"")
-add_test(NAME original_japanese_korean_encoding_native_keys COMMAND japanese_korean_encoding)
-set_tests_properties(original_japanese_korean_encoding_native_keys PROPERTIES TIMEOUT 90
-    ENVIRONMENT "WXNOTEPAD_JAPANESE_KOREAN_NATIVE_KEYS=1")
-foreach(language 2052 1028)
-    add_test(NAME original_japanese_korean_localized_${language} COMMAND japanese_korean_encoding)
-    set_tests_properties(original_japanese_korean_localized_${language} PROPERTIES TIMEOUT 90
-        ENVIRONMENT "WXNOTEPAD_JAPANESE_KOREAN_NATIVE_KEYS=1;WXNOTEPAD_JAPANESE_KOREAN_LANGUAGE=${language}")
-endforeach()
-add_dependencies(japanese_korean_encoding wxnotepad_catalogs)
 add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
 add_editor_test(editor_smoke editor_input_undo 30)
 add_gui_program(stream_drag tests/stream_drag.cpp app_shell)

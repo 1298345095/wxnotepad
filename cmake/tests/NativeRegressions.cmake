@@ -511,3 +511,22 @@ if(WIN32 OR (UNIX AND NOT APPLE))
     add_test(NAME original_style_native_font_locale COMMAND style_locale)
     set_tests_properties(original_style_native_font_locale PROPERTIES TIMEOUT 60)
 endif()
+
+add_editor_test(japanese_korean_encoding original_japanese_korean_encoding 90)
+target_compile_definitions(japanese_korean_encoding PRIVATE
+    "JAPANESE_KOREAN_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/encoding_279\"")
+add_test(NAME original_japanese_korean_encoding_native_keys COMMAND japanese_korean_encoding)
+set_tests_properties(original_japanese_korean_encoding_native_keys PROPERTIES TIMEOUT 90
+    ENVIRONMENT "WXNOTEPAD_JAPANESE_KOREAN_NATIVE_KEYS=1")
+foreach(language 2052 1028)
+    add_test(NAME original_japanese_korean_localized_${language} COMMAND japanese_korean_encoding)
+    set_tests_properties(original_japanese_korean_localized_${language} PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_JAPANESE_KOREAN_NATIVE_KEYS=1;WXNOTEPAD_JAPANESE_KOREAN_LANGUAGE=${language}")
+endforeach()
+add_dependencies(japanese_korean_encoding wxnotepad_catalogs)
+
+add_test(NAME original_japanese_korean_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/japanese_korean_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}"
+    --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/japanese-korean-process")
+set_tests_properties(original_japanese_korean_process PROPERTIES TIMEOUT 90)
