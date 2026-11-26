@@ -172,6 +172,33 @@ void Geometry(EditorFrame* frame) {
     editor->Send(Redo);
     Require(TestEditor::Text(editor) == edited && editor->Send(GetModify), "Redo survives all scroll modes");
     Limits(frame, {1, 0, 0, 0, 0});
+#ifdef __WXGTK__
+    // GTK can allocate a new width after the explicit native scroll. Resizing
+    // without changing wrapped row counts must retain the viewport, even when
+    // the caret is at the start of the document and outside that viewport.
+    // Run after the original geometry/history fixture to preserve its setup.
+    TestEditor::ResetStream(editor, text.c_str());
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Word Wrap"));
+    Page(editor, PageRows, width);
+    Require(editor->Send(WrapCount, 0) == 2, "native resize fixture starts with the original two wrapped rows");
+    const auto anchor = editor->Send(GetAnchor);
+    const auto caret = editor->Send(GetCurrentPos);
+    constexpr int allocationWidthChangeDip = 6;
+    for (int mode = 0; mode < static_cast<int>(Labels.size()); ++mode) {
+        Choose(frame, mode);
+        NativePaint::Complete(editor);
+        Bottom(editor);
+        Require(editor->Send(GetFirstVisibleLine) == LongLimits[mode],
+                "wrapped scrollbar reaches original limit before resize");
+        Page(editor, PageRows, width + editor->FromDIP(allocationWidthChangeDip));
+        Require(editor->Send(WrapCount, 0) == 2, "native width change keeps the original two wrapped rows");
+        Require(editor->Send(GetFirstVisibleLine) == LongLimits[mode],
+                "wrapped native resize retains the explicitly scrolled viewport");
+        Require(editor->Send(GetAnchor) == anchor && editor->Send(GetCurrentPos) == caret,
+                "wrapped native resize preserves the offscreen selection");
+        Page(editor, PageRows, width);
+    }
+#endif
     std::puts("PASS: original native scroll limits, empty/short/long documents, resize, zoom, DPI notification, "
               "folding, wrapping and history");
 }
