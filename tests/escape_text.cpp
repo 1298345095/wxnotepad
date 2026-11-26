@@ -6,6 +6,7 @@
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include "syntax/syntax_catalog.h"
+#include "syntax_menu_helpers.h"
 #include <array>
 #include <wx/wx.h>
 
@@ -193,7 +194,9 @@ void ShortcutsAndLanguages(EditorFrame* frame) {
                 "extra shortcut modifier preserves original exact matching");
     }
     for (const auto& language : SyntaxCatalog()) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", wxString(language.name)));
+        TestSyntax::WithSchemeOptions(wxString(language.name), [&] {
+            NativeSearch::Command(frame, TestSyntax::SchemeCommand(*frame->GetMenuBar(), language.name));
+        });
         for (int mapping = 40204; mapping <= 40207; ++mapping) {
             const auto& shortcut = shortcuts[mapping - 40204];
             ResetBytes(editor, shortcut.before);
