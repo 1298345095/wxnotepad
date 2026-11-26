@@ -59,6 +59,57 @@ while a file override is active writes the remembered preference. Explicit
 toggles and accepted dialog choices update it. The editor owns its remembered
 nonzero mode and rendering geometry.
 
+## CI regression diagnosis
+
+### Windows path identity
+
+The new cancelled-Open assertion compared the stored document path with a
+temporary filename containing a Windows TEMP 8.3 alias. Open expands that alias
+to its long path. The fixture now captures `DocumentPath()` after successful Open
+and checks that cancellation and failure preserve that loaded identity, alongside
+the unchanged wrapping override. The [Windows run](https://github.com/1298345095/wxnotepad/actions/runs/45701119594/job/139511462464)
+passed 355 tests with four existing environment skips.
+
+### Linux wrapping geometry and invalidation
+
+The original CI log reported the Unicode representation restore-row assertion
+without native geometry or Core state. Follow-up diagnostic runs reproduced the
+same assertion and established two failure mechanisms; the original log does not
+identify which mechanism occurred in that run.
+
+First, `SetSize(360, 300)` could update wx's cached size while GTK still held the
+previous allocation. The visible menu imposed a minimum width of about 374 pixels,
+so the initial wrapping baseline and restored representation used different
+viewports. The fixture now owns a `FromDIP(360, 300)` client area with the menu
+hidden, waits for actual frame-client and editor-outer geometry through
+`NativePaint::Complete`, and checks wrapping before pixel reads can drain the
+pending resize. The original wrapping, document-state and pixel assertions remain.
+
+With that geometry fixed, the scale2 case still failed in all four diagnostic
+sessions. [Run 45722459969](https://github.com/1298345095/wxnotepad/actions/runs/45722459969)
+recorded these Core values at 100% zoom:
+
+| Representation | Rows | Stored wrap width | Paint client width |
+| --- | --- | --- | --- |
+| Visible | 15 | 314 | 354 |
+| Hidden | 8 | 314 | 360 |
+| Restored | 14 | 320 | 354 |
+
+The recorded horizontal margin was 40, and all three states had no pending
+wrap. GTK scrollbar changes could alter the logical client width without a size
+event, leaving wrapping calculated for a different viewport. `Core::Draw` now
+compares `wrapWidth` with the text width derived from the client size already
+read for that paint and calls `NeedWrapping()` when they differ. This uses the
+existing paint path and paint count.
+
+The [focused native validation](https://github.com/1298345095/wxnotepad/actions/runs/45723034114)
+passed all 308 runs: 20 observed X11 controls, 100 observed scale2 reproductions,
+40 cleaned X11 fixtures, 100 cleaned X11 scale2 fixtures, 24 cleaned Wayland
+fixtures and 24 cleaned Wayland scale2 fixtures. The observed scale2 sequence is
+now 15 / 8 / 15 rows; every captured Core wrap width matches that paint's text
+viewport. The cleaned fixture retains the original exact restoration assertion
+and uses no diagnostic observation mode.
+
 ## Verification
 
 New behavior-focused coverage:

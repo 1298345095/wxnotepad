@@ -55,8 +55,6 @@ add_test(NAME original_guides_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/guides_process.py" "$<TARGET_FILE:guides>")
 set_tests_properties(original_guides_settings_lifecycle PROPERTIES TIMEOUT 90)
 add_editor_test(unicode_controls original_unicode_controls 60)
-target_include_directories(unicode_controls PRIVATE src/editor/platform
-    "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 if(WIN32)
     add_test(NAME original_unicode_controls_dpi96 COMMAND unicode_controls)
     set_tests_properties(original_unicode_controls_dpi96 PROPERTIES TIMEOUT 60
@@ -164,9 +162,3 @@ add_editor_test(replace_regex replace_regular_expression 30)
 add_editor_test(replace_all_regex replace_all_regular_expression 30)
 add_editor_test(replace_selection replace_in_selection 30)
 add_editor_test(search_backslashes original_search_backslashes 30)
-
-# Temporary comparison target for the cleaned regression fixture.
-add_editor_test(unicode_controls_clean investigation_unicode_clean 60)
-add_test(NAME investigation_unicode_clean_scale2 COMMAND unicode_controls_clean)
-set_tests_properties(investigation_unicode_clean_scale2 PROPERTIES TIMEOUT 60
-    ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")

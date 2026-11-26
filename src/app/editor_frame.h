@@ -22,8 +22,6 @@ class ExplorerSelections;
 #endif
 
 class EditorFrame final : public wxFrame {
-    friend struct SearchContinuationObservation;
-
 public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
     ~EditorFrame() override;
