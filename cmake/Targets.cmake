@@ -112,6 +112,7 @@ add_library(editor_features STATIC
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/single_byte_codec.cpp
     src/document/encoding/chinese_codec.cpp
+    src/document/encoding/japanese_korean_codec.cpp
     src/document/encoding/utf16_codec.cpp
     src/document/encoding/wx_conversion.cpp
     src/document/encoding/encoding_detection.cpp

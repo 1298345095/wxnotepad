@@ -13,10 +13,11 @@ enum DetectionFlags : uint8_t {
     NoEncodingTags = 16,
     NoFileVariables = 32
 };
-constexpr std::array<std::optional<FileEncoding>, 9> encodings = {
-    std::nullopt,          FileEncoding::Utf8, FileEncoding::Utf16Le,     FileEncoding::Utf16Be, FileEncoding::Gbk,
-    FileEncoding::Gb18030, FileEncoding::Big5, FileEncoding::Windows1252, FileEncoding::Dos437};
-constexpr std::array defaults = {-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 1252, 437, 936, 950, 54936, 932};
+constexpr std::array<std::optional<FileEncoding>, 11> encodings = {
+    std::nullopt,         FileEncoding::Utf8,       FileEncoding::Utf16Le,   FileEncoding::Utf16Be,
+    FileEncoding::Gbk,    FileEncoding::Gb18030,    FileEncoding::Big5,      FileEncoding::Windows1252,
+    FileEncoding::Dos437, FileEncoding::Windows932, FileEncoding::Windows949};
+constexpr std::array defaults = {-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 1252, 437, 936, 950, 54936, 932, 949};
 constexpr std::array paths = {"sample.txt", "sample.nfo", "sample.DIZ",  "sample.bat", "sample.cmd",
                               "sample.sh",  "sample.vhd", "sample.VHDL", "sample.xml", "sample.py"};
 bool Same(const DetectedEncoding& first, const DetectedEncoding& second) {

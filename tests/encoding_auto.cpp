@@ -9,6 +9,7 @@
 #include <print>
 #include <stdexcept>
 #include <string_view>
+#include <tuple>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
@@ -44,6 +45,31 @@ void CheckQuickReloadWithUtf8SystemAnsi() {
     Require(buffer == "中\x{81}" && raw.size() == 1 && raw.front().start == 3 && raw.front().end == 4,
             "native GBK fallback decodes valid text and marks the malformed byte for lossless Save");
 #endif
+}
+void CheckJapaneseKoreanNativeCodePages() {
+    for (const auto& [page, encoding, bytes] :
+         {std::tuple{932U, FileEncoding::Windows932, std::string_view("\xb6\xfb\xfc")},
+          std::tuple{949U, FileEncoding::Windows949, std::string_view("\xb0\xa1\x81\x41")}}) {
+        const NativeSourceCodePages nativePages{page, page, page};
+        const auto ansi = DetectQuickReloadEncoding(bytes, QuickReloadEncoding::Ansi, {}, nativePages);
+        const auto oem = DetectQuickReloadEncoding(bytes, QuickReloadEncoding::Oem, {}, nativePages);
+        Require(ansi.encoding == encoding && ansi.systemDefault && !ansi.systemOem && !ansi.bom,
+                "CP932/949 native ANSI keeps its native source identity");
+        Require(oem.encoding == encoding && !oem.systemDefault && oem.systemOem && !oem.bom,
+                "CP932/949 native OEM remains distinct from explicit and ANSI choices");
+        Require(EncodingSetting(EncodingChoice(encoding)) == static_cast<int>(page) &&
+                    EncodingSetting(EncodingChoice(encoding, false, true)) == 0 &&
+                    EncodingSetting(EncodingChoice(encoding, false, false, true)) == 5,
+                "explicit Japanese/Korean numeric setting differs from native ANSI/OEM settings");
+        const NativeSourceCodePages utf8Pages{65001, page, page};
+        const auto valid = DetectQuickReloadEncoding(bytes, QuickReloadEncoding::Ansi, {}, utf8Pages);
+        const auto invalid = DetectQuickReloadEncoding("A\x81", QuickReloadEncoding::Ansi, {}, utf8Pages);
+        Require(valid.encoding == encoding && !valid.systemDefault && !valid.systemOem,
+                "UTF-8 native ANSI adopts explicit CP932/949 after strict legacy decoding");
+        Require(invalid.encoding == encoding && invalid.systemDefault && !invalid.systemOem &&
+                    invalid.nativeAnsiCodePage == page,
+                "failed strict CP932/949 legacy decoding retains native ANSI source identity and raw-byte page");
+    }
 }
 std::string Text(EditorControl& editor) {
     std::string text(static_cast<size_t>(editor.Send(Scintilla::Message::GetLength)) + 1, '\0');
@@ -442,6 +468,7 @@ public:
                 std::filesystem::create_directory(directory);
                 CheckAutomaticDetection(editor, directory);
                 CheckQuickReloadWithUtf8SystemAnsi();
+                CheckJapaneseKoreanNativeCodePages();
                 result_ = 0;
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
