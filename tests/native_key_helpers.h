@@ -614,6 +614,9 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     if (releaseDeadline) *releaseDeadline = keyDeadline;
+#ifdef __WXGTK__
+    NativeSearch::OpeningShortcut openingShortcut(received, keyDeadline);
+#endif
     while (!received && Clock::now() < keyDeadline) {
         // A busy native queue must still let us check release and its deadline.
         NativeSearch::DispatchEvents(frame);
