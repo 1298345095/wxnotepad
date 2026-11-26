@@ -1,4 +1,4 @@
-name: Native long-line feedback scheduling
+name: Native long-line release deadline observation
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   compare:
-    name: Verify modal feedback after actual key release
+    name: Observe real input, synchronous work and release deadlines
     runs-on: ubuntu-26.04
     timeout-minutes: 35
     env:
@@ -43,23 +43,23 @@ jobs:
         env:
           CXXFLAGS: '-g1'
         run: python -X utf8 .github/scripts/ci.py configure --coverage
-      - name: Build three measured feedback variants
-        run: python -X utf8 .github/scripts/longline_feedback_investigation.py build
-      - name: Compare CallAfter and timer with original search and Escape assertions
-        run: python -X utf8 .github/scripts/longline_feedback_investigation.py run
+      - name: Build two observed release-budget variants
+        run: python -X utf8 .github/scripts/longline_release_investigation.py build
+      - name: Observe four concurrent native search sessions per caret period
+        run: python -X utf8 .github/scripts/longline_release_investigation.py run
       - name: Preserve all timing and assertion evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: longline-feedback-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: longline-release-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
             .ci/build/coverage-cmake/compile_commands.json
-            .github/scripts/longline_feedback_investigation.py
+            .github/scripts/longline_release_investigation.py
             .github/scripts/prepare_longline_probe.py
             .github/scripts/decode_longline_probe.py
             .github/scripts/longline_probe.h
-            .github/scripts/fixtures/longline-feedback/
+            .github/scripts/fixtures/longline-release/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

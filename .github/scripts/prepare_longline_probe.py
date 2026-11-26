@@ -104,6 +104,23 @@ def fixture(text):
 
 def native_search(text):
     text = replace_once(text, '#pragma once\n', '#pragma once\n#include "diagnostics/longline_probe.h"\n')
+    iteration = ('    gtk_main_iteration_do(FALSE);\n'
+                 '#if wxUSE_EXCEPTIONS\n'
+                 '    // Native callbacks store exceptions until control returns to C++.\n'
+                 '    wxTheApp->RethrowStoredException();\n'
+                 '#endif\n')
+    text = replace_once(text, iteration,
+                        '    {\n'
+                        '        const LonglineProbe::Scope iterationTiming(LonglineProbe::Kind::GtkIterationBegin,\n'
+                        '            LonglineProbe::Kind::GtkIterationEnd, reinterpret_cast<std::intptr_t>(window));\n'
+                        + iteration + '    }\n')
+    for method, kind in (('ProcessPendingEvents', 'PendingEvents'), ('ProcessIdle', 'ProcessIdle')):
+        call = f'    wxTheApp->{method}();\n'
+        text = replace_once(text, call,
+                            '    {\n'
+                            f'        const LonglineProbe::Scope dispatchPartTiming(LonglineProbe::Kind::{kind}Begin,\n'
+                            f'            LonglineProbe::Kind::{kind}End, reinterpret_cast<std::intptr_t>(window));\n'
+                            + call + '    }\n')
     legacy = '        if (dialog->GetName() == "Search feedback") wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });\n'
     if legacy in text:
         text = replace_once(text, legacy,
@@ -159,6 +176,28 @@ def native_search(text):
     return text
 
 
+def search_session(text):
+    text = '#include "diagnostics/longline_probe.h"\n' + text
+    start = text.index('bool SearchSession::SaveSelectionAsFindText(bool selectWord) {\n')
+    end = text.index('\nstd::optional<FindResult> SearchSession::FindSelection(', start)
+    prefix, body, suffix = text[:start], text[start:end], text[end:]
+    body = replace_once(body, '    using Scintilla::Message;\n',
+                        '    const LonglineProbe::Scope saveFindTiming(LonglineProbe::Kind::SaveFindBegin,\n'
+                        '        LonglineProbe::Kind::SaveFindEnd, selectWord, reinterpret_cast<std::intptr_t>(&editor_));\n'
+                        '    using Scintilla::Message;\n')
+    rejection = '    if (length <= 0 || static_cast<size_t>(length) >= SearchLimits::SelectionBytes) return false;\n'
+    body = replace_once(body, rejection,
+                        '    LonglineProbe::Event(LonglineProbe::Kind::SaveFindLength, saveFindTiming.Id(), length);\n'
+                        '    if (length <= 0 || static_cast<size_t>(length) >= SearchLimits::SelectionBytes) {\n'
+                        '        LonglineProbe::Event(LonglineProbe::Kind::SaveFindResult, saveFindTiming.Id(), 0, length);\n'
+                        '        return false;\n'
+                        '    }\n')
+    body = replace_once(body, '    return true;\n',
+                        '    LonglineProbe::Event(LonglineProbe::Kind::SaveFindResult, saveFindTiming.Id(), 1, length);\n'
+                        '    return true;\n')
+    return prefix + body + suffix
+
+
 def core(text):
     text = '#include "diagnostics/longline_probe.h"\n' + text
     text = replace_once(text, 'void EditorControl::Core::Draw(wxDC& dc) {\n',
@@ -205,7 +244,7 @@ def main():
     if output.exists():
         parser.error('--output-dir must be fresh')
     paths = ['tests/search_continuation.cpp', 'tests/native_key_helpers.h', 'src/editor/editor_core.cpp',
-             'tests/native_search_helpers.h']
+             'tests/native_search_helpers.h', 'src/search/search_session.cpp']
     contents = {}
     hashes = {}
     for relative in paths:
@@ -220,7 +259,8 @@ def main():
         contents[relative] = raw.decode('utf-8')
         hashes[relative] = {'source': str(path.resolve()), 'sha256': hashlib.sha256(raw).hexdigest()}
     generated = {paths[0]: fixture(contents[paths[0]]), paths[1]: helper(contents[paths[1]]),
-                 paths[2]: core(contents[paths[2]]), paths[3]: native_search(contents[paths[3]])}
+                 paths[2]: core(contents[paths[2]]), paths[3]: native_search(contents[paths[3]]),
+                 paths[4]: search_session(contents[paths[4]])}
     generated['src/diagnostics/longline_probe.h'] = Path(__file__).with_name('longline_probe.h').read_text()
     for relative, text in generated.items():
         destination = output / relative
@@ -231,7 +271,22 @@ def main():
                 'outputs': {relative: hashlib.sha256(text.encode()).hexdigest() for relative, text in generated.items()},
                 'stage_names': {stage_hash(label): label for label in stages},
                 'trace_environment': 'WXNOTEPAD_PAINT_TRACE', 'trace_path_is_exact': True,
-                'record_capacity': 8192, 'record_bytes': 80,
+                'record_capacity': 32768, 'record_bytes': 80,
+                'dispatch_payloads': {
+                    'gtk_iteration_begin': 'window; span includes the existing native-exception rethrow boundary',
+                    'pending_events_begin': 'window; existing wx ProcessPendingEvents call only',
+                    'process_idle_begin': 'window; existing wx ProcessIdle call only',
+                    'save_find_begin': 'selectWord, editor, unused, unused',
+                    'save_find_length': 'selected byte count, unused, unused, unused',
+                    'save_find_result': 'accepted, selected byte count, unused, unused'},
+                'key_payloads': {
+                    'key_observed': 'phase(1=CHAR_HOOK/2=DOWN/3=UP), wxkey, modifiers, wxTarget',
+                    'key_budget': 'remaining_us, received, checkpoint(1=initial/2=before-dispatch/3=after-dispatch/4=loop-end), expectedKey',
+                    'key_deadline': 'steady_clock deadline_ns, expectedKey, modifiers, unused',
+                    'x11_queue_prefix': 'cached X event count, first type, keycode, state; XEventsQueued(QueuedAlready) then non-consuming XPeekEvent',
+                    'x11_queue_identity': 'window, serial, time, send_event for that first queued X event',
+                    'x11_generic_prefix': 'extension opcode, evtype, cookie, data_present for an already cached GenericEvent; no XGetEventData call',
+                    'gdk_queue_prefix': 'first cached type, keyval, state, time; GDK peek only copies its cached queue prefix and neither reads new X events nor dispatches/removes an event'},
                 'feedback_payloads': {
                     'feedback_enter': 'dialog, shown, modal, unused',
                     'feedback_queued': 'dialog, route(0=CallAfter/1=timer), released_if_timer, unused',

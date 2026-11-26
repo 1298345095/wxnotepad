@@ -18,9 +18,17 @@ KINDS = {
     60: 'map_shown', 61: 'map_acknowledged', 62: 'map_wait_begin', 63: 'map_wait_end',
     70: 'feedback_enter', 71: 'feedback_queued', 72: 'feedback_fired',
     73: 'feedback_click_begin', 74: 'feedback_click_end', 75: 'feedback_exit',
+    80: 'gtk_iteration_begin', 81: 'gtk_iteration_end',
+    82: 'pending_events_begin', 83: 'pending_events_end',
+    84: 'process_idle_begin', 85: 'process_idle_end',
+    86: 'save_find_begin', 87: 'save_find_end', 88: 'save_find_length', 89: 'save_find_result',
+    90: 'key_observed', 91: 'key_budget', 92: 'key_deadline',
+    93: 'gdk_queue_prefix', 94: 'x11_queue_prefix', 95: 'x11_queue_identity',
+    96: 'x11_generic_prefix',
 }
 BEGIN_END = {1: 2, 10: 11, 12: 13, 14: 15, 16: 17, 19: 20,
-             30: 31, 33: 34, 40: 41, 42: 43, 62: 63, 73: 74}
+             30: 31, 33: 34, 40: 41, 42: 43, 62: 63, 73: 74,
+             80: 81, 82: 83, 84: 85, 86: 87}
 
 
 def decode(path, manifest=None):
@@ -77,7 +85,8 @@ def decode(path, manifest=None):
                           'values_begin': begin['values'], 'values_end': row['values']})
     counts = Counter(row['kind'] for row in events)
     durations = {}
-    for kind in ('draw', 'paint', 'dispatch', 'focus', 'final_dispatch', 'caret_tick', 'idle', 'map_wait', 'feedback_click'):
+    for kind in ('draw', 'paint', 'dispatch', 'focus', 'final_dispatch', 'caret_tick', 'idle', 'map_wait',
+                 'feedback_click', 'gtk_iteration', 'pending_events', 'process_idle', 'save_find'):
         matching = [item for item in spans if item['kind'] == kind]
         durations[kind] = {'completed': len(matching),
                            'wall_ms_total': round(sum(item['wall_ms'] for item in matching), 4),

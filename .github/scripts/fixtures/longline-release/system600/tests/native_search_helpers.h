@@ -36,13 +36,25 @@ inline void DispatchEvents([[maybe_unused]] wxWindow* window) {
         wxYield();
         return;
     }
+    {
+        const LonglineProbe::Scope iterationTiming(LonglineProbe::Kind::GtkIterationBegin,
+            LonglineProbe::Kind::GtkIterationEnd, reinterpret_cast<std::intptr_t>(window));
     gtk_main_iteration_do(FALSE);
 #if wxUSE_EXCEPTIONS
     // Native callbacks store exceptions until control returns to C++.
     wxTheApp->RethrowStoredException();
 #endif
+    }
+    {
+        const LonglineProbe::Scope dispatchPartTiming(LonglineProbe::Kind::PendingEventsBegin,
+            LonglineProbe::Kind::PendingEventsEnd, reinterpret_cast<std::intptr_t>(window));
     wxTheApp->ProcessPendingEvents();
+    }
+    {
+        const LonglineProbe::Scope dispatchPartTiming(LonglineProbe::Kind::ProcessIdleBegin,
+            LonglineProbe::Kind::ProcessIdleEnd, reinterpret_cast<std::intptr_t>(window));
     wxTheApp->ProcessIdle();
+    }
 #else
     wxYield();
 #endif

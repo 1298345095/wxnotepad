@@ -110,6 +110,96 @@ now 15 / 8 / 15 rows; every captured Core wrap width matches that paint's text
 viewport. The cleaned fixture retains the original exact restoration assertion
 and uses no diagnostic observation mode.
 
+### Native fixture responsiveness
+
+The automatic-insertion and tag-closure fixtures ran 444 and 424 cases in one
+GUI callback, delaying accessibility requests across otherwise successful cases.
+Each fixture owns a one-shot timer and next-case index: one turn completes one
+independent case. Teardown stops the timer; all text, selection, Undo/Redo and
+saved-byte inputs and assertions remain intact.
+
+The [insertion comparison](https://github.com/1298345095/wxnotepad/actions/runs/45738358923)
+and [tag-closure comparison](https://github.com/1298345095/wxnotepad/actions/runs/45741569011)
+each passed eight sessions with every functional case intact. External AT-SPI
+`Peer.Ping` calls were bound to the actual application PID: each original pair
+produced six 10-second timeouts during the case loop. The modified groups returned
+133 replies for insertion and 228 for tag closure across X11 and Wayland, with no
+mid-loop timeout; the clean registered CTests also passed on both backends.
+
+### Windows subprocess cleanup
+
+A caret fixture completed its assertions but temporary executable removal raised
+WinError 32; the failing run did not identify the holder of that sharing conflict.
+`tests/temporary_directory.py` owns a five-second monotonic cleanup retry deadline
+for Windows sharing violations, with pauses of at most 50 ms; other errors propagate.
+Successful cleanup preserves body exceptions; persistent conflicts reach the deadline.
+
+The [native cleanup investigation](https://github.com/1298345095/wxnotepad/actions/runs/45743347624)
+reused the failing Windows executable and Python 3.14.10. All 15 original and 15
+modified caret attempts passed. Separate real `CreateFileW` holders verified
+transient-lock recovery, persistent-lock failure at five seconds, and propagation
+of the original body exception. An exited-process control permitted EXE deletion
+with both handles open.
+
+### Native shortcut completion
+
+The X11 release helper used `wxYield()` inside an outer key-up/deadline loop.
+Repeated native paints could keep that drain running after the real key-up had
+already arrived. The helper now rechecks release and deadline between native
+iterations. Window presentation has its own completion state: it tracks each
+owned window's show epoch and actual `GDK_MAP` acknowledgement, including windows
+shown later during command dispatch. This handles GTK's deferred show transition,
+where wx's shown flag can precede native presentation.
+
+The [normal-period investigation](https://github.com/1298345095/wxnotepad/actions/runs/45747432757)
+completed all 14 sessions. At the measured 600 ms caret period, the original X11
+first Save and first Find performed two to five paints after key-up inside the
+same dispatch. The modified first Save, first Find and near-limit Save returned
+from that dispatch with no further paint. All original search scenarios remained.
+
+The [50 ms caret control](https://github.com/1298345095/wxnotepad/actions/runs/45749170020)
+then reproduced continuous repaint inside the original first-Save drain: both
+processes timed out at 60 seconds after more than 200 completed paints. The
+finite-dispatch version completed its first three shortcuts, then both processes
+timed out inside the final Find feedback after native map acknowledgement. These
+observations separate release-drain completion from the nested modal response.
+
+### File-readback cost under coverage
+
+[Native phase measurements](https://github.com/1298345095/wxnotepad/actions/runs/45747432757)
+located substantial coverage overhead in the large-file fixture's three
+per-character readbacks. A fixture-local bulk reader reduced those measured
+stages while preserving the complete 33,554,444-byte comparisons. That experiment
+guided the shared `TestFiles::Bytes` implementation: it now reads 64 KiB blocks to
+EOF, appends the final partial block, and reports a read error separately from EOF.
+Reading the open stream to EOF also preserves callers polling child-process logs.
+
+Binary, empty-file, block-boundary, missing-file, read-error and nonseekable-stream
+contracts passed. The [formal Linux job](https://github.com/1298345095/wxnotepad/actions/runs/45748634143/job/139670736264)
+passed both backend suites; `large_language_selection` completed in 1.42 seconds
+on X11 and 1.33 seconds on Wayland. The improvement belongs to test readback;
+production file loading and saving keep their existing responsibilities.
+
+### Modal feedback response and retained pressure regression
+
+The [modal-response comparison](https://github.com/1298345095/wxnotepad/actions/runs/45753054592)
+recorded a queued but never-fired `CallAfter` in both 50 ms controls, followed by
+60-second timeouts despite native map acknowledgement and real key-up. The shared
+response helper now owns a one-shot timer and a weak reference to the opening
+shortcut, requires its real release before clicking, and cancels expired work.
+Native dispatch also rethrows exceptions stored by native callbacks on return.
+
+All eight candidate sessions, covering 12 CTests, passed. The two X11 pressure
+searches completed in 31.78–32.35 seconds; ordinary X11/Wayland searches, held-key
+feedback and Escape also passed. All six candidate search traces recorded release
+before Click and closed every span with zero dropped records. In all four X11
+traces, the same feedback window's native Map acknowledgement preceded Click.
+
+`SelectionLimit` retains the 50 ms caret period on X11 after `ResetStream`. It
+keeps the 1 MiB input, all 83 assertions, 13 scenarios and 60-second limit. Each
+scenario owns a fresh frame, so this pressure ends with scenario 7; Wayland keeps
+its existing period. The measured pressure cases leave over 27 seconds of margin.
+
 ## Verification
 
 New behavior-focused coverage:

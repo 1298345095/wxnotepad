@@ -210,6 +210,15 @@ public:
     ~KeyReleaseObserver() override { wxEvtHandler::RemoveFilter(this); }
     const Observation& LastKeyEvent() const { return lastKeyEvent_; }
     int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_CHAR_HOOK || event.GetEventType() == wxEVT_KEY_DOWN ||
+            event.GetEventType() == wxEVT_KEY_UP) {
+            const auto& key = static_cast<wxKeyEvent&>(event);
+            const int phase = event.GetEventType() == wxEVT_CHAR_HOOK  ? 1
+                              : event.GetEventType() == wxEVT_KEY_DOWN ? 2
+                                                                       : 3;
+            LonglineProbe::Event(LonglineProbe::Kind::KeyObserved, 0, phase, key.GetKeyCode(), key.GetModifiers(),
+                                 reinterpret_cast<std::intptr_t>(event.GetEventObject()));
+        }
         if (event.GetEventType() == wxEVT_KEY_DOWN || event.GetEventType() == wxEVT_KEY_UP) {
             const auto& key = static_cast<wxKeyEvent&>(event);
             lastKeyEvent_ = {event.GetEventType() == wxEVT_KEY_UP ? "up" : "down", key.GetKeyCode(), key.GetModifiers(),
@@ -337,12 +346,45 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
 #endif
 #ifndef __WXMSW__
 #ifdef __WXGTK__
+inline void ObserveQueuedKeyPrefix(EditorFrame* frame) {
+    if (!LonglineProbe::active) return;
+    auto* display = gtk_widget_get_display(GTK_WIDGET(frame->GetHandle()));
+    if (GDK_IS_X11_DISPLAY(display)) {
+        auto* nativeDisplay = GDK_DISPLAY_XDISPLAY(display);
+        // Inspect cached queues only, after the original failure verdict.
+        // A non-key prefix does not rule out a later queued release.
+        const int queued = XEventsQueued(nativeDisplay, QueuedAlready);
+        XEvent prefix{};
+        if (queued > 0) XPeekEvent(nativeDisplay, &prefix);
+        const bool key = queued > 0 && (prefix.type == KeyPress || prefix.type == KeyRelease);
+        LonglineProbe::Event(LonglineProbe::Kind::X11QueuePrefix, 0, queued, queued > 0 ? prefix.type : -1,
+                             key ? prefix.xkey.keycode : 0, key ? prefix.xkey.state : 0);
+        if (queued > 0) {
+            LonglineProbe::Event(LonglineProbe::Kind::X11QueueIdentity, 0,
+                                 prefix.type == GenericEvent ? 0 : static_cast<std::int64_t>(prefix.xany.window),
+                                 static_cast<std::int64_t>(prefix.xany.serial),
+                                 key ? static_cast<std::int64_t>(prefix.xkey.time) : 0, prefix.xany.send_event);
+            if (prefix.type == GenericEvent)
+                LonglineProbe::Event(LonglineProbe::Kind::X11GenericPrefix, 0, prefix.xcookie.extension,
+                                     prefix.xcookie.evtype, prefix.xcookie.cookie, prefix.xcookie.data != nullptr);
+        }
+    }
+    // GTK 3.24's peek copies its cached first event without reading new X events.
+    if (auto* prefix = gdk_display_peek_event(display)) {
+        const bool key = prefix->type == GDK_KEY_PRESS || prefix->type == GDK_KEY_RELEASE;
+        LonglineProbe::Event(LonglineProbe::Kind::GdkQueuePrefix, 0, prefix->type, key ? prefix->key.keyval : 0,
+                             key ? prefix->key.state : 0, key ? prefix->key.time : 0);
+        gdk_event_free(prefix);
+    } else {
+        LonglineProbe::Event(LonglineProbe::Kind::GdkQueuePrefix, 0, -1);
+    }
+}
+
 inline void ObserveShortcutReleaseFailure(EditorFrame* frame, const wxString& focusFile, const wxString& request,
                                           int expectedKey, bool received,
                                           const KeyReleaseObserver::Observation& lastEvent) {
-    auto* widget = GTK_WIDGET(frame->GetHandle());
-    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) return;
     const auto failedAt = g_get_monotonic_time();
+    ObserveQueuedKeyPrefix(frame);
     wxString pending;
     wxFFile observed(focusFile, "rb");
     const bool read = observed.IsOpened() && observed.ReadAll(&pending);
@@ -628,18 +670,31 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     }
     LonglineProbe::Event(LonglineProbe::Kind::RequestEnd, requestTiming);
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
+    LonglineProbe::Event(LonglineProbe::Kind::KeyDeadline, 0,
+                         std::chrono::duration_cast<std::chrono::nanoseconds>(keyDeadline.time_since_epoch()).count(),
+                         key, (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
+    const auto observeBudget = [&](int checkpoint) {
+        if (!LonglineProbe::active) return;
+        LonglineProbe::Event(LonglineProbe::Kind::KeyBudget, 0,
+                             std::chrono::duration_cast<std::chrono::microseconds>(keyDeadline - Clock::now()).count(),
+                             received, checkpoint, key);
+    };
     if (releaseDeadline) *releaseDeadline = keyDeadline;
 #ifdef __WXGTK__
     NativeSearch::OpeningShortcut openingShortcut(received, keyDeadline);
 #endif
+    observeBudget(1);
     while (!received && Clock::now() < keyDeadline) {
         const auto dispatchTiming = LonglineProbe::Event(
             LonglineProbe::Kind::DispatchBegin, 0, received);
+        observeBudget(2);
         // A busy native queue must still let us check release and its deadline.
         NativeSearch::DispatchEvents(frame);
+        observeBudget(3);
         LonglineProbe::Event(LonglineProbe::Kind::DispatchEnd, dispatchTiming, received);
         wxMilliSleep(10);
     }
+    observeBudget(4);
     if (!received) {
 #ifdef __WXGTK__
         ObserveShortcutReleaseFailure(frame, focusFile, request, key, received, observer.LastKeyEvent());

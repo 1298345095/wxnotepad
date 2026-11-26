@@ -28,6 +28,9 @@ enum class Kind : std::uint64_t {
     NativeIdleAdded = 50, NativeIdleRemoved,
     MapShown = 60, MapAcknowledged, MapWaitBegin, MapWaitEnd,
     FeedbackEnter = 70, FeedbackQueued, FeedbackFired, FeedbackClickBegin, FeedbackClickEnd, FeedbackExit,
+    GtkIterationBegin = 80, GtkIterationEnd, PendingEventsBegin, PendingEventsEnd,
+    ProcessIdleBegin, ProcessIdleEnd, SaveFindBegin, SaveFindEnd, SaveFindLength, SaveFindResult,
+    KeyObserved = 90, KeyBudget, KeyDeadline, GdkQueuePrefix, X11QueuePrefix, X11QueueIdentity, X11GenericPrefix,
 };
 
 struct Header {
@@ -40,7 +43,7 @@ struct Record {
     std::uint64_t kind, shortcut, span;
     std::int64_t a, b, c, d;
 };
-inline constexpr std::size_t Capacity = 8192;
+inline constexpr std::size_t Capacity = 32768;
 struct Storage { Header header; Record records[Capacity]; };
 static_assert(sizeof(Header) == 64 && sizeof(Record) == 80);
 

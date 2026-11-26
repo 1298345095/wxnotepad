@@ -172,6 +172,11 @@ void SelectionLimit(EditorFrame* frame) {
     auto* editor = frame->Editor();
     ReportStage("selection limit ResetStream begin");
     TestEditor::ResetStream(editor, text.c_str(), 0, OneMiB);
+#ifdef __WXGTK__
+    // Keep X11 paints active while testing shortcut and nested-modal progress.
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(editor->GetHandle()))))
+        editor->Send(SetCaretPeriod, 50);
+#endif
     ReportStage("selection limit ResetStream complete; save begin");
     {
 #ifdef __WXGTK__
@@ -423,6 +428,9 @@ public:
         for (auto* child : dialog->GetChildren()) {
             if (auto* label = wxDynamicCast(child, wxStaticText)) messages.push_back(label->GetLabel());
         }
+#ifdef __WXGTK__
+        response_.Respond(dialog, response, [this] { responseBeforeRelease |= !released; });
+#else
         wxTheApp->CallAfter([this, dialog] {
             // Closing the modal while F3 is still held can leave Wayland with
             // no keyboard target for its release. Share the caller's deadline.
@@ -433,8 +441,15 @@ public:
             responseBeforeRelease |= !released;
             NativeSearch::Click(dialog, response);
         });
+#endif
         return wxID_NONE;
     }
+#ifdef __WXGTK__
+    void Exit(wxDialog* dialog) override { response_.Cancel(dialog); }
+
+private:
+    NativeSearch::FeedbackResponse response_;
+#endif
 };
 
 void FeedbackTransitions(EditorFrame* frame) {
