@@ -23,7 +23,7 @@ void CheckDetection() {
     constexpr auto python = "#!/usr/bin/env python3\n";
     Check("sample.cpp", python, Cpp);
     Check("sample.txt", python, PlainText);
-    Check("sample.rb", python, PlainText);
+    Check("sample.rb", python, Ruby);
     Check("sample.cgi", python, Python);
     Check("sample.unknown", python, Python);
     Check("sample.conf", python, Python);
