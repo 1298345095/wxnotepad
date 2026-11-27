@@ -65,16 +65,21 @@ def main():
         config = folder / "Notepad4.ini"
         config.write_text("[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16")
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
-        run("xrandr", "--setmonitor", "PositionLeft", "800/212x600/159+0+0", "none")
-        run("xrandr", "--setmonitor", "PositionRight", "800/212x600/159+800+0", "none")
+        # Xvfb retains its physical output. The added RandR logical monitors
+        # exercise GDK monitor selection; both default rectangles also fit the
+        # physical WM work area so placement is not clipped by a different bound.
+        run("xrandr", "--setmonitor", "PositionLeft", "540/143x1000/265+0+0", "none")
+        run("xrandr", "--setmonitor", "PositionRight", "1050/278x1000/265+540+0", "none")
         try:
+            inventory = subprocess.check_output(["xrandr", "--listmonitors"], text=True)
+            assert inventory.splitlines()[0] == "Monitors: 3", inventory
             expected_primary = primary_default()
             app = Process(executable, folder / "right", environment, arguments=("-pos", "850,40,640,480,0"))
             try:
                 rectangle(app, (850, 40, 640, 480))
                 app.choose(menu_id(app.state, "Save Settings Now"))
                 stored = read_settings(config)
-                group = stored["Window Position 800x600"]
+                group = stored["Window Position 1050x1000"]
                 assert tuple(int(group[key]) for key in ("WindowPosX", "WindowPosY", "WindowSizeX", "WindowSizeY")) == (
                     850,
                     40,
@@ -83,12 +88,12 @@ def main():
                 )
                 run("xdotool", "windowactivate", "--sync", app.state["frame_x11_window"])
                 run("xdotool", "key", "--clearmodifiers", "ctrl+shift+p")
-                rectangle(app, (1016, 16, 568, 568))
+                rectangle(app, (606, 16, 968, 968))
                 seed_clipboard()
                 app.choose(menu_id(app.state, "Window Position"))
-                assert native_clipboard() == "-pos 1016,16,568,568,0"
+                assert native_clipboard() == "-pos 606,16,968,968,0"
                 run("xdotool", "key", "--clearmodifiers", "ctrl+shift+p")
-                rectangle(app, (816, 16, 568, 568))
+                rectangle(app, (556, 16, 968, 968))
                 app.choose(menu_id(app.state, "Clear Position History"))
                 app.close()
             finally:
