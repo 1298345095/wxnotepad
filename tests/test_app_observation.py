@@ -1,5 +1,6 @@
 """Exercise publication races and the two observation callers' failure contracts."""
 
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,32 @@ import resources
 
 
 class AppObservation(unittest.TestCase):
+    def test_observer_drivers_import_without_inherited_tools_path(self):
+        tests = Path(__file__).resolve().parent
+        probe = (
+            "import importlib\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            "sys.path.insert(0, sys.argv[1])\n"
+            "driver = importlib.import_module(sys.argv[2])\n"
+            "import app_observation\n"
+            "assert driver.read_state is app_observation.read_state\n"
+            "print(Path(app_observation.__file__).resolve())\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="observer-import-") as directory:
+            for driver in ("observed_shutdown_process", "window_routing_readiness"):
+                with self.subTest(driver=driver):
+                    result = subprocess.run(
+                        [sys.executable, "-E", "-X", "utf8", "-c", probe, str(tests), driver],
+                        cwd=directory,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        timeout=5,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout.strip(), str(tests.parent / "tools/app_observation.py"))
+
     def test_state_keeps_tabs_in_values_and_empty_fields(self):
         with tempfile.TemporaryDirectory() as name:
             folder = Path(name)

@@ -10,6 +10,7 @@ import time
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from app_observation import read_state
 from resource_process import command, observation_context
 from settings_process import Application
