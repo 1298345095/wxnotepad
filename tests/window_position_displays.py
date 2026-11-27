@@ -1,5 +1,7 @@
 """Actual XRandR monitor movement, default positions and removed-monitor history."""
 
+import ctypes as c
+import ctypes.util
 import os
 import shutil
 import subprocess
@@ -9,7 +11,7 @@ import time
 from pathlib import Path
 
 from localization_package import Process, menu_id, read_settings
-from window_position_process import native_clipboard, native_rectangle, seed_clipboard
+from window_position_process import gtk_clipboard, native_clipboard, native_rectangle, seed_clipboard
 
 
 def run(*arguments):
@@ -24,6 +26,30 @@ def rectangle(app, expected):
             return
         assert time.monotonic() < deadline, (actual, expected)
         time.sleep(0.01)
+
+
+def primary_default():
+    gtk_clipboard()  # Initialize an independent native GDK display connection.
+    gdk = c.CDLL(ctypes.util.find_library("gdk-3"))
+    gdk.gdk_display_get_default.restype = c.c_void_p
+    gdk.gdk_display_get_primary_monitor.argtypes = [c.c_void_p]
+    gdk.gdk_display_get_primary_monitor.restype = c.c_void_p
+    display = gdk.gdk_display_get_default()
+    monitor = gdk.gdk_display_get_primary_monitor(display)
+    if not monitor:
+        gdk.gdk_display_get_monitor.argtypes = [c.c_void_p, c.c_int]
+        gdk.gdk_display_get_monitor.restype = c.c_void_p
+        monitor = gdk.gdk_display_get_monitor(display, 0)
+
+    class Rectangle(c.Structure):
+        _fields_ = [("x", c.c_int), ("y", c.c_int), ("width", c.c_int), ("height", c.c_int)]
+
+    work = Rectangle()
+    gdk.gdk_monitor_get_workarea.argtypes = [c.c_void_p, c.POINTER(Rectangle)]
+    gdk.gdk_monitor_get_workarea(monitor, c.byref(work))
+    height = work.height - 32
+    width = min(work.width - 32, height)
+    return work.x + work.width - width - 16, work.y + 16, width, height
 
 
 def main():
@@ -42,6 +68,7 @@ def main():
         run("xrandr", "--setmonitor", "PositionLeft", "800/212x600/159+0+0", "none")
         run("xrandr", "--setmonitor", "PositionRight", "800/212x600/159+800+0", "none")
         try:
+            expected_primary = primary_default()
             app = Process(executable, folder / "right", environment, arguments=("-pos", "850,40,640,480,0"))
             try:
                 rectangle(app, (850, 40, 640, 480))
@@ -62,13 +89,26 @@ def main():
                 assert native_clipboard() == "-pos 1016,16,568,568,0"
                 run("xdotool", "key", "--clearmodifiers", "ctrl+shift+p")
                 rectangle(app, (816, 16, 568, 568))
+                app.choose(menu_id(app.state, "Clear Position History"))
+                app.close()
+            finally:
+                app.stop()
+            app = Process(executable, folder / "cleared", environment)
+            try:
+                rectangle(app, expected_primary)
+                app.close()
+            finally:
+                app.stop()
+            app = Process(executable, folder / "saved-again", environment, arguments=("-pos", "850,40,640,480,0"))
+            try:
+                app.choose(menu_id(app.state, "Save Settings Now"))
                 app.close()
             finally:
                 app.stop()
             run("xrandr", "--delmonitor", "PositionRight")
             app = Process(executable, folder / "removed", environment)
             try:
-                rectangle(app, (616, 16, 968, 968))
+                rectangle(app, expected_primary)
                 app.close()
             finally:
                 app.stop()

@@ -162,7 +162,16 @@ void EditorFrame::RestoreWindowPosition() {
             *this, wxString::Format("%d,%d,%d,%d,%d", rect.x, rect.y, rect.width, rect.height, saved->maximized));
         normalWindowPosition_ = *saved;
     } else if (normalWindowPosition_.coordinates) {
-        SetSize(DefaultRectangle(display.GetClientArea()));
+        // Original InitInstance uses SPI_GETWORKAREA for an absent resolution
+        // record, even if the generic monitor hint points to another screen.
+        unsigned primary = 0;
+        for (unsigned index = 0; index < wxDisplay::GetCount(); ++index) {
+            if (wxDisplay(index).IsPrimary()) {
+                primary = index;
+                break;
+            }
+        }
+        SetSize(DefaultRectangle(wxDisplay(primary).GetClientArea()));
         CaptureNormalWindowPosition();
     }
     normalWindowSize_ = normalWindowPosition_.normal.GetSize();
