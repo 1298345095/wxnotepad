@@ -206,11 +206,14 @@ try:
             expression = json.dumps(value, ensure_ascii=True)
             content = "pre " + expression + " tail\r\n"
             target = output / (encoding + ".txt")
-            target.write_bytes(bom + content.encode(codec))
+            target.write_bytes(b"" if encoding == "ansi" else bom + content.encode(codec))
             app = Original(target, portable / "Notepad4.exe", desktop, name, encoding)
             try:
                 if encoding == "ansi":
                     app.command(40100)
+                    # Like the existing Base64 original capture, choose ANSI
+                    # on an empty file before setting its native document bytes.
+                    app.reset(content.encode("ascii"), 4 + len(expression), 4)
                 app.send(2160, 4 + len(expression), 4)
                 before = app.state()
                 app.command(CALCULATE)

@@ -29,7 +29,7 @@ std::string ScriptString(JSContext* context, JSValueConst value) {
 }
 
 std::string FormatNumber(double number) {
-    if (std::isnan(number)) return "-1.#IND";
+    if (std::isnan(number)) return std::signbit(number) ? "-1.#IND" : "1.#QNAN";
     if (std::isinf(number)) return number < 0 ? "-inf" : "inf";
     if (number == 0) return std::signbit(number) ? "-0" : "0";
     constexpr int AutomationDigits = 15;

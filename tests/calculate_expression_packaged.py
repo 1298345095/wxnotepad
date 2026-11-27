@@ -116,7 +116,7 @@ def main():
             digest = engine.pop("package_record_sha256")
             assert engine == {
                 "name": "quickjs-ng",
-                "version": "0.16.2",
+                "version": "0.16.2#1",
                 "license": "MIT AND Unicode-3.0",
                 "linkage": "static",
             }, build_record
