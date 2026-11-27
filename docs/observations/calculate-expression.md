@@ -6,8 +6,9 @@ It evaluates the selected JavaScript with `with(Math)`, inserts a space and the
 formatted result after the original expression, and selects that entire insertion
 (including the space). `^` is JavaScript XOR. There is no new shortcut.
 
-The command uses the main selection, including when several selections exist.
-The result becomes one forward selection. Undo restores the original selections
+With multiple selections, the command evaluates the original concatenated
+selection text and inserts at the main selection's end. The result becomes one
+forward selection. Undo restores the original selections
 and main selection; Redo restores the result. Empty selections disable the menu.
 Empty/null/undefined results do not edit or create history. Rectangles retain the
 original warning. Read-only selections keep the command enabled: Scintilla blocks
@@ -19,6 +20,8 @@ the `JavaScript` ProgID fallback. It invokes object `toString()` and formats the
 VARIANT through system `propsys!VariantToString`. Native ANSI documents retain
 the existing original native-code-page conversion boundary. File encodings,
 BOMs, EOL metadata and document save points use the existing document commands.
+The original-supported primitive `Symbol("x")` result converts to `Symbol(x)`
+on both engines through its explicit `toString()` method.
 
 Linux statically links QuickJS-ng 0.16.2, overlay port revision 1, without
 its optional I/O modules or command-line programs. The CMake target must be a
@@ -40,6 +43,10 @@ substituting a smaller expression language.
 
 On 2026-11-27 the user approved two Linux engine differences: localized timezone
 display-name suffixes in Date strings and engine-specific error wording.
+The user subsequently approved newer QuickJS syntax on Linux: `1n+2n` produces
+exact decimal `3`, and `({a:1})?.a` produces `1`; original Windows Chakra rejects
+these syntaxes. BigInt output uses decimal text directly, including values beyond
+the exact floating-point integer range, and obeys the existing result capacity.
 For the same America/Los_Angeles zone, original `new Date(0)` returned
 `Wed Dec 31 1969 16:00:00 GMT-0800 (太平洋标准时间)` while QuickJS returned
 `Wed Dec 31 1969 16:00:00 GMT-0800`. Error notifications retain the original text
@@ -48,6 +55,12 @@ UTF-8 bytes; Linux notification anchors remain inside the selected source on val
 UTF-8 boundaries. Runtime source tokens may differ: `throw new Error("owned error")`
 points at `throw` in Chakra and the Error constructor in QuickJS. Windows retains
 the original UTF-16-column/byte-position handling, including its Unicode quirk.
+For concatenated selections, Linux maps the engine's source-byte offset through
+the sorted document ranges and the actual default/custom copy separator, so a
+failure in a later range points to that selected token even when another range
+is main. Native popup-coordinate regressions calibrate the existing notification
+surface at independently known source tokens, including gaps, CJK, supplementary
+characters and the JavaScript Unicode line separator, for either main range.
 
 The independent real original capture is retained outside Git at
 `F:/wxnotepad-evidence/window-and-tools-implementation-2026-11-27/292/original-native-02/`.
