@@ -1,7 +1,7 @@
 # Editor dependency profile
 
-This overlay copies wxWidgets 3.3.3#1 from the pinned vcpkg baseline
-`d186940b2f0c4e8e5b4ff804af57d2a26fbfa091`. Local port version 6 retains the
+This overlay uses the fixed wxWidgets 3.3.4 release, port version 1. It builds on the port from
+vcpkg baseline `d186940b2f0c4e8e5b4ff804af57d2a26fbfa091` and retains the
 earlier Windows profile, which disables
 JPEG, TIFF, WebP and wxRegEx on Windows and removes their package dependencies.
 The application's regular-expression commands use the pinned Notepad4 core,
@@ -12,8 +12,7 @@ Doc/View/MDI frameworks. The application owns its document model, uses one
 document per top-level window, and does not use those controls. wxGridSizer is
 a layout class, independent of the disabled wxGrid table control.
 
-Version 6 also removes these unused implementations from the Windows core/base
-DLLs:
+The Windows profile also removes these unused implementations from core/base:
 
 - GIF, PCX, TGA, IFF and PNM image codecs and animation controls.
 - Calendar/date/time pickers, wxFindReplaceDialog, wizards, splash screens,
@@ -42,11 +41,12 @@ Notepad4 core and retains its Scintilla/Notepad4 notices in `licenses/`.
 wxSTC was not linked into the application or included in its distribution;
 this change reduces SDK downloads, compilation and installed SDK size.
 
-Linux otherwise keeps the original options and dependency declarations. Its
-GTK overlay and static linkage are unchanged.
+Linux keeps the original options and dependency declarations. Its GTK overlay
+and static linkage are unchanged. A Linux-only patch gives wxWidgets' private
+xdg-shell protocol objects distinct C symbols so they can link with static GDK.
+The wire protocol names and dynamic Wayland system-library boundary are unchanged.
 
-Version 5 synchronized the wxMSW pending-watch removal vector, and version 7
-replaces that partial fix with the upstream wxWidgets MSW file-watcher fixes
+The 3.3.4 release includes the upstream wxWidgets MSW file-watcher fixes
 (`53e793af35`, `0b744dd44c`, `06ffddba79`; upstream issues
 [22381](https://github.com/wxWidgets/wxWidgets/issues/22381) and
 [26866](https://github.com/wxWidgets/wxWidgets/pull/26866)). Together they
@@ -60,7 +60,10 @@ completions cleanly, and keep the IOCP worker running when a single watched
 directory is deleted. Upstream
 [issue 15995](https://github.com/wxWidgets/wxWidgets/issues/15995) explains why
 these retired watches need their own lifetime container; its earlier vector
-change does not synchronize concurrent mutations.
+change does not synchronize concurrent mutations. The old watcher and Wayland
+build patches are removed because their fixes are included in this release.
+The SDL patch follows upstream's SDL3-first detection while preserving the SDL2
+config-package fallback and exported dependencies for the optional sound feature.
 
 Select this overlay for local dependency builds with
 `--overlay-ports=<repository>/.github/ports`. CI already selects that directory

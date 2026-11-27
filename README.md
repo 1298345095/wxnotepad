@@ -323,7 +323,7 @@ For opt-in native input, clipboard and shutdown tracing, see
 [native diagnostics](docs/diagnostics.md). Ordinary builds exclude tracing.
 
 Prerequisites: Git, Python 3.14+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
-**3.3.3#7** from vcpkg. CI uses MSVC and GCC 15. On Linux use Ubuntu 26.04+ and
+**3.3.4#1** from vcpkg. CI uses MSVC and GCC 15. On Linux use Ubuntu 26.04+ and
 GTK3 with `gtk+-3.0`, `wayland-egl` and `wayland-cursor` development packages,
 Ninja, and a working desktop. Keep WSL sources and builds on its Linux filesystem.
 The SDK capability test compiles and runs C++23 `std::print` and `std::println`,
@@ -350,7 +350,7 @@ Use them when updating an existing installation as well as creating a new one.
 The build entry point reuses an existing vcpkg installation and does not install
 packages. Adapt those example installation paths to `<vcpkg-root>/installed` on
 your machine. Pass its root explicitly when it is not `G:/vcpkg` (Windows) or
-`~/vcpkg` (Linux). The CMake package check requires wxWidgets 3.3.3 exactly.
+`~/vcpkg` (Linux). The CMake package check requires wxWidgets 3.3.4 exactly.
 
 Windows, from the repository root in PowerShell 7:
 

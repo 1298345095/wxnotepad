@@ -1,5 +1,5 @@
 set(wxWidgets_USE_STATIC ON)
-find_package(wxWidgets 3.3.3 EXACT CONFIG REQUIRED)
+find_package(wxWidgets 3.3.4 EXACT CONFIG REQUIRED)
 foreach(component wx::core wx::base)
     get_target_property(component_type ${component} TYPE)
     if(NOT component_type STREQUAL "STATIC_LIBRARY")

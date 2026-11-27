@@ -1,6 +1,6 @@
 # UI localization
 
-wxnotepad uses wxWidgets 3.3.3's gettext MO reader. English is compiled into the
+wxnotepad uses wxWidgets 3.3.4's gettext MO reader. English is compiled into the
 shared UI source. Application catalogs and the locked toolkit stock catalogs are
 ordinary editable PO files; MO files are generated build output. GNU gettext is a
 host build tool and adds no application runtime library dependency.
@@ -124,7 +124,7 @@ the install prefix at configure time for a working system installation. Executab
 relative lookup remains available for relocated portable output. Resource lookup
 is independent of the active document, working directory and writable settings.
 
-The stock PO files are verbatim imports from the locked wxWidgets 3.3.3 source;
+The stock PO files are verbatim imports from the locked wxWidgets 3.3.4 source;
 [their provenance](../po/wxstd/README.md) records source hashes and notices. The
 existing wxWidgets package notice is retained in artifacts. Do not depend on
 optional SDK-installed MOs.

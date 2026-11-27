@@ -1107,8 +1107,9 @@ private:
         frame->ShowFullScreen(true);
         editor->SetSize(0, 0, 760, 700);
         peer->SetSize(800, 0, 600, 700);
-        CallAfter([this, frame, editor, peer] {
+        auto run = [this, frame, editor, peer](bool ready) {
             try {
+                Require(ready, "owned drag surface must be ready for native input");
                 SelfDrags(frame, editor);
                 IncomingPeerDrags(frame, editor, peer);
                 OutgoingPeerDrags(frame, editor, peer);
@@ -1120,7 +1121,12 @@ private:
             }
             frame->Destroy();
             ExitMainLoop();
-        });
+        };
+#ifdef __WXGTK__
+        NativeKeys::AfterPresentation(frame, std::move(run));
+#else
+        CallAfter([run = std::move(run)] { run(true); });
+#endif
         return true;
     }
 
