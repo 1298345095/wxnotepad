@@ -1,4 +1,5 @@
 """Shared original-app session for character insertion and tag-closure captures."""
+
 import ctypes as c
 from ctypes import wintypes as w
 from pathlib import Path
@@ -17,7 +18,9 @@ def prepare_host(executable, output):
     shutil.copy2(executable, host / "Notepad4.exe")
     (host / "Notepad4.ini").write_text(
         "[Notepad4]\n[Settings]\nSaveSettings=0\nLoadASCIIasUTF8=0\nLoadANSIasUTF8=0\n"
-        "NoEncodingTags=0\nSkipUnicodeDetection=0\n", encoding="utf-8")
+        "NoEncodingTags=0\nSkipUnicodeDetection=0\n",
+        encoding="utf-8",
+    )
     return host
 
 
@@ -57,8 +60,11 @@ class Session:
 
     def state(self):
         text = bytes(self.send(2007, position) & 255 for position in range(self.send(2006))).decode("utf-8")
-        return [text, *[self.send(message) for message in (2009, 2008, 2159, 2174, 2016)],
-                [[self.send(2579, index), self.send(2577, index)] for index in range(self.send(2570))]]
+        return [
+            text,
+            *[self.send(message) for message in (2009, 2008, 2159, 2174, 2016)],
+            [[self.send(2579, index), self.send(2577, index)] for index in range(self.send(2570))],
+        ]
 
     def capture_case(self, before, position, character, readonly, anchor, extra_anchor, extra_caret, overtype):
         self.send(2171, 0)

@@ -1,4 +1,5 @@
 """Win32 protocol and pinned Notepad4 resources used by scheme observations."""
+
 WM_NULL = 0x0000
 WM_COMMAND = 0x0111
 BM_GETCHECK = 0x00F0

@@ -1,4 +1,5 @@
 """Capture URL commands from the pinned original Windows editor (no desktop input)."""
+
 import argparse
 import csv
 import ctypes as c
@@ -56,9 +57,14 @@ def capture(executable: Path, output: Path) -> None:
     def state():
         size = send(editor, 2006, 0, 0)
         text = bytes(send(editor, 2007, pos, 0) & 255 for pos in range(size))
-        return {"hex": text.hex(), "anchor": send(editor, 2009, 0, 0),
-                "caret": send(editor, 2008, 0, 0), "modified": send(editor, 2159, 0, 0),
-                "undo": send(editor, 2174, 0, 0), "redo": send(editor, 2016, 0, 0)}
+        return {
+            "hex": text.hex(),
+            "anchor": send(editor, 2009, 0, 0),
+            "caret": send(editor, 2008, 0, 0),
+            "modified": send(editor, 2159, 0, 0),
+            "undo": send(editor, 2174, 0, 0),
+            "redo": send(editor, 2016, 0, 0),
+        }
 
     inputs = [
         ("unicode", "中文 café 😀 𐐀".encode()),
@@ -79,23 +85,80 @@ def capture(executable: Path, output: Path) -> None:
     ]
     punctuation = "!\"$&'()*+,-./:;<=>@[\\]^_`{|}~"
     inputs += [(f"ascii_{ord(char):02x}", ("a" + char + "b").encode()) for char in punctuation]
-    inputs += [(f"url_{index}", text.encode()) for index, text in enumerate([
-        "a#f?q", "a?x#f", "a#f#x?q?y", "a#x?y#z", "a?x#y?z", "a?中文 x#é y",
-        "HTTP://User:Pass@HOST:80/a", "http://host", "http://a b/x y", "http://中文/路径",
-        "http:a b\\c", "http:\\host\\a", "file:a b\\c", "file://C:/a b", "mailto:?a b#c d",
-        "mailto://host", "ftp:a b\\c", "foo:a b\\c", "foo://a b\\c", "foo://host?x", "//host",
-        "\\\\host\\a", "c://host", "a%00", "%E2%82", "%C2x%A9", "%C2é%A9",
-        "%ED%A0%80", "%F4%90%80%80", "%E0%80%80", "%F0%80%80%80", "%C0%AF",
-        "%F5%80%80%80", "%E2%82%41", "%EF%BF%BF", "foo:é", "FOO://host/x",
-    ])]
+    inputs += [
+        (f"url_{index}", text.encode())
+        for index, text in enumerate(
+            [
+                "a#f?q",
+                "a?x#f",
+                "a#f#x?q?y",
+                "a#x?y#z",
+                "a?x#y?z",
+                "a?中文 x#é y",
+                "HTTP://User:Pass@HOST:80/a",
+                "http://host",
+                "http://a b/x y",
+                "http://中文/路径",
+                "http:a b\\c",
+                "http:\\host\\a",
+                "file:a b\\c",
+                "file://C:/a b",
+                "mailto:?a b#c d",
+                "mailto://host",
+                "ftp:a b\\c",
+                "foo:a b\\c",
+                "foo://a b\\c",
+                "foo://host?x",
+                "//host",
+                "\\\\host\\a",
+                "c://host",
+                "a%00",
+                "%E2%82",
+                "%C2x%A9",
+                "%C2é%A9",
+                "%ED%A0%80",
+                "%F4%90%80%80",
+                "%E0%80%80",
+                "%F0%80%80%80",
+                "%C0%AF",
+                "%F5%80%80%80",
+                "%E2%82%41",
+                "%EF%BF%BF",
+                "foo:é",
+                "FOO://host/x",
+            ]
+        )
+    ]
     inputs += [(f"nul_boundary_{size}", b"%00" + b"x" * (size - 3)) for size in [14, 15, 16, 30, 31, 32]]
     inputs += [("nul_boundary_unicode", "中文😀%00abcde".encode())]
-    inputs += [(f"scheme_{scheme}_{index}", (scheme + ':' + tail).encode())
-               for scheme in ["http", "https", "file", "ftp", "news", "nntp", "gopher", "telnet", "wais",
-                              "mailto", "about", "javascript", "vbscript", "res", "shell", "unknown"]
-               for index, tail in enumerate(["a/b\\c?d e#f g", "//host/a\\b?c d#e f"])]
-    result = {"revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a", "executable": str(executable),
-              "platform": platform.platform(), "fixtures": []}
+    inputs += [
+        (f"scheme_{scheme}_{index}", (scheme + ":" + tail).encode())
+        for scheme in [
+            "http",
+            "https",
+            "file",
+            "ftp",
+            "news",
+            "nntp",
+            "gopher",
+            "telnet",
+            "wais",
+            "mailto",
+            "about",
+            "javascript",
+            "vbscript",
+            "res",
+            "shell",
+            "unknown",
+        ]
+        for index, tail in enumerate(["a/b\\c?d e#f g", "//host/a\\b?c d#e f"])
+    ]
+    result = {
+        "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+        "executable": str(executable),
+        "platform": platform.platform(),
+        "fixtures": [],
+    }
     try:
         send(editor, 2037, 65001, 0)
         for name, data in inputs:
@@ -116,8 +179,16 @@ def capture(executable: Path, output: Path) -> None:
                 assert undo["hex"] == data.hex(), "one original Undo restores the exact input"
                 send(editor, 2011, 0, 0)
                 redo = state()
-                result["fixtures"].append({"name": name, "command": command, "input": data.hex(), "after": after,
-                                           "undone": undo, "redone": redo})
+                result["fixtures"].append(
+                    {
+                        "name": name,
+                        "command": command,
+                        "input": data.hex(),
+                        "after": after,
+                        "undone": undo,
+                        "redone": redo,
+                    }
+                )
     finally:
         send(editor, 2014, 0, 0)
         send(frame, 0x10, 0, 0)
@@ -139,16 +210,50 @@ def capture(executable: Path, output: Path) -> None:
         fixture_file.write("# Command bits: URL Encode=1, URL Component Encode=2, URL Decode=4.\n")
         writer = csv.writer(fixture_file, delimiter="\t", lineterminator="\n")
         writer.writerow(["command_cases", len(result["fixtures"])])
-        writer.writerow(["name", "input_hex", "expected_hex", "commands", "anchor", "caret",
-                         "undo_anchor", "undo_caret", "redo_anchor", "redo_caret", "modified", "can_undo", "can_redo",
-                         "undo_modified", "undo_can_undo", "undo_can_redo", "redo_modified", "redo_can_undo", "redo_can_redo"])
+        writer.writerow(
+            [
+                "name",
+                "input_hex",
+                "expected_hex",
+                "commands",
+                "anchor",
+                "caret",
+                "undo_anchor",
+                "undo_caret",
+                "redo_anchor",
+                "redo_caret",
+                "modified",
+                "can_undo",
+                "can_redo",
+                "undo_modified",
+                "undo_can_undo",
+                "undo_can_redo",
+                "redo_modified",
+                "redo_can_undo",
+                "redo_can_redo",
+            ]
+        )
         for row, commands in grouped.values():
             after = row["after"]
-            writer.writerow([row["name"], row["input"], after["hex"], commands, after["anchor"], after["caret"],
-                             row["undone"]["anchor"], row["undone"]["caret"],
-                             row["redone"]["anchor"], row["redone"]["caret"],
-                             *(row[state][flag] for state in ["after", "undone", "redone"]
-                               for flag in ["modified", "undo", "redo"])])
+            writer.writerow(
+                [
+                    row["name"],
+                    row["input"],
+                    after["hex"],
+                    commands,
+                    after["anchor"],
+                    after["caret"],
+                    row["undone"]["anchor"],
+                    row["undone"]["caret"],
+                    row["redone"]["anchor"],
+                    row["redone"]["caret"],
+                    *(
+                        row[state][flag]
+                        for state in ["after", "undone", "redone"]
+                        for flag in ["modified", "undo", "redo"]
+                    ),
+                ]
+            )
 
 
 if __name__ == "__main__":

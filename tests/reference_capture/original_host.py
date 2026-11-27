@@ -1,4 +1,5 @@
 """Observe the original application's owned editor through its public messages."""
+
 import ctypes as c
 from ctypes import wintypes as w
 from private_desktop import Process
@@ -31,20 +32,24 @@ class Original:
         self.hwnd = self.editor = None
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline and not self.editor:
+
             def window(hwnd, _):
                 pid = w.DWORD()
                 user.GetWindowThreadProcessId(hwnd, c.byref(pid))
                 if pid.value == self.process.pid:
+
                     def child(control, _):
                         name = c.create_unicode_buffer(100)
                         user.GetClassNameW(control, name, 100)
                         if name.value == "Scintilla":
                             self.editor, self.hwnd = control, hwnd
                         return True
+
                     user.EnumChildWindows(hwnd, CALLBACK(child), 0)
                 return True
+
             user.EnumDesktopWindows(desktop, CALLBACK(window), 0)
-            time.sleep(.03)
+            time.sleep(0.03)
         assert self.editor, "owned original editor appeared"
         assert user.WaitForInputIdle(self.process.handle, 15000) == 0, "original startup finished before observation"
         self.handle = kernel.OpenProcess(0x38, False, self.process.pid)
@@ -81,10 +86,20 @@ class Original:
         self.send(2014)
 
     def state(self):
-        return {"hex": self.text().hex(), "anchor": self.send(2009), "caret": self.send(2008),
-                "modified": self.send(2159), "undo": self.send(2174), "redo": self.send(2016),
-                "selections": self.send(2570), "main": self.send(2575), "selectionMode": self.send(2423),
-                "codepage": self.send(2137), "eol": self.send(2030), "readonly": self.send(2140)}
+        return {
+            "hex": self.text().hex(),
+            "anchor": self.send(2009),
+            "caret": self.send(2008),
+            "modified": self.send(2159),
+            "undo": self.send(2174),
+            "redo": self.send(2016),
+            "selections": self.send(2570),
+            "main": self.send(2575),
+            "selectionMode": self.send(2423),
+            "codepage": self.send(2137),
+            "eol": self.send(2030),
+            "readonly": self.send(2140),
+        }
 
     def close(self):
         self.send(2171, 0)

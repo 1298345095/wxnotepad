@@ -1,4 +1,5 @@
 """Round-trip original file-watching preferences through independent applications."""
+
 from english_settings import english_settings
 import argparse
 import os
@@ -15,8 +16,12 @@ def main():
     parser.add_argument("executable", type=Path)
     args = parser.parse_args()
     source = args.executable.resolve()
-    for mode, interval, delay, flags, reset in ((2, 1000, 1000, 0, 0), (0, 1373, 1459, 1, 1),
-                                              (1, 1373, 1459, 2, 0), (2, 1373, 1459, 3, 1)):
+    for mode, interval, delay, flags, reset in (
+        (2, 1000, 1000, 0, 0),
+        (0, 1373, 1459, 1, 1),
+        (1, 1373, 1459, 2, 0),
+        (2, 1373, 1459, 3, 1),
+    ):
         with tempfile.TemporaryDirectory(prefix="wxnotepad-watch-settings-") as name:
             folder = Path(name)
             executable = folder / source.name
@@ -24,18 +29,27 @@ def main():
             configuration = folder / "Notepad4.ini"
             text = "[Settings]\nUnrelatedSetting=keep\n[Settings2]\nUnrelatedTimer=keep\n"
             if (interval, delay) != (1000, 1000):
-                text = (f"[Settings]\nFileWatchingMode={mode}\nFileWatchingOption={flags}\n"
-                        f"ResetFileWatching={reset}\nUnrelatedSetting=keep\n"
-                        f"[Settings2]\nFileCheckInterval={interval}\nAutoReloadTimeout={delay}\n"
-                        "UnrelatedTimer=keep\n")
+                text = (
+                    f"[Settings]\nFileWatchingMode={mode}\nFileWatchingOption={flags}\n"
+                    f"ResetFileWatching={reset}\nUnrelatedSetting=keep\n"
+                    f"[Settings2]\nFileCheckInterval={interval}\nAutoReloadTimeout={delay}\n"
+                    "UnrelatedTimer=keep\n"
+                )
             configuration.write_text(english_settings(text), encoding="utf-16")
             environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
             for _ in range(2):
                 app = Application(executable, folder, environment)
                 try:
-                    observed = tuple(int(app.state[key]) for key in
-                                     ("file_watching_mode", "file_check_interval", "auto_reload_timeout",
-                                      "file_watching_option", "reset_file_watching"))
+                    observed = tuple(
+                        int(app.state[key])
+                        for key in (
+                            "file_watching_mode",
+                            "file_check_interval",
+                            "auto_reload_timeout",
+                            "file_watching_option",
+                            "reset_file_watching",
+                        )
+                    )
                     assert observed == (mode, interval, delay, flags, reset), app.state
                     app.close()
                 finally:
@@ -47,7 +61,8 @@ def main():
         executable = folder / source.name
         shutil.copy2(source, executable)
         (folder / "Notepad4.ini").write_text(
-            english_settings("[Settings2]\nFileCheckInterval=20\nAutoReloadTimeout=50\n"), encoding="utf-16")
+            english_settings("[Settings2]\nFileCheckInterval=20\nAutoReloadTimeout=50\n"), encoding="utf-16"
+        )
         fixture = folder / "startup.txt"
         fixture.write_bytes(b"initial startup document\n")
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
@@ -55,13 +70,15 @@ def main():
         try:
             expected = b"independently changed startup document\n"
             fixture.write_bytes(expected)
-            time.sleep(.3)
+            time.sleep(0.3)
             app.named_menu("File", "Save")
             assert fixture.read_bytes() == expected and int(app.state["length"]) == len(expected), app.state
             app.close()
         finally:
             app.stop()
-    print("PASS: original AutoReload/1000/1000/flags-clear/reset-off defaults, all modes and option bits survive restarts")
+    print(
+        "PASS: original AutoReload/1000/1000/flags-clear/reset-off defaults, all modes and option bits survive restarts"
+    )
     print("PASS: startup-file Open installs monitoring when the native event loop starts")
 
 

@@ -1,4 +1,5 @@
 """Packaged production startup verifies target actions and all released captions."""
+
 import argparse
 from pathlib import Path
 import tempfile
@@ -31,8 +32,7 @@ def main():
             settings(executable.parent / "Notepad4.ini", language)
             children = root / code / "children"
             children.mkdir(parents=True)
-            app = Process(executable, root / code / "parent", environment(executable, children, code), source,
-                          cwd=root)
+            app = Process(executable, root / code / "parent", environment(executable, children, code), source, cwd=root)
             child = None
             try:
                 entries = menus(app.state)
@@ -41,8 +41,18 @@ def main():
                 folders = [entry for entry in entries.values() if entry["label"] == folder]
                 assert len(folders) == 2 and all(entry["enabled"] == "1" for entry in folders), folders
                 assert not list(children.iterdir()), "target detection/menu observation must not launch a child"
-                before = {key: app.state[key] for key in ("document_path", "length", "dirty", "caret_position",
-                                                          "selection_start", "selection_end", "encoding")}
+                before = {
+                    key: app.state[key]
+                    for key in (
+                        "document_path",
+                        "length",
+                        "dirty",
+                        "caret_position",
+                        "selection_start",
+                        "selection_end",
+                        "encoding",
+                    )
+                }
                 app.choose(action)
                 child = wait_child(children)
                 assert child.process.pid != app.process.pid, "target must open in a separate process"

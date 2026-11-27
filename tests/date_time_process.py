@@ -1,4 +1,5 @@
 """Verify original Settings2 insertion templates through independent application processes and saved bytes."""
+
 from english_settings import english_settings
 from datetime import datetime
 import os
@@ -18,8 +19,10 @@ def default_text(now, short):
     from ctypes import wintypes
 
     class SystemTime(ctypes.Structure):
-        _fields_ = [(field, wintypes.WORD) for field in
-                    ("year", "month", "weekday", "day", "hour", "minute", "second", "millisecond")]
+        _fields_ = [
+            (field, wintypes.WORD)
+            for field in ("year", "month", "weekday", "day", "hour", "minute", "second", "millisecond")
+        ]
 
     local = SystemTime(now.year, now.month, 0, now.day, now.hour, now.minute, now.second, 0)
     date = ctypes.create_unicode_buffer(128)
@@ -47,8 +50,10 @@ def main():
             ("😀" * 127 + "Aignored", "字" * 255 + "ignored", "utf16"),
         ]
         for short, long, mode in cases:
-            original = ("[Settings]\nUnrelated=keep\n[Settings2]\n"
-                        f"DateTimeShort={short}\nDateTimeLong={long}\nOther=preserved\n")
+            original = (
+                "[Settings]\nUnrelated=keep\n[Settings2]\n"
+                f"DateTimeShort={short}\nDateTimeLong={long}\nOther=preserved\n"
+            )
             config.write_text(english_settings(original), encoding="utf-16")
             for label, is_short in (("Time/Date (Short Form)", True), ("Time/Date (Long Form)", False)):
                 document.write_bytes(b"")
@@ -67,8 +72,11 @@ def main():
                         pattern = "短-%Y-%m-%d" if is_short else "long-%H:%M"
                         assert actual in (before.strftime(pattern).encode(), after.strftime(pattern).encode()), actual
                     else:
-                        expected = ("S" if is_short else "L") * 255 if mode == "bounded" else (
-                            "😀" * 127 + "A" if is_short else "字" * 255)
+                        expected = (
+                            ("S" if is_short else "L") * 255
+                            if mode == "bounded"
+                            else ("😀" * 127 + "A" if is_short else "字" * 255)
+                        )
                         assert actual == expected.encode("utf-8"), (mode, actual)
                     app.menu("Save Settings Now")
                     app.close()
@@ -78,7 +86,7 @@ def main():
                 assert f"DateTimeShort={short}" in saved and f"DateTimeLong={long}" in saved, saved
                 assert "Other=preserved" in saved and "Unrelated=keep" in saved, saved
         # Missing and empty load-only fields retain the host defaults without creating keys.
-        for fields in ("", "DateTimeShort=\nDateTimeLong=\n", 'DateTimeShort=""\nDateTimeLong=\'\'\n'):
+        for fields in ("", "DateTimeShort=\nDateTimeLong=\n", "DateTimeShort=\"\"\nDateTimeLong=''\n"):
             config.write_text(english_settings("[Settings2]\n" + fields), encoding="utf-16")
             for label, short in (("Time/Date (Short Form)", True), ("Time/Date (Long Form)", False)):
                 document.write_bytes(b"")

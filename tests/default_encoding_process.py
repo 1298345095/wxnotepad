@@ -1,4 +1,5 @@
 """Native default choices persist through actual settings commands and exit."""
+
 import argparse
 import os
 from pathlib import Path
@@ -25,18 +26,27 @@ def run(source, installed_directory):
                 config_folder = folder / "config" / "Notepad4"
                 config_folder.mkdir(parents=True)
             config = config_folder / "Notepad4.ini"
-            choices = [("UTF-8", None), ("UTF-8 with BOM", 4), ("UTF-16LE with BOM", 1),
-                       ("UTF-16LE", 6), ("UTF-16BE with BOM", 2), ("UTF-16BE", 7),
-                       ("Simplified Chinese (GBK, GB2312)", 936),
-                       ("Simplified Chinese (GB18030)", 54936),
-                       ("Traditional Chinese (Big5, Big5-HKSCS)", 950),
-                       ("Japanese (Shift-JIS)", 932), ("Korean (Unified Hangul Code)", 949)]
+            choices = [
+                ("UTF-8", None),
+                ("UTF-8 with BOM", 4),
+                ("UTF-16LE with BOM", 1),
+                ("UTF-16LE", 6),
+                ("UTF-16BE with BOM", 2),
+                ("UTF-16BE", 7),
+                ("Simplified Chinese (GBK, GB2312)", 936),
+                ("Simplified Chinese (GB18030)", 54936),
+                ("Traditional Chinese (Big5, Big5-HKSCS)", 950),
+                ("Japanese (Shift-JIS)", 932),
+                ("Korean (Unified Hangul Code)", 949),
+            ]
             for mode in ("disabled", "exit", "explicit"):
                 for label, number in choices:
                     enabled = mode == "exit"
-                    seed = (f"[Settings]\nSaveSettings={int(enabled)}\nSkipUnicodeDetection=0\n"
-                            "Unrelated=keep\n[Settings2]\nNoFileVariables=1\nRelativeFileMRU=0\n"
-                            "[Unrelated]\nKeep=保留\n")
+                    seed = (
+                        f"[Settings]\nSaveSettings={int(enabled)}\nSkipUnicodeDetection=0\n"
+                        "Unrelated=keep\n[Settings2]\nNoFileVariables=1\nRelativeFileMRU=0\n"
+                        "[Unrelated]\nKeep=保留\n"
+                    )
                     config.write_text(seed, encoding="utf-16")
                     environment.update(WXNOTEPAD_DEFAULTS_PERSIST=mode, WXNOTEPAD_DEFAULTS_CHOICE=label)
                     result = subprocess.run([str(executable)], env=environment, timeout=20)
@@ -46,12 +56,17 @@ def run(source, installed_directory):
                         assert retained in saved, (mode, label, saved)
                     if mode == "disabled":
                         assert "SkipUnicodeDetection=0" in saved and "DefaultEncoding=" not in saved, saved
-                        assert all(key + "=" not in saved for key in ("LoadASCIIasUTF8", "LoadANSIasUTF8", "LoadNFOasOEM", "NoEncodingTags")), saved
+                        assert all(
+                            key + "=" not in saved
+                            for key in ("LoadASCIIasUTF8", "LoadANSIasUTF8", "LoadNFOasOEM", "NoEncodingTags")
+                        ), saved
                     else:
                         assert "SkipUnicodeDetection=" not in saved, saved
                         for expected in ("LoadASCIIasUTF8=0", "LoadANSIasUTF8=0", "LoadNFOasOEM=0", "NoEncodingTags=1"):
                             assert expected in saved, saved
-                        assert ("DefaultEncoding=" not in saved if number is None else f"DefaultEncoding={number}" in saved), saved
+                        assert (
+                            "DefaultEncoding=" not in saved if number is None else f"DefaultEncoding={number}" in saved
+                        ), saved
                     print(f"PASS: {mode} {label}: independent INI mapping and retained fields")
         finally:
             if installed:

@@ -1,4 +1,5 @@
 """Verify special insertion in independent application processes and saved files."""
+
 from english_settings import english_settings
 import os
 from pathlib import Path
@@ -33,7 +34,7 @@ def insert_menu(app, keys, label):
         deadline = time.monotonic() + 3
         while focus.read_text(encoding="utf-8") and time.monotonic() < deadline:
             assert app.process.poll() is None, "owned app remains running during native menu input"
-            time.sleep(.01)
+            time.sleep(0.01)
         assert not focus.read_text(encoding="utf-8"), f"private driver acknowledged {gesture}"
     app.state = wait_state(app.folder, app.process, lambda state: state["dirty"] == "1")
 
@@ -49,7 +50,9 @@ def main():
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
-        (folder / "Notepad4.ini").write_text(english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\n"), encoding="utf-16")
+        (folder / "Notepad4.ini").write_text(
+            english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\n"), encoding="utf-16"
+        )
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         document = folder / "插入😀.txt"
         original = b""

@@ -3,6 +3,7 @@
 Requires a graphical session. Linux: run inside clipboard_isolated.py's private
 Xvfb/Weston session. All output/scratch files are intentionally disposable.
 """
+
 import argparse
 import ctypes
 from ctypes import wintypes
@@ -32,15 +33,27 @@ def digest(path, prefix=b""):
 
 def memory(pid):
     if sys.platform != "win32":
-        status = dict(line.split(":", 1) for line in
-                      Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line)
+        status = dict(
+            line.split(":", 1) for line in Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line
+        )
         return {"rss_bytes": int(status["VmRSS"].split()[0]) * 1024}
 
     class Counters(ctypes.Structure):
         _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
-            (name, ctypes.c_size_t) for name in ("PeakWorkingSetSize", "WorkingSetSize",
-            "QuotaPeakPagedPoolUsage", "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
-            "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage", "PrivateUsage")]
+            (name, ctypes.c_size_t)
+            for name in (
+                "PeakWorkingSetSize",
+                "WorkingSetSize",
+                "QuotaPeakPagedPoolUsage",
+                "QuotaPagedPoolUsage",
+                "QuotaPeakNonPagedPoolUsage",
+                "QuotaNonPagedPoolUsage",
+                "PagefileUsage",
+                "PeakPagefileUsage",
+                "PrivateUsage",
+            )
+        ]
+
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
     kernel.OpenProcess.restype = wintypes.HANDLE
@@ -86,7 +99,9 @@ def native_edit(process, state):
         if os.environ.get("DISPLAY") in (None, ":0", ":0.0") or not os.environ.get("XAUTHORITY"):
             raise RuntimeError("Native input requires the private Xvfb display")
         if state["backend"] == "GdkX11Display":
-            windows = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--pid", str(process.pid)], text=True).splitlines()
+            windows = subprocess.check_output(
+                ["xdotool", "search", "--onlyvisible", "--pid", str(process.pid)], text=True
+            ).splitlines()
             if not windows:
                 raise RuntimeError("No owned visible X11 window")
             subprocess.run(["xdotool", "windowfocus", "--sync", windows[0]], check=True)
@@ -98,8 +113,15 @@ def show_owned_topmost(process, state):
     user.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
     user.GetAncestor.restype = wintypes.HWND
     user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-    user.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
-                                 ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user.SetWindowPos.argtypes = [
+        wintypes.HWND,
+        wintypes.HWND,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        wintypes.UINT,
+    ]
     user.RedrawWindow.argtypes = [wintypes.HWND, ctypes.c_void_p, wintypes.HANDLE, wintypes.UINT]
     handle = user.GetAncestor(int(state["editor_handle"]), 2)
     owner = wintypes.DWORD()
@@ -193,15 +215,24 @@ def observe(executable, work, kind, sample, run, topmost):
     args = [str(executable), "--observe", str(folder)]
     if kind != "operations" and sample:
         args += ["--startup-file", str(scratch)]
-    row = {"kind": kind, "case": sample.stem if sample else "empty", "run": run,
-           "folder": str(folder), "memory": {}, "timestamps": {}}
+    row = {
+        "kind": kind,
+        "case": sample.stem if sample else "empty",
+        "run": run,
+        "folder": str(folder),
+        "memory": {},
+        "timestamps": {},
+    }
     stamp = row["timestamps"]
     stamp["spawn_begin"] = time.perf_counter()
     process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     row["pid"] = process.pid
     try:
-        state = wait_state(folder, process, lambda s: s["sequence"] == "0" and
-                           (s["backend"] != "GdkWaylandDisplay" or s["active"] == "1"))
+        state = wait_state(
+            folder,
+            process,
+            lambda s: s["sequence"] == "0" and (s["backend"] != "GdkWaylandDisplay" or s["active"] == "1"),
+        )
         if topmost:
             show_owned_topmost(process, state)
         stamp["ready_observed"] = time.perf_counter()
@@ -238,17 +269,20 @@ def summarize(rows):
         for key in values[0]:
             if key.endswith("_ms"):
                 entry[key] = statistics.median(row[key] for row in values)
-        entry["memory"] = {stage: {counter: statistics.median(row["memory"][stage][counter] for row in values)
-                                   for counter in counters}
-                           for stage, counters in values[0]["memory"].items()}
+        entry["memory"] = {
+            stage: {counter: statistics.median(row["memory"][stage][counter] for row in values) for counter in counters}
+            for stage, counters in values[0]["memory"].items()
+        }
         result[name] = entry
     return result
 
 
 def observe_batch(executable, output, args, samples, report):
-    for kind, count, cases in (("startup", args.startup_count, [None, samples["small"]]),
-                               ("idle", args.idle_count, [None, samples["small"]]),
-                               ("operations", args.operation_count, [samples["10MiB"], samples["100MiB"]])):
+    for kind, count, cases in (
+        ("startup", args.startup_count, [None, samples["small"]]),
+        ("idle", args.idle_count, [None, samples["small"]]),
+        ("operations", args.operation_count, [samples["10MiB"], samples["100MiB"]]),
+    ):
         for sample in cases:
             for run in range(1, count + 1):
                 row = observe(executable, output, kind, sample, run, args.owned_topmost)
@@ -268,8 +302,11 @@ def main():
     parser.add_argument("--startup-count", type=int, default=5)
     parser.add_argument("--idle-count", type=int, default=3)
     parser.add_argument("--operation-count", type=int, default=3)
-    parser.add_argument("--owned-topmost", action="store_true",
-                        help="Windows: show only each launched app above normal windows without global input")
+    parser.add_argument(
+        "--owned-topmost",
+        action="store_true",
+        help="Windows: show only each launched app above normal windows without global input",
+    )
     args = parser.parse_args()
     if args.owned_topmost and sys.platform != "win32":
         parser.error("--owned-topmost is Windows-only")
@@ -277,32 +314,55 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True)
     samples = prepare(output / "samples")
-    report = {"source_commit": args.source_commit, "executable": str(executable),
-              "exe_sha256": digest(executable), "platform": platform.platform(),
-              "python": sys.version, "processor": platform.processor(), "logical_cpus": os.cpu_count(),
-              "environment": {k: os.environ.get(k) for k in ("DISPLAY", "GDK_BACKEND", "WAYLAND_DISPLAY")},
-              "poll_seconds": POLL, "hook_timer_ms": 10, "quiet_seconds": QUIET,
-              "owned_topmost": args.owned_topmost,
-              "planned_counts": {"startup_per_case": args.startup_count,
-                                 "idle_per_case": args.idle_count,
-                                 "operations_per_size": args.operation_count},
-              "cache": "OS caches retained; samples generated/hashed/copied before timing; fresh process each row",
-              "definitions": "External perf_counter observed upper bounds including command-file/input dispatch and polling. Actual shown frame; Open/Save frame commands, native one-byte X at zero. Hook calls Update before publishing; no compositor-present timestamp. Startup Update marker followed by native character acceptance; pristine idle uses separate processes. Windows WM_CHAR is process-local native character delivery, not a hardware/IME latency test. Linux xdotool input and focus subprocess overhead included in edit/startup endpoints. Memory snapshots after 1 s quiet, not peaks.",
-              "samples": {name: {"bytes": p.stat().st_size, "sha256": digest(p),
-                                 "expected_saved_sha256": digest(p, b"X")} for name, p in samples.items()},
-              "rows": []}
+    report = {
+        "source_commit": args.source_commit,
+        "executable": str(executable),
+        "exe_sha256": digest(executable),
+        "platform": platform.platform(),
+        "python": sys.version,
+        "processor": platform.processor(),
+        "logical_cpus": os.cpu_count(),
+        "environment": {k: os.environ.get(k) for k in ("DISPLAY", "GDK_BACKEND", "WAYLAND_DISPLAY")},
+        "poll_seconds": POLL,
+        "hook_timer_ms": 10,
+        "quiet_seconds": QUIET,
+        "owned_topmost": args.owned_topmost,
+        "planned_counts": {
+            "startup_per_case": args.startup_count,
+            "idle_per_case": args.idle_count,
+            "operations_per_size": args.operation_count,
+        },
+        "cache": "OS caches retained; samples generated/hashed/copied before timing; fresh process each row",
+        "definitions": "External perf_counter observed upper bounds including command-file/input dispatch and polling. Actual shown frame; Open/Save frame commands, native one-byte X at zero. Hook calls Update before publishing; no compositor-present timestamp. Startup Update marker followed by native character acceptance; pristine idle uses separate processes. Windows WM_CHAR is process-local native character delivery, not a hardware/IME latency test. Linux xdotool input and focus subprocess overhead included in edit/startup endpoints. Memory snapshots after 1 s quiet, not peaks.",
+        "samples": {
+            name: {"bytes": p.stat().st_size, "sha256": digest(p), "expected_saved_sha256": digest(p, b"X")}
+            for name, p in samples.items()
+        },
+        "rows": [],
+    }
     for parent in executable.parents:
         record = parent / "original-core/wxnotepad-source.json"
         if record.exists():
             report["core_build_record"] = json.loads(record.read_text(encoding="utf-8"))
             cache = parent / "cmake/CMakeCache.txt"
-            report["cmake_build"] = [line for line in cache.read_text(encoding="utf-8").splitlines()
-                                     if line.startswith(("CMAKE_BUILD_TYPE:", "CMAKE_CXX_COMPILER:",
-                                         "CMAKE_GENERATOR:", "CMAKE_GENERATOR_TOOLSET:", "wxWidgets_DIR:"))]
+            report["cmake_build"] = [
+                line
+                for line in cache.read_text(encoding="utf-8").splitlines()
+                if line.startswith(
+                    (
+                        "CMAKE_BUILD_TYPE:",
+                        "CMAKE_CXX_COMPILER:",
+                        "CMAKE_GENERATOR:",
+                        "CMAKE_GENERATOR_TOOLSET:",
+                        "wxWidgets_DIR:",
+                    )
+                )
+            ]
             break
     if sys.platform != "win32":
-        report["cpu_info"] = next(line for line in Path("/proc/cpuinfo").read_text().splitlines()
-                                  if line.startswith("model name"))
+        report["cpu_info"] = next(
+            line for line in Path("/proc/cpuinfo").read_text().splitlines() if line.startswith("model name")
+        )
         report["mem_total"] = Path("/proc/meminfo").read_text().splitlines()[0]
         report["os_release"] = Path("/etc/os-release").read_text()
     observe_batch(executable, output, args, samples, report)

@@ -1,7 +1,8 @@
 """Read published app state and send commands through the observation protocol."""
+
 import time
 
-POLL = .01
+POLL = 0.01
 
 
 class AppExited(Exception):
@@ -15,8 +16,7 @@ class StateTimeout(Exception):
 
 
 def read_state(folder):
-    return dict(line.split("\t", 1) for line in
-                (folder / "state").read_text(encoding="utf-8").splitlines())
+    return dict(line.split("\t", 1) for line in (folder / "state").read_text(encoding="utf-8").splitlines())
 
 
 def wait_state(folder, process, predicate, timeout, clock=time.monotonic):
@@ -28,7 +28,7 @@ def wait_state(folder, process, predicate, timeout, clock=time.monotonic):
             state = read_state(folder)
             if predicate(state):
                 return state
-        except (FileNotFoundError, PermissionError):
+        except FileNotFoundError, PermissionError:
             pass
         time.sleep(POLL)
     raise StateTimeout()

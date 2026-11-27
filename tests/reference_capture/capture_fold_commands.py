@@ -14,37 +14,96 @@ from original_host import Original, user
 
 
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
-COMMANDS = {"default": 40454, "all": 40455, "block": 40466, "current": 40449,
-            **{f"level{level}": 40455 + level for level in range(1, 11)}}
-CPP = ("before();\nvoid deep() {\n" + "".join("  " * level + "if (flag) {\n" for level in range(1, 11))
-       + "  " * 11 + "deepest();\n" + "".join("  " * level + "}\n" for level in range(10, -1, -1))
-       + "outside();\nvoid sibling() {\n  if (flag) {\n    leaf();\n  }\n}\nafter();\n")
-PYTHON = ("before()\nclass First:\n  def run(self):\n       if True:\n            call()\n       tail()\n"
-          "  reset()\noutside()\nclass Second:\n    def run(self):\n         leaf()\n    end()\nafter()\n"
-          "def independent():\n   def helper():\n      work()\n   helper()\ndone()\n")
-MARKDOWN = ("before\n# First\n## Empty\n## Body\ntext\n### Child\nbody\n```cpp\ncode();\n```\n"
-            "# Second\nother\n## Child\ntail\n")
+COMMANDS = {
+    "default": 40454,
+    "all": 40455,
+    "block": 40466,
+    "current": 40449,
+    **{f"level{level}": 40455 + level for level in range(1, 11)},
+}
+CPP = (
+    "before();\nvoid deep() {\n"
+    + "".join("  " * level + "if (flag) {\n" for level in range(1, 11))
+    + "  " * 11
+    + "deepest();\n"
+    + "".join("  " * level + "}\n" for level in range(10, -1, -1))
+    + "outside();\nvoid sibling() {\n  if (flag) {\n    leaf();\n  }\n}\nafter();\n"
+)
+PYTHON = (
+    "before()\nclass First:\n  def run(self):\n       if True:\n            call()\n       tail()\n"
+    "  reset()\noutside()\nclass Second:\n    def run(self):\n         leaf()\n    end()\nafter()\n"
+    "def independent():\n   def helper():\n      work()\n   helper()\ndone()\n"
+)
+MARKDOWN = (
+    "before\n# First\n## Empty\n## Body\ntext\n### Child\nbody\n```cpp\ncode();\n```\n# Second\nother\n## Child\ntail\n"
+)
 SCROLL = "before();\n" * 22 + "void distant() {\n  call();\n}\n" + "after();\n" * 40
 LEGACY = "void outer() {\n  if (true) {\n    call();\n  }\n  tail();\n}\nafter();\n"
 FIXTURES = {
-    "cpp": ("cpp", CPP, [("all", 0), ("all", None), ("block", 25), ("all", 0), ("all", None),
-                         ("block", 0), ("current", 0), ("block", CPP.splitlines().index("after();")),
-                         ("block", 3), ("block", None),
-                         ("current", 3), ("current", None),
-                         *[(f"level{level}", 0) for level in range(10, 0, -1)],
-                         ("default", 0), ("default", None), ("hide", None),
-                         *[(name, None) for name in COMMANDS], ("show", None)]),
-    "python": ("py", PYTHON, [("level2", 0), ("level2", None), ("block", 9), ("level2", 0),
-                              ("level2", None), ("current", 9), ("current", None), ("block", 4), ("block", None),
-                              ("current", 4),
-                              ("current", None), ("default", 0), ("default", None), ("all", 8), ("all", None)]),
-    "markdown": ("md", MARKDOWN, [("default", 0), ("default", None), ("block", 12), ("level2", 0),
-                                  ("level2", None), ("current", 6), ("current", None), ("all", 12), ("all", None)]),
+    "cpp": (
+        "cpp",
+        CPP,
+        [
+            ("all", 0),
+            ("all", None),
+            ("block", 25),
+            ("all", 0),
+            ("all", None),
+            ("block", 0),
+            ("current", 0),
+            ("block", CPP.splitlines().index("after();")),
+            ("block", 3),
+            ("block", None),
+            ("current", 3),
+            ("current", None),
+            *[(f"level{level}", 0) for level in range(10, 0, -1)],
+            ("default", 0),
+            ("default", None),
+            ("hide", None),
+            *[(name, None) for name in COMMANDS],
+            ("show", None),
+        ],
+    ),
+    "python": (
+        "py",
+        PYTHON,
+        [
+            ("level2", 0),
+            ("level2", None),
+            ("block", 9),
+            ("level2", 0),
+            ("level2", None),
+            ("current", 9),
+            ("current", None),
+            ("block", 4),
+            ("block", None),
+            ("current", 4),
+            ("current", None),
+            ("default", 0),
+            ("default", None),
+            ("all", 8),
+            ("all", None),
+        ],
+    ),
+    "markdown": (
+        "md",
+        MARKDOWN,
+        [
+            ("default", 0),
+            ("default", None),
+            ("block", 12),
+            ("level2", 0),
+            ("level2", None),
+            ("current", 6),
+            ("current", None),
+            ("all", 12),
+            ("all", None),
+        ],
+    ),
     "viewport": ("cpp", SCROLL, [("all", 23), ("all", None), ("block", 22), ("block", None)]),
     "legacy-hidden": ("cpp", LEGACY, [("all", 2), ("all", None)]),
     "history": ("cpp", LEGACY, [("all", 2), ("all", None), ("default", 1), ("default", None)]),
-    "childless": ("cpp", "standalone();\n" + LEGACY,
-                  [("block", 0), ("all", 0), ("all", None), ("block", 0)]),
+    "childless": ("cpp", "standalone();\n" + LEGACY, [("block", 0), ("all", 0), ("all", None), ("block", 0)]),
 }
 
 
@@ -76,11 +135,19 @@ def editor_state(original):
     send = original.send
     lines = send(2154)
     anchor, caret = send(2009), send(2008)
-    return dict(expanded="".join(str(send(2230, line)) for line in range(lines)),
-                visible="".join(str(send(2228, line)) for line in range(lines)),
-                anchor=anchor, caret=caret, reversed=int(anchor > caret),
-                first=send(2152), xoffset=send(2398), modified=send(2159), undo=send(2174), redo=send(2016),
-                text=original.text().hex())
+    return dict(
+        expanded="".join(str(send(2230, line)) for line in range(lines)),
+        visible="".join(str(send(2228, line)) for line in range(lines)),
+        anchor=anchor,
+        caret=caret,
+        reversed=int(anchor > caret),
+        first=send(2152),
+        xoffset=send(2398),
+        modified=send(2159),
+        undo=send(2174),
+        redo=send(2016),
+        text=original.text().hex(),
+    )
 
 
 def capture_fixture(executable, output, desktop, desktop_name, name, extension, text, actions):
@@ -90,7 +157,9 @@ def capture_fixture(executable, output, desktop, desktop_name, name, extension, 
     shutil.copy2(executable, program)
     (fixture / "Notepad4.ini").write_text(
         "[Settings]\nWordWrap=0\nShowCodeFolding=1\nShowToolbar=0\nShowStatusbar=0\n"
-        "RenderingTechnology=0\nWarnLineEndings=0\nSaveSettings=0\n", encoding="utf-16")
+        "RenderingTechnology=0\nWarnLineEndings=0\nSaveSettings=0\n",
+        encoding="utf-16",
+    )
     document = fixture / f"fixture.{extension}"
     document.write_bytes(text.encode("ascii"))
     original = Original(document, program, desktop, desktop_name)
@@ -114,8 +183,7 @@ def capture_fixture(executable, output, desktop, desktop_name, name, extension, 
         if name == "viewport":
             assert user.SetWindowPos(original.editor, None, 0, 0, 700, send(2279, 0) * 14, 0x16)
         menu = read_menu(user, user.GetMenu(original.hwnd))
-        geometry = {"rows": send(2370), "levels": [send(2223, line) for line in range(send(2154))],
-                    "lexer": send(4002)}
+        geometry = {"rows": send(2370), "levels": [send(2223, line) for line in range(send(2154))], "lexer": send(4002)}
         for action, caret_line in actions:
             if caret_line is not None:
                 start = send(2167, caret_line)
@@ -145,16 +213,19 @@ def main():
     output.mkdir()
     resolve_menu_functions()
     desktop_name = f"wxnotepad-fold-reference-{os.getpid()}"
-    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1ff, None)
+    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1FF, None)
     if not desktop:
         raise c.WinError(c.get_last_error())
     try:
-        fixtures = [capture_fixture(executable, output, desktop, desktop_name, name, *fixture)
-                    for name, fixture in FIXTURES.items()]
+        fixtures = [
+            capture_fixture(executable, output, desktop, desktop_name, name, *fixture)
+            for name, fixture in FIXTURES.items()
+        ]
     finally:
         user.CloseDesktop(desktop)
-    report = dict(revision=REVISION, executable_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
-                  fixtures=fixtures)
+    report = dict(
+        revision=REVISION, executable_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(), fixtures=fixtures
+    )
     (output / "original.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     write_fixture(output / "fold_commands.tsv", fixtures)
     print(f"Captured {sum(len(fixture['records']) for fixture in fixtures)} Notepad4 fold transitions.")
@@ -166,14 +237,27 @@ def write_fixture(path, fixtures):
         writer = csv.writer(stream, delimiter="\t", lineterminator="\n")
         for fixture in fixtures:
             source = fixture["text"].encode("ascii").hex()
-            writer.writerow(["fixture", fixture["name"], fixture["extension"], source,
-                             fixture["geometry"]["rows"], fixture["geometry"]["lexer"]])
+            writer.writerow(
+                [
+                    "fixture",
+                    fixture["name"],
+                    fixture["extension"],
+                    source,
+                    fixture["geometry"]["rows"],
+                    fixture["geometry"]["lexer"],
+                ]
+            )
             for record in fixture["records"]:
                 state = dict(record["after"])
                 if state["text"] == source:
                     state["text"] = "-"
-                writer.writerow([record["action"], record["caret_line"] if record["caret_line"] is not None else -1,
-                                 *state.values()])
+                writer.writerow(
+                    [
+                        record["action"],
+                        record["caret_line"] if record["caret_line"] is not None else -1,
+                        *state.values(),
+                    ]
+                )
 
 
 if __name__ == "__main__":

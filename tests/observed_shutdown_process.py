@@ -1,4 +1,5 @@
 """Exercise publication contention and clean shutdown in independent actual apps."""
+
 from contextlib import ExitStack, contextmanager
 import json
 import os
@@ -24,9 +25,17 @@ def obstruct_publication(state, mode):
     elif mode in ("restricted-reader", "exclusive-reader"):
         import ctypes
         from ctypes import wintypes
+
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
-                                        wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+        kernel32.CreateFileW.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        ]
         kernel32.CreateFileW.restype = wintypes.HANDLE
         kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
         # GENERIC_READ, OPEN_EXISTING: deny replacement and fallback overwrite.
@@ -53,6 +62,7 @@ def suspended_editor(app):
     """Stage the external lock before the real GUI thread can consume a packet."""
     import ctypes
     from ctypes import wintypes
+
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
@@ -71,12 +81,12 @@ def suspended_editor(app):
     if not thread:
         raise ctypes.WinError(ctypes.get_last_error())
     try:
-        if kernel32.SuspendThread(thread) == 0xffffffff:
+        if kernel32.SuspendThread(thread) == 0xFFFFFFFF:
             raise ctypes.WinError(ctypes.get_last_error())
         try:
             yield
         finally:
-            if kernel32.ResumeThread(thread) == 0xffffffff:
+            if kernel32.ResumeThread(thread) == 0xFFFFFFFF:
                 raise ctypes.WinError(ctypes.get_last_error())
     finally:
         kernel32.CloseHandle(thread)
@@ -91,7 +101,7 @@ def command_contention(executable, folder, environment):
                 with suspended_editor(app):
                     command(folder, requested)
                     reader.enter_context(obstruct_publication(folder / "command", mode))
-                time.sleep(.25)
+                time.sleep(0.25)
                 assert app.process.poll() is None, "pending command cannot close before its reader releases it"
                 state = read_state(folder)
                 assert state["sequence"] == "0", f"unconsumed command was acknowledged: {state}"
@@ -108,7 +118,7 @@ def partial_command(executable, folder, environment):
     app = Application(executable, folder, environment)
     try:
         command(folder, "1\n")
-        time.sleep(.25)
+        time.sleep(0.25)
         state = read_state(folder)
         assert state["sequence"] == "0" and (folder / "command").exists(), state
         app.close()
@@ -123,7 +133,7 @@ def main():
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
-        (folder / "Notepad4.ini").write_text('[Settings2]\nUILanguage=1033\n', encoding="utf-16")
+        (folder / "Notepad4.ini").write_text("[Settings2]\nUILanguage=1033\n", encoding="utf-16")
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         modes = ("none", "crt-reader", "restricted-reader") if sys.platform == "win32" else ("none", "directory")
         for mode in modes:
@@ -135,11 +145,12 @@ def main():
                         command(folder, "1\nmenu\nView\tZoom In\n")
                         deadline = time.monotonic() + 5
                         while (folder / "command").exists() and time.monotonic() < deadline:
-                            time.sleep(.01)
-                        time.sleep(.25)
+                            time.sleep(0.01)
+                        time.sleep(0.25)
                         if mode != "directory":
                             assert (folder / "state").read_bytes() == previous, (
-                                "a blocked snapshot replacement preserves the complete previous publication")
+                                "a blocked snapshot replacement preserves the complete previous publication"
+                            )
                         print(f"CONTENDED {mode} " + json.dumps(observation_context(folder, app.process)), flush=True)
                     app.sequence = 1
                 print("BEFORE CLOSE " + json.dumps(observation_context(folder, app.process)), flush=True)

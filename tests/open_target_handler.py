@@ -1,4 +1,5 @@
 """Owned desktop boundary: record exact native URI without opening an application."""
+
 import os
 from pathlib import Path
 import sys

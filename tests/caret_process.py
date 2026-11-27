@@ -1,4 +1,5 @@
 """Caret preferences through independent real application processes and saved INI bytes."""
+
 from english_settings import english_settings
 import argparse
 import os
@@ -21,8 +22,13 @@ def main():
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         config = folder / "Notepad4.ini"
         seed = folder / "Notepad4.ini-default"
-        seed.write_text(english_settings("; keep comment\n[Settings]\nSaveSettings=0\nCaretStyle=113suffix\n"
-                        "CaretBlinkPeriod=275suffix\nUnrelated=keep\n[Styles]\nUnrelatedStyle=保留\n"), encoding="utf-16")
+        seed.write_text(
+            english_settings(
+                "; keep comment\n[Settings]\nSaveSettings=0\nCaretStyle=113suffix\n"
+                "CaretBlinkPeriod=275suffix\nUnrelated=keep\n[Styles]\nUnrelatedStyle=保留\n"
+            ),
+            encoding="utf-16",
+        )
         app = Application(executable, folder, environment)
         try:
             assert (app.state["caret_style"], app.state["caret_period"]) == ("273", "275"), app.state
@@ -55,32 +61,41 @@ def main():
             if not line or line.startswith("#"):
                 continue
             packed, blink, style, normalized = map(int, line.split("\t"))
-            config.write_text(english_settings(f"[Settings]\nCaretStyle={packed}\nCaretBlinkPeriod={blink}\n"), encoding="utf-16")
+            config.write_text(
+                english_settings(f"[Settings]\nCaretStyle={packed}\nCaretBlinkPeriod={blink}\n"), encoding="utf-16"
+            )
             app = Application(executable, folder, environment)
             try:
                 assert app.state["caret_style"] == str(style), (line, app.state)
                 assert app.state["caret_period"] == (system_period if blink < 0 else str(blink)), (line, app.state)
                 app.menu("Save Settings Now")
                 initial_saved = config.read_bytes().decode("utf-16")
-                assert ("CaretBlinkPeriod=" not in initial_saved if blink == -1 else
-                        f"CaretBlinkPeriod={blink}\r\n" in initial_saved), initial_saved
+                assert (
+                    "CaretBlinkPeriod=" not in initial_saved
+                    if blink == -1
+                    else f"CaretBlinkPeriod={blink}\r\n" in initial_saved
+                ), initial_saved
                 app.menu("No Blink")
                 assert app.state["caret_period"] == (system_period if blink == 0 else "0"), (line, app.state)
                 app.close()
             finally:
                 app.stop()
             saved = config.read_bytes().decode("utf-16")
-            assert ("CaretStyle=" not in saved if normalized == 1 else f"CaretStyle={normalized}\r\n" in saved), saved
-            assert ("CaretBlinkPeriod=" not in saved if blink == 0 else "CaretBlinkPeriod=0\r\n" in saved), saved
+            assert "CaretStyle=" not in saved if normalized == 1 else f"CaretStyle={normalized}\r\n" in saved, saved
+            assert "CaretBlinkPeriod=" not in saved if blink == 0 else "CaretBlinkPeriod=0\r\n" in saved, saved
         for packed, blink in [("invalid", "invalid"), ("1suffix", "-7suffix")]:
-            config.write_text(english_settings(f"[Settings]\nCaretStyle={packed}\nCaretBlinkPeriod={blink}\n"), encoding="utf-16")
+            config.write_text(
+                english_settings(f"[Settings]\nCaretStyle={packed}\nCaretBlinkPeriod={blink}\n"), encoding="utf-16"
+            )
             app = Application(executable, folder, environment)
             try:
                 assert (app.state["caret_style"], app.state["caret_period"]) == ("1", system_period), app.state
                 app.close()
             finally:
                 app.stop()
-    print("PASS: original packed caret fixtures, system/custom/zero periods, seed, independent restart and INI persistence")
+    print(
+        "PASS: original packed caret fixtures, system/custom/zero periods, seed, independent restart and INI persistence"
+    )
 
 
 if __name__ == "__main__":

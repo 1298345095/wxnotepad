@@ -1,4 +1,5 @@
 """Verify original LineSelection loading and saving through application processes."""
+
 from english_settings import english_settings
 import os
 from pathlib import Path

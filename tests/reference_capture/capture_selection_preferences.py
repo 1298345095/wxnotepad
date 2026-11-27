@@ -1,4 +1,5 @@
 """Capture pinned original selection preference edges on a private Windows desktop."""
+
 import ctypes as c
 from ctypes import wintypes as w
 import json
@@ -32,7 +33,7 @@ def main():
     user.EnumDesktopWindows.argtypes = [w.HANDLE, callback, c.c_ssize_t]
     user.CloseDesktop.argtypes = [w.HANDLE]
     desktop_name = "wxnotepad-selection-reference-" + str(__import__("os").getpid())
-    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1ff, None)
+    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1FF, None)
     if not desktop:
         raise c.WinError(c.get_last_error())
     user.EnumWindows = lambda cb, param: user.EnumDesktopWindows(desktop, cb, param)
@@ -53,23 +54,52 @@ def main():
         executable = Path(temp) / "Notepad4.exe"
         shutil.copy2(sys.argv[1], executable)
         (Path(temp) / "Notepad4.ini").write_text("[Settings]\nSelectOption=15\nWordWrap=0\n", encoding="utf-16")
+
         class Startup(c.Structure):
-            _fields_ = [("cb", w.DWORD), ("lpReserved", w.LPWSTR), ("lpDesktop", w.LPWSTR),
-                        ("lpTitle", w.LPWSTR), ("dwX", w.DWORD), ("dwY", w.DWORD),
-                        ("dwXSize", w.DWORD), ("dwYSize", w.DWORD), ("dwXCountChars", w.DWORD),
-                        ("dwYCountChars", w.DWORD), ("dwFillAttribute", w.DWORD), ("dwFlags", w.DWORD),
-                        ("wShowWindow", w.WORD), ("cbReserved2", w.WORD), ("lpReserved2", c.c_void_p),
-                        ("hStdInput", w.HANDLE), ("hStdOutput", w.HANDLE), ("hStdError", w.HANDLE)]
+            _fields_ = [
+                ("cb", w.DWORD),
+                ("lpReserved", w.LPWSTR),
+                ("lpDesktop", w.LPWSTR),
+                ("lpTitle", w.LPWSTR),
+                ("dwX", w.DWORD),
+                ("dwY", w.DWORD),
+                ("dwXSize", w.DWORD),
+                ("dwYSize", w.DWORD),
+                ("dwXCountChars", w.DWORD),
+                ("dwYCountChars", w.DWORD),
+                ("dwFillAttribute", w.DWORD),
+                ("dwFlags", w.DWORD),
+                ("wShowWindow", w.WORD),
+                ("cbReserved2", w.WORD),
+                ("lpReserved2", c.c_void_p),
+                ("hStdInput", w.HANDLE),
+                ("hStdOutput", w.HANDLE),
+                ("hStdError", w.HANDLE),
+            ]
+
         class ProcessInfo(c.Structure):
             _fields_ = [("handle", w.HANDLE), ("thread", w.HANDLE), ("pid", w.DWORD), ("tid", w.DWORD)]
+
         startup = Startup()
         startup.cb = c.sizeof(startup)
         startup.lpDesktop = desktop_name
         process = ProcessInfo()
-        kernel.CreateProcessW.argtypes = [w.LPCWSTR, w.LPWSTR, c.c_void_p, c.c_void_p, w.BOOL,
-                                        w.DWORD, c.c_void_p, w.LPCWSTR, c.POINTER(Startup), c.POINTER(ProcessInfo)]
+        kernel.CreateProcessW.argtypes = [
+            w.LPCWSTR,
+            w.LPWSTR,
+            c.c_void_p,
+            c.c_void_p,
+            w.BOOL,
+            w.DWORD,
+            c.c_void_p,
+            w.LPCWSTR,
+            c.POINTER(Startup),
+            c.POINTER(ProcessInfo),
+        ]
         arguments = c.create_unicode_buffer(subprocess.list2cmdline([str(executable), "/n", str(path)]))
-        if not kernel.CreateProcessW(None, arguments, None, None, False, 0, None, str(Path(temp)), c.byref(startup), c.byref(process)):
+        if not kernel.CreateProcessW(
+            None, arguments, None, None, False, 0, None, str(Path(temp)), c.byref(startup), c.byref(process)
+        ):
             raise c.WinError(c.get_last_error())
         frame, editor = find_editor_windows(user, process, callback)
         if dpi96 and user.GetDpiForWindow(editor) != 96:
@@ -80,8 +110,10 @@ def main():
         remote = kernel.VirtualAllocEx(handle, None, 65536, 0x3000, 4)
         if not remote:
             raise c.WinError(c.get_last_error())
+
         def send(message, first=0, second=0):
             return user.SendMessageW(editor, message, first, second)
+
         def text(value):
             encoded = value.encode("utf-8") + b"\0"
             if not kernel.WriteProcessMemory(handle, remote, encoded, len(encoded), None):
@@ -90,6 +122,7 @@ def main():
             send(2001, len(encoded) - 1, remote)
             send(2175)
             send(2014)
+
         def state():
             client = w.RECT()
             user.GetClientRect(editor, c.byref(client))
@@ -98,19 +131,34 @@ def main():
             data = c.create_string_buffer(length + 1)
             if not kernel.ReadProcessMemory(handle, remote, data, length + 1, None):
                 raise c.WinError(c.get_last_error())
-            return {"text": data.raw[:length].decode("utf-8"), "anchor": send(2009),
-                    "caret": send(2008), "modified": send(2159), "undo": send(2174), "redo": send(2016),
-                    "selections": send(2570), "multiple": send(2564), "history": send(2783),
-                    "first_line": send(2152), "x_offset": send(2398), "dpi": user.GetDpiForWindow(editor),
-                    "client_width": client.right, "scroll_width": send(2275),
-                    "line_width": send(2164, 0, send(2136, 0)) - send(2164, 0, 0),
-                    "caret_x": send(2164, 0, send(2008)), "anchor_x": send(2164, 0, send(2009))}
+            return {
+                "text": data.raw[:length].decode("utf-8"),
+                "anchor": send(2009),
+                "caret": send(2008),
+                "modified": send(2159),
+                "undo": send(2174),
+                "redo": send(2016),
+                "selections": send(2570),
+                "multiple": send(2564),
+                "history": send(2783),
+                "first_line": send(2152),
+                "x_offset": send(2398),
+                "dpi": user.GetDpiForWindow(editor),
+                "client_width": client.right,
+                "scroll_width": send(2275),
+                "line_width": send(2164, 0, send(2136, 0)) - send(2164, 0, 0),
+                "caret_x": send(2164, 0, send(2008)),
+                "anchor_x": send(2164, 0, send(2009)),
+            }
+
         def replace(value):
             encoded = value.encode("utf-8") + b"\0"
             kernel.WriteProcessMemory(handle, remote, encoded, len(encoded), None)
             send(2170, 0, remote)
+
         def command(identifier):
             user.SendMessageW(frame, 0x111, identifier, 0)
+
         results = {}
         try:
             text("abcd" + chr(13) + chr(10) + "efgh" + chr(13) + chr(10) + "ijkl")
@@ -159,9 +207,10 @@ def main():
             results["history-toggle-undo"] = state()
             send(2011)
             results["history-toggle-redo"] = state()
-            (output / "original-selection-preferences.json").write_text(json.dumps({
-                "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a", "cases": results
-            }, indent=2) + "\n", encoding="utf-8")
+            (output / "original-selection-preferences.json").write_text(
+                json.dumps({"revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a", "cases": results}, indent=2) + "\n",
+                encoding="utf-8",
+            )
             print(f"Captured {len(results)} original runtime preference states on private desktop")
         finally:
             send(2171, 0)

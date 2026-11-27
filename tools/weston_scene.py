@@ -1,4 +1,5 @@
 """Match owned, mapped toplevels in a Weston scene-graph snapshot."""
+
 import re
 
 
@@ -7,8 +8,13 @@ def _mapped_view_sections(scene):
     for section in re.split(r"(?=^Layer |^\tView )", scene, flags=re.MULTILINE):
         if section.startswith("Layer "):
             layered = True
-        if layered and section.startswith("\tView ") and not re.search(
-                r"\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]", section):
+        if (
+            layered
+            and section.startswith("\tView ")
+            and not re.search(
+                r"\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]", section
+            )
+        ):
             yield section
 
 
@@ -35,7 +41,8 @@ def input_ready_toplevel(scene, process, surface):
     # can coexist with the mapped target until the real curtain is destroyed.
     curtain = r"\tView \d+ \(role \(null\), PID 0, surface ID 0, desktop shell fade surface, "
     return mapped_toplevel(scene, process, surface) and not any(
-        re.match(curtain, section) for section in _mapped_view_sections(scene))
+        re.match(curtain, section) for section in _mapped_view_sections(scene)
+    )
 
 
 def mapped_toplevel_position(scene, process, surface):

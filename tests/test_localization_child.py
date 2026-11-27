@@ -1,4 +1,5 @@
 """Lock down the observed Windows exit-code-before-signaling race."""
+
 import ctypes
 from ctypes import wintypes
 import gc
@@ -26,9 +27,10 @@ class WindowsChildLifecycle(unittest.TestCase):
             GetExitCodeProcess=mock.Mock(side_effect=exit_code),
             WaitForSingleObject=mock.Mock(side_effect=[WAIT_TIMEOUT, WAIT_OBJECT_0]),
             TerminateProcess=mock.Mock(return_value=True),
-            CloseHandle=mock.Mock(return_value=True))
-        self.enterContext(mock.patch.object(sys, 'platform', 'win32'))
-        self.enterContext(mock.patch.object(ctypes, 'WinDLL', return_value=self.kernel, create=True))
+            CloseHandle=mock.Mock(return_value=True),
+        )
+        self.enterContext(mock.patch.object(sys, "platform", "win32"))
+        self.enterContext(mock.patch.object(ctypes, "WinDLL", return_value=self.kernel, create=True))
 
     def test_available_exit_code_waits_for_signal_then_closes_once_and_caches(self):
         child = localization_package.Child(OWNED_PID)
@@ -43,8 +45,9 @@ class WindowsChildLifecycle(unittest.TestCase):
         self.kernel.GetExitCodeProcess.assert_called_once()
         self.kernel.CloseHandle.assert_called_once_with(OWNED_HANDLE)
         self.assertEqual(child.poll(), 0)
-        self.assertEqual(self.kernel.WaitForSingleObject.call_args_list,
-                         [mock.call(OWNED_HANDLE, 0), mock.call(OWNED_HANDLE, 0)])
+        self.assertEqual(
+            self.kernel.WaitForSingleObject.call_args_list, [mock.call(OWNED_HANDLE, 0), mock.call(OWNED_HANDLE, 0)]
+        )
         self.kernel.OpenProcess.assert_called_once()
         del child
         gc.collect()
@@ -52,14 +55,15 @@ class WindowsChildLifecycle(unittest.TestCase):
 
     def test_failed_open_raises_without_closing_an_unowned_handle(self):
         self.kernel.OpenProcess.return_value = None
-        with mock.patch.object(ctypes, 'get_last_error', return_value=5, create=True), \
-                mock.patch.object(ctypes, 'WinError', side_effect=lambda code: OSError(code, 'OpenProcess'),
-                                  create=True):
+        with (
+            mock.patch.object(ctypes, "get_last_error", return_value=5, create=True),
+            mock.patch.object(ctypes, "WinError", side_effect=lambda code: OSError(code, "OpenProcess"), create=True),
+        ):
             with self.assertRaises(OSError):
                 localization_package.Child(OWNED_PID)
         gc.collect()
         self.kernel.CloseHandle.assert_not_called()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

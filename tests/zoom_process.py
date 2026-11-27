@@ -1,4 +1,5 @@
 """Verify the original ZoomLevel preference across actual application processes."""
+
 from english_settings import english_settings
 import os
 from pathlib import Path

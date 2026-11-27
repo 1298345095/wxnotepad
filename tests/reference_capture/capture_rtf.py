@@ -44,7 +44,7 @@ def clipboard_rtf():
         try:
             raw = c.string_at(data, kernel.GlobalSize(memory))
             result, terminator, _ = raw.partition(b"\0")
-            assert terminator and result.startswith(br"{\rtf1") and result.endswith(b"}"), raw
+            assert terminator and result.startswith(rb"{\rtf1") and result.endswith(b"}"), raw
             return result
         finally:
             kernel.GlobalUnlock(memory)
@@ -68,9 +68,12 @@ def menu_item(menu, path=()):
 
 def selection(original):
     send = original.send
-    return dict(original.state(), start=send(2143), end=send(2145),
-                ranges=[[send(message, index) for message in (2579, 2577, 2583, 2581)]
-                        for index in range(send(2570))])
+    return dict(
+        original.state(),
+        start=send(2143),
+        end=send(2145),
+        ranges=[[send(message, index) for message in (2579, 2577, 2583, 2581)] for index in range(send(2570))],
+    )
 
 
 def record(original, directory, name):
@@ -90,8 +93,9 @@ def record(original, directory, name):
         (directory / f"{name}.rtf").write_bytes(clipboard_rtf())
     after = selection(original)
     assert before == after, (name, before, after)
-    return dict(name=name, menu=item[0], menuIndex=item[1], enabled=not bool(flags & 3),
-                state=before, clipboardChanged=changed)
+    return dict(
+        name=name, menu=item[0], menuIndex=item[1], enabled=not bool(flags & 3), state=before, clipboardChanged=changed
+    )
 
 
 def configure_api():
@@ -146,8 +150,7 @@ def capture_style_overrides(original, output):
     keyword = 8
     comment = 2
     send(2056, keyword, original.put(b"Consolas\0"))
-    for message, value in ((2061, 1350), (2063, 600), (2054, 1), (2059, 1), (2041, 1),
-                           (2052, 0xD0D0FF), (2066, 204)):
+    for message, value in ((2061, 1350), (2063, 600), (2054, 1), (2059, 1), (2041, 1), (2052, 0xD0D0FF), (2066, 204)):
         send(message, keyword, value)
     send(2052, comment, 0xF0FFF0)
     send(2057, comment, 1)
@@ -176,10 +179,12 @@ def main():
         raise c.WinError(c.get_last_error())
     cases = []
     try:
-        for source, name, encoding in ((None, None, "utf-8"),
-                                       (cpp, "cpp", "utf-8"),
-                                       (portable / "legacy.txt", "legacy", "windows-1252"),
-                                       (portable / "ansi.txt", "ansi", "ansi")):
+        for source, name, encoding in (
+            (None, None, "utf-8"),
+            (cpp, "cpp", "utf-8"),
+            (portable / "legacy.txt", "legacy", "windows-1252"),
+            (portable / "ansi.txt", "ansi", "ansi"),
+        ):
             original = Original(source, executable, desktop, "default", encoding)
             try:
                 if name:
@@ -193,8 +198,12 @@ def main():
                 original.close()
     finally:
         user.CloseDesktop(desktop)
-    session = dict(revision=REFERENCE_REVISION, executable_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
-                   windowsAnsiCodePage=kernel.GetACP(), cases=cases)
+    session = dict(
+        revision=REFERENCE_REVISION,
+        executable_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
+        windowsAnsiCodePage=kernel.GetACP(),
+        cases=cases,
+    )
     (output / "original.json").write_text(json.dumps(session, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 

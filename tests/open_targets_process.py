@@ -1,4 +1,5 @@
 """Run native target actions with an owned source and independent editor children."""
+
 import os
 from pathlib import Path
 import subprocess
@@ -15,7 +16,8 @@ def check_request_reader(folder):
     """Read the actual request protocol while its native rename handle is open."""
     import ctypes as c
     from ctypes import wintypes as w
-    kernel = c.WinDLL('kernel32', use_last_error=True)
+
+    kernel = c.WinDLL("kernel32", use_last_error=True)
     kernel.CreateFileW.argtypes = [w.LPCWSTR, w.DWORD, w.DWORD, c.c_void_p, w.DWORD, w.DWORD, w.HANDLE]
     kernel.CreateFileW.restype = w.HANDLE
     kernel.SetFileInformationByHandle.argtypes = [w.HANDLE, c.c_int, c.c_void_p, w.DWORD]
@@ -23,41 +25,54 @@ def check_request_reader(folder):
     kernel.CloseHandle.argtypes = [w.HANDLE]
     kernel.CloseHandle.restype = w.BOOL
     delete_access, share_read_write_delete, open_existing, file_rename_info = 0x10000, 7, 3, 3
-    helper = str(Path(__file__).with_name('open_target_request.ps1')).replace("'", "''")
-    for index, (item, cancelled) in enumerate((('目标, selected file.txt', False), ('', False), ('target.txt', True))):
-        staging = folder / f'request-reader-{index}.tmp'
-        published = folder / f'request-reader-{index}.ready'
-        directory = str(folder / '目标 directory')
-        selected = str(folder / item) if item else ''
-        payload = (directory + '\n' + selected + '\n' + str(os.getpid()) + '\n' +
-                   ('cancelled\n' if cancelled else '')).encode('utf-8')
+    helper = str(Path(__file__).with_name("open_target_request.ps1")).replace("'", "''")
+    for index, (item, cancelled) in enumerate((("目标, selected file.txt", False), ("", False), ("target.txt", True))):
+        staging = folder / f"request-reader-{index}.tmp"
+        published = folder / f"request-reader-{index}.ready"
+        directory = str(folder / "目标 directory")
+        selected = str(folder / item) if item else ""
+        payload = (
+            directory + "\n" + selected + "\n" + str(os.getpid()) + "\n" + ("cancelled\n" if cancelled else "")
+        ).encode("utf-8")
         staging.write_bytes(payload)
-        handle = kernel.CreateFileW(str(staging), delete_access, share_read_write_delete, None,
-                                    open_existing, 0, None)
+        handle = kernel.CreateFileW(str(staging), delete_access, share_read_write_delete, None, open_existing, 0, None)
         assert handle != w.HANDLE(-1).value, c.WinError(c.get_last_error())
         try:
-            name = str(published).encode('utf-16-le')
+            name = str(published).encode("utf-16-le")
+
             class RenameInfo(c.Structure):
-                _fields_ = [('replace', c.c_ubyte), ('root', w.HANDLE), ('length', w.DWORD),
-                            ('name', w.WCHAR * (len(name) // c.sizeof(w.WCHAR) + 1))]
+                _fields_ = [
+                    ("replace", c.c_ubyte),
+                    ("root", w.HANDLE),
+                    ("length", w.DWORD),
+                    ("name", w.WCHAR * (len(name) // c.sizeof(w.WCHAR) + 1)),
+                ]
+
             info = RenameInfo()
             info.length = len(name)
             c.memmove(c.addressof(info) + RenameInfo.name.offset, name, len(name))
-            assert kernel.SetFileInformationByHandle(handle, file_rename_info, c.byref(info), c.sizeof(info)), \
+            assert kernel.SetFileInformationByHandle(handle, file_rename_info, c.byref(info), c.sizeof(info)), (
                 c.WinError(c.get_last_error())
+            )
             path = str(published).replace("'", "''")
-            command = (f"$ErrorActionPreference = 'Stop'; . '{helper}'; $lines = @(Read-ExplorerRequest '{path}'); "
-                       '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]::Join("`n", $lines) + "`n"))')
-            encoded = base64.b64encode(command.encode('utf-16-le')).decode('ascii')
-            result = subprocess.run(['pwsh', '-NoProfile', '-EncodedCommand', encoded],
-                                    capture_output=True, timeout=10, check=False)
-            assert result.returncode == 0, result.stderr.decode('utf-8', errors='replace')
-            assert result.stdout.strip() == base64.b64encode(payload), \
-                'actual observer reader must preserve every exact UTF-8 request byte while rename is open'
+            command = (
+                f"$ErrorActionPreference = 'Stop'; . '{helper}'; $lines = @(Read-ExplorerRequest '{path}'); "
+                '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]::Join("`n", $lines) + "`n"))'
+            )
+            encoded = base64.b64encode(command.encode("utf-16-le")).decode("ascii")
+            result = subprocess.run(
+                ["pwsh", "-NoProfile", "-EncodedCommand", encoded], capture_output=True, timeout=10, check=False
+            )
+            assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
+            assert result.stdout.strip() == base64.b64encode(payload), (
+                "actual observer reader must preserve every exact UTF-8 request byte while rename is open"
+            )
         finally:
             kernel.CloseHandle(handle)
-    print('PASS: actual observer reader preserves Unicode, empty item and cancellation request bytes under native rename',
-          flush=True)
+    print(
+        "PASS: actual observer reader preserves Unicode, empty item and cancellation request bytes under native rename",
+        flush=True,
+    )
 
 
 def main():
@@ -73,14 +88,24 @@ def main():
             for library in source.parent.glob("*.dll"):
                 shutil.copy2(library, folder / library.name)
         (folder / "parent.txt").write_bytes(b"parent fixture\n")
-        environment = dict(os.environ, WXNOTEPAD_OPEN_TARGET_ROOT=str(folder),
-                           PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
+        environment = dict(
+            os.environ,
+            WXNOTEPAD_OPEN_TARGET_ROOT=str(folder),
+            PATH=str(source.parent) + os.pathsep + os.environ["PATH"],
+        )
         if sys.platform == "win32":
             # Ordinary builds compile tracing out; the existing diagnostic build
             # records the actual shell result without replacing the native call.
             environment.update(WXNOTEPAD_DIAGNOSTICS="1", WXNOTEPAD_DIAGNOSTIC_LOG="stderr")
-        failure_output = Path(os.environ.get("WXNOTEPAD_OPEN_TARGET_FAILURE_DIR",
-                              Path(__file__).resolve().parents[1] / ".ci/reports/open-targets")) / folder.name
+        failure_output = (
+            Path(
+                os.environ.get(
+                    "WXNOTEPAD_OPEN_TARGET_FAILURE_DIR",
+                    Path(__file__).resolve().parents[1] / ".ci/reports/open-targets",
+                )
+            )
+            / folder.name
+        )
         if sys.platform != "win32":
             applications = folder / "data" / "applications"
             applications.mkdir(parents=True)
@@ -92,20 +117,43 @@ def main():
                 f'Exec="{sys.executable}" "{handler}" %u\n'
                 "MimeType=x-scheme-handler/wx242;x-scheme-handler/http;x-scheme-handler/https;"
                 "x-scheme-handler/mailto;inode/directory;text/plain;application/octet-stream;\n",
-                encoding="utf-8")
-            (config / "mimeapps.list").write_text("[Default Applications]\n" + "".join(
-                f"{kind}=wxnotepad-open-target.desktop;\n" for kind in (
-                    "x-scheme-handler/wx242", "x-scheme-handler/http", "x-scheme-handler/https",
-                    "x-scheme-handler/mailto", "inode/directory", "text/plain", "application/octet-stream")),
-                encoding="utf-8")
+                encoding="utf-8",
+            )
+            (config / "mimeapps.list").write_text(
+                "[Default Applications]\n"
+                + "".join(
+                    f"{kind}=wxnotepad-open-target.desktop;\n"
+                    for kind in (
+                        "x-scheme-handler/wx242",
+                        "x-scheme-handler/http",
+                        "x-scheme-handler/https",
+                        "x-scheme-handler/mailto",
+                        "inode/directory",
+                        "text/plain",
+                        "application/octet-stream",
+                    )
+                ),
+                encoding="utf-8",
+            )
             environment.update(XDG_DATA_HOME=str(applications.parent), XDG_CONFIG_HOME=str(config))
         if sys.platform == "win32":
             check_request_reader(folder)
         manager = None
         try:
             if sys.platform == "win32":
-                manager = subprocess.Popen(["pwsh", "-NoProfile", "-File", str(Path(__file__).with_name("open_target_explorer.ps1")),
-                                            "-Root", str(folder), "-Evidence", str(failure_output)], env=environment)
+                manager = subprocess.Popen(
+                    [
+                        "pwsh",
+                        "-NoProfile",
+                        "-File",
+                        str(Path(__file__).with_name("open_target_explorer.ps1")),
+                        "-Root",
+                        str(folder),
+                        "-Evidence",
+                        str(failure_output),
+                    ],
+                    env=environment,
+                )
                 deadline = time.monotonic() + 10
                 while not (folder / "explorer-ready").exists() and time.monotonic() < deadline:
                     assert manager.poll() is None, "owned Explorer observer must stay running"

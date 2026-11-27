@@ -1,4 +1,5 @@
 """Original encoding options reach actual Open and Save across fresh processes."""
+
 from english_settings import english_settings
 import os
 from pathlib import Path
@@ -52,15 +53,22 @@ def run(executable):
                 assert state["encoding"] == encoding and state["bom"] == str(bom), (seed, state)
                 command(folder, "2\nsave\n")
                 state = wait_state(folder, app.process, lambda s: s["sequence"] == "2")
-                assert state["result"] == "ok" and fixture.read_bytes() == (data if saved_bytes is None else saved_bytes), (seed, state)
+                assert state["result"] == "ok" and fixture.read_bytes() == (
+                    data if saved_bytes is None else saved_bytes
+                ), (seed, state)
                 app.sequence = 2
                 app.close()
                 assert "Keep=1" in config.read_text(encoding="utf-16")
                 if seed == "DefaultEncoding=3" or seed.startswith("DefaultEncoding=-4294967296"):
                     assert "DefaultEncoding=" not in config.read_text(encoding="utf-16")
-                elif seed.splitlines()[0] in {"DefaultEncoding=1252", "DefaultEncoding=437",
-                                             "DefaultEncoding=54936", "DefaultEncoding=950",
-                                             "DefaultEncoding=932", "DefaultEncoding=949"}:
+                elif seed.splitlines()[0] in {
+                    "DefaultEncoding=1252",
+                    "DefaultEncoding=437",
+                    "DefaultEncoding=54936",
+                    "DefaultEncoding=950",
+                    "DefaultEncoding=932",
+                    "DefaultEncoding=949",
+                }:
                     saved = config.read_text(encoding="utf-16")
                     assert seed.splitlines()[0] in saved, saved
                 print(f"PASS: fresh-process {seed!r} -> {encoding}, BOM={bom}, exact Save")

@@ -1,4 +1,5 @@
 """Keep native assertions while checking opt-in input/clipboard/close evidence."""
+
 import argparse
 import os
 from pathlib import Path
@@ -11,12 +12,23 @@ from diagnostics_process import records
 def check_native(log, driver):
     rows = records(log)
     names = {row["event"] for row in rows}
-    for event in ("application.key-down", "application.key-up", "editor.key-down", "editor.key-up",
-                  "editor.focus-in", "clipboard.write", "clipboard.owned", "clipboard.read", "clipboard.received"):
+    for event in (
+        "application.key-down",
+        "application.key-up",
+        "editor.key-down",
+        "editor.key-up",
+        "editor.focus-in",
+        "clipboard.write",
+        "clipboard.owned",
+        "clipboard.read",
+        "clipboard.received",
+    ):
         assert event in names, (event, names)
     for row in rows:
         if row["event"].startswith("editor.key-"):
-            assert all(field in row for field in ("target", "focus", "length", "anchor", "caret", "key", "modifiers")), row
+            assert all(
+                field in row for field in ("target", "focus", "length", "anchor", "caret", "key", "modifiers")
+            ), row
         if row["event"] == "clipboard.received":
             assert int(row["length"]) > 0 and row["format"], row
     driver_rows = records(driver) if driver.exists() else rows
@@ -60,8 +72,9 @@ def main():
         for executable, check in ((args.editing_keys, check_native), (args.close_smoke, check_close)):
             log = args.evidence.resolve() / f"{mode}-{executable.stem}.log"
             log.unlink(missing_ok=True)
-            environment = dict(os.environ, WXNOTEPAD_DIAGNOSTIC_LOG=str(log),
-                               WXNOTEPAD_DIAGNOSTICS="1" if enabled else "0")
+            environment = dict(
+                os.environ, WXNOTEPAD_DIAGNOSTIC_LOG=str(log), WXNOTEPAD_DIAGNOSTICS="1" if enabled else "0"
+            )
             focus = environment.get("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS")
             driver = Path(focus + ".diagnostics") if focus else log.with_suffix(".driver")
             driver.unlink(missing_ok=True)

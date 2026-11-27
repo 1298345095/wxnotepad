@@ -1,4 +1,5 @@
 """Check original visibility defaults, save policies and independent native relaunches."""
+
 from contextlib import ExitStack
 from pathlib import Path
 import os
@@ -25,17 +26,26 @@ with ExitStack() as stack:
     ini = config_folder / "Notepad4.ini"
 
     def run(menu, status, toolbar=True, action="keep", policy="exit"):
-        result = subprocess.run([str(executable), str(int(menu)), str(int(status)), str(int(toolbar)), action, policy],
-                                env=environment, capture_output=True, text=True, timeout=20)
+        result = subprocess.run(
+            [str(executable), str(int(menu)), str(int(status)), str(int(toolbar)), action, policy],
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
         assert result.returncode == 0, result.stdout + result.stderr
 
-    for menu, status, toolbar in [(menu, status, toolbar) for menu in (True, False)
-                                  for status in (True, False) for toolbar in (True, False)]:
+    for menu, status, toolbar in [
+        (menu, status, toolbar) for menu in (True, False) for status in (True, False) for toolbar in (True, False)
+    ]:
         for save_on_exit, explicit in [(True, False), (False, False), (False, True)]:
-            ini.write_text("[Settings]\n; retained\nCustom=保留\n" +
-                           f"ShowMenu={int(menu)}\nShowStatusbar={int(status)}\nShowToolbar={int(toolbar)}\n" +
-                           ("" if save_on_exit else "SaveSettings=0\n") +
-                           "[Other]\nShowMenu=unrelated\n", encoding="utf-16")
+            ini.write_text(
+                "[Settings]\n; retained\nCustom=保留\n"
+                + f"ShowMenu={int(menu)}\nShowStatusbar={int(status)}\nShowToolbar={int(toolbar)}\n"
+                + ("" if save_on_exit else "SaveSettings=0\n")
+                + "[Other]\nShowMenu=unrelated\n",
+                encoding="utf-16",
+            )
             run(menu, status, toolbar, "toggle", "explicit" if explicit else "exit")
             saved = ini.read_text(encoding="utf-16").replace("\r\n", "\n")
             assert "; retained" in saved and "Custom=保留" in saved
