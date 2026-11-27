@@ -514,7 +514,17 @@ def exercise(app, dialogs, favorite_directory, target, other, evidence):
     # approved Cancel correction retains this window instead of exiting.
     broken = favorite_directory / ("B broken.lnk" if sys.platform == "win32" else "B broken")
     missing = target.parent / "missing-target.txt"
-    shortcut(broken, missing)
+    if sys.platform != "win32":
+        project = target.parent / "project 中文"
+        (project / "subdirectory").mkdir(parents=True)
+        alias = target.parent / "directory alias"
+        alias.symlink_to(project / "subdirectory", target_is_directory=True)
+        missing = project / "missing-target.txt"
+        # The filesystem follows alias before '..'; lexical collapse would
+        # incorrectly point at target.parent/missing-target.txt.
+        shortcut(broken, alias / ".." / missing.name)
+    else:
+        shortcut(broken, missing)
     before_missing = dict(app.state)
     history_before_missing = recent_paths()
     for choice in ("no", "cancel", "yes"):
@@ -536,13 +546,16 @@ def exercise(app, dialogs, favorite_directory, target, other, evidence):
             assert recent_paths() == history_before_missing, "No/Cancel keeps the original recent-file list"
     if sys.platform != "win32":
         relative = favorite_directory / "C relative"
-        relative.symlink_to(os.path.relpath(target, favorite_directory))
-        assert os.readlink(relative) == os.path.relpath(target, favorite_directory)
+        resolved = project / "existing-target.txt"
+        resolved.write_bytes(b"filesystem-resolved directory symlink target\n")
+        relative_target = os.path.relpath(alias / ".." / resolved.name, favorite_directory)
+        relative.symlink_to(relative_target)
+        assert os.readlink(relative) == relative_target
         app.begin("menu", str(open_favorites))
         window = dialogs.wait(app.process, "Favorites")
         select_favorite(dialogs, app, window, 2)
         app.finish()
-        check_document(app, target)
+        check_document(app, resolved)
     damaged = favorite_directory / "D damaged.lnk"
     damaged.write_bytes(b"L\0\0\0unsupported Windows shell link")
     before_damaged = dict(app.state)
