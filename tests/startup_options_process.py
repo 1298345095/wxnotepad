@@ -237,6 +237,7 @@ def help_message(executable, root):
                 text = "\n".join(dialogs.texts(window))
                 assert usage in text, (code, text)
                 assert all(option in text for option in ("-e ", "-s ", "-g ", "-G ", "-ro", "-?")), text
+                assert all(fragment in text for fragment in ("+ file1 file2 ...", "MultiFileArg", "32")), text
                 assert "--startup-" not in text and ("Windows" if sys.platform == "win32" else "Linux") in text
                 dialogs.answer(process, "ok", window=window)
                 assert process.wait(timeout=10) == 0

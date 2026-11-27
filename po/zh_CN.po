@@ -855,6 +855,17 @@ msgstr "缩放(&Z)"
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr "* 匹配零个或多个字符；? 恰好匹配一个字符。"
 
+#. TRANSLATORS: Multi-file help; keep + file1 file2 ..., [Settings2] MultiFileArg=1, - and -- literal.
+#: src/app/main.cpp
+msgid ""
+"+ file1 file2 ...  Open up to 32 files (additional paths are ignored).\n"
+"[Settings2] MultiFileArg=1 uses this mode by default; - or -- forces one path.\n"
+"Multiple files always open in separate new windows; preceding options apply to every file."
+msgstr ""
+"+ file1 file2 ...  打开最多 32 个文件（忽略超出数量的路径）。\n"
+"[Settings2] MultiFileArg=1 默认使用此模式；- 或 -- 强制将后续参数作为单一路径。\n"
+"多个文件始终分别在新窗口中打开；文件列表前的选项应用于每个文件。"
+
 #. TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
 #: src/app/main.cpp
 msgid ""
