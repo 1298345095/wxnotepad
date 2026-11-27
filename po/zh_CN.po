@@ -816,6 +816,11 @@ msgstr "&Visual Studio"
 msgid "&Web Source Code"
 msgstr "Web 源代码(&W)"
 
+#. TRANSLATORS: Original Tools/Web Tools submenu.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Tools"
+msgstr "Web开发(&W)"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
 msgstr "通配符搜索(&I)"
@@ -854,6 +859,17 @@ msgstr "缩放(&Z)"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr "* 匹配零个或多个字符；? 恰好匹配一个字符。"
+
+#. TRANSLATORS: Multi-file help; keep + file1 file2 ..., [Settings2] MultiFileArg=1, - and -- literal.
+#: src/app/main.cpp
+msgid ""
+"+ file1 file2 ...  Open up to 32 files (additional paths are ignored).\n"
+"[Settings2] MultiFileArg=1 uses this mode by default; - or -- forces one path.\n"
+"Multiple files always open in separate new windows; preceding options apply to every file."
+msgstr ""
+"+ file1 file2 ...  打开最多 32 个文件（忽略超出数量的路径）。\n"
+"[Settings2] MultiFileArg=1 默认使用此模式；- 或 -- 强制将后续参数作为单一路径。\n"
+"多个文件始终分别在新窗口中打开；文件列表前的选项应用于每个文件。"
 
 #. TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
 #: src/app/main.cpp
@@ -929,6 +945,15 @@ msgstr "ASS — 启用对称交换(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Action on &Selection"
 msgstr "对选中内容执行操作(&S)"
+
+msgid "&Calculate Expression"
+msgstr "计算表达式(&C)"
+
+msgid "Unexpected end of expression."
+msgstr "表达式意外结束。"
+
+msgid "Evaluate the selected JavaScript expression in Math scope."
+msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
@@ -1242,6 +1267,14 @@ msgstr[0] "CR: %llu 行。"
 #: src/syntax/syntax_catalog.cpp
 msgid "CSS Style Sheet"
 msgstr "CSS 样式表"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Compress"
+msgstr "CSS/JS/JSON 压缩(&C)"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Pretty"
+msgstr "CSS/JS/JSON 美化(&P)"
 
 #. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp

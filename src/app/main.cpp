@@ -1,21 +1,25 @@
 #include "app/editor_frame.h"
+#include "app/dialogs/document_dialogs.h"
 #include <utility>
 #include "app/localization.h"
 #include "editor/editor_control.h"
 #include "editor/go_to_location.h"
 #include "app/process_observer.h"
 #include "app/new_window.h"
+#include "app/native_launch.h"
 #include "app/window_routing.h"
 #include "settings/settings_store.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <wx/file.h>
+#include <wx/stdpaths.h>
 #include <memory>
 #include <limits>
 #include <array>
 #include <cwchar>
 #include <algorithm>
+#include <vector>
 
 namespace {
 struct StartupOptions : WindowRequest {
@@ -27,6 +31,10 @@ struct StartupOptions : WindowRequest {
     bool help = false;
     std::optional<std::pair<bool, bool>> routing;
     std::optional<bool> alwaysOnTop;
+    // Pinned Notepad4::lpFileList collects at most 32 arguments.
+    static constexpr size_t MaximumFiles = 32;
+    std::vector<wxString> files;
+    int fileArgumentsBegin = 0;
 
     bool ParseEncoding(const wxString& value) {
         long setting = 0;
@@ -84,7 +92,7 @@ struct StartupOptions : WindowRequest {
         return true;
     }
 
-    bool Parse(int argc, const wxCmdLineArgsArray& argv) {
+    bool Parse(int argc, const wxCmdLineArgsArray& argv, bool multipleFiles) {
         int i = 1;
         while (i < argc) {
             const wxString argument(argv[i++]);
@@ -102,7 +110,16 @@ struct StartupOptions : WindowRequest {
                 missingParameter = argument;
                 return false;
             }
-            if (argument == "-" || argument == "--") {
+            if (argument == "+") {
+                fileArgumentsBegin = i - 1;
+                while (i < argc && files.size() < MaximumFiles)
+                    files.emplace_back(argv[i++]);
+                if (!files.empty()) {
+                    startup = files.front();
+                    ordinaryFile = true;
+                }
+                return true;
+            } else if (argument == "-" || argument == "--") {
                 if (i == argc || !startup.empty()) return false;
                 startup = argv[i++];
                 ordinaryFile = true;
@@ -158,6 +175,13 @@ struct StartupOptions : WindowRequest {
                 if (!startup.empty() || argument.StartsWith("-")) return false;
                 startup = argument;
                 ordinaryFile = true;
+                if (multipleFiles) {
+                    fileArgumentsBegin = i - 1;
+                    files.push_back(argument);
+                    while (i < argc && files.size() < MaximumFiles)
+                        files.emplace_back(argv[i++]);
+                    return true;
+                }
                 // The original single-file mode treats the remaining command
                 // line as one pathname, including unquoted spaces.
                 while (i < argc)
@@ -214,6 +238,10 @@ wxString StartupHelp() {
 #endif
     // TRANSLATORS: New wxnotepad help; preserve the literal option terminators - and --.
     text += "\n" + _("Use - or -- to end options and open the remaining single file path.");
+    // TRANSLATORS: Multi-file help; keep + file1 file2 ..., [Settings2] MultiFileArg=1, - and -- literal.
+    text += "\n\n" + _("+ file1 file2 ...  Open up to 32 files (additional paths are ignored).\n"
+                       "[Settings2] MultiFileArg=1 uses this mode by default; - or -- forces one path.\n"
+                       "Multiple files always open in separate new windows; preceding options apply to every file.");
     return text;
 }
 } // namespace
@@ -238,10 +266,12 @@ public:
     }
     bool OnInit() override {
         WXNOTE_TRACE("process.start");
-        StartupOptions options;
-        const bool parsed = options.Parse(argc, argv);
-        if (!parsed && !options.unsupportedSourceCodePage && options.missingParameter.empty()) return false;
+        // Read MultiFileArg before collecting paths. Pinned Notepad4 loads this
+        // default after parsing, making the setting ineffective without +.
         settings_ = std::make_unique<SettingsStore>();
+        StartupOptions options;
+        const bool parsed = options.Parse(argc, argv, settings_->values.multiFileArg);
+        if (!parsed && !options.unsupportedSourceCodePage && options.missingParameter.empty()) return false;
         AppLocalization::Initialize(settings_->values.uiLanguage);
         if (!options.missingParameter.empty()) {
             // TRANSLATORS: New wxnotepad missing-operand error; %s is the literal option token, such as /s or -e.
@@ -266,6 +296,32 @@ public:
             // TRANSLATORS: New wxnotepad title for the delivered command-line help.
             wxMessageBox(StartupHelp(), _("Command Line Help"), wxOK | wxICON_INFORMATION);
             startupExitCode_ = 0;
+            return true;
+        }
+        if (options.files.size() > 1) {
+            // Original RelaunchMultiInst preserves preceding options, then
+            // appends /n - for each target, overriding even explicit /rs.
+            // argv spawning preserves the caller's cwd and never adds a shell.
+            std::vector<wxString> arguments{wxStandardPaths::Get().GetExecutablePath()};
+            for (int i = 1; i < options.fileArgumentsBegin; ++i) {
+                if (wxString(argv[i]) == "--observe") {
+                    ++i; // Each child uses the inherited observation root.
+                    continue;
+                }
+                arguments.emplace_back(argv[i]);
+            }
+            arguments.emplace_back("-n");
+            arguments.emplace_back("-");
+            startupExitCode_ = 0;
+            for (const auto& file : options.files) {
+                auto childArguments = arguments;
+                childArguments.push_back(file);
+                wxString error;
+                if (!NativeLaunch::SpawnArguments(childArguments, wxGetCwd(), error)) {
+                    wxMessageBox(error, _("Could not open file"), wxOK | wxICON_ERROR);
+                    startupExitCode_ = 2;
+                }
+            }
             return true;
         }
         SetAppearance(Appearance::System);
@@ -296,7 +352,16 @@ public:
             // file confirmation. Internal relaunch failures keep their contract.
             frame->Show();
             const wxFileName path(options.startup);
-            if (!path.FileExists() && !wxFileName::DirExists(path.GetFullPath())) {
+            if (wxFileName::DirExists(path.GetFullPath())) {
+                // Original startup opens its file chooser in a directory target.
+                OpenFileDialog dialog(frame, options.scheme.value_or(SyntaxLanguage::PlainText), {},
+                                      settings_->values.favoriteSchemes, settings_->values.schemeExtensions);
+                dialog.SetDirectory(path.GetFullPath());
+                if (const auto chosen = dialog.Choose())
+                    options.startup = *chosen;
+                else
+                    skipLoad = true;
+            } else if (!path.FileExists()) {
                 const int choice = wxMessageBox(
                     // TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.
                     wxString::Format(_("\"%s\" not found.\nWould you like to create this file?"), path.GetFullPath()),

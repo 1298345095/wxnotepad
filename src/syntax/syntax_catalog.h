@@ -101,6 +101,7 @@ inline constexpr uint32_t CppPreprocessor = 1U << 8U;
 inline constexpr uint32_t CharacterPrefix = 1U << 9U;
 inline constexpr uint32_t EscapePunctuation = 1U << 10U;
 inline constexpr uint32_t PlainTextFile = 1U << 11U;
+inline constexpr uint32_t CodePretty = 1U << 12U;
 } // namespace SyntaxLexerAttribute
 
 // Pinned EditLexer.h::EDITLEXER generated defaults, shared by editing consumers.

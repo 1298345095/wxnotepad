@@ -882,6 +882,11 @@ msgstr "&Visual Studio"
 msgid "&Web Source Code"
 msgstr "網頁原始碼(&W)"
 
+#. TRANSLATORS: Original Tools/Web Tools submenu.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Tools"
+msgstr "Web開發(&W)"
+
 # Original Notepad4 zh-Hant: IDD_FIND/IDC_WILDCARDSEARCH; adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
@@ -925,6 +930,17 @@ msgstr "縮放(&Z)"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr "* 符合零個或多個字元；? 符合一個字元。"
+
+#. TRANSLATORS: Multi-file help; keep + file1 file2 ..., [Settings2] MultiFileArg=1, - and -- literal.
+#: src/app/main.cpp
+msgid ""
+"+ file1 file2 ...  Open up to 32 files (additional paths are ignored).\n"
+"[Settings2] MultiFileArg=1 uses this mode by default; - or -- forces one path.\n"
+"Multiple files always open in separate new windows; preceding options apply to every file."
+msgstr ""
+"+ file1 file2 ...  開啟最多 32 個檔案（忽略超出數量的路徑）。\n"
+"[Settings2] MultiFileArg=1 預設使用此模式；- 或 -- 強制將後續參數視為單一路徑。\n"
+"多個檔案一律分別在新視窗中開啟；檔案清單前的選項套用至每個檔案。"
 
 #. TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
 #: src/app/main.cpp
@@ -1001,6 +1017,15 @@ msgstr "ASS — 啟用對稱字元交換(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Action on &Selection"
 msgstr "對選取內容執行動作(&S)"
+
+msgid "&Calculate Expression"
+msgstr "計算運算式(&C)"
+
+msgid "Unexpected end of expression."
+msgstr "運算式意外結束。"
+
+msgid "Evaluate the selected JavaScript expression in Math scope."
+msgstr "在 Math 範圍內計算選取的 JavaScript 運算式。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
@@ -1329,6 +1354,14 @@ msgstr[0] "CR：%llu 行。"
 #: src/syntax/syntax_catalog.cpp
 msgid "CSS Style Sheet"
 msgstr "CSS 樣式表"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Compress"
+msgstr "CSS/JS/JSON 壓縮(&C)"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Pretty"
+msgstr "CSS/JS/JSON 美化(&P)"
 
 #. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp

@@ -10,3 +10,10 @@
 The original archive also retains all source notices. Other transitive vcpkg
 dependency notices remain under the chosen installation's `share/<port>/copyright`.
 The application package also retains the dependency notices.
+
+Linux Calculate Expression statically links QuickJS-ng 0.16.2 from the pinned
+vcpkg baseline (MIT and Unicode-3.0). Its complete notices and package/SPDX records
+are in the selected SDK's `share/quickjs-ng/`; the application bundler retains the
+copyright notice under `licenses/vcpkg/quickjs-ng/`. The engine's optional libc
+I/O modules and command-line programs are not application runtime dependencies.
+Windows uses the original system ActiveScript/propsys components.
