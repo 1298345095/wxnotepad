@@ -407,7 +407,7 @@ def exercise(app, dialogs, favorite_directory, target, other, evidence):
 
     def recent_paths():
         app.begin("menu", str(menu_id(app.state, "Recent (History)...")))
-        window = dialogs.wait(app.process, "Recent Files")
+        window = dialogs.wait(app.process, "Recent Files", message=app.state["document_path"])
         paths = tuple(text for text in dialogs.texts(window) if str(target.parent) in text)
         assert any(app.state["document_path"] in text for text in paths), paths
         cancel_dialog(dialogs, window)
