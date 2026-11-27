@@ -57,6 +57,7 @@ def main():
     user.GetClassNameW.argtypes = [w.HWND, w.LPWSTR, c.c_int]
     user.GetWindowTextW.argtypes = [w.HWND, w.LPWSTR, c.c_int]
     user.GetWindowThreadProcessId.argtypes = [w.HWND, c.POINTER(w.DWORD)]
+    user.GetDpiForWindow.argtypes = [w.HWND]
     user.GetWindowPlacement.argtypes = [w.HWND, c.POINTER(Placement)]
     user.GetWindowRect.argtypes = [w.HWND, c.POINTER(w.RECT)]
     user.MonitorFromWindow.argtypes = [w.HWND, w.DWORD]
@@ -193,6 +194,7 @@ def main():
             executable_sha256=digest,
             copied=copied,
             fullscreen_copied=fullscreen_copied,
+            dpi=user.GetDpiForWindow(frame),
             monitor=rect(monitor.screen),
             work=rect(monitor.work),
             records=records,
