@@ -561,11 +561,26 @@ def bundle(cmake_dir, executable, output_root, *, report_dir=None):
         target = destination / "licenses/vcpkg" / notice.parent.name
         target.mkdir(parents=True, exist_ok=True)
         shutil.copy2(notice, target / "copyright")
+        if not windows and notice.parent.name == "quickjs-ng":
+            # The statically linked expression engine carries its actual SDK
+            # package/source records as well as both complete license notices.
+            for record in ("vcpkg.spdx.json", "vcpkg-spdx-resources.json"):
+                shutil.copy2(notice.parent / record, target / record)
     source = json.loads(source_record.read_text(encoding="utf-8"))
     source["application_commit"] = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=source_root, text=True
     ).strip()
     source["triplet"] = triplet
+    if not windows and cache.get("qjs_DIR"):
+        engine_record = destination / "licenses/vcpkg/quickjs-ng/vcpkg.spdx.json"
+        engine = json.loads(engine_record.read_text(encoding="utf-8"))["packages"][0]
+        source["expression_engine"] = {
+            "name": engine["name"],
+            "version": engine["versionInfo"],
+            "license": engine["licenseConcluded"],
+            "linkage": "static",
+            "package_record_sha256": hashlib.sha256(engine_record.read_bytes()).hexdigest(),
+        }
     source["executable_sha256"] = hashlib.sha256((destination / executable.name).read_bytes()).hexdigest()
     if not windows:
         source["unstripped_executable_sha256"] = hashlib.sha256(executable.read_bytes()).hexdigest()

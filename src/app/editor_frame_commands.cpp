@@ -118,6 +118,15 @@ wxMenu* EditorFrame::CreateToolsMenu() {
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
     }
+    selection->AppendSeparator();
+    const int calculate = wxWindow::NewControlId();
+    selection->Append(calculate, _("&Calculate Expression"),
+                      _("Evaluate the selected JavaScript expression in Math scope."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { CalculateExpression(); }, calculate);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        calculate);
     // TRANSLATORS: Original Action on Selection submenu; actions use selected or caret-local text.
     tools->AppendSubMenu(selection, _("Action on &Selection"));
     auto* base64 = new wxMenu;
@@ -143,6 +152,10 @@ wxMenu* EditorFrame::CreateToolsMenu() {
             id);
     }
     tools->AppendSubMenu(base64, _("&Base64"));
+    auto* web = new wxMenu;
+    AppendCodeFormatting(web);
+    // TRANSLATORS: Original Tools/Web Tools submenu.
+    tools->AppendSubMenu(web, _("&Web Tools"));
     return tools;
 }
 

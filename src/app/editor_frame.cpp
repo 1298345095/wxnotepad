@@ -26,6 +26,7 @@
 #include <wx/fontutil.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
+#include <X11/Xatom.h>
 #undef None
 #endif
 #include <wx/msgdlg.h>
@@ -33,6 +34,7 @@
 #include <wx/filename.h>
 #include <wx/translation.h>
 #include <array>
+#include <algorithm>
 #ifdef __WXMSW__
 #include <wx/msw/wrapwin.h>
 #endif
@@ -68,12 +70,13 @@ struct EditorFrame::FullScreenPlacement {
 };
 #endif
 
-EditorFrame::EditorFrame(SettingsStore* settings)
+EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTopOverride)
     : wxFrame(nullptr, wxID_ANY, wxString::Format(_("%s - wxnotepad"), _("Untitled")), wxDefaultPosition,
               wxSize(900, 600)),
       editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
-      indentation_(settings ? settings->values : defaults_), wordWrap_(*editor_),
+      alwaysOnTopOverride_(alwaysOnTopOverride), indentation_(settings ? settings->values : defaults_),
+      wordWrap_(*editor_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
                                                   settings->values.noHtmlGuess,
@@ -155,6 +158,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     document_.New();
     indentation_.Apply(*editor_, document_.Language());
     CreateMenus();
+    ApplyAlwaysOnTop();
     CreateDefaultToolbar();
     SetIcons(ApplicationIcons());
     CreatePositionStatus();
@@ -255,6 +259,60 @@ bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     return wxFrame::MSWTranslateMessage(message);
 }
 #endif
+
+bool EditorFrame::SupportsAlwaysOnTop() const {
+#ifdef __WXGTK__
+    auto* widget = GTK_WIDGET(GetHandle());
+    return GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget)) &&
+           gdk_x11_screen_supports_net_wm_hint(gtk_widget_get_screen(widget),
+                                               gdk_atom_intern_static_string("_NET_WM_STATE_ABOVE"));
+#else
+    return true;
+#endif
+}
+
+bool EditorFrame::AlwaysOnTopActive() const {
+    if (!SupportsAlwaysOnTop()) return false;
+#ifdef __WXMSW__
+    return (::GetWindowLongPtrW(static_cast<HWND>(GetHandle()), GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+#elif defined(__WXGTK__)
+    auto* window = gtk_widget_get_window(GTK_WIDGET(GetHandle()));
+    if (!window) return false;
+    // GDK's cached state can omit ABOVE even after the WM applies it. Read
+    // the actual X11 property so the menu and toolbar reflect native state.
+    auto* display = GDK_WINDOW_XDISPLAY(window);
+    const auto state = XInternAtom(display, "_NET_WM_STATE", False);
+    const auto above = XInternAtom(display, "_NET_WM_STATE_ABOVE", False);
+    Atom type = 0;
+    int format = 0;
+    unsigned long count = 0, remaining = 0;
+    unsigned char* bytes = nullptr;
+    constexpr long MaximumStateAtoms = 64;
+    const int status = XGetWindowProperty(display, GDK_WINDOW_XID(window), state, 0, MaximumStateAtoms, False,
+                                          AnyPropertyType, &type, &format, &count, &remaining, &bytes);
+    const auto* atoms = reinterpret_cast<const Atom*>(bytes);
+    const bool active = status == Success && type == XA_ATOM && format == 32 && bytes &&
+                        std::find(atoms, atoms + count, above) != atoms + count;
+    if (bytes) XFree(bytes);
+    return active;
+#else
+    return (GetWindowStyleFlag() & wxSTAY_ON_TOP) != 0;
+#endif
+}
+
+void EditorFrame::ApplyAlwaysOnTop() {
+    if (!SupportsAlwaysOnTop()) return;
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    SetWindowStyleFlag(alwaysOnTopOverride_.value_or(preferences.alwaysOnTop) ? GetWindowStyleFlag() | wxSTAY_ON_TOP
+                                                                              : GetWindowStyleFlag() & ~wxSTAY_ON_TOP);
+}
+
+void EditorFrame::ToggleAlwaysOnTop() {
+    if (!SupportsAlwaysOnTop()) return;
+    (settings_ ? settings_->values : defaults_).alwaysOnTop = !AlwaysOnTopActive();
+    alwaysOnTopOverride_.reset();
+    ApplyAlwaysOnTop();
+}
 
 bool EditorFrame::FullScreenActive() const {
 #ifdef __WXMSW__

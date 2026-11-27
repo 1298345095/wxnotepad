@@ -832,6 +832,11 @@ msgstr "&Visual Studio"
 msgid "&Web Source Code"
 msgstr "Web 源代码(&W)"
 
+#. TRANSLATORS: Original Tools/Web Tools submenu.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Tools"
+msgstr "Web开发(&W)"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
 msgstr "通配符搜索(&I)"
@@ -895,6 +900,15 @@ msgstr ""
 "-r  重用可用窗口。\n"
 "-rs  无文件时重用窗口；否则仅匹配同一文件。"
 
+#. TRANSLATORS: Original temporary topmost switches; keep -o, -o0, -o- and -oo unchanged.
+#: src/app/main.cpp
+msgid ""
+"-o  Always On Top for this launch.\n"
+"-o0, -o-, -oo  Disable Always On Top for this launch."
+msgstr ""
+"-o  仅本次启动始终置顶。\n"
+"-o0, -o-, -oo  仅本次启动关闭始终置顶。"
+
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
 msgstr "1/3 页(&3)"
@@ -956,6 +970,15 @@ msgstr "对选中内容执行操作(&S)"
 msgid "Add to Favorites"
 msgstr "添加到收藏夹"
 
+msgid "&Calculate Expression"
+msgstr "计算表达式(&C)"
+
+msgid "Unexpected end of expression."
+msgstr "表达式意外结束。"
+
+msgid "Evaluate the selected JavaScript expression in Math scope."
+msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
 msgstr "别名"
@@ -981,6 +1004,17 @@ msgstr "所有文件 (%s)"
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有文件 (*)|*"
+
+#. TRANSLATORS: Original IDM_VIEW_ALWAYSONTOP, first in Window Options.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Always On &Top\tAlt+Shift+T"
+msgstr "始终置顶(&T)\tAlt+Shift+T"
+
+#. TRANSLATORS: This desktop backend has no supported client window-stacking interface.
+#. TRANSLATORS: Explain why the adjacent Always On Top command is disabled.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Always On Top is unavailable on this desktop."
+msgstr "当前桌面不支持窗口置顶。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Anchor"
@@ -1257,6 +1291,14 @@ msgstr[0] "CR: %llu 行。"
 #: src/syntax/syntax_catalog.cpp
 msgid "CSS Style Sheet"
 msgstr "CSS 样式表"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Compress"
+msgstr "CSS/JS/JSON 压缩(&C)"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Pretty"
+msgstr "CSS/JS/JSON 美化(&P)"
 
 #. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp

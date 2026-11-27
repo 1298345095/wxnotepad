@@ -24,7 +24,7 @@ class ExplorerSelections;
 
 class EditorFrame final : public wxFrame {
 public:
-    explicit EditorFrame(SettingsStore* settings = nullptr);
+    explicit EditorFrame(SettingsStore* settings = nullptr, std::optional<bool> alwaysOnTopOverride = std::nullopt);
     ~EditorFrame() override;
 #ifdef __WXMSW__
     bool MSWTranslateMessage(WXMSG* message) override;
@@ -75,9 +75,14 @@ private:
     SettingsStore* settings_;
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
+    std::optional<bool> alwaysOnTopOverride_;
     bool FullScreenActive() const;
     void SetFullScreen(bool active);
     void HandleFullScreenKey(int modifiers);
+    bool SupportsAlwaysOnTop() const;
+    bool AlwaysOnTopActive() const;
+    void ApplyAlwaysOnTop();
+    void ToggleAlwaysOnTop();
     bool HandleEscapeKey(int modifiers);
 #ifdef __WXMSW__
     struct FullScreenPlacement;
@@ -144,10 +149,12 @@ private:
     wxMenu* CreateSearchMenu();
     wxMenu* CreateSettingsMenu();
     wxMenu* CreateToolsMenu();
+    void AppendCodeFormatting(wxMenu* web);
     void AppendDocumentTools(wxMenu* tools);
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();
     void RunSelectionAction(SelectionAction action);
+    void CalculateExpression();
     bool HandleSelectionActionKey(const wxKeyEvent& event);
     bool LaunchSelectionCommand(const wxString& command, const wxString& directory, wxString& error);
     void AppendEditingCommands(wxMenu* edit);

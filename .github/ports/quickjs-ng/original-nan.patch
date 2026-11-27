@@ -1,0 +1,84 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -41,6 +41,9 @@
+ #endif
+ #include <time.h>
+ #include <math.h>
++/* Match the original system engine canonical negative quiet NaN. */
++#undef NAN
++#define NAN (-__builtin_nanf(""))
+ 
+ #include "cutils.h"
+ #include "list.h"
+@@ -46516,7 +46519,7 @@
+     JS_PROP_DOUBLE_DEF("MIN_SAFE_INTEGER", -9007199254740991.0, 0 ), /* ES6 */
+     // workarounds for msvc & djgpp where NAN and INFINITY
+     // are not compile-time expressions
+-    JS_PROP_U2D_DEF("NaN",               0x7FF8ull<<48, 0 ),
++    JS_PROP_U2D_DEF("NaN",               0xFFF8ull<<48, 0 ),
+     JS_PROP_U2D_DEF("NEGATIVE_INFINITY", 0xFFF0ull<<48, 0 ),
+     JS_PROP_U2D_DEF("POSITIVE_INFINITY", 0x7FF0ull<<48, 0 ),
+ };
+@@ -48607,13 +48610,15 @@
+             }
+             i++;
+         }
+-        return js_number(r);
++        return js_number(isnan(r) ? NAN : r);
+     }
+ }
+ 
+ static double js_math_sign(double a)
+ {
+-    if (isnan(a) || a == 0.0)
++    if (isnan(a))
++        return NAN;
++    if (a == 0.0)
+         return a;
+     if (a < 0)
+         return -1;
+@@ -48627,6 +48632,7 @@
+     uint64_t frac_mask, one;
+     unsigned int e, s;
+ 
++    if (isnan(a)) return NAN;
+     u.d = a;
+     e = (u.u64 >> 52) & 0x7ff;
+     if (e < 1023) {
+@@ -48988,12 +48994,12 @@
+    - avoid initializing data with dynamic library entry points.
+    - avoid some overhead if the call can be inlined at compile or link time.
+  */
+-static double js_math_fabs(double d) { return fabs(d); }
++static double js_math_fabs(double d) { return isnan(d) ? NAN : fabs(d); }
+ static double js_math_floor(double d) { return floor(d); }
+ static double js_math_ceil(double d) { return ceil(d); }
+ static double js_math_sqrt(double d) { return sqrt(d); }
+-static double js_math_acos(double d) { return acos(d); }
+-static double js_math_asin(double d) { return asin(d); }
++static double js_math_acos(double d) { return fabs(d) > 1.0 ? NAN : acos(d); }
++static double js_math_asin(double d) { return fabs(d) > 1.0 ? NAN : asin(d); }
+ static double js_math_atan(double d) { return atan(d); }
+ static double js_math_atan2(double a, double b) { return atan2(a, b); }
+ static double js_math_cos(double d) { return cos(d); }
+@@ -49005,9 +49011,9 @@
+ static double js_math_cosh(double d) { return cosh(d); }
+ static double js_math_sinh(double d) { return sinh(d); }
+ static double js_math_tanh(double d) { return tanh(d); }
+-static double js_math_acosh(double d) { return acosh(d); }
++static double js_math_acosh(double d) { return d < 1.0 ? -NAN : acosh(d); }
+ static double js_math_asinh(double d) { return asinh(d); }
+-static double js_math_atanh(double d) { return atanh(d); }
++static double js_math_atanh(double d) { return fabs(d) > 1.0 ? -NAN : atanh(d); }
+ static double js_math_expm1(double d) { return expm1(d); }
+ static double js_math_log1p(double d) { return log1p(d); }
+ static double js_math_log2(double d) { return log2(d); }
+@@ -57226,7 +57232,7 @@
+     // workarounds for msvc & djgpp where NAN and INFINITY
+     // are not compile-time expressions
+     JS_PROP_U2D_DEF("Infinity", 0x7FF0ull<<48, 0 ),
+-    JS_PROP_U2D_DEF("NaN", 0x7FF8ull<<48, 0 ),
++    JS_PROP_U2D_DEF("NaN", 0xFFF8ull<<48, 0 ),
+     JS_PROP_UNDEFINED_DEF("undefined", 0 ),
+     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),
+     JS_CFUNC_DEF("eval", 1, js_global_eval ),

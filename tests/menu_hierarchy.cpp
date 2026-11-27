@@ -160,7 +160,11 @@ void CheckMenu(EditorFrame* frame) {
     auto* appearance = Submenu(bar->GetMenu(5), "Appearance");
     // Pinned Notepad4.rc: Window Options precedes Window Title Display, and
     // Single File Instance starts the following group before File Change Notification.
-    Order(Submenu(bar->GetMenu(5), "Window Options"), {"Reuse Window"});
+    auto* windowOptions = Submenu(bar->GetMenu(5), "Window Options");
+    if (windowOptions->FindItemByPosition(0)->IsEnabled())
+        Order(windowOptions, {"Always On Top", "Reuse Window"});
+    else
+        Order(windowOptions, {"Always On Top", "Always On Top is unavailable on this desktop.", "Reuse Window"});
     Order(Submenu(bar->GetMenu(5), "Window Title Display"),
           {"File Name Only", "File Name and Directory", "Full Path Name", "Text Excerpt"});
     // Pinned Notepad4.rc: customize and automatic scaling follow Show Toolbar.
