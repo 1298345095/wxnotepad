@@ -767,6 +767,13 @@ With only `--cmake-dir`, the executable defaults to that directory's native
 
 To exercise the exact CI test wrapper against an existing native build:
 
+The main-window position display fixture uses `xrandr` from Ubuntu's
+`x11-xserver-utils` test package to create owned XRandR monitors inside its
+authenticated Xvfb session. It checks actual non-primary outer coordinates,
+resolution groups, right/left default positioning and removed-monitor history.
+The monitors are removed before the private session exits. These are GUI test
+dependencies and do not enter the application SDK or runtime output.
+
 The Escape minimize/restore fixture requires the Ubuntu `openbox` test package
 on X11. Its test wrapper starts an owned Openbox with a private configuration
 inside the existing authenticated Xvfb session and checks native WM readiness

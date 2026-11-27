@@ -31,3 +31,7 @@ add_test(NAME original_window_position_process COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_position_process.py" "$<TARGET_FILE:wxnotepad>"
     --cmake-dir "${CMAKE_BINARY_DIR}")
 set_tests_properties(original_window_position_process PROPERTIES TIMEOUT 90)
+add_test(NAME original_window_position_displays COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_position_displays.py" "$<TARGET_FILE:wxnotepad>")
+set_tests_properties(original_window_position_displays PROPERTIES TIMEOUT 60 SKIP_RETURN_CODE 77)
