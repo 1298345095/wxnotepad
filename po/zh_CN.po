@@ -189,6 +189,10 @@ msgstr "浏览(&B)..."
 msgid "&CSS Style Sheet"
 msgstr "CSS 样式表(&H)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Calculate Expression"
+msgstr "计算表达式(&C)"
+
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
 msgstr "取消(&C)"
@@ -969,15 +973,6 @@ msgstr "对选中内容执行操作(&S)"
 #: src/app/dialogs/file_favorites_dialog.cpp src/app/editor_frame_favorites.cpp
 msgid "Add to Favorites"
 msgstr "添加到收藏夹"
-
-msgid "&Calculate Expression"
-msgstr "计算表达式(&C)"
-
-msgid "Unexpected end of expression."
-msgstr "表达式意外结束。"
-
-msgid "Evaluate the selected JavaScript expression in Math scope."
-msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
@@ -2126,6 +2121,10 @@ msgstr "转义序列"
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Escape with backslash."
 msgstr "使用反斜线转义"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Evaluate the selected JavaScript expression in Math scope."
+msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Example List"
@@ -4438,6 +4437,7 @@ msgid "This operation can't be performed (lines too long)."
 msgstr "此操作不能执行(行太长)。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT.
+#: src/app/calculate_expression.cpp
 #: src/app/dialogs/enclose_selection_dialog.cpp
 #: src/app/dialogs/insert_tag_dialog.cpp
 #: src/app/dialogs/modify_lines_dialog.cpp src/app/editor_frame_commands.cpp
@@ -4609,6 +4609,10 @@ msgstr "撤销重做时记住选区(&U)"
 #: src/app/editor_frame_edit_commands.cpp
 msgid "Unescape HTML/&XML Chars\tAlt+Shift+H"
 msgstr "反转义 HTML/XML 字符(&X)\tAlt+Shift+H"
+
+#: src/app/expression_evaluator_qjs.cpp
+msgid "Unexpected end of expression."
+msgstr "表达式意外结束。"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Unicode"
