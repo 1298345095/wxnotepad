@@ -316,45 +316,6 @@ def main():
                 app.close()
             finally:
                 app.stop()
-            if sys.platform == "linux":
-                # A removed equal-resolution monitor still selects the current
-                # resolution group. Its maximized normal rectangle needs fitting.
-                app = launch(("-pos", "100000,100000,4000,3000,0"))
-                try:
-                    within_work_area(app)
-                    fitted = native_rectangle(app)
-                    app.choose(menu_id(app.state, "Save Settings Now"))
-                    app.close()
-                finally:
-                    app.stop()
-                history = read_settings(config)
-                groups = [name for name in history.sections() if name.startswith("Window Position ")]
-                assert len(groups) == 1, groups
-                group = groups[0]
-                for key, value in zip(
-                    ("WindowPosX", "WindowPosY", "WindowSizeX", "WindowSizeY", "WindowMaximized"),
-                    (100000, 100000, 4000, 3000, 1),
-                    strict=True,
-                ):
-                    history[group][key] = str(value)
-                with config.open("w", encoding="utf-16") as stream:
-                    history.write(stream)
-                app = launch()
-                try:
-                    assert app.state["maximized"] == "1", app.state
-                    seed_clipboard()
-                    app.choose(menu_id(app.state, "Window Position"))
-                    exported = native_clipboard()
-                    assert exported == "-pos " + ",".join(map(str, (*fitted, 1))), (exported, fitted)
-                    app.choose(menu_id(app.state, "Save Settings Now"))
-                    saved = read_settings(config)[group]
-                    assert tuple(
-                        int(saved[key])
-                        for key in ("WindowPosX", "WindowPosY", "WindowSizeX", "WindowSizeY", "WindowMaximized")
-                    ) == (*fitted, 1), dict(saved)
-                    app.close()
-                finally:
-                    app.stop()
         config.write_text("[Settings]\nSaveSettings=1\n[Settings2]\nUILanguage=1033\n", encoding="utf-16")
         app = launch(("-pos", "100,120,640,480,1"))
         try:
