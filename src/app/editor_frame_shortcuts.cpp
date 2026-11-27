@@ -46,7 +46,12 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
     }
     if (HandleTabConversionKey(event) || HandleCaseConversionKey(event)) return true;
     if (event.GetKeyCode() == 'T' && event.AltDown()) {
-        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        if (!event.ControlDown() && !event.MetaDown()) {
+            if (event.ShiftDown())
+                ToggleAlwaysOnTop();
+            else
+                editor_->StripTrailingBlanks();
+        }
         return true;
     }
     return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
@@ -300,6 +305,22 @@ bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int 
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetModifiers() == wxMOD_ALT) {
+        if (event.GetKeyCode() == 'I') {
+            OpenFileFavorites();
+            return true;
+        }
+        if (event.GetKeyCode() == 'K') {
+            AddFileFavorite();
+            return true;
+        }
+#ifndef __WXMSW__
+        if (event.GetKeyCode() == WXK_F9) {
+            ManageFileFavorites();
+            return true;
+        }
+#endif
+    }
     if (event.GetKeyCode() == 'H' && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
         !event.MetaDown()) {
         ShowRecentFiles();

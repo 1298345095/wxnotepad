@@ -25,7 +25,7 @@ class ExplorerSelections;
 
 class EditorFrame final : public wxFrame {
 public:
-    explicit EditorFrame(SettingsStore* settings = nullptr);
+    explicit EditorFrame(SettingsStore* settings = nullptr, std::optional<bool> alwaysOnTopOverride = std::nullopt);
     ~EditorFrame() override;
 #ifdef __WXMSW__
     bool MSWTranslateMessage(WXMSG* message) override;
@@ -87,9 +87,14 @@ private:
     void CopyWindowPosition();
     void AppendWindowPositionCommands(wxMenu* menu);
     void AppendCopyWindowPosition(wxMenu* menu);
+    std::optional<bool> alwaysOnTopOverride_;
     bool FullScreenActive() const;
     void SetFullScreen(bool active);
     void HandleFullScreenKey(int modifiers);
+    bool SupportsAlwaysOnTop() const;
+    bool AlwaysOnTopActive() const;
+    void ApplyAlwaysOnTop();
+    void ToggleAlwaysOnTop();
     bool HandleEscapeKey(int modifiers);
 #ifdef __WXMSW__
     struct FullScreenPlacement;
@@ -144,6 +149,10 @@ private:
     void ShowEditorContextMenu(wxContextMenuEvent& event);
     void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
+    void AppendFileFavorites(wxMenu* file);
+    void AddFileFavorite();
+    void OpenFileFavorites();
+    void ManageFileFavorites();
     void AppendReloadEncodingCommands(wxMenu* reload);
     void AppendEncodingCommands(wxMenu* file);
     wxMenu* CreateEditMenu();

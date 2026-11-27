@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/command_ids.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
 #include <utility>
@@ -186,6 +187,25 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     view->AppendSeparator();
     AppendAppearanceOptions(view);
     auto* windowOptions = new wxMenu;
+    const int alwaysOnTop = std::to_underlying(AppCommand::AlwaysOnTop);
+    // TRANSLATORS: Original IDM_VIEW_ALWAYSONTOP, first in Window Options.
+    auto* topmostItem = windowOptions->AppendCheckItem(alwaysOnTop, _("Always On &Top\tAlt+Shift+T"));
+    if (!SupportsAlwaysOnTop()) {
+        // TRANSLATORS: This desktop backend has no supported client window-stacking interface.
+        topmostItem->SetHelp(_("Always On Top is unavailable on this desktop."));
+        topmostItem->Enable(false);
+        // TRANSLATORS: Explain why the adjacent Always On Top command is disabled.
+        windowOptions->Append(wxID_ANY, _("Always On Top is unavailable on this desktop."))->Enable(false);
+    }
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleAlwaysOnTop(); }, alwaysOnTop);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(SupportsAlwaysOnTop());
+            event.Check(AlwaysOnTopActive());
+        },
+        alwaysOnTop);
+    windowOptions->AppendSeparator();
     AppendWindowPositionCommands(windowOptions);
     const auto appendRouting = [this](wxMenu* menu, const wxString& label, bool reuse) {
         const int id = wxWindow::NewControlId();

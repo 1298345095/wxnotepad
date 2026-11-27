@@ -11,8 +11,10 @@ Windows history and `/pos x,y,width,height,maximized` use normal outer-window
 dimensions in physical pixels and `WINDOWPLACEMENT` workspace coordinates.
 The startup adapter adds the selected monitor's work-area offset when setting
 a screen-coordinate rectangle. It fits the rectangle to an available monitor's
-work area, including when the recorded display has disappeared. Default
-position uses the current monitor's work area with the original fixed 16-pixel
+work area, including when the recorded display has disappeared. Explicit startup
+sizes remain physical pixels across synchronous Windows DPI changes. Startup
+without history uses the primary work area. The default-position command uses
+the current monitor's work area with the original fixed 16-pixel
 inset, the smaller of the available width and height, and right/left toggling.
 Editor client dimensions and DIP font/toolbar dimensions are separate.
 
@@ -30,8 +32,10 @@ and maximized state. Actual normal size and maximized state are retained in
 `[wxnotepad Wayland Window]`; no fabricated coordinates are written, and
 imported original resolution histories and generic coordinates are preserved.
 Clear Position History removes the original resolution groups, Wayland size
-history and the already-shared Run dialog width. A normal later save can create
-a fresh record, as in the original.
+history and the already-shared Run dialog width. A later explicit or exit save
+can create a fresh record, as in the original. The next startup uses no-history
+layout only while no subsequent save has created a record. The user explicitly
+approved this original save lifecycle for #290.
 
 Sticky Window Position first explicitly saves the current normal record, then
 immediately writes `[Settings2] StickyWindowPosition`. Subsequent ordinary and

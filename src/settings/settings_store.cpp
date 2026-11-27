@@ -1,4 +1,5 @@
 #include "settings/settings_store.h"
+#include "settings/environment_expansion.h"
 #include "settings/style_profile_io.h"
 #include <utility>
 #include "search/search_limits.h"
@@ -111,6 +112,8 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     values.saveBeforeRunningTools = document_.ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
     const auto openWith = document_.ReadString("OpenWithDir", {});
     if (!openWith.empty()) values.openWithDirectory = RecentFiles::ExpandPath(openWith);
+    const auto favorites = document_.ReadString("Favorites", {});
+    if (!favorites.empty()) values.favoritesDirectory = RecentFiles::ExpandPath(ExpandWindowsEnvironment(favorites));
     values.runCommandWidthDIP = std::max(0, document_.ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
     auto& print = values.printing;
     print.header = static_cast<PrintHeader>(
@@ -140,6 +143,7 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.showMenu = document_.ReadBool("ShowMenu", defaults.showMenu);
     values.showToolbar = document_.ReadBool("ShowToolbar", defaults.showToolbar);
+    values.alwaysOnTop = document_.ReadBool("AlwaysOnTop", defaults.alwaysOnTop);
     values.autoScaleToolbar = document_.ReadInt("AutoScaleToolbar", defaults.autoScaleToolbar);
     values.toolbarButtons = document_.ReadString("ToolbarButtons", defaults.toolbarButtons);
     values.showStatusbar = document_.ReadBool("ShowStatusbar", defaults.showStatusbar);
@@ -473,6 +477,12 @@ bool SettingsStore::Save(bool explicitSave) {
                                                               RecentFiles::PathKind::Directory),
                               {});
         document_.WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
+        document_.WriteString("Favorites",
+                              values.favoritesDirectory.empty()
+                                  ? wxString{}
+                                  : RecentFiles::PortablePath(values.favoritesDirectory, true, values.portableMyDocs,
+                                                              RecentFiles::PathKind::Directory),
+                              {});
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;
         document_.WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
@@ -487,6 +497,7 @@ bool SettingsStore::Save(bool explicitSave) {
                            RecentFiles::MinimumCapacity << 1);
         document_.WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
         document_.WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
+        document_.WriteBool("AlwaysOnTop", values.alwaysOnTop, defaults.alwaysOnTop);
         document_.WriteInt("AutoScaleToolbar", values.autoScaleToolbar, defaults.autoScaleToolbar);
         document_.WriteString("ToolbarButtons", values.toolbarButtons, defaults.toolbarButtons);
         document_.WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);

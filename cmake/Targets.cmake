@@ -129,6 +129,9 @@ target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPA
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/file_favorites.cpp
+    src/app/editor_frame_favorites.cpp
+    src/app/dialogs/file_favorites_dialog.cpp
     src/app/code_format.cpp
     src/app/app_icon.cpp
     src/app/dialogs/auto_completion_settings_dialog.cpp
