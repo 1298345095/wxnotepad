@@ -174,7 +174,10 @@ void EditorFrame::RestoreWindowPosition() {
         const auto& rect = saved->normal;
         ApplyPublicWindowPosition(
             *this, wxString::Format("%d,%d,%d,%d,%d", rect.x, rect.y, rect.width, rect.height, saved->maximized));
-        normalWindowPosition_ = *saved;
+        // Applying the placement caches the fitted normal rectangle before
+        // maximize. Keep it when the saved monitor no longer fits this desktop.
+        normalWindowPosition_.coordinates = saved->coordinates;
+        normalWindowPosition_.screen = saved->screen;
     } else if (normalWindowPosition_.coordinates) {
         // Original InitInstance uses SPI_GETWORKAREA for an absent resolution
         // record, even if the generic monitor hint points to another screen.
