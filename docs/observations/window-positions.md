@@ -38,3 +38,10 @@ immediately writes `[Settings2] StickyWindowPosition`. Subsequent ordinary and
 explicit saves retain that record. Fullscreen and minimized windows use the
 last normal rectangle; maximizing retains normal dimensions and records its
 maximized flag. Closing with exit saving disabled does not replace history.
+
+Fullscreen Copy Window Position intentionally improves the pinned original:
+the original copies its fullscreen rectangle (observed at 150% as
+`/pos -11,-45,2582,1656,0`), while wxnotepad copies the cached ordinary rectangle
+(`/pos 180,210,700,510,0` in the same sequence). The user explicitly approved
+ordinary-position copying as an improvement for #290. Original fullscreen and
+minimized INI persistence still retain the ordinary record.
