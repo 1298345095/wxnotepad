@@ -51,6 +51,41 @@ std::string Copy(EditorFrame& frame) {
     if (!copied) throw TestEditor::Failure("native clipboard receives position text");
     return *copied;
 }
+bool FullScreen(EditorFrame& frame) {
+#ifdef __WXMSW__
+    const auto window = static_cast<HWND>(frame.GetHandle());
+    RECT rect{};
+    MONITORINFO monitor{sizeof(MONITORINFO)};
+    Require(GetWindowRect(window, &rect) &&
+                GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &monitor),
+            "owned native full-screen geometry is available");
+    return !(GetWindowLongW(window, GWL_STYLE) & WS_THICKFRAME) && rect.left <= monitor.rcMonitor.left &&
+           rect.top <= monitor.rcMonitor.top && rect.right >= monitor.rcMonitor.right &&
+           rect.bottom >= monitor.rcMonitor.bottom;
+#else
+    return frame.IsFullScreen();
+#endif
+}
+void MaximizedFullScreenHistory(EditorFrame& frame, const wxString& path, const wxString& section, bool coordinates) {
+    frame.Maximize();
+    Await([&] { return frame.IsMaximized(); }, "owned window is maximized");
+    Choose(frame, "Save Settings Now");
+    SavedRectangle(path, {700, 510}, section);
+    if (coordinates) Require(Copy(frame).ends_with(",700,510,1"), "copy exports normal rectangle with maximized flag");
+    NativeKeys::Shortcut(&frame, WXK_F11, false);
+    Await([&] { return FullScreen(frame); }, "owned maximized window enters actual native full-screen mode");
+    Choose(frame, "Save Settings Now");
+    SavedRectangle(path, {700, 510}, section);
+    if (coordinates)
+        Require(Copy(frame).ends_with(",700,510,1"), "full-screen copy retains prior ordinary maximized flag");
+    NativeKeys::Shortcut(&frame, WXK_ESCAPE, false);
+    Await([&] { return !FullScreen(frame) && frame.IsMaximized(); }, "full-screen exits to the native maximized state");
+    Choose(frame, "Save Settings Now");
+    SavedRectangle(path, {700, 510}, section);
+    IniDocument ini(path);
+    Require(ini.Load() && ini.ReadBool("WindowMaximized", false, section),
+            "maximized full-screen cycle retains its original history flag");
+}
 } // namespace
 class PositionApp final : public wxApp {
 public:
@@ -109,11 +144,7 @@ public:
                     Require(Copy(*frame) == copied, "fullscreen exports the ordinary rectangle");
                     NativeKeys::Shortcut(frame, WXK_ESCAPE, false);
                     Await([&] { return frame->GetSize() == wxSize(700, 510); }, "fullscreen restores normal geometry");
-                    frame->Maximize();
-                    Await([&] { return frame->IsMaximized(); }, "owned window is maximized");
-                    Choose(*frame, "Save Settings Now");
-                    SavedRectangle(path_, {700, 510}, section);
-                    Require(Copy(*frame).ends_with(",700,510,1"), "copy exports normal rectangle with maximized flag");
+                    MaximizedFullScreenHistory(*frame, path_, section, true);
                     NativeKeys::Shortcut(frame, 'P', true, false, true);
                     const auto work = wxDisplay(frame).GetClientArea();
                     const int height = work.height - 32;
@@ -136,6 +167,7 @@ public:
                             "Wayland never saves fabricated global coordinates");
                     Require(ini.ReadInt("RunDlgSizeX", 0, "Window Position 1x1") == 999,
                             "Wayland size saves preserve imported original global-position history");
+                    MaximizedFullScreenHistory(*frame, path_, section, false);
                 }
                 Choose(*frame, "Clear Position History");
                 Require(ini.Load(), "read cleared INI");
