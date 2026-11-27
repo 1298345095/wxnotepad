@@ -62,6 +62,23 @@ def lifecycle(executable, root, ini=None, environment_overrides=None):
                             child.close()
                         finally:
                             child.stop()
+                        previous = {path.name for path in children.iterdir()}
+                        app.begin("menu", str(menu_id(app.state, "Restart")))
+                        assert app.process.wait(timeout=10) == 0, "actual Restart closes its original parent"
+                        child = wait_child(children, previous)
+                        try:
+                            checked(child, identity, supported and preference)
+                            child.close()
+                        finally:
+                            child.stop()
+                        app.stop()
+                        app = Process(
+                            executable,
+                            root / f"after-restart-{count}",
+                            env,
+                            arguments=(() if option is None else ("-" + option,)),
+                        )
+                        checked(app, identity, supported and effective)
                     if supported:
                         app.choose(identity)
                         checked(app, identity, not effective)
