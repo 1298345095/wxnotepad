@@ -8,6 +8,7 @@
 #include <wx/translation.h>
 #include <algorithm>
 #include <utility>
+#include <limits>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
@@ -19,12 +20,10 @@ namespace {
 // Notepad4 89b8b36, InitInstance and SnapToDefaultPos; licenses/Notepad4.txt.
 // Original coordinates and inset are pixels, independent of the editor's DPI.
 constexpr int DefaultInset = 16;
-wxRect DefaultRectangle(const wxRect& work, const wxRect& current = {}) {
+wxRect DefaultRectangle(const wxRect& work) {
     const int height = std::max(1, work.height - 2 * DefaultInset);
     const int width = std::max(1, std::min(work.width - 2 * DefaultInset, height));
-    wxRect target(work.GetRight() + 1 - width - DefaultInset, work.y + DefaultInset, width, height);
-    if (target == current) target.x = work.x + DefaultInset;
-    return target;
+    return {work.GetRight() + 1 - width - DefaultInset, work.y + DefaultInset, width, height};
 }
 wxRect FitRectangle(wxRect normal, const wxRect& work) {
     normal.width = std::min(normal.width, work.width);
@@ -40,6 +39,20 @@ wxDisplay PositionDisplay(const wxPoint& point) {
     MONITORINFO monitor{sizeof(MONITORINFO)};
     if (::GetMonitorInfoW(::MonitorFromPoint(nativePoint, MONITOR_DEFAULTTONEAREST), &monitor))
         display = wxDisplay::GetFromPoint(wxPoint(monitor.rcMonitor.left, monitor.rcMonitor.top));
+#else
+    if (display == wxNOT_FOUND) {
+        double shortestDistance = std::numeric_limits<double>::max();
+        for (unsigned index = 0; index < wxDisplay::GetCount(); ++index) {
+            const auto bounds = wxDisplay(index).GetGeometry();
+            const double dx = static_cast<double>(point.x) - std::clamp(point.x, bounds.x, bounds.GetRight());
+            const double dy = static_cast<double>(point.y) - std::clamp(point.y, bounds.y, bounds.GetBottom());
+            const double distance = dx * dx + dy * dy;
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+                display = static_cast<int>(index);
+            }
+        }
+    }
 #endif
     return wxDisplay(display == wxNOT_FOUND ? 0 : static_cast<unsigned>(display));
 }
@@ -162,7 +175,9 @@ void EditorFrame::DefaultWindowPosition() {
         return;
     }
     const bool restoring = FullScreenActive() || IsMaximized() || IsIconized();
-    const auto target = DefaultRectangle(wxDisplay(this).GetClientArea(), GetRect());
+    const auto work = wxDisplay(this).GetClientArea();
+    auto target = DefaultRectangle(work);
+    if (target == GetRect()) target.x = work.x + DefaultInset;
     if (restoring) pendingDefaultPosition_ = target;
     if (FullScreenActive()) SetFullScreen(false);
     if (IsIconized()) Iconize(false);
@@ -183,7 +198,8 @@ void EditorFrame::ApplyPendingWindowPosition() {
                    (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN | GDK_WINDOW_STATE_ICONIFIED)))
         return;
 #endif
-    const auto target = *std::exchange(pendingDefaultPosition_, std::nullopt);
+    const auto target = pendingDefaultPosition_.value();
+    pendingDefaultPosition_.reset();
     CallAfter([this, target] {
         SetSize(target, wxSIZE_ALLOW_MINUS_ONE);
         CaptureNormalWindowPosition();

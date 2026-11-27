@@ -36,7 +36,7 @@ wxString PositionSection(EditorFrame& frame) {
     const auto size = wxDisplay(&frame).GetGeometry().GetSize();
     return wxString::Format("Window Position %dx%d", size.x, size.y);
 }
-void SavedRectangle(const wxString& path, const wxString& section, wxSize size) {
+void SavedRectangle(const wxString& path, wxSize size, const wxString& section) {
     IniDocument ini(path);
     Require(ini.Load(), "read actual position INI");
     Require(ini.ReadInt("WindowSizeX", 0, section) == size.x && ini.ReadInt("WindowSizeY", 0, section) == size.y,
@@ -46,7 +46,7 @@ void SavedRectangle(const wxString& path, const wxString& section, wxSize size) 
 std::string Copy(EditorFrame& frame) {
     NativeKeys::Shortcut(&frame, 'K', true, false, true);
     const auto copied = EditorClipboard::ReadPlainText(frame);
-    Require(copied.has_value(), "native clipboard receives position text");
+    if (!copied) throw TestEditor::Failure("native clipboard receives position text");
     return *copied;
 }
 } // namespace
@@ -72,17 +72,17 @@ public:
                 IniDocument ini(path_);
                 Require(ini.Load() && ini.ReadBool("StickyWindowPosition", false, "Settings2"),
                         "sticky command persists its original flag immediately");
-                SavedRectangle(path_, section, {640, 480});
+                SavedRectangle(path_, {640, 480}, section);
                 const int clear = frame->GetMenuBar()->FindMenuItem("Settings", "Clear Position History");
                 Require(clear != wxNOT_FOUND && !frame->GetMenuBar()->IsEnabled(clear),
                         "history clearing is disabled while sticky is active");
                 frame->SetSize(160, 180, 700, 510);
                 Await([&] { return frame->GetSize() == wxSize(700, 510); }, "moved rectangle is presented");
                 Choose(*frame, "Save Settings Now");
-                SavedRectangle(path_, section, {640, 480});
+                SavedRectangle(path_, {640, 480}, section);
                 Choose(*frame, "Sticky Window Position");
                 Choose(*frame, "Save Settings Now");
-                SavedRectangle(path_, section, {700, 510});
+                SavedRectangle(path_, {700, 510}, section);
                 TestEditor::Append(frame, "document survives position commands");
                 const auto text = TestEditor::Text(frame);
                 const int copy = frame->GetMenuBar()->FindMenuItem("Edit", "Window Position");
@@ -98,19 +98,19 @@ public:
                     frame->Iconize();
                     Await([&] { return frame->IsIconized(); }, "owned window is minimized");
                     Choose(*frame, "Save Settings Now");
-                    SavedRectangle(path_, section, {700, 510});
+                    SavedRectangle(path_, {700, 510}, section);
                     frame->Iconize(false);
                     Await([&] { return !frame->IsIconized(); }, "owned window is restored");
                     NativeKeys::Shortcut(frame, WXK_F11, false);
                     Choose(*frame, "Save Settings Now");
-                    SavedRectangle(path_, section, {700, 510});
+                    SavedRectangle(path_, {700, 510}, section);
                     Require(Copy(*frame) == copied, "fullscreen exports the ordinary rectangle");
                     NativeKeys::Shortcut(frame, WXK_ESCAPE, false);
                     Await([&] { return frame->GetSize() == wxSize(700, 510); }, "fullscreen restores normal geometry");
                     frame->Maximize();
                     Await([&] { return frame->IsMaximized(); }, "owned window is maximized");
                     Choose(*frame, "Save Settings Now");
-                    SavedRectangle(path_, section, {700, 510});
+                    SavedRectangle(path_, {700, 510}, section);
                     Require(Copy(*frame).ends_with(",700,510,1"), "copy exports normal rectangle with maximized flag");
                     NativeKeys::Shortcut(frame, 'P', true, false, true);
                     const auto work = wxDisplay(frame).GetClientArea();
