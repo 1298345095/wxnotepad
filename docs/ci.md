@@ -211,6 +211,17 @@ UTF-8 rather than the runner's local code page. The private display helper claim
 an input request before delivering its native event so it cannot erase a newer
 request published by an event handler.
 
+Packaged X11 window-routing activation waits for the owned process's unique
+visible native window before minimizing it. wxWidgets' `shown` publication can
+precede Openbox's map/reparent sequence. This setup check has a 15-second
+monotonic deadline; process exit, ambiguous windows and native query errors still
+fail. The original minimize, delivery and restoration checks and 120-second case
+guards remain. `native_x11_routing_map_readiness` runs the complete activation
+case while its own private Openbox holds the initial map through startup
+publication, then resumes it after 100 ms. This X11-only regression skips on
+Wayland. Managed routing evidence now lives under `Testing/Temporary/`, which the
+existing artifact upload retains. See [the diagnosis](observations/x11-routing-map-readiness.md).
+
 Native polling intervals use `tests/steady_stopwatch.h`, backed by
 `std::chrono::steady_clock`. UTC corrections must not shorten key-delivery or
 dialog waits. During the coverage investigation WSL's UTC clock moved about

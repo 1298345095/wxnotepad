@@ -700,7 +700,7 @@ foreach(language en zh_CN zh_TW)
         add_test(NAME packaged_window_routing_${scenario}_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-            --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-${scenario}-${language}"
+            --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-${scenario}-${language}"
             --scenario ${scenario} --language ${language})
         set_tests_properties(packaged_window_routing_${scenario}_${language} PROPERTIES TIMEOUT 120)
     endforeach()
@@ -740,4 +740,10 @@ if(UNIX)
         --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-policy-disconnect"
         --scenario policy-disconnect)
     set_tests_properties(packaged_window_routing_policy_disconnect PROPERTIES TIMEOUT 120)
+    add_test(NAME native_x11_routing_map_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_readiness.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}"
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-map-readiness")
+    set_tests_properties(native_x11_routing_map_readiness PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
 endif()

@@ -25,6 +25,7 @@ SAVE_FRAGMENTS = {'en': 'before opening another file?', 'zh_CN': '打开另一�
 ERROR_TITLES = {'en': 'Could not save file', 'zh_CN': '无法保存文件', 'zh_TW': '無法儲存檔案'}
 ERROR_FRAGMENTS = {'en': 'Choose a file as the save destination.', 'zh_CN': '选择保存目标文件。',
                    'zh_TW': '選擇儲存目的檔案。'}
+X11_MAP_TIMEOUT_SECONDS = 15
 
 
 def answer_save(fixture, app, code, choice, window):
@@ -761,6 +762,25 @@ def wait_for_close_withdrawal(app, endpoint):
     raise AssertionError(('Close did not consume its command and withdraw its owned endpoint', str(endpoint), state))
 
 
+def wait_for_x11_window(process):
+    deadline = time.monotonic() + X11_MAP_TIMEOUT_SECONDS
+    while (remaining := deadline - time.monotonic()) > 0:
+        status = process.poll()
+        assert status is None, ('Application exited before native X11 mapping', process.pid, status)
+        query = subprocess.run(['xdotool', 'search', '--onlyvisible', '--pid', str(process.pid)],
+                               capture_output=True, text=True, timeout=remaining)
+        if query.returncode == 0:
+            windows = query.stdout.splitlines()
+            assert len(windows) == 1, windows
+            return windows[0]
+        # xdotool reports an ordinary no-match with exit 1 and no output. Other
+        # query failures must fail immediately rather than become map timeouts.
+        assert query.returncode == 1 and not query.stdout and not query.stderr, (
+            'Native X11 query failed', query.returncode, query.stdout, query.stderr)
+        time.sleep(min(.01, max(0, deadline - time.monotonic())))
+    raise AssertionError(f'Owned X11 window did not map within {X11_MAP_TIMEOUT_SECONDS}s: pid={process.pid}')
+
+
 def activation(fixture):
     code = fixture.args.language
     target = fixture.working / 'activation.txt'
@@ -791,10 +811,9 @@ def activation(fixture):
             assert user.GetForegroundWindow() == caller
             app.state = wait_state(app.folder, app.process, lambda state: state['shown'] == '0')
         elif app.state['backend'] == 'GdkX11Display':
-            windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid',
-                                                str(app.process.pid)], text=True).splitlines()
-            assert len(windows) == 1
-            subprocess.run(['xdotool', 'windowminimize', windows[0]], check=True)
+            # wx's shown flag can precede the WM's map/reparent sequence.
+            window = wait_for_x11_window(app.process)
+            subprocess.run(['xdotool', 'windowminimize', window], check=True)
             app.state = wait_state(app.folder, app.process, lambda state: state['shown'] == '0')
         else:
             # Minimize through the existing public Escape preference/gesture.
