@@ -20,6 +20,8 @@ the `JavaScript` ProgID fallback. It invokes object `toString()` and formats the
 VARIANT through system `propsys!VariantToString`. Native ANSI documents retain
 the existing original native-code-page conversion boundary. File encodings,
 BOMs, EOL metadata and document save points use the existing document commands.
+The original-supported primitive `Symbol("x")` result converts to `Symbol(x)`
+on both engines through its explicit `toString()` method.
 
 Linux statically links QuickJS-ng 0.16.2, overlay port revision 1, without
 its optional I/O modules or command-line programs. The CMake target must be a

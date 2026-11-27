@@ -7,6 +7,8 @@ struct CalculationReference {
     bool error;
 };
 inline constexpr CalculationReference CalculationReferences[] = {
+    // Independent original ActiveScript/propsys primitive Symbol conversion.
+    {R"calc(Symbol("x"))calc", " Symbol(x)", false},
     // Independent original value/sign samples through math, variables and objects.
     {R"calc(-NaN)calc", " 1.#QNAN", false},
     {R"calc(sqrt(-1))calc", " -1.#IND", false},

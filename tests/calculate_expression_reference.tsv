@@ -75,3 +75,4 @@
 "min(-NaN,1)"	" -1.#IND"
 "max(-NaN,1)"	" -1.#IND"
 "sign(-NaN)"	" -1.#IND"
+"Symbol(\"x\")"	" Symbol(x)"

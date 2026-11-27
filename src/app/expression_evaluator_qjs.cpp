@@ -158,7 +158,8 @@ ExpressionEvaluation EvaluateExpression(const wxString& expression, size_t resul
     ScriptValue value{context.get(),
                       JS_Eval(context.get(), source.data(), source.size(), "<selection>", JS_EVAL_TYPE_GLOBAL)};
     if (JS_IsException(value.value)) return ScriptError(context.get(), selectedSource);
-    if (JS_IsObject(value.value)) {
+    // ActiveScript exposes Symbol results through object toString as well.
+    if (JS_IsObject(value.value) || JS_IsSymbol(value.value)) {
         ScriptValue method{context.get(), JS_GetPropertyStr(context.get(), value.value, "toString")};
         if (JS_IsException(method.value)) return ScriptError(context.get(), selectedSource);
         if (!JS_IsFunction(context.get(), method.value)) return {};
