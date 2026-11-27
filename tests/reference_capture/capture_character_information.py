@@ -6,15 +6,15 @@ The bounded batch publishes Character Info for six characters and three encoding
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, CALLBACK
+from original_host import CALLBACK, Original
 
 
 def main():

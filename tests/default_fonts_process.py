@@ -1,12 +1,12 @@
 """Verify native default font changes across independent portable application launches."""
 
-from pathlib import Path
 import configparser
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-fonts-") as temporary:

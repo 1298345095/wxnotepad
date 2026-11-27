@@ -1,15 +1,15 @@
 """Capture pinned Notepad4 search commands on a private Windows desktop."""
 
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
 import threading
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
 from original_host import CALLBACK, Original, user
 

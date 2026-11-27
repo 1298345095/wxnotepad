@@ -1,14 +1,15 @@
 """Capture number-conversion literals from the pinned original Windows process."""
 
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+from ctypes import wintypes as w
+from pathlib import Path
+
 from original_windows import find_editors, find_frames
 
 

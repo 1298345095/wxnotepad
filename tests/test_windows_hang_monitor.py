@@ -1,10 +1,8 @@
 """Verify the Character Info parent monitor with real Windows processes and dumps."""
 
 import ctypes
-from ctypes import wintypes
 import json
 import os
-from pathlib import Path
 import shutil
 import struct
 import subprocess
@@ -12,6 +10,8 @@ import sys
 import tempfile
 import time
 import unittest
+from ctypes import wintypes
+from pathlib import Path
 
 MONITOR = Path(__file__).with_name("windows_hang_monitor.py")
 PROCESS_SYNCHRONIZE = 0x00100000

@@ -4,11 +4,11 @@ import argparse
 import codecs
 import hashlib
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
-from scheme_data import read_pinned, provenance, original_scheme
 import update_schemes
+from scheme_data import original_scheme, provenance, read_pinned
 
 ROOT = Path(__file__).resolve().parents[1]
 

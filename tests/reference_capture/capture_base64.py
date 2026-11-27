@@ -5,16 +5,17 @@ No clipboard or foreground input is used.
 """
 
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-import threading
-import time
-from pathlib import Path
 import shutil
 import sys
-from original_host import Original, user, CALLBACK
+import threading
+import time
+from ctypes import wintypes as w
+from pathlib import Path
+
+from original_host import CALLBACK, Original, user
 
 exe, output = map(Path, sys.argv[1:3])
 output.mkdir(parents=True, exist_ok=True)

@@ -3,8 +3,8 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 from capture_printing import Native, save_pdf
 

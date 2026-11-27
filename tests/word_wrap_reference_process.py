@@ -1,11 +1,11 @@
 """Compare native dialog results with independently captured pinned-original rows."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 reference = Path(sys.argv[2]).resolve()

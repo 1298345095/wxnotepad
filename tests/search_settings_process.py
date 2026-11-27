@@ -1,11 +1,11 @@
 """Check search settings with real native controls in independent processes."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-find-settings-") as name:

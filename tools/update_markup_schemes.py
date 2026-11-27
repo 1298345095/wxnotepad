@@ -2,7 +2,6 @@
 
 import argparse
 from pathlib import Path
-import re
 
 from scheme_data import generate_scheme, provenance, read_pinned, style_initializers
 

@@ -1,9 +1,9 @@
 """Exercise the production diagnostic boundary with real stdio and allocation failures."""
 
 import argparse
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 
 def main():

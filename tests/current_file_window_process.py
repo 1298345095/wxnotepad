@@ -1,21 +1,19 @@
 """Open the current disk document through the packaged native Tools command."""
 
 import argparse
-from contextlib import ExitStack
 import ctypes
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
 import time
+from contextlib import ExitStack
+from pathlib import Path
 
-from localization_process import Acceptance, PREFERENCE, TEXT
-from localization_package import menu_id, menus, wait_child
 from localization_native import plain
-from resource_process import wait_state
-
+from localization_package import menu_id, menus, wait_child
+from localization_process import PREFERENCE, TEXT, Acceptance
 
 CAPTIONS = {
     "en": "Open &in New Window\tAlt+0",

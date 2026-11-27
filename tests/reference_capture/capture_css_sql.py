@@ -2,11 +2,11 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import shutil
+from ctypes import wintypes as w
 from enum import IntEnum
+from pathlib import Path
 
 import original_host as host
 

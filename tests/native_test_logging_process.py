@@ -1,10 +1,10 @@
 """A busy clipboard must fail the native test through stderr, without a log dialog."""
 
 import argparse
-from pathlib import Path
 import subprocess
 import tempfile
 import time
+from pathlib import Path
 
 PEER_TIMEOUT_SECONDS = 5
 TEST_TIMEOUT_SECONDS = 10

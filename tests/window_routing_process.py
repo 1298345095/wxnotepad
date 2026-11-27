@@ -1,20 +1,19 @@
 """Original window routing through settings menus and real packaged processes."""
 
 import argparse
-from pathlib import Path
-import tempfile
-from contextlib import ExitStack
-import subprocess
-import time
-import sys
 import json
 import os
+import subprocess
+import sys
+import tempfile
+import time
+from contextlib import ExitStack
+from pathlib import Path
 
-from localization_process import Acceptance, PREFERENCE, TEXT
-from localization_package import menu_id, menus, read_settings, ROOT, Process, Child, wait_child, settings
-from startup_options_process import pending_start, finish_start
+from localization_package import ROOT, Child, Process, menu_id, menus, read_settings, settings, wait_child
+from localization_process import PREFERENCE, TEXT, Acceptance
 from resource_process import wait_state
-
+from startup_options_process import finish_start, pending_start
 
 CAPTIONS = {
     "en": ("Reuse Window", "Single File Instance", "Window O&ptions"),
@@ -1062,7 +1061,8 @@ def windows_session(fixture, app, target, code):
     from ctypes import wintypes
 
     sys.path.insert(0, str(ROOT / "tests/reference_capture"))
-    from private_desktop import Process as DesktopProcess, kernel
+    from private_desktop import Process as DesktopProcess
+    from private_desktop import kernel
 
     user = ctypes.WinDLL("user32", use_last_error=True)
     user.CreateDesktopW.argtypes = [

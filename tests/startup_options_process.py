@@ -1,20 +1,20 @@
 """Exercise ordinary command-line opening through the real packaged application."""
 
 import argparse
-from contextlib import contextmanager
 import ctypes
 import json
 import os
-from pathlib import Path
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
 import tempfile
+from contextlib import contextmanager
+from pathlib import Path
 
-from localization_package import Process, bundle_application, environment, menu_id, settings
 from localization_native import Dialogs
-from resource_process import wait_state
+from localization_package import Process, bundle_application, environment, menu_id, settings
 from observed_shutdown_process import obstruct_publication
+from resource_process import wait_state
 
 
 def summary(state):

@@ -1,17 +1,17 @@
 """Exercise session restoration at the native API boundary without changing the host."""
 
 import ctypes
-from ctypes import wintypes
 import json
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from ctypes import wintypes
+from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / ".github/scripts"))
-import windows_foreground
+import windows_foreground  # noqa: E402 -- The CI helper path must be initialized first.
 
 
 class ForegroundAPI:

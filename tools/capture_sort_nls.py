@@ -5,10 +5,10 @@ sorting independent of the host's different Unicode collation data.
 """
 
 import ctypes
-from ctypes import wintypes
 import platform
 import struct
 import zlib
+from ctypes import wintypes
 from pathlib import Path
 
 

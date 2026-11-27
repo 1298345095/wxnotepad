@@ -1,12 +1,12 @@
 """Run a command on an authenticated Xvfb display allocated by the X server."""
 
-from contextlib import contextmanager, ExitStack, nullcontext
 import os
-from pathlib import Path
 import secrets
 import subprocess
 import sys
 import tempfile
+from contextlib import ExitStack, contextmanager, nullcontext
+from pathlib import Path
 
 SCREEN_GEOMETRY = "1600x1000x24"
 PRIMARY_DISPLAY = 0

@@ -2,8 +2,8 @@
 
 import argparse
 import ctypes
-from ctypes import wintypes
 import json
+from ctypes import wintypes
 from pathlib import Path
 
 from localization_layout import screenshot_windows

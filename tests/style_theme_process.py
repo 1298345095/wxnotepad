@@ -1,20 +1,19 @@
 """Observe theme/profile lifecycle in the real relocated packaged application."""
 
 import argparse
-from contextlib import contextmanager
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import stat
 import sys
 import tempfile
+from contextlib import contextmanager
+from pathlib import Path
 
-from localization_process import Acceptance
-from localization_package import menu_id, menus, read_settings
 from localization_native import Dialogs
-
+from localization_package import menu_id, menus, read_settings
+from localization_process import Acceptance
 
 CAPTIONS = {
     "en": ("Default", "Dark"),

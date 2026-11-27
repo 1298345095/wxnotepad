@@ -3,13 +3,13 @@
 import argparse
 import difflib
 import os
-from pathlib import Path
 import sys
 import tempfile
+from pathlib import Path
 
-from localization_package import Process, bundle_application, menu_id, menus
-from localization_native import Dialogs, plain
 from localization_layout import capture_and_check, owned_topmost
+from localization_native import Dialogs, plain
+from localization_package import Process, bundle_application, menu_id, menus
 from resource_process import native_edit, wait_state
 
 LANGUAGES = [

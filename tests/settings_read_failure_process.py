@@ -1,12 +1,11 @@
 """Keep independent disk bytes while real settings writers cannot read an owned INI."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-unreadable-settings-") as name:

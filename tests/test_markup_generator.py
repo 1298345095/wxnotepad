@@ -1,11 +1,11 @@
 """Worked source examples for reproducible grouped and offset markup style data."""
 
 import importlib.util
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]

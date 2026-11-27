@@ -1,8 +1,8 @@
 """Capture literal Sort Lines fixtures through the original Windows APIs."""
 
 import ctypes
-from functools import cmp_to_key
 import json
+from functools import cmp_to_key
 from pathlib import Path
 
 

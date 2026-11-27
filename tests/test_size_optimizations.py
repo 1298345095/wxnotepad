@@ -1,13 +1,13 @@
 """Build and run small native targets through the production size policy."""
 
 import importlib.util
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import textwrap
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("ci_size", ROOT / ".github/scripts/ci.py")

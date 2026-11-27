@@ -1,12 +1,12 @@
 """Observe opt-in diagnostics through independent actual application processes."""
 
 import argparse
-from contextlib import redirect_stderr
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import time
+from contextlib import redirect_stderr
+from pathlib import Path
 
 from settings_process import Application
 

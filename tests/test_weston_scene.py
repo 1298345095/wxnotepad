@@ -1,8 +1,8 @@
 """Keep surface activation and title-based dialog mapping on the same scene rules."""
 
-from pathlib import Path
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position

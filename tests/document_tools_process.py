@@ -2,10 +2,10 @@
 
 import argparse
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def main():
@@ -25,7 +25,8 @@ def main():
         )
         working = None
         if args.cmake_dir is not None:
-            from localization_package import bundle_application, environment as package_environment
+            from localization_package import bundle_application
+            from localization_package import environment as package_environment
 
             executable = bundle_application(executable, args.cmake_dir.resolve(), root / "bundle")
             environment.update(package_environment(executable, root / "children"))

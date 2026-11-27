@@ -7,12 +7,11 @@ its legacy build log did not record a source revision. See issue #145 evidence.
 
 import csv
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 reference = Path(sys.argv[2]).resolve()

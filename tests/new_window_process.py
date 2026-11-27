@@ -1,14 +1,15 @@
 """Exercise New Window through real processes on an isolated desktop."""
 
-from english_settings import english_settings
 import argparse
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 from contextlib import ExitStack
+from pathlib import Path
+
+from english_settings import english_settings
 
 
 def main():

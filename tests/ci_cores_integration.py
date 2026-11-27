@@ -1,11 +1,11 @@
 """Exercise crash evidence collection with an actual native process and core."""
 
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 

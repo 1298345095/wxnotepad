@@ -1,13 +1,13 @@
 """Check the DPI mode of the actual editor process, including its child window."""
 
 import ctypes
-from ctypes import wintypes
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
+from ctypes import wintypes
+from pathlib import Path
 
 
 def main():

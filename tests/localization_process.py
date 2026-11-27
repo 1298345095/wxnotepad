@@ -1,27 +1,26 @@
 """Accept localization through the real packaged shown application and native UI."""
 
 import argparse
-from contextlib import ExitStack
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
-import time
+from contextlib import ExitStack
+from pathlib import Path
 
-from localization_native import Dialogs
 from localization_layout import capture_and_check
+from localization_native import Dialogs
 from localization_package import (
     ROOT,
     Process,
     bundle_application,
-    read_cmake_cache,
     environment,
     language_id,
     menu_id,
     menus,
+    read_cmake_cache,
     read_settings,
     settings,
     wait_child,

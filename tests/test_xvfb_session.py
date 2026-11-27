@@ -2,13 +2,13 @@
 
 import json
 import os
-from pathlib import Path
-import signal
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONCURRENT_SESSIONS = 40  # The overlapping X11/Wayland startup that reproduced the failure.

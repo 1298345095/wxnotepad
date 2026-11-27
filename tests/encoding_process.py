@@ -1,12 +1,12 @@
 """Original encoding options reach actual Open and Save across fresh processes."""
 
-from english_settings import english_settings
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
+from english_settings import english_settings
 from resource_process import command, wait_state
 from settings_process import Application
 

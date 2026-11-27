@@ -5,12 +5,12 @@ import ctypes
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 import tarfile
+from pathlib import Path
 
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
 UPSTREAM = "https://github.com/zufuliu/notepad4.git"

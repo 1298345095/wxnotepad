@@ -4,8 +4,8 @@ Generated files retain their upstream copyright and license notices.
 Adapt subclassability and host factories; retain the original monitor/SPI setup.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 core, output = map(Path, sys.argv[1:3])
 source = (core / "scintilla/win32/SurfaceD2D.cxx").read_text(encoding="utf-8")

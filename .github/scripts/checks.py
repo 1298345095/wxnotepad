@@ -1,13 +1,12 @@
 """Run the repository's canonical formatter or native maintained-source analyzer."""
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
-import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 REPORTS = ROOT / ".ci/reports"

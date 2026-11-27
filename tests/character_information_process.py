@@ -1,9 +1,9 @@
 """Exercise the packaged application menus, native feedback and system clipboard."""
 
 import argparse
-from pathlib import Path
 import sys
 import tempfile
+from pathlib import Path
 
 from localization_native import Dialogs
 from localization_package import Process, bundle_application, environment, menus, settings

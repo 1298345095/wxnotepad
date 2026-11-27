@@ -1,12 +1,11 @@
 """Verify selection menu preferences through independent frames and saved INI bytes."""
 
-import os
 import argparse
-from pathlib import Path
+import os
 import shutil
 import subprocess
-import sys
 import tempfile
+from pathlib import Path
 
 
 def exercise(source, executable_folder, configuration, environment):

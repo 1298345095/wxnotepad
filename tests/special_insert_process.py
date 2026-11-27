@@ -1,14 +1,14 @@
 """Verify special insertion in independent application processes and saved files."""
 
-from english_settings import english_settings
 import os
-from pathlib import Path
 import re
 import shutil
 import sys
 import tempfile
 import time
+from pathlib import Path
 
+from english_settings import english_settings
 from resource_process import command, wait_state
 from settings_process import Application
 

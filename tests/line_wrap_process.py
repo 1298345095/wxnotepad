@@ -1,11 +1,11 @@
 """Check the Column Wrap boundary imported from original INI settings."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def main():

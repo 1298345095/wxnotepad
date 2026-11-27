@@ -2,8 +2,8 @@
 
 import argparse
 import json
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 from localization_package import Process, bundle_application, environment, menu_id, settings, wait_child
 

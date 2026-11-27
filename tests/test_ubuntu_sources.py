@@ -1,13 +1,12 @@
 """Run CI's Ubuntu source normalization against owned APT source files."""
 
-from pathlib import Path
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NORMALIZE = ROOT / ".github/scripts/normalize-ubuntu-sources.sh"

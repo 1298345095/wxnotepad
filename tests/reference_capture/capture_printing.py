@@ -1,14 +1,13 @@
 import argparse
 import base64
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import subprocess
 import time
-
+from ctypes import wintypes as w
+from pathlib import Path
 
 WM_COMMAND = 0x111
 PAGE_SETUP = 40013

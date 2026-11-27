@@ -1,11 +1,11 @@
 """Observe renderer preferences in independent GUI processes and read saved INI bytes."""
 
-from pathlib import Path
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-rendering-") as directory:

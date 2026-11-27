@@ -1,12 +1,12 @@
 """Verify original LineSelection loading and saving through application processes."""
 
-from english_settings import english_settings
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 
 

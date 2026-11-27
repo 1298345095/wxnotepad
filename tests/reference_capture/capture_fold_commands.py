@@ -3,15 +3,14 @@
 import argparse
 import csv
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
+from ctypes import wintypes as w
+from pathlib import Path
 
 from original_host import Original, user
-
 
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
 COMMANDS = {

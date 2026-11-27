@@ -1,10 +1,10 @@
 """Check actual native PDF body, page order, and selection/range semantics."""
 
 import argparse
-from pathlib import Path
 import re
 import subprocess
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 
 def pdf_pages(tool, path):

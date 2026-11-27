@@ -2,10 +2,10 @@
 
 import argparse
 import ctypes
-from pathlib import Path
 import subprocess
 import tempfile
 import time
+from pathlib import Path
 
 RESPONSE_TIMEOUT_SECONDS = 5
 

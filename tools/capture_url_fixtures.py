@@ -3,11 +3,12 @@
 import argparse
 import csv
 import ctypes as c
-from ctypes import wintypes as w
 import json
 import platform
-from pathlib import Path
 import subprocess
+from ctypes import wintypes as w
+from pathlib import Path
+
 from original_windows import find_editors, find_frames
 
 

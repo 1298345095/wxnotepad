@@ -6,19 +6,20 @@ All focus/input stays on xvfb-run's private DISPLAY. No WSLg/Windows bridge.
 Set WXNOTEPAD_DISPLAY_LOG_DIR to retain the full private Weston log.
 """
 
-import os
 import json
-from pathlib import Path
-import signal
-import shutil
+import os
 import re
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
-import time
 import threading
+import time
 from collections import deque
-from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position
+from pathlib import Path
+
+from weston_scene import input_ready_toplevel, mapped_toplevel_position
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"

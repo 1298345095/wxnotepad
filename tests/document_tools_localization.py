@@ -2,13 +2,14 @@
 
 import argparse
 import ctypes
-from pathlib import Path
 import sys
 import tempfile
-from localization_process import Acceptance, PREFERENCE
-from localization_package import menus, read_settings
+from pathlib import Path
+
 from localization_layout import capture_and_check, owned_topmost
 from localization_native import plain
+from localization_package import menus, read_settings
+from localization_process import PREFERENCE, Acceptance
 
 CAPTIONS = {
     "en": (

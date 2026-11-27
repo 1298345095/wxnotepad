@@ -1,15 +1,15 @@
 """Check static size reports, malformed binary bounds and complete artwork retention."""
 
-from contextlib import redirect_stderr
 import importlib.util
 import io
 import json
-from pathlib import Path
 import struct
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
+from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -1,10 +1,10 @@
 """Check the public importer against independent pinned INI/Make/Diff literals."""
 
 import argparse
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--source", required=True)

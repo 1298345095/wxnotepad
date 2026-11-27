@@ -1,10 +1,10 @@
 """Run native selection actions with private Linux desktop associations."""
 
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def main():

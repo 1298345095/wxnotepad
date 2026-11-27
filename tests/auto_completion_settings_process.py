@@ -1,11 +1,11 @@
 """Exercise each original insertion bit through owned native dialogs and reopened settings."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-auto-insertion-") as name:

@@ -1,13 +1,13 @@
 """Verify original Settings2 insertion templates through independent application processes and saved bytes."""
 
-from english_settings import english_settings
-from datetime import datetime
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from datetime import datetime
+from pathlib import Path
 
+from english_settings import english_settings
 from resource_process import command, wait_state
 from settings_process import Application
 

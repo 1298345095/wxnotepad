@@ -1,17 +1,17 @@
 """Exercise publication contention and clean shutdown in independent actual apps."""
 
-from contextlib import ExitStack, contextmanager
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import ExitStack, contextmanager
+from pathlib import Path
 
-from resource_process import command, observation_context
 from app_observation import read_state
+from resource_process import command, observation_context
 from settings_process import Application
 
 

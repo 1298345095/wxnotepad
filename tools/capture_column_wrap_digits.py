@@ -1,9 +1,9 @@
 """Capture Windows GetDlgItemInt digits; format the generated header with clang-format 23.1.2."""
 
 import ctypes as c
+import sys
 from ctypes import wintypes as w
 from pathlib import Path
-import sys
 
 
 def main():

@@ -1,13 +1,13 @@
 """Capture native block commands from an owned original process, without clipboard use."""
 
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
 DOCUMENTS = [
     (

@@ -1,11 +1,11 @@
 """Shared original-app session for character insertion and tag-closure captures."""
 
 import ctypes as c
-from ctypes import wintypes as w
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from ctypes import wintypes as w
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 from original_windows import find_editors, find_frames

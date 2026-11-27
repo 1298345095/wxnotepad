@@ -5,14 +5,15 @@ Requires the serialized host GUI slot and an isolated pinned original executable
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import time
-from original_host import Original, CALLBACK
+from ctypes import wintypes as w
+from pathlib import Path
+
+from original_host import CALLBACK, Original
 
 
 def main():

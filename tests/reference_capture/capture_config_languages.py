@@ -1,13 +1,13 @@
 """Freeze independent original lexer states on an owned Windows desktop."""
 
-import ctypes as c
-from ctypes import wintypes as w
 import argparse
-import original_host as host
+import ctypes as c
 import json
-from pathlib import Path
 import shutil
-from private_desktop import Process
+from ctypes import wintypes as w
+from pathlib import Path
+
+import original_host as host
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--exe", required=True, type=Path)

@@ -2,10 +2,10 @@
 
 import argparse
 import os
-from pathlib import Path
 import signal
 import subprocess
 import tempfile
+from pathlib import Path
 
 
 def require_abort(result, scenario):

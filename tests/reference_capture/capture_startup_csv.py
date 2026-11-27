@@ -2,14 +2,14 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, user, CALLBACK
+from original_host import CALLBACK, Original, user
 
 
 def main():

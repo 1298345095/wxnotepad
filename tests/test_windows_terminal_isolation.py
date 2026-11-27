@@ -2,16 +2,16 @@
 
 import ctypes
 import json
-from pathlib import Path
 import sys
 import tempfile
-from types import SimpleNamespace
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / ".github/scripts"))
-import windows_context_investigation as investigation
+import windows_context_investigation as investigation  # noqa: E402 -- Initialize the CI helper path first.
 
 WAIT_TIMEOUT = 0x102
 TERMINAL_CLASS = "CASCADIA_HOSTING_WINDOW_CLASS"

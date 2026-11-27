@@ -1,12 +1,11 @@
 """Round-trip original EscFunction values through native menus, saving and restart."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-escape-") as directory:

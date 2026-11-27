@@ -1,15 +1,15 @@
 """Review the delivered Extra Esc menus and ordinary close prompts in all UI languages."""
 
 import argparse
-from pathlib import Path
-import tempfile
 import sys
+import tempfile
 import time
-from localization_process import Acceptance, PREFERENCE
-from localization_package import menus, read_settings
-from localization_native import plain
-from localization_layout import capture_and_check, owned_topmost
+from pathlib import Path
 
+from localization_layout import capture_and_check, owned_topmost
+from localization_native import plain
+from localization_package import menus, read_settings
+from localization_process import PREFERENCE, Acceptance
 
 CAPTIONS = {
     "en": ("Extra Esc &Key Function", "&None", "&Minimize wxnotepad", "E&xit wxnotepad"),

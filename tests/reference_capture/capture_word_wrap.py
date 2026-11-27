@@ -6,15 +6,15 @@ No clipboard or desktop input is used. Normal mode uses the monitor's real DPI;
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, CALLBACK, user, kernel
+from original_host import CALLBACK, Original, kernel, user
 
 # Pinned Notepad4 changes STYLE_DEFAULT from upstream Scintilla's 32 to zero.
 STYLE_DEFAULT = 0

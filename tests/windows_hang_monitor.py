@@ -2,14 +2,14 @@
 
 import argparse
 import ctypes
-from ctypes import wintypes
 import json
 import math
 import os
-from pathlib import Path
 import subprocess
 import sys
 import time
+from ctypes import wintypes
+from pathlib import Path
 
 JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000

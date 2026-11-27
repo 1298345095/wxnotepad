@@ -2,19 +2,19 @@
 
 import json
 import os
-from contextlib import chdir
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 import xml.etree.ElementTree as ET
+from contextlib import chdir
+from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / ".github/scripts"))
-import windows_context_investigation as investigation
-import windows_foreground
+import windows_context_investigation as investigation  # noqa: E402 -- Initialize the CI helper path first.
+import windows_foreground  # noqa: E402 -- Initialize the CI helper path first.
 
 
 class WindowsInvestigation(unittest.TestCase):

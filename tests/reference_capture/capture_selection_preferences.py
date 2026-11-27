@@ -1,14 +1,14 @@
 """Capture pinned original selection preference edges on a private Windows desktop."""
 
 import ctypes as c
-from ctypes import wintypes as w
 import json
 import os
-from pathlib import Path
-import subprocess
 import shutil
+import subprocess
 import sys
 import tempfile
+from ctypes import wintypes as w
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 from capture_number_radix import find_editor_windows

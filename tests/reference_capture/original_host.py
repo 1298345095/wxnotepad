@@ -1,9 +1,10 @@
 """Observe the original application's owned editor through its public messages."""
 
 import ctypes as c
-from ctypes import wintypes as w
-from private_desktop import Process
 import time
+from ctypes import wintypes as w
+
+from private_desktop import Process
 
 user = c.WinDLL("user32", use_last_error=True)
 kernel = c.WinDLL("kernel32", use_last_error=True)

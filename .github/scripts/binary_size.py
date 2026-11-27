@@ -3,14 +3,14 @@
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import re
 import struct
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from report_paths import report_path
+from report_paths import report_path  # noqa: E402 -- The tools path must be initialized first.
 
 
 def region(data, offset, size):

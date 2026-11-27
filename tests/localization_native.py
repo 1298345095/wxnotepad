@@ -1,10 +1,10 @@
 """External native dialog/accessibility driver for owned packaged app processes."""
 
 import ctypes
-from ctypes import wintypes
 import os
 import sys
 import time
+from ctypes import wintypes
 
 from resource_process import wait_state
 from weston_scene import mapped_toplevel
@@ -212,6 +212,7 @@ class Dialogs:
             return
         import json
         import subprocess
+
         from localization_layout import capture_and_check
 
         prefix = self.evidence / f"native-wait-{process.pid}-{self.wait_sequence}"

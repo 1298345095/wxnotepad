@@ -2,13 +2,14 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import threading
 import time
+from ctypes import wintypes as w
+from pathlib import Path
+
 import original_host as host
 
 parser = argparse.ArgumentParser(description=__doc__)

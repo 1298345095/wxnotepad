@@ -1,15 +1,15 @@
 """Inspect and capture the actual visible native dialog layout externally."""
 
 import ctypes
-from contextlib import contextmanager
-from ctypes import wintypes
 import json
 import os
-from pathlib import Path
 import struct
 import sys
 import time
 import zlib
+from contextlib import contextmanager
+from ctypes import wintypes
+from pathlib import Path
 
 TEXT_ROUNDING_PIXELS = 2
 

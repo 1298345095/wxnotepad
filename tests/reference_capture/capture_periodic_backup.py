@@ -1,17 +1,17 @@
 """Observe periodic backup eligibility, rotation and lifecycle on an isolated original."""
 
 import ctypes as c
-from ctypes import wintypes as w
-from hashlib import sha256
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
 import time
+from ctypes import wintypes as w
+from hashlib import sha256
+from pathlib import Path
 
-from original_host import Original, user
 from capture_save_backup import wait_ready
+from original_host import Original, user
 
 
 def wait_for(check, message, seconds=5):
@@ -52,7 +52,10 @@ def main():
             original = Original(path, executable, desktop, desktop_name)
             try:
                 wait_ready(original, path.name)
-                backups = lambda: sorted(root.glob("source.txt *"))
+
+                def backups():
+                    return sorted(root.glob("source.txt *"))
+
                 time.sleep(0.3)
                 assert not backups(), "unchanged original has no backup"
                 for index in range(7):

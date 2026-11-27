@@ -1,12 +1,11 @@
 """Check the shell import's consumed lists and original style attributes."""
 
-from pathlib import Path
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from scheme_data import generate_scheme
-from scheme_data import style_initializers
+from scheme_data import generate_scheme, style_initializers
 
 
 class ShellSchemeData(unittest.TestCase):

@@ -1,7 +1,7 @@
 """Exercise native dialog discovery across transient accessibility reads."""
 
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import localization_native

@@ -1,8 +1,9 @@
 """Capture pinned Notepad4 automatic tag closure on an isolated Windows desktop."""
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
+
 from character_capture import Session, prepare_host
 
 exe, output = map(Path, sys.argv[1:3])

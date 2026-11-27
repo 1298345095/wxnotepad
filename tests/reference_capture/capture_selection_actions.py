@@ -2,15 +2,15 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, user, kernel
+from original_host import Original, kernel, user
 
 PINNED_ORIGINAL_SHA256 = "c4ae363348fe833b39c9d9b77f1f0b85565f140f7c5e52c51a0b91cf896227d9"
 KEYS = ("GoogleSearchUrl", "BingSearchUrl", "WikiSearchUrl", "CustomAction1", "CustomAction2")

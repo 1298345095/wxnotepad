@@ -1,12 +1,11 @@
 """Import independent SelectOption bits through real INIs and frame processes."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-selection-options-") as name:

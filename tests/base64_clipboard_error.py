@@ -3,7 +3,6 @@
 import subprocess
 import sys
 
-
 expected = b"FAIL: Character Info copies the same native-byte interpretation shown in its feedback"
 try:
     result = subprocess.run(

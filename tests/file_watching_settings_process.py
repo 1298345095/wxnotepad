@@ -1,13 +1,13 @@
 """Round-trip original file-watching preferences through independent applications."""
 
-from english_settings import english_settings
 import argparse
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import time
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 
 

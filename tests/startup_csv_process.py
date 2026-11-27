@@ -2,9 +2,9 @@
 
 import argparse
 import json
-from pathlib import Path
 import sys
 import tempfile
+from pathlib import Path
 
 from csv_process import accept, checked, select_radio
 from localization_native import Dialogs

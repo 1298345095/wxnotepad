@@ -1,9 +1,9 @@
 """Retain pinned filename precedence without compiling additional lexers."""
 
 import argparse
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 
 from scheme_data import REVISION, read_pinned
 

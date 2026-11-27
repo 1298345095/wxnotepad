@@ -1,14 +1,14 @@
 """Capture pinned Notepad4 header commands on an isolated Windows desktop."""
 
-import ctypes as c
-from ctypes import wintypes as w
 import csv
+import ctypes as c
 import json
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
 exe, output = map(Path, sys.argv[1:3])
 extra = len(sys.argv) > 3 and sys.argv[3] == "--extra"

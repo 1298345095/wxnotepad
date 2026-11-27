@@ -1,11 +1,11 @@
 """Verify native comments and AutoInsertMask lifecycle in owned portable processes."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-line-comments-") as name:

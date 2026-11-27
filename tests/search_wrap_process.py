@@ -1,11 +1,11 @@
 """Verify original search-message suppression through independent native processes."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def run(executable, environment):

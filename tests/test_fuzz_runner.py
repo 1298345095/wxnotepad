@@ -1,10 +1,10 @@
 """Check the fuzz runner's failure propagation and durable corpus/evidence behavior."""
 
 import importlib.util
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 SPEC = importlib.util.spec_from_file_location("fuzz_runner", Path(__file__).parent / "fuzz/run.py")
 RUNNER = importlib.util.module_from_spec(SPEC)

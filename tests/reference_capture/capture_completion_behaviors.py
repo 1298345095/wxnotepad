@@ -7,12 +7,12 @@ capture input, A|B places the caret between A and B; the marker is not inserted.
 """
 
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import shutil
 import sys
-import time
+from ctypes import wintypes as w
+from pathlib import Path
+
 import original_host as h
 
 # Pinned Scintilla.h and original Notepad4 resource.h identifiers.

@@ -1,11 +1,11 @@
 """Observe original FontQuality lifecycle through independent GUI processes and INI bytes."""
 
-from pathlib import Path
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-font-quality-") as directory:

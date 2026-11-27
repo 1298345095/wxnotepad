@@ -1,14 +1,15 @@
 """Run native target actions with an owned source and independent editor children."""
 
+import base64
+import json
 import os
-from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
-import shutil
-import json
-import base64
+from pathlib import Path
+
 from resource_process import process_windows
 
 

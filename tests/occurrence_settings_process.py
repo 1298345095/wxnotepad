@@ -1,11 +1,12 @@
 """Original integer occurrence preferences across independent app processes."""
 
-from english_settings import english_settings
-import os
 import argparse
-from pathlib import Path
+import os
 import shutil
 import tempfile
+from pathlib import Path
+
+from english_settings import english_settings
 from settings_process import Application
 
 

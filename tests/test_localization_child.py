@@ -1,11 +1,11 @@
 """Lock down the observed Windows exit-code-before-signaling race."""
 
 import ctypes
-from ctypes import wintypes
 import gc
 import sys
-from types import SimpleNamespace
 import unittest
+from ctypes import wintypes
+from types import SimpleNamespace
 from unittest import mock
 
 import localization_package

@@ -1,11 +1,11 @@
 """Original completion preference import and save in independent GUI processes."""
 
-from pathlib import Path
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory(prefix="wxnotepad-completion-") as directory:

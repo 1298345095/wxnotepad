@@ -5,11 +5,11 @@ ctest or wsl.exe ... ctest. Uses no keyboard or mouse injection.
 """
 
 import ctypes as c
-from ctypes import wintypes as w
-import subprocess
 import re
+import subprocess
 import sys
 import time
+from ctypes import wintypes as w
 
 user = c.WinDLL("user32", use_last_error=True)
 kernel = c.WinDLL("kernel32", use_last_error=True)

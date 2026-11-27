@@ -1,14 +1,14 @@
 """Verify recent history through independent application processes and saved INI bytes."""
 
-from english_settings import english_settings
+import configparser
 import os
-from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
-import subprocess
-import configparser
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 
 
@@ -191,8 +191,8 @@ def main():
         print("PASS: Windows ordinal case dedup retains stored spelling; case-sensitive hosts retain distinct paths")
         if os.name == "nt":
             import ctypes
-            from ctypes import wintypes
             import uuid
+            from ctypes import wintypes
 
             shell = ctypes.WinDLL("shell32")
             ole = ctypes.WinDLL("ole32")

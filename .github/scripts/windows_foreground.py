@@ -1,17 +1,17 @@
 """Prepare and restore foreground activation on an isolated hosted Windows desktop."""
 
 import argparse
-from contextlib import contextmanager
 import ctypes
-from ctypes import wintypes
 import json
 import os
-from pathlib import Path
 import sys
+from contextlib import contextmanager
+from ctypes import wintypes
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from report_paths import report_path
+from report_paths import report_path  # noqa: E402 -- The tools path must be initialized first.
 
 SPI_GETFOREGROUNDLOCKTIMEOUT = 0x2000
 SPI_SETFOREGROUNDLOCKTIMEOUT = 0x2001

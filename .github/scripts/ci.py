@@ -1,21 +1,21 @@
 """Small CI glue around the existing pinned-core preparation and CMake entry points."""
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from cmake_cache import read_cmake_cache
+from cmake_cache import read_cmake_cache  # noqa: E402 -- The tools path must be initialized first.
 
 WORK = ROOT / ".ci"
 REPORTS = WORK / "reports"

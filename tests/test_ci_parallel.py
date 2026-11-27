@@ -1,13 +1,13 @@
 """Exercise parallel CI partitions with real CTest processes and working directories."""
 
-from concurrent.futures import ThreadPoolExecutor
 import importlib.util
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]

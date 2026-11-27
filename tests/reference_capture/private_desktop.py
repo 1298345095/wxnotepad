@@ -1,8 +1,8 @@
 """Launch owned native processes with an explicit Win32 STARTUPINFO desktop."""
 
 import ctypes as c
-from ctypes import wintypes as w
 import subprocess
+from ctypes import wintypes as w
 
 kernel = c.WinDLL("kernel32", use_last_error=True)
 

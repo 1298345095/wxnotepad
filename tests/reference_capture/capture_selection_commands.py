@@ -1,13 +1,14 @@
 """Capture original selection commands on an owned private Windows desktop."""
 
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
+from ctypes import wintypes as w
+from pathlib import Path
+
 from original_host import Original, user
 
 DOCUMENTS = [

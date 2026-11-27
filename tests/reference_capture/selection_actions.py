@@ -3,9 +3,9 @@
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
 

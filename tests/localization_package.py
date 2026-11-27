@@ -2,21 +2,21 @@
 
 import configparser
 import ctypes
-from ctypes import wintypes
 import importlib.util
 import os
-from pathlib import Path
 import signal
 import subprocess
 import sys
 import time
+from ctypes import wintypes
+from pathlib import Path
 
 from resource_process import command, wait_state
 from settings_process import Application
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from cmake_cache import read_cmake_cache
+from cmake_cache import read_cmake_cache as read_cmake_cache  # noqa: E402 -- Initialize tools, then re-export for callers.
 
 
 def bundle_application(source, cmake, folder, reports=None):

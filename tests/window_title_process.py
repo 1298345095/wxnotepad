@@ -2,11 +2,12 @@
 
 import argparse
 import os
-from pathlib import Path
 import shutil
 import tempfile
 from contextlib import ExitStack
-from localization_package import Process, menus, menu_id, read_settings, wait_child
+from pathlib import Path
+
+from localization_package import Process, menu_id, menus, read_settings, wait_child
 
 
 def main():

@@ -1,8 +1,8 @@
 """The shared importer retains original style identities and inheritance text."""
 
-from pathlib import Path
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from style_profiles import style_records

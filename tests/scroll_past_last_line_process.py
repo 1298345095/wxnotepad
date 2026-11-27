@@ -1,12 +1,12 @@
 """Import, save and reopen original integer scroll modes in independent GUI processes."""
 
 import argparse
-from contextlib import ExitStack
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from contextlib import ExitStack
+from pathlib import Path
 
 
 def main():

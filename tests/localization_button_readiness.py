@@ -1,10 +1,10 @@
 """Exercise native button publication through the packaged UI's native driver."""
 
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 from localization_native import Dialogs, plain
 

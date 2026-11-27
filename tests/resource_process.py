@@ -1,14 +1,16 @@
 """Independent actual-app protocol check; requires a graphical session."""
 
 import argparse
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from app_observation import AppExited, StateTimeout, publish_command as command, wait_state as observe_state
+from app_observation import AppExited, StateTimeout
+from app_observation import publish_command as command
+from app_observation import wait_state as observe_state
 from resources import native_edit
 
 

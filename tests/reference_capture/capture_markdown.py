@@ -4,11 +4,11 @@ Usage: python capture_markdown.py <pinned-Notepad4.exe> <external-evidence-dir>
 """
 
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import shutil
 import sys
+from ctypes import wintypes as w
+from pathlib import Path
 
 import original_host as host
 

@@ -1,8 +1,8 @@
 """Packaged production startup verifies target actions and all released captions."""
 
 import argparse
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 from localization_package import Process, bundle_application, environment, menus, settings, wait_child
 

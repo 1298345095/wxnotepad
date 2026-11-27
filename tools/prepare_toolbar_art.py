@@ -6,9 +6,10 @@ Requires Pillow. The existing Notepad4 BSD notice covers these original assets.
 
 import io
 import struct
-from pathlib import Path
-import sys
 import subprocess
+import sys
+from pathlib import Path
+
 from PIL import Image
 
 BMP_PIXEL_DATA_OFFSET_FIELD = 10

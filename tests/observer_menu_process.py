@@ -1,10 +1,10 @@
 """Dispatch existing shown application menus by numeric command identity."""
 
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 from resource_process import command, wait_state
 from settings_process import Application

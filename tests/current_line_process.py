@@ -1,12 +1,12 @@
 """Verify original current-line import/persistence across independent applications."""
 
-from english_settings import english_settings
-import os
 import argparse
-from pathlib import Path
+import os
 import shutil
 import tempfile
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 
 

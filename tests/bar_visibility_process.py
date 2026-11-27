@@ -1,12 +1,12 @@
 """Check original visibility defaults, save policies and independent native relaunches."""
 
-from contextlib import ExitStack
-from pathlib import Path
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import ExitStack
+from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 with ExitStack() as stack:

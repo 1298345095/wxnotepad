@@ -1,16 +1,16 @@
 """Exercise periodic backup and per-process retention in an actual development bundle."""
 
-from english_settings import english_settings
 import argparse
-import sys
 import os
-from pathlib import Path
+import sys
 import tempfile
 import time
+from pathlib import Path
 
-from localization_package import Process, bundle_application, menu_id
-from localization_native import Dialogs, plain
+from english_settings import english_settings
 from localization_layout import capture_and_check, owned_topmost
+from localization_native import Dialogs, plain
+from localization_package import Process, bundle_application, menu_id
 from resource_process import native_edit, wait_state
 from settings_process import Application
 
@@ -150,7 +150,10 @@ def main():
                 )
                 native_edit(app.process, state)
                 wait_state(owned, app.process, lambda s: s["dirty"] == "1")
-                backups = lambda: list(root.glob(f"source.txt *{app.process.pid}.txt"))
+
+                def backups():
+                    return list(root.glob(f"source.txt *{app.process.pid}.txt"))
+
                 wait_for(lambda: len(backups()) == 1, "packaged native edit must create a real periodic backup")
                 assert backups()[0].read_bytes() == (b"Xpackaged\n" if not launch else b"XXpackaged\n")
                 assert source.read_bytes() == (b"packaged\n" if not launch else b"Xpackaged\n")

@@ -1,10 +1,10 @@
 """Check the shared importer against pinned Batch/PowerShell/AutoHotkey facts."""
 
 import argparse
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--source", required=True)

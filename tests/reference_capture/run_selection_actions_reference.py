@@ -2,8 +2,8 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import os
+from ctypes import wintypes as w
 from pathlib import Path
 
 from private_desktop import Process

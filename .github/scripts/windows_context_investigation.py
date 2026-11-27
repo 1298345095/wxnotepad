@@ -1,12 +1,12 @@
 """Run focused Windows context-menu investigations through registered CTest cases."""
 
 import argparse
-from contextlib import nullcontext
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
+from contextlib import nullcontext
+from pathlib import Path
 
 import ci
 import windows_foreground

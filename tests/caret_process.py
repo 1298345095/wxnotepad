@@ -1,11 +1,11 @@
 """Caret preferences through independent real application processes and saved INI bytes."""
 
-from english_settings import english_settings
 import argparse
 import os
-from pathlib import Path
 import shutil
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 from temporary_directory import TemporaryDirectory
 

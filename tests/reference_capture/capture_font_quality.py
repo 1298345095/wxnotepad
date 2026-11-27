@@ -6,13 +6,13 @@ the temporary topmost state is used solely to expose its raster for capture.
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
+from ctypes import wintypes as w
+from pathlib import Path
 from types import SimpleNamespace
 
 from original_host import Original, user

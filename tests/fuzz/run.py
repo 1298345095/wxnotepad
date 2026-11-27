@@ -3,10 +3,10 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import time
+from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TARGETS = ("codecs", "detection", "file_variables")

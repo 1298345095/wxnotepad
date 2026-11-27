@@ -5,9 +5,13 @@ Creates a separate portable host; does not use the clipboard or desktop input.
 """
 
 import ctypes as c
+import json
+import shutil
+import subprocess
+import sys
+import time
 from ctypes import wintypes as w
 from pathlib import Path
-import sys, subprocess, json, time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 from capture_number_radix import find_editor_windows
@@ -17,8 +21,6 @@ out = Path(sys.argv[2]).resolve()
 out.mkdir(parents=True, exist_ok=True)
 host = out / "original-portable"
 host.mkdir(exist_ok=True)
-import shutil
-
 shutil.copy2(original, host / "Notepad4.exe")
 (host / "Notepad4.ini").write_text(
     "[Settings]\nSaveSettings=0\nAutoCompleteOption=7\nAutoCIgnoreCase=0\n", encoding="utf-8"

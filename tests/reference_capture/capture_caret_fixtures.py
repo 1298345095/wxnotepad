@@ -2,13 +2,13 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
 
 def capture(executable, output):

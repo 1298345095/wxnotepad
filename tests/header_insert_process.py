@@ -1,17 +1,17 @@
 """Compare actual application Save/reload with independently captured original bytes."""
 
-from english_settings import english_settings
 import csv
 import locale
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
-from special_insert_process import request
-from settings_process import Application
+from english_settings import english_settings
 from resource_process import command, wait_state
+from settings_process import Application
+from special_insert_process import request
 
 
 def run(source, reference):

@@ -1,11 +1,12 @@
 """Original bookmark/history settings through independent application processes."""
 
-from english_settings import english_settings
 import argparse
 import os
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
+
+from english_settings import english_settings
 from settings_process import Application
 
 

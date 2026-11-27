@@ -6,19 +6,20 @@ Xvfb/Weston session. All output/scratch files are intentionally disposable.
 
 import argparse
 import ctypes
-from ctypes import wintypes
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import shutil
 import statistics
 import subprocess
 import sys
 import time
+from ctypes import wintypes
+from pathlib import Path
 
-from app_observation import AppExited, POLL, StateTimeout, publish_command, wait_state as observe_state
+from app_observation import POLL, AppExited, StateTimeout, publish_command
+from app_observation import wait_state as observe_state
 
 QUIET = 1.0
 

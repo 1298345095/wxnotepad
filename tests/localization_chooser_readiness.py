@@ -1,20 +1,20 @@
 """Exercise the folder driver's role lookup using a controlled GTK publisher."""
 
-from pathlib import Path
 import os
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
-from localization_native import Dialogs
 from localization_button_readiness import (
     BUTTON_PUBLICATION_DELAY_MS,
     COMMAND_POLL_MS,
     PROPERTY_BUSY_SECONDS,
     wait_marker,
 )
+from localization_native import Dialogs
 
 TITLE = "Owned chooser role readiness"
 

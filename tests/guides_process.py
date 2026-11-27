@@ -1,10 +1,10 @@
 """Exercise original guide/edge imports and saves in independent native processes."""
 
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def run(executable, folder, settings, expected, action="keep", fixture=None):

@@ -5,14 +5,14 @@ Uses only a separately copied original on an owned private Windows desktop.
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, CALLBACK, kernel, user
+from original_host import CALLBACK, Original, kernel, user
 
 SOURCES = (
     ("windows_1252", b"caf\xe9\r\n"),
