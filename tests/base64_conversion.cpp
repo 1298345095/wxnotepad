@@ -14,6 +14,11 @@
 #include <wx/modalhook.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/log.h>
+#ifdef __WXMSW__
+#include <semaphore>
+#include <thread>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -149,7 +154,31 @@ public:
         }
     }
 };
-std::string ObserveCharacterInfo(EditorFrame* frame) {
+#ifdef __WXMSW__
+class BusyClipboard final {
+public:
+    BusyClipboard()
+        : worker_([this](std::stop_token stop) {
+              locked_ = OpenClipboard(nullptr) != FALSE;
+              ready_.release();
+              if (!locked_) return;
+              const auto until = std::chrono::steady_clock::now() + MaximumHold;
+              while (!stop.stop_requested() && std::chrono::steady_clock::now() < until)
+                  wxMilliSleep(1);
+              CloseClipboard();
+          }) {
+        ready_.acquire();
+        Require(locked_, "acquire the native clipboard before the actual Character Info copy");
+    }
+
+private:
+    static constexpr auto MaximumHold = std::chrono::seconds(3);
+    std::binary_semaphore ready_{0};
+    bool locked_ = false;
+    std::jthread worker_;
+};
+#endif
+std::string ObserveCharacterInfo(EditorFrame* frame, [[maybe_unused]] bool busyClipboard = false) {
     Progress("native ANSI character information");
 #ifdef __WXGTK__
     NativeKeys::Shortcut(frame, 'A', true); // Gives Wayland the real owned input serial for clipboard publication.
@@ -162,6 +191,10 @@ std::string ObserveCharacterInfo(EditorFrame* frame) {
     }
     const int command = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
     Require(command != wxNOT_FOUND, "reachable native Character Info command exists");
+#ifdef __WXMSW__
+    std::unique_ptr<BusyClipboard> busy;
+    if (busyClipboard) busy = std::make_unique<BusyClipboard>();
+#endif
     CharacterFeedback feedback;
     NativeSearch::Command(frame, command);
     Progress("native ANSI character information returned");
@@ -512,12 +545,23 @@ void AnsiInvalidProbe(EditorFrame* frame, const wxString& output) {
 class Base64App final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        // Retain clipboard errors in the test output instead of opening a
+        // second, undriven wxLogGui dialog after an assertion fails.
+        std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
+        previousLog.reset();
+#endif
         auto* frame = new EditorFrame(&settings_);
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "private compositor presents the owned editor");
 #ifdef __WXMSW__
+                if (argc == 2 && argv[1] == "--clipboard-contention") {
+                    TestEditor::ResetStream(frame->Editor(), "A", 0, 1);
+                    ObserveCharacterInfo(frame, true);
+                    Require(false, "contended clipboard copy must retain its failing assertion");
+                }
                 wxString diagnostic;
                 if (wxGetEnv("WXNOTEPAD_BASE64_ANSI_PROBE", &diagnostic)) {
                     AnsiInvalidProbe(frame, diagnostic);

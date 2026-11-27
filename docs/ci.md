@@ -619,8 +619,12 @@ at 45 seconds under its original 60-second guard. Its flushed phases distinguish
 the 498 captured conversions, command states, native ANSI bytes, character
 information and frame cleanup. The evidence retains its matching binary and
 any PDB; all original samples and assertions remain in force. Windows clipboard
-errors in the Character Info fixture go to stderr so it reports a failed
+errors in both fixtures go to stderr so each reports a failed
 assertion without opening an additional modal error dialog.
+The Windows-only `native_base64_clipboard_error` regression holds the native
+clipboard at the actual Character Info copy boundary and requires the original
+failing assertion, native error text and child exit 1 within ten seconds. Its
+own 20-second CTest guard leaves existing test deadlines and order unchanged.
 
 The JSON native fixture waits for GTK's initial folder load before selecting a
 file, so that load cannot replace the requested selection. On Linux with CMake

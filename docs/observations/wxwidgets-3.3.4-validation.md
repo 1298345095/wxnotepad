@@ -92,8 +92,34 @@ The fixture now flushes its major phases and reuses the existing external
 Windows hang monitor to capture at 45 seconds before the original timeout.
 The hosted artifact retains the dump and matching executable. All 498 captured
 samples, command/selection/history, native ANSI and character-information
-assertions remain unchanged. A new captured stall is required to identify the
-timeout's cause; a passing rerun alone is not treated as a repair.
+assertions remain unchanged.
+
+Controlled native clipboard contention at the real Character Info copy exposed
+a concrete hang path. The original assertion failed, but wxLogGui opened a
+second `Base64_conversion Error` modal dialog and the complete fixture timed
+out at 60 seconds. The 45-second dump's GUI thread was in
+`user32!DialogBoxIndirectParamW`; the matching visible-window receipt and
+binary are retained under `clipboard-busy-before/`.
+
+The fixture now uses wxLogStderr on Windows, following the existing Character
+Info fixture. The same complete contention replay retains the clipboard errors
+and failing assertion, and exits with code 1 in 17.33 seconds instead of
+hanging. This corrects failure reporting, not the failed clipboard operation.
+
+The maintained `native_base64_clipboard_error` case holds the native clipboard
+on another thread at that same copy boundary, with a three-second maximum
+hold and automatic release. It requires the actual clipboard error, original
+assertion message and child exit 1. Before the log-target fix it fails the
+ten-second child deadline in the extra modal dialog. Its separate 20-second
+CTest guard and Windows-only registration leave all existing test positions,
+Linux shard assignments, original samples and original timeouts intact.
+With the fix, this new regression passes in 1.52 seconds; the final complete
+Base64 and Escape cases pass in 16.57 and 3.38 seconds. Native Windows
+clang-tidy completed with the project's blocking checks preserved.
+
+The first hosted timeout did not retain a dump, so its exact cause remains
+unconfirmed. This controlled replay fixes a proven matching timeout path;
+passing reruns alone are not treated as proof of the first timeout's cause.
 
 ## Approval and validation
 
