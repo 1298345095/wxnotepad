@@ -180,6 +180,7 @@ add_library(app_shell STATIC
     src/app/desktop_launch.cpp
     src/app/document_tools.cpp
     src/app/new_window.cpp
+    src/app/window_position.cpp
     src/app/window_routing.cpp
     src/app/open_targets.cpp
     src/app/run_command.cpp

@@ -24,6 +24,7 @@ wxnotepad -e windows-1252 -s json -ro -g 2,2 + "first.txt" "second 中文😀.tx
 | `g line[,character[,bytes]]` | Jump to a one-based line and character. An odd third value counts bytes instead of characters; a byte offset inside a Unicode character resolves to its beginning. |
 | `G line[,column[,tab-width]]` | Jump using one-based display columns. The optional tab width affects this jump without changing the document's tab settings. |
 | `ro` | Enable the editor's read-only mode. Disk permissions remain unchanged. |
+| `pos x,y,width,height,maximized` | Set the normal outer window rectangle and maximized state (`0` or `1`). Width and height must be positive. Copy Window Position (Ctrl+Shift+K) produces this public five-field argument; it can be passed to another real application launch. |
 | `o` | Request Always On Top for this launch without changing the saved preference. |
 | `o0`, `o-`, `oo` | Disable Always On Top for this launch without changing the saved preference. |
 | `?` | Show help in the configured interface language. |
@@ -34,6 +35,14 @@ without expanding tabs for either option. Omitted columns start at the beginning
 of the selected line. Positions beyond a line stop at its end. The cursor and
 selection remain empty at the destination, which is unfolded and scrolled into
 view.
+
+Window positions use native zero-based coordinates. Windows `/pos` uses physical
+outer pixels and workspace coordinates from `WINDOWPLACEMENT`; startup accounts
+for the monitor work-area offset. X11 `-pos` uses GDK logical outer coordinates.
+An available monitor's work area bounds absolute placement. Wayland applies size
+and maximized state while the compositor chooses location; coordinate export and
+Ctrl+Shift+P default positioning are unavailable. Other advanced original
+position switches are not supported. See [window position behavior](observations/window-positions.md).
 
 Always On Top uses the supported native window-stacking interface. Unsupported
 GTK backends, including Wayland, retain the stored preference but disable the

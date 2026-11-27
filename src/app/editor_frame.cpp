@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/new_window.h"
 #ifdef __WXMSW__
 #include "app/explorer_selections.h"
 #endif
@@ -109,6 +110,12 @@ EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTo
     });
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!FullScreenActive() && !IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+        CaptureNormalWindowPosition();
+        ApplyPendingWindowPosition();
+        event.Skip();
+    });
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event) {
+        CaptureNormalWindowPosition();
         event.Skip();
     });
     editor_->SetFontSettings(preferences.fonts);
@@ -207,6 +214,7 @@ EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTo
         event.Skip();
     });
 #endif
+    RestoreWindowPosition();
     UpdateDocumentState();
     editor_->SetFocus();
 }
@@ -229,12 +237,23 @@ bool EditorFrame::Destroy() {
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     const bool keyDown = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
     const auto handle = static_cast<HWND>(GetHandle());
-    const bool interceptedKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE || message->wParam == VK_F9;
+    const bool interceptedKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE || message->wParam == VK_F9 ||
+                                message->wParam == 'P' || message->wParam == 'K';
     if (keyDown && interceptedKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
         const int modifiers = (::GetKeyState(VK_CONTROL) < 0 ? wxMOD_CONTROL : 0) |
                               (::GetKeyState(VK_MENU) < 0 ? wxMOD_ALT : 0) |
                               (::GetKeyState(VK_SHIFT) < 0 ? wxMOD_SHIFT : 0) |
                               ((::GetKeyState(VK_LWIN) < 0 || ::GetKeyState(VK_RWIN) < 0) ? wxMOD_META : 0);
+        if (modifiers == (wxMOD_CONTROL | wxMOD_SHIFT)) {
+            if (message->wParam == 'P') {
+                DefaultWindowPosition();
+                return true;
+            }
+            if (message->wParam == 'K') {
+                CopyWindowPosition();
+                return true;
+            }
+        }
         if (message->wParam == VK_F11) {
             HandleFullScreenKey(modifiers);
             return true;
@@ -324,6 +343,7 @@ bool EditorFrame::FullScreenActive() const {
 
 void EditorFrame::SetFullScreen(bool active) {
     if (active == FullScreenActive()) return;
+    if (active) CaptureNormalWindowPosition();
 #ifdef __WXMSW__
     const auto window = static_cast<HWND>(GetHandle());
     if (active) {
@@ -429,6 +449,8 @@ void EditorFrame::ApplyBarVisibility() {
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
+    CaptureNormalWindowPosition();
+    settings_->CaptureWindowPosition(normalWindowPosition_);
 #ifdef __WXMSW__
     settings_->values.renderingTechnology = static_cast<int>(editor_->Send(Scintilla::Message::GetTechnology));
     settings_->values.fontQuality = static_cast<int>(editor_->Send(Scintilla::Message::GetFontQuality));
