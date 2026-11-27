@@ -49,6 +49,12 @@ UTF-8 bytes; Linux notification anchors remain inside the selected source on val
 UTF-8 boundaries. Runtime source tokens may differ: `throw new Error("owned error")`
 points at `throw` in Chakra and the Error constructor in QuickJS. Windows retains
 the original UTF-16-column/byte-position handling, including its Unicode quirk.
+For concatenated selections, Linux maps the engine's source-byte offset through
+the sorted document ranges and the actual default/custom copy separator, so a
+failure in a later range points to that selected token even when another range
+is main. Native popup-coordinate regressions calibrate the existing notification
+surface at independently known source tokens, including gaps, CJK, supplementary
+characters and the JavaScript Unicode line separator, for either main range.
 
 The independent real original capture is retained outside Git at
 `F:/wxnotepad-evidence/window-and-tools-implementation-2026-11-27/292/original-native-02/`.

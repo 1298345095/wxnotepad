@@ -65,6 +65,63 @@ void SelectionModes(EditorFrame* frame, int id) {
             "selection text uses document order even when the main selection is the first range");
     std::puts("PASS: original read-only, rectangle and main/multiple selection semantics");
 }
+#ifndef __WXMSW__
+void ErrorPlacement(EditorFrame* frame, int id) {
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    struct Placement {
+        const char* text;
+        intptr_t firstEnd;
+        intptr_t secondStart;
+        intptr_t secondEnd;
+        const char* separator;
+    };
+    // The independent QuickJS reference identifies foo as the failing token.
+    // Calibrate the real notification surface at that literal document token,
+    // so this tests source mapping without fixing platform font/pixel metrics.
+    constexpr Placement cases[] = {{"1+2\nfoo", 3, 4, 7, ""},
+                                   {"1+ skip foo", 2, 8, 11, "\n"},
+                                   {"\"中文\"; foo", 9, 10, 13, "\n"},
+                                   {"\"😀\"; foo", 7, 8, 11, "\n"},
+                                   {"\"中\";\u2028 foo", 9, 10, 13, "\n"}};
+    const auto popup = [editor] {
+        auto* window = wxWindow::FindWindowByName("Color CallTip", editor);
+        Require(window && window->IsShown(), "real native error notification is shown");
+        return window->GetScreenRect();
+    };
+    for (const auto& scene : cases) {
+        for (const bool mainFirst : {true, false}) {
+            editor->Send(CallTipCancel);
+            TestEditor::ResetStream(editor, scene.text, 0, scene.firstEnd, Scintilla::EndOfLine::CrLf);
+            editor->Send(SetCopySeparator, 0, reinterpret_cast<intptr_t>(scene.separator));
+            editor->Send(AddSelection, scene.secondEnd, scene.secondStart);
+            editor->Send(SetMainSelection, mainFirst ? 0 : 1);
+            NativeSearch::DispatchEvents(frame);
+            constexpr const char* ErrorText = "foo is not defined";
+            editor->Send(ShowNotification, static_cast<uintptr_t>(scene.secondStart) << 2,
+                         reinterpret_cast<intptr_t>(ErrorText));
+            NativeSearch::DispatchEvents(frame);
+            const auto expected = popup();
+            editor->Send(ShowNotification, 0, reinterpret_cast<intptr_t>(ErrorText));
+            NativeSearch::DispatchEvents(frame);
+            Require(popup() != expected, "native popup calibration distinguishes actual source positions");
+            NativeSearch::Command(frame, id);
+            const auto actual = popup();
+            if (actual != expected) {
+                DiagnosticPrint::Print(stderr, "Error popup expected {},{} {}x{}, actual {},{} {}x{}\n", expected.x,
+                                       expected.y, expected.width, expected.height, actual.x, actual.y, actual.width,
+                                       actual.height);
+                throw std::runtime_error("concatenated selection error points at the actual failing document token");
+            }
+            Require(TestEditor::Text(frame) == scene.text && !editor->Send(GetModify) && !editor->Send(CanUndo),
+                    "positioned error preserves document and history");
+        }
+    }
+    editor->Send(SetCopySeparator, 0, reinterpret_cast<intptr_t>(""));
+    editor->Send(CallTipCancel);
+    std::puts("PASS: real native error placement through default/custom selection separators and both main ranges");
+}
+#endif
 void EncodedFiles(EditorFrame* frame, int id) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
@@ -208,6 +265,9 @@ public:
                 std::puts(
                     "PASS: independent original JavaScript/Math, types, objects, fresh state, errors and Undo/Redo");
                 SelectionModes(frame, id);
+#ifndef __WXMSW__
+                ErrorPlacement(frame, id);
+#endif
                 std::string originalLongExpression;
                 for (int term = 0; term < 550; ++term)
                     originalLongExpression += "1+";
