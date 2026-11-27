@@ -44,6 +44,8 @@ void SavedRectangle(const wxString& path, wxSize size, const wxString& section) 
     Require(ini.ReadString("Marker", {}, "Unrelated") == "retained", "position commands retain unrelated settings");
 }
 std::string Copy(EditorFrame& frame) {
+    constexpr char Seed[] = "owned window-position fixture seed";
+    frame.Editor()->Send(Scintilla::Message::CopyText, sizeof(Seed) - 1, reinterpret_cast<intptr_t>(Seed));
     NativeKeys::Shortcut(&frame, 'K', true, false, true);
     const auto copied = EditorClipboard::ReadPlainText(frame);
     if (!copied) throw TestEditor::Failure("native clipboard receives position text");

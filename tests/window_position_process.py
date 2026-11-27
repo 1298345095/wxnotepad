@@ -77,6 +77,19 @@ def native_clipboard():
                 kernel.GlobalUnlock(handle)
         finally:
             user.CloseClipboard()
+    gtk, glib, clipboard = gtk_clipboard()
+    gtk.gtk_clipboard_wait_for_text.argtypes = [c.c_void_p]
+    gtk.gtk_clipboard_wait_for_text.restype = c.c_void_p
+    glib.g_free.argtypes = [c.c_void_p]
+    pointer = gtk.gtk_clipboard_wait_for_text(clipboard)
+    assert pointer
+    try:
+        return c.string_at(pointer).decode("utf-8")
+    finally:
+        glib.g_free(pointer)
+
+
+def gtk_clipboard():
     gtk, gdk, glib = [c.CDLL(ctypes.util.find_library(name)) for name in ("gtk-3", "gdk-3", "glib-2.0")]
     gtk.gtk_init_check.argtypes = [c.c_void_p, c.c_void_p]
     assert gtk.gtk_init_check(None, None)
@@ -84,15 +97,21 @@ def native_clipboard():
     gdk.gdk_atom_intern_static_string.restype = c.c_void_p
     gtk.gtk_clipboard_get.argtypes = [c.c_void_p]
     gtk.gtk_clipboard_get.restype = c.c_void_p
-    gtk.gtk_clipboard_wait_for_text.argtypes = [c.c_void_p]
-    gtk.gtk_clipboard_wait_for_text.restype = c.c_void_p
-    glib.g_free.argtypes = [c.c_void_p]
-    pointer = gtk.gtk_clipboard_wait_for_text(gtk.gtk_clipboard_get(gdk.gdk_atom_intern_static_string(b"CLIPBOARD")))
-    assert pointer
-    try:
-        return c.string_at(pointer).decode("utf-8")
-    finally:
-        glib.g_free(pointer)
+    return gtk, glib, gtk.gtk_clipboard_get(gdk.gdk_atom_intern_static_string(b"CLIPBOARD"))
+
+
+def seed_clipboard():
+    if sys.platform == "win32":
+        user = c.WinDLL("user32")
+        assert user.OpenClipboard(None)
+        try:
+            assert user.EmptyClipboard()
+        finally:
+            user.CloseClipboard()
+    else:
+        gtk, _, clipboard = gtk_clipboard()
+        gtk.gtk_clipboard_set_text.argtypes = [c.c_void_p, c.c_char_p, c.c_int]
+        gtk.gtk_clipboard_set_text(clipboard, b"owned window-position fixture seed", -1)
 
 
 def native_work_area(app):
@@ -179,6 +198,7 @@ def main():
                 assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480)
                 if not wayland:
                     assert native_rectangle(app) == (100, 120, 640, 480)
+                    seed_clipboard()
                     app.choose(copy)
                     copied = native_clipboard()
                     assert copied == ("/pos" if sys.platform == "win32" else "-pos") + " 100,120,640,480,0"

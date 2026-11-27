@@ -100,6 +100,12 @@ def main():
         )
 
     def command(identity):
+        if identity == 40581:
+            assert user.OpenClipboard(frame)
+            try:
+                assert user.EmptyClipboard()
+            finally:
+                user.CloseClipboard()
         pending = threading.Thread(target=lambda: user.SendMessageW(frame, 0x111, identity, 0), daemon=True)
         pending.start()
         deadline = time.monotonic() + 4
