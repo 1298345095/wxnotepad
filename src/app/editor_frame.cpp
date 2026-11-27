@@ -233,12 +233,23 @@ bool EditorFrame::Destroy() {
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     const bool keyDown = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
     const auto handle = static_cast<HWND>(GetHandle());
-    const bool windowModeKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE;
+    const bool windowModeKey =
+        message->wParam == VK_F11 || message->wParam == VK_ESCAPE || message->wParam == 'P' || message->wParam == 'K';
     if (keyDown && windowModeKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
         const int modifiers = (::GetKeyState(VK_CONTROL) < 0 ? wxMOD_CONTROL : 0) |
                               (::GetKeyState(VK_MENU) < 0 ? wxMOD_ALT : 0) |
                               (::GetKeyState(VK_SHIFT) < 0 ? wxMOD_SHIFT : 0) |
                               ((::GetKeyState(VK_LWIN) < 0 || ::GetKeyState(VK_RWIN) < 0) ? wxMOD_META : 0);
+        if (modifiers == (wxMOD_CONTROL | wxMOD_SHIFT)) {
+            if (message->wParam == 'P') {
+                DefaultWindowPosition();
+                return true;
+            }
+            if (message->wParam == 'K') {
+                CopyWindowPosition();
+                return true;
+            }
+        }
         if (message->wParam == VK_F11) {
             HandleFullScreenKey(modifiers);
             return true;
