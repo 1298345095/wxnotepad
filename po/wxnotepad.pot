@@ -831,16 +831,16 @@ msgid ""
 "-rs  Reuse without a file; otherwise match only the same file."
 msgstr ""
 
-#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
-#: src/app/main.cpp
-msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
-msgstr ""
-
 #. TRANSLATORS: Original temporary topmost switches; keep -o, -o0, -o- and -oo unchanged.
 #: src/app/main.cpp
 msgid ""
 "-o  Always On Top for this launch.\n"
 "-o0, -o-, -oo  Disable Always On Top for this launch."
+msgstr ""
+
+#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
+#: src/app/main.cpp
+msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
 msgstr ""
 
 #: src/app/editor_frame_settings_commands.cpp

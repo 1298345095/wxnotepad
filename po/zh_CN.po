@@ -914,11 +914,6 @@ msgstr ""
 "-r  重用可用窗口。\n"
 "-rs  无文件时重用窗口；否则仅匹配同一文件。"
 
-#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
-#: src/app/main.cpp
-msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
-msgstr "-pos x,y,width,height,maximized  普通窗口外框矩形和最大化状态（0 或 1）。"
-
 #. TRANSLATORS: Original temporary topmost switches; keep -o, -o0, -o- and -oo unchanged.
 #: src/app/main.cpp
 msgid ""
@@ -927,6 +922,11 @@ msgid ""
 msgstr ""
 "-o  仅本次启动始终置顶。\n"
 "-o0, -o-, -oo  仅本次启动关闭始终置顶。"
+
+#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
+#: src/app/main.cpp
+msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
+msgstr "-pos x,y,width,height,maximized  普通窗口外框矩形和最大化状态（0 或 1）。"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
