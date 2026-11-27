@@ -1,0 +1,104 @@
+{
+  "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+  "executable_sha256": "1425c9a4b5ab2ea1fa3ba088f38dd987b763b7b8feff23dde6243f7855e86a78",
+  "original_menu_command": 40425,
+  "toolbar_config_identity": 26,
+  "toolbar_bitmap_index": 25,
+  "stacking_observation": "Native WS_EX_TOPMOST plus relative Z order against an owned foreground normal peer.",
+  "document_sample": {
+    "hex": "616c70686120626574610d0a",
+    "anchor": 8,
+    "caret": 2,
+    "modified": 0,
+    "undo": 0,
+    "redo": 0,
+    "selections": 1,
+    "main": 0,
+    "selectionMode": 0,
+    "codepage": 65001,
+    "eol": 0,
+    "readonly": 0
+  },
+  "cases": [
+    {
+      "preference": false,
+      "switch": null,
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": false,
+      "saved_after_manual_toggle": true
+    },
+    {
+      "preference": false,
+      "switch": "/o",
+      "initial_topmost": true,
+      "after_manual_toggle": false,
+      "saved_before_manual_toggle": false,
+      "saved_after_manual_toggle": false
+    },
+    {
+      "preference": false,
+      "switch": "/o0",
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": false,
+      "saved_after_manual_toggle": true
+    },
+    {
+      "preference": false,
+      "switch": "/o-",
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": false,
+      "saved_after_manual_toggle": true
+    },
+    {
+      "preference": false,
+      "switch": "/oo",
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": false,
+      "saved_after_manual_toggle": true
+    },
+    {
+      "preference": true,
+      "switch": null,
+      "initial_topmost": true,
+      "after_manual_toggle": false,
+      "saved_before_manual_toggle": true,
+      "saved_after_manual_toggle": false
+    },
+    {
+      "preference": true,
+      "switch": "/o",
+      "initial_topmost": true,
+      "after_manual_toggle": false,
+      "saved_before_manual_toggle": true,
+      "saved_after_manual_toggle": false
+    },
+    {
+      "preference": true,
+      "switch": "/o0",
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": true,
+      "saved_after_manual_toggle": true
+    },
+    {
+      "preference": true,
+      "switch": "/o-",
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": true,
+      "saved_after_manual_toggle": true
+    },
+    {
+      "preference": true,
+      "switch": "/oo",
+      "initial_topmost": false,
+      "after_manual_toggle": true,
+      "saved_before_manual_toggle": true,
+      "saved_after_manual_toggle": true
+    }
+  ]
+}

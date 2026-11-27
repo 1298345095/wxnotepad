@@ -153,6 +153,7 @@ std::vector<ToolbarCommand> ToolbarCommands(wxMenuBar* menuBar) {
                                             {21, wxID_PRINT},
                                             {24, std::to_underlying(FoldDefaultLevels)},
                                             {25, std::to_underlying(ExecuteDocument)},
+                                            {26, std::to_underlying(AlwaysOnTop)},
                                             {27, std::to_underlying(NewWindow)}});
     std::vector<ToolbarCommand> commands;
     for (const auto& [identity, id] : specifications)

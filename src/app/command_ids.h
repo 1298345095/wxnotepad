@@ -19,5 +19,6 @@ enum class AppCommand : int {
     ChooseEncoding,
     EolCrLf,
     EolLf,
-    EolCr
+    EolCr,
+    AlwaysOnTop
 };

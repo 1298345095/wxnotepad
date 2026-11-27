@@ -939,6 +939,15 @@ msgstr ""
 "-r  重用可用視窗。\n"
 "-rs  無檔案時重用視窗；否則僅比對相同檔案。"
 
+#. TRANSLATORS: Original temporary topmost switches; keep -o, -o0, -o- and -oo unchanged.
+#: src/app/main.cpp
+msgid ""
+"-o  Always On Top for this launch.\n"
+"-o0, -o-, -oo  Disable Always On Top for this launch."
+msgstr ""
+"-o  僅本次啟動始終置頂。\n"
+"-o0, -o-, -oo  僅本次啟動關閉始終置頂。"
+
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
 msgstr "1/3 頁(&3)"
@@ -1018,6 +1027,17 @@ msgstr "所有檔案 (%s)"
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有檔案 (*)|*"
+
+#. TRANSLATORS: Original IDM_VIEW_ALWAYSONTOP, first in Window Options.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Always On &Top\tAlt+Shift+T"
+msgstr "始終置頂(&T)\tAlt+Shift+T"
+
+#. TRANSLATORS: This desktop backend has no supported client window-stacking interface.
+#. TRANSLATORS: Explain why the adjacent Always On Top command is disabled.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Always On Top is unavailable on this desktop."
+msgstr "目前桌面不支援視窗置頂。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Anchor"

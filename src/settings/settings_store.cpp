@@ -138,6 +138,7 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.showMenu = document_.ReadBool("ShowMenu", defaults.showMenu);
     values.showToolbar = document_.ReadBool("ShowToolbar", defaults.showToolbar);
+    values.alwaysOnTop = document_.ReadBool("AlwaysOnTop", defaults.alwaysOnTop);
     values.autoScaleToolbar = document_.ReadInt("AutoScaleToolbar", defaults.autoScaleToolbar);
     values.toolbarButtons = document_.ReadString("ToolbarButtons", defaults.toolbarButtons);
     values.showStatusbar = document_.ReadBool("ShowStatusbar", defaults.showStatusbar);
@@ -477,6 +478,7 @@ bool SettingsStore::Save(bool explicitSave) {
                            RecentFiles::MinimumCapacity << 1);
         document_.WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
         document_.WriteBool("ShowToolbar", values.showToolbar, defaults.showToolbar);
+        document_.WriteBool("AlwaysOnTop", values.alwaysOnTop, defaults.alwaysOnTop);
         document_.WriteInt("AutoScaleToolbar", values.autoScaleToolbar, defaults.autoScaleToolbar);
         document_.WriteString("ToolbarButtons", values.toolbarButtons, defaults.toolbarButtons);
         document_.WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);

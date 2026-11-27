@@ -23,6 +23,8 @@ wxnotepad -- --leading-name.txt
 | `g line[,character[,bytes]]` | Jump to a one-based line and character. An odd third value counts bytes instead of characters; a byte offset inside a Unicode character resolves to its beginning. |
 | `G line[,column[,tab-width]]` | Jump using one-based display columns. The optional tab width affects this jump without changing the document's tab settings. |
 | `ro` | Enable the editor's read-only mode. Disk permissions remain unchanged. |
+| `o` | Request Always On Top for this launch without changing the saved preference. |
+| `o0`, `o-`, `oo` | Disable Always On Top for this launch without changing the saved preference. |
 | `?` | Show help in the configured interface language. |
 
 `g` and `G` are case sensitive. Zero means the first line; a negative line or a
@@ -31,6 +33,12 @@ without expanding tabs for either option. Omitted columns start at the beginning
 of the selected line. Positions beyond a line stop at its end. The cursor and
 selection remain empty at the destination, which is unfolded and scrolled into
 view.
+
+Always On Top uses the supported native window-stacking interface. Unsupported
+GTK backends, including Wayland, retain the stored preference but disable the
+operation and show a localized explanation. Manually toggling the command on a
+supported desktop clears the temporary startup override and updates the preference.
+New Window and Restart load the stored preference without inheriting that override.
 
 Opening a missing path asks whether to create an empty file. Yes creates the file,
 No keeps an empty document, and Cancel exits. A read failure reports an error and

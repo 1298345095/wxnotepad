@@ -747,3 +747,31 @@ if(UNIX)
         --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-map-readiness")
     set_tests_properties(native_x11_routing_map_readiness PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
 endif()
+
+add_gui_program(always_on_top tests/always_on_top.cpp app_shell)
+add_dependencies(always_on_top wxnotepad_catalogs)
+foreach(language 1033 2052 1028)
+    add_test(NAME original_always_on_top_${language} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "$<TARGET_FILE:always_on_top>" ${language})
+    set_tests_properties(original_always_on_top_${language} PROPERTIES TIMEOUT 60)
+endforeach()
+add_test(NAME packaged_always_on_top COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/always_on_top_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}")
+set_tests_properties(packaged_always_on_top PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_always_on_top_lifecycle COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/always_on_top_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario lifecycle)
+set_tests_properties(packaged_always_on_top_lifecycle PROPERTIES TIMEOUT 120)
+if(UNIX)
+    add_test(NAME packaged_always_on_top_installed COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/always_on_top_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --installed)
+    set_tests_properties(packaged_always_on_top_installed PROPERTIES TIMEOUT 120)
+    add_test(NAME native_managed_x11_readiness COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_readiness.py")
+    set_tests_properties(native_managed_x11_readiness PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
+endif()
