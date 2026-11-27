@@ -46,16 +46,18 @@ Linux otherwise keeps the original options and dependency declarations. Its
 GTK overlay and static linkage are unchanged.
 
 Version 5 synchronized the wxMSW pending-watch removal vector, and version 7
-extends that synchronization to the IOCP active-watch map used when the worker
-re-arms a directory watch in `wxFSWatcherImplMSW::SetUpWatch`. Previously the
-worker read `wxFSWatcherImpl::m_watches` without a lock while the UI thread
-cleared or inserted entries, causing a use-after-free, and checked by directory
-path rather than watch identity, which could re-arm a retired watch after a
-same-directory refresh. The patch protects both `wxIOCPService::m_watches` and
-`m_removedWatches` with one `wxCriticalSection`, registers watches before
-issuing `ReadDirectoryChangesW`, verifies exact watch identity before
-re-arming, completes pending removals before overflow handling, and releases
-completed retired watches outside the lock. Upstream
+replaces that partial fix with the upstream wxWidgets MSW file-watcher fixes
+(`53e793af35`, `0b744dd44c`, `06ffddba79`; upstream issues
+[22381](https://github.com/wxWidgets/wxWidgets/issues/22381) and
+[26866](https://github.com/wxWidgets/wxWidgets/pull/26866)). Together they
+cancel outstanding overlapped `ReadDirectoryChangesW` I/O via `CancelIoEx` and
+wait with `GetOverlappedResult` before freeing watch buffers, protect
+`wxIOCPService::m_watches` and `m_removedWatches` with one `wxCriticalSection`,
+register watches before starting the first read (with `CancelAdd` rollback),
+complete pending removals under the lock in `wxFSWatcherImplMSW::SetUpWatch`
+instead of reading `wxFSWatcherImpl::m_watches` unlocked, handle cancelled
+completions cleanly, and keep the IOCP worker running when a single watched
+directory is deleted. Upstream
 [issue 15995](https://github.com/wxWidgets/wxWidgets/issues/15995) explains why
 these retired watches need their own lifetime container; its earlier vector
 change does not synchronize concurrent mutations.
