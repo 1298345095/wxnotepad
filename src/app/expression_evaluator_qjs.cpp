@@ -174,7 +174,7 @@ ExpressionEvaluation EvaluateExpression(const wxString& expression, size_t resul
         result.text = wxString::FromUTF8(FormatNumber(number));
     } else if (JS_IsBool(value.value)) {
         result.text = JS_ToBool(context.get(), value.value) ? "-1" : "0";
-    } else if (JS_IsString(value.value)) {
+    } else if (JS_IsString(value.value) || JS_IsBigInt(value.value)) {
         const auto text = ScriptString(context.get(), value.value);
         // The original propsys output is passed through a null-terminated
         // WideCharToMultiByte/InsertText boundary, including BSTR embedded NULs.

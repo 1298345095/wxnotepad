@@ -28,6 +28,9 @@ def main():
         .read_text(encoding="utf-8")
         .splitlines()
     ]
+    if args.executable.suffix != ".exe":
+        # User-approved newer Linux syntax, preserving exact BigInt decimal output.
+        samples += [("1n+2n", " 3"), ("9007199254740993n", " 9007199254740993"), ("({a:1})?.a", " 1")]
     with tempfile.TemporaryDirectory(prefix="wxnotepad-calculation-package-") as temporary:
         root = Path(temporary)
         executable = bundle_application(

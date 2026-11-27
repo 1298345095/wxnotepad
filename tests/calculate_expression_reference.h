@@ -7,6 +7,15 @@ struct CalculationReference {
     bool error;
 };
 inline constexpr CalculationReference CalculationReferences[] = {
+#ifndef __WXMSW__
+    // Approved Linux engine-version behavior; BigInt formatting remains exact.
+    {"1n+2n", " 3", false},
+    {"9007199254740993n", " 9007199254740993", false},
+    {"({a:1})?.a", " 1", false},
+#else
+    {"1n+2n", "", true},
+    {"({a:1})?.a", "", true},
+#endif
     // Independent original ActiveScript/propsys primitive Symbol conversion.
     {R"calc(Symbol("x"))calc", " Symbol(x)", false},
     // Independent original value/sign samples through math, variables and objects.

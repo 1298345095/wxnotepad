@@ -43,6 +43,10 @@ substituting a smaller expression language.
 
 On 2026-11-27 the user approved two Linux engine differences: localized timezone
 display-name suffixes in Date strings and engine-specific error wording.
+The user subsequently approved newer QuickJS syntax on Linux: `1n+2n` produces
+exact decimal `3`, and `({a:1})?.a` produces `1`; original Windows Chakra rejects
+these syntaxes. BigInt output uses decimal text directly, including values beyond
+the exact floating-point integer range, and obeys the existing result capacity.
 For the same America/Los_Angeles zone, original `new Date(0)` returned
 `Wed Dec 31 1969 16:00:00 GMT-0800 (太平洋标准时间)` while QuickJS returned
 `Wed Dec 31 1969 16:00:00 GMT-0800`. Error notifications retain the original text
