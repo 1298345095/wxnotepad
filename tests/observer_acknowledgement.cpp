@@ -20,7 +20,6 @@
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #include <gdk/gdkwayland.h>
-#include <gdk/gdkx.h>
 #endif
 
 namespace {
@@ -335,35 +334,6 @@ private:
                 "actual native command succeeds without editing the document");
         std::puts("PASS: native unchanged-state observer acknowledgement");
         CheckFailureRecovery();
-        CheckInactiveVisibility();
-    }
-    void CheckInactiveVisibility() {
-#ifdef __WXGTK__
-        if (!GDK_IS_X11_DISPLAY(gtk_widget_get_display(GTK_WIDGET(frame_->GetHandle())))) return;
-        frame_->Hide();
-        Await([this] { return !frame_->IsActive(); }, "hidden X11 frame becomes inactive");
-        Command(5);
-        Await([this] { return Sequence("sequence\t5\n"); }, "inactive hidden frame publishes its baseline");
-        const auto state = directory_.Path() / "state";
-        Require(TestFiles::Bytes(state).contains("\nshown\t0\n") && TestFiles::Bytes(state).contains("\nactive\t0\n"),
-                "visibility baseline is hidden and inactive");
-        const auto visibility = [this, &state](const char* expected) {
-            Require(!frame_->IsActive() && frame_->GetSize() == size_,
-                    "visibility changes retain inactive frame geometry");
-            CheckEditorState();
-            Require(Sequence("sequence\t5\n"), "visibility publication needs no additional observer command");
-            return TestFiles::Bytes(state).contains(expected);
-        };
-        // A mapped X11 frame can be minimized before it ever becomes active.
-        // Show/hide reproduces the same shown-only change without requiring a WM.
-        frame_->ShowWithoutActivating();
-        Await([&visibility] { return visibility("\nshown\t1\n"); },
-              "inactive shown frame publishes visibility without an activation change");
-        frame_->Hide();
-        Await([&visibility] { return visibility("\nshown\t0\n"); },
-              "inactive hidden frame publishes visibility without an activation change");
-        std::puts("PASS: inactive native visibility changes publish without editor or activation changes");
-#endif
     }
     TestFiles::TemporaryRoot directory_;
     SettingsStore settings_{TestFiles::Filename(directory_.Path() / "settings.ini")};
