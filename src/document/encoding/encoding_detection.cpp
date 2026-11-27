@@ -52,8 +52,8 @@ struct OriginalEncoding {
 constexpr auto fileEncodings = std::to_array<FileEncodingInfo>({
     {FileEncoding::Utf8, 65001, "UTF-8", "UTF-8"},
     {FileEncoding::Utf16Le, 1200, "UTF-16LE", "UTF-16LE"},
-    {FileEncoding::Utf16Be, 1201, "UTF-16BE", "UTF-16BE"},
     {FileEncoding::Gbk, 936, "GBK (CP936)", "CP936"},
+    {FileEncoding::Utf16Be, 1201, "UTF-16BE", "UTF-16BE"},
     {FileEncoding::Gb18030, 54936, "GB18030 (CP54936)", "CP54936"},
     {FileEncoding::Big5, 950, "Big5 (CP950)", "CP950"},
     {FileEncoding::Windows1252, 1252, "Windows-1252", "CP1252"},
@@ -61,6 +61,12 @@ constexpr auto fileEncodings = std::to_array<FileEncodingInfo>({
     {FileEncoding::Windows932, 932, "Shift-JIS (CP932)", "CP932"},
     {FileEncoding::Windows949, 949, "Windows-949 (UHC)", "CP949"},
 });
+static_assert([] {
+    for (size_t index = 0; index < fileEncodings.size(); ++index) {
+        if (static_cast<size_t>(fileEncodings[index].encoding) != index) return false;
+    }
+    return true;
+}());
 
 int CodePageIndex(unsigned page) {
     for (size_t index = CPI_UTF8; index < std::size(catalog); ++index) {
@@ -134,8 +140,7 @@ int DefaultEncoding(int value) {
 int EncodingIndex(FileEncoding encoding) {
     if (encoding == FileEncoding::Utf16Le) return CPI_UNICODE;
     if (encoding == FileEncoding::Utf16Be) return CPI_UNICODEBE;
-    const auto* info = FindFileEncodingInfo(encoding);
-    return info ? CodePageIndex(info->codePage) : CPI_NONE;
+    return CodePageIndex(FindFileEncodingInfo(encoding).codePage);
 }
 
 int EncodingIndex(const EncodingChoice& choice) {
@@ -413,11 +418,8 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
 }
 } // namespace
 
-const FileEncodingInfo* FindFileEncodingInfo(FileEncoding encoding) {
-    for (const auto& info : fileEncodings) {
-        if (info.encoding == encoding) return &info;
-    }
-    return nullptr;
+const FileEncodingInfo& FindFileEncodingInfo(FileEncoding encoding) {
+    return fileEncodings[static_cast<size_t>(encoding)];
 }
 
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {

@@ -64,11 +64,11 @@ bool GtkHasData() {
 #endif
 
 bool EditorClipboard::HasData([[maybe_unused]] wxWindow& owner) {
-    if (wxTheClipboard->IsOpened()) return false;
 #ifdef __WXMSW__
     const NativeClipboard clipboard(static_cast<HWND>(owner.GetHandle()));
     return clipboard && ::CountClipboardFormats() != 0;
 #else
+    if (wxTheClipboard->IsOpened()) return false;
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
     if (!lock) return false;
@@ -82,11 +82,11 @@ bool EditorClipboard::HasData([[maybe_unused]] wxWindow& owner) {
 
 bool EditorClipboard::Clear([[maybe_unused]] wxWindow& owner) {
     WXNOTE_TRACE("clipboard.clear", "\ttarget=%p", static_cast<void*>(&owner));
-    if (wxTheClipboard->IsOpened()) return false;
 #ifdef __WXMSW__
     const NativeClipboard clipboard(static_cast<HWND>(owner.GetHandle()));
     return clipboard && ::CountClipboardFormats() != 0 && ::EmptyClipboard();
 #else
+    if (wxTheClipboard->IsOpened()) return false;
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
     if (!lock) return false;
@@ -119,7 +119,6 @@ bool EditorClipboard::Clear([[maybe_unused]] wxWindow& owner) {
 bool EditorClipboard::Write([[maybe_unused]] wxWindow& owner, const Scintilla::Internal::SelectionText& text) {
     WXNOTE_TRACE("clipboard.write", "\ttarget=%p\tlength=%llu\trectangular=%d\tline=%d", static_cast<void*>(&owner),
                  static_cast<unsigned long long>(text.Length()), text.rectangular, text.lineCopy);
-    if (wxTheClipboard->IsOpened()) return false;
 #ifdef __WXMSW__
     const NativeClipboard clipboard(static_cast<HWND>(owner.GetHandle()));
     if (!clipboard) return false;
@@ -160,6 +159,7 @@ bool EditorClipboard::Write([[maybe_unused]] wxWindow& owner, const Scintilla::I
                  static_cast<unsigned long long>(text.Length()));
     return true;
 #else
+    if (wxTheClipboard->IsOpened()) return false;
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
     if (!lock) return false;
@@ -232,7 +232,6 @@ bool EditorClipboard::Write([[maybe_unused]] wxWindow& owner, const Scintilla::I
 bool EditorClipboard::WriteRtf([[maybe_unused]] wxWindow& owner, std::string rtf) {
     WXNOTE_TRACE("clipboard.write-rtf", "\ttarget=%p\tlength=%llu", static_cast<void*>(&owner),
                  static_cast<unsigned long long>(rtf.size()));
-    if (wxTheClipboard->IsOpened()) return false;
 #ifdef __WXMSW__
     const NativeClipboard clipboard(static_cast<HWND>(owner.GetHandle()));
     if (!clipboard) return false;
@@ -248,6 +247,7 @@ bool EditorClipboard::WriteRtf([[maybe_unused]] wxWindow& owner, std::string rtf
     ::GlobalFree(memory);
     return false;
 #else
+    if (wxTheClipboard->IsOpened()) return false;
     wxTheClipboard->UsePrimarySelection(false);
     wxClipboardLocker lock;
     if (!lock) return false;
@@ -324,9 +324,9 @@ bool EditorClipboard::HasText() noexcept {
 }
 
 std::optional<std::string> EditorClipboard::ReadPlainText(wxWindow& owner) {
-    if (wxTheClipboard->IsOpened()) return std::nullopt;
     std::optional<std::string> result;
 #ifdef __WXGTK__
+    if (wxTheClipboard->IsOpened()) return std::nullopt;
     auto* data = gtk_clipboard_wait_for_contents(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD),
                                                  gdk_atom_intern_static_string(PlainTextFormat));
     if (data) {
@@ -351,7 +351,9 @@ std::optional<std::string> EditorClipboard::ReadPlainText(wxWindow& owner) {
 std::optional<EditorClipboard::ReadResult>
 EditorClipboard::Read([[maybe_unused]] wxWindow& owner, [[maybe_unused]] const std::function<bool()>& selectionEmpty) {
     WXNOTE_TRACE("clipboard.read", "\ttarget=%p", static_cast<void*>(&owner));
+#ifndef __WXMSW__
     if (wxTheClipboard->IsOpened()) return std::nullopt;
+#endif
     ReadResult result;
 #ifdef __WXGTK__
     auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);

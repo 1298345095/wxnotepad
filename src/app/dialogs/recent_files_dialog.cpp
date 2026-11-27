@@ -77,7 +77,9 @@ void RecentFilesDialog::RefreshFiles() {
 void RecentFilesDialog::Accept() {
     const long selected = files_->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (selected < 0) return;
-    if (wxFileExists(files_->GetItemText(selected))) {
+    const auto path = files_->GetItemText(selected);
+    if (wxFileExists(path)) {
+        selectedPath_ = path;
         EndModal(wxID_OK);
         return;
     }
@@ -90,13 +92,12 @@ void RecentFilesDialog::Accept() {
 }
 
 std::optional<wxString> RecentFilesDialog::Choose() {
+    selectedPath_.reset();
     const int choice = ShowModal();
     // Pinned FileMRUDlgProc applies options on destruction, even after Cancel.
     preferences_.saveRecentFiles = remember_->GetValue();
     long capacity = 0;
     if (!capacity_->GetValue().ToLong(&capacity) || capacity > std::numeric_limits<int>::max()) capacity = 0;
     preferences_.maxRecentFiles = std::max(static_cast<int>(capacity), RecentFiles::MinimumCapacity);
-    if (choice != wxID_OK) return std::nullopt;
-    const long selected = files_->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
-    return selected < 0 ? std::nullopt : std::optional<wxString>(files_->GetItemText(selected));
+    return choice == wxID_OK ? selectedPath_ : std::nullopt;
 }

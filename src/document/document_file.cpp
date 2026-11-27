@@ -158,66 +158,70 @@ wxString PrepareSaveCopy(const wxString& destination) {
     return {};
 }
 
-ReadOnlyState ReadReadOnlyState(const wxString& path) {
+namespace {
+struct ReadOnlyQuery {
     ReadOnlyState state;
-    if (path.empty()) {
-        // TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
-        state.changeError = _("Save the document before changing file permissions.");
-        return state;
-    }
 #ifdef __WXMSW__
-    const auto attributes = GetFileAttributesW(path.wc_str());
-    if (attributes == INVALID_FILE_ATTRIBUTES)
-        // TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
-        state.changeError = wxString::Format(_("Could not read file attributes: %s"), wxSysErrorMsg());
-    else if (attributes & FILE_ATTRIBUTE_DIRECTORY)
-        // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
-        state.changeError = _("This command changes a file, not a directory.");
-    else
-        state.readOnly = state.flag = (attributes & FILE_ATTRIBUTE_READONLY) != 0;
+    DWORD attributes = INVALID_FILE_ATTRIBUTES;
 #else
     struct stat info{};
-    if (stat(path.fn_str(), &info) != 0)
+#endif
+};
+
+ReadOnlyQuery QueryReadOnlyMetadata(const wxString& path) {
+    ReadOnlyQuery result;
+    if (path.empty()) {
+        // TRANSLATORS: IDM_FILE_READONLY_FILE unavailable for an unnamed document; no parameters.
+        result.state.changeError = _("Save the document before changing file permissions.");
+        return result;
+    }
+#ifdef __WXMSW__
+    result.attributes = GetFileAttributesW(path.wc_str());
+    if (result.attributes == INVALID_FILE_ATTRIBUTES)
+        // TRANSLATORS: IDM_FILE_READONLY_FILE metadata error; %s is the native Windows error.
+        result.state.changeError = wxString::Format(_("Could not read file attributes: %s"), wxSysErrorMsg());
+    else if (result.attributes & FILE_ATTRIBUTE_DIRECTORY)
+        // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a directory target; no parameters.
+        result.state.changeError = _("This command changes a file, not a directory.");
+    else
+        result.state.readOnly = result.state.flag = (result.attributes & FILE_ATTRIBUTE_READONLY) != 0;
+#else
+    if (stat(path.fn_str(), &result.info) != 0)
         // TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
-        state.changeError = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
-    else if (!S_ISREG(info.st_mode))
+        result.state.changeError = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
+    else if (!S_ISREG(result.info.st_mode))
         // TRANSLATORS: IDM_FILE_READONLY_FILE rejects a non-regular-file target; no parameters.
-        state.changeError = _("This command changes a file, not a directory.");
+        result.state.changeError = _("This command changes a file, not a directory.");
     else {
-        state.flag = (info.st_mode & S_IWUSR) == 0;
-        state.readOnly = info.st_uid == geteuid() ? state.flag : !wxFileName::IsFileWritable(path);
-        if (info.st_uid != geteuid())
+        result.state.flag = (result.info.st_mode & S_IWUSR) == 0;
+        result.state.readOnly = result.info.st_uid == geteuid() ? result.state.flag : !wxFileName::IsFileWritable(path);
+        if (result.info.st_uid != geteuid())
             // TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
-            state.changeError = _("Only the file owner can change the owner's write permission.");
+            result.state.changeError = _("Only the file owner can change the owner's write permission.");
     }
 #endif
-    return state;
+    return result;
+}
+} // namespace
+
+ReadOnlyState ReadReadOnlyState(const wxString& path) {
+    return QueryReadOnlyMetadata(path).state;
 }
 
 wxString ToggleReadOnly(const wxString& path) {
-    wxString error = ReadReadOnlyState(path).changeError;
-    if (error.empty()) {
+    auto query = QueryReadOnlyMetadata(path);
+    if (!query.state.changeError.empty()) return query.state.changeError;
 #ifdef __WXMSW__
-        const auto attributes = GetFileAttributesW(path.wc_str());
-        if (attributes == INVALID_FILE_ATTRIBUTES ||
-            !SetFileAttributesW(path.wc_str(), attributes ^ FILE_ATTRIBUTE_READONLY))
-            // TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
-            error = wxString::Format(_("Could not change file attributes: %s"), wxSysErrorMsg());
+    if (!SetFileAttributesW(path.wc_str(), query.attributes ^ FILE_ATTRIBUTE_READONLY))
+        // TRANSLATORS: IDM_FILE_READONLY_FILE update error; %s is the native Windows error.
+        return wxString::Format(_("Could not change file attributes: %s"), wxSysErrorMsg());
 #else
-        struct stat state{};
-        if (stat(path.fn_str(), &state) != 0)
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE metadata error; %s is the native filesystem error.
-            error = wxString::Format(_("Could not read file permissions: %s"), wxSysErrorMsg());
-        else if (state.st_uid != geteuid())
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE ownership restriction; no parameters.
-            error = _("Only the file owner can change the owner's write permission.");
-        else if (chmod(path.fn_str(),
-                       (state.st_mode & (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)) ^ S_IWUSR) != 0)
-            // TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
-            error = wxString::Format(_("Could not change the file owner's write permission: %s"), wxSysErrorMsg());
+    if (chmod(path.fn_str(),
+              (query.info.st_mode & (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)) ^ S_IWUSR) != 0)
+        // TRANSLATORS: Linux IDM_FILE_READONLY_FILE update error; %s is the native filesystem error.
+        return wxString::Format(_("Could not change the file owner's write permission: %s"), wxSysErrorMsg());
 #endif
-    }
-    return error;
+    return {};
 }
 
 bool UpdateWriteTime(const wxString& path) {

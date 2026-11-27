@@ -174,8 +174,7 @@ void ProcessObserver::Publish() {
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
-    const auto* encodingInfo = FindFileEncodingInfo(frame_->DocumentEncoding());
-    const char* encoding = encodingInfo ? encodingInfo->observationName : "CP936";
+    const char* encoding = FindFileEncodingInfo(frame_->DocumentEncoding()).observationName;
     wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"

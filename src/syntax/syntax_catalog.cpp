@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <limits>
+#include <utility>
 
 namespace {
 #include "syntax/generated/cpp_scheme_data.h"
@@ -1040,6 +1041,21 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      {SyntaxMenuFamily::Standalone, 20}},
 });
 
+constexpr auto definitionIndices = [] {
+    constexpr auto count = static_cast<size_t>(SyntaxLanguage::Count);
+    static_assert(definitions.size() == count);
+    std::array<size_t, count> indices{};
+    std::array<bool, count> seen{};
+    for (size_t index = 0; index < definitions.size(); ++index) {
+        const auto key = static_cast<size_t>(definitions[index].language);
+        indices[key] = index;
+        seen[key] = true;
+    }
+    for (const bool present : seen)
+        if (!present) throw "missing syntax catalog entry";
+    return indices;
+}();
+
 } // namespace
 
 std::span<const SyntaxDefinition> SyntaxCatalog() {
@@ -1059,10 +1075,7 @@ std::vector<const SyntaxDefinition*> SyntaxMenuMembers(SyntaxMenuFamily family) 
 }
 
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
-    for (const auto& definition : definitions) {
-        if (definition.language == language) return definition;
-    }
-    return definitions[0];
+    return definitions[definitionIndices[static_cast<size_t>(language)]];
 }
 
 std::optional<SyntaxLanguage> SyntaxFromOriginalSchemeId(int identity) {
@@ -1189,8 +1202,10 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return diffSettingsSection;
     case Csv:
         return csvSettingsSection;
-    default:
+    case PlainText:
         return "Text File";
+    default:
+        std::unreachable();
     }
 }
 

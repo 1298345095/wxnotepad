@@ -113,14 +113,16 @@ public:
             },
             wxID_OK);
         reset_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-            if (const auto* data = Selected(); data && data->style) {
-                const auto defaults = store_ ? store_->ResetStyles() : FontSettings{};
-                Value(*data) = data->global ? defaults.GlobalStyle(wxString::FromUTF8(data->style->key))
-                                            : defaults.TokenStyle(data->language, *data->style);
-                ShowSelection();
-            } else if (const auto* data = Selected(); data && !data->global) {
-                settings_.schemeExtensions.erase(data->language);
-                ShowSelection();
+            if (const auto* data = Selected()) {
+                if (data->style) {
+                    const auto defaults = store_ ? store_->ResetStyles() : FontSettings{};
+                    Value(*data) = data->global ? defaults.GlobalStyle(wxString::FromUTF8(data->style->key))
+                                                : defaults.TokenStyle(data->language, *data->style);
+                    ShowSelection();
+                } else if (!data->global) {
+                    settings_.schemeExtensions.erase(data->language);
+                    ShowSelection();
+                }
             }
             edit_->SetFocus();
         });

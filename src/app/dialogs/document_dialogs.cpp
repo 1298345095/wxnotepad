@@ -97,7 +97,7 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     source->SetName("Source encoding");
     AppLocalization::SetAccessibleName(*source, _("Source encoding"));
     for (const auto encoding : choices) {
-        const auto index = source->Append(FindFileEncodingInfo(encoding)->displayName);
+        const auto index = source->Append(FindFileEncodingInfo(encoding).displayName);
         if (initial == encoding) source->SetSelection(static_cast<int>(index));
     }
     contents->Add(source, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));

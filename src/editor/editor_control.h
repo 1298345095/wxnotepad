@@ -165,7 +165,7 @@ public:
     void ApplyStylePixelSettings();
     const CaretAppearance& GetCaretAppearance() const { return caretAppearance_; }
     void SetCaretAppearance(CaretAppearance appearance);
-    OccurrenceMarking& Occurrences() { return *occurrences_; }
+    OccurrenceMarking& Occurrences() { return occurrences_; }
     void FlushPendingUIUpdate();
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
@@ -197,14 +197,14 @@ private:
     void ShowColorCallTip(intptr_t position);
     void QueueColorCallTipEdit();
     void EditColorCallTip(ColorCallTipRange range);
-    // Keep automatic-typing state alive until the notifying core has shut down.
+    // Keep automatic-typing and occurrence-marking state alive until the notifying core has shut down.
     TypingAssistance typing_{*this};
+    OccurrenceMarking occurrences_{*this};
     std::unique_ptr<Core> core_;
     bool initialPositionPending_ = false;
     // Select the replacement using the main selection's original direction.
     void ReplaceRangeAndSelect(intptr_t start, intptr_t end, std::string_view replacement);
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
-    std::unique_ptr<OccurrenceMarking> occurrences_;
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;

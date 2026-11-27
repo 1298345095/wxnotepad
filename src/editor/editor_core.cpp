@@ -962,8 +962,7 @@ void EditorControl::Core::RecordNotificationChanges(const Scintilla::Notificatio
 }
 
 void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationData& notification) const {
-    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
-        window_.occurrences_->Update(notification.updated);
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI) window_.occurrences_.Update(notification.updated);
     // Original bookmark-margin clicks use the clicked line and keep the caret.
     if (notification.nmhdr.code == Scintilla::Notification::MarginClick &&
         notification.margin == EditorMargin::Bookmark && window_.BookmarkMarginVisible()) {

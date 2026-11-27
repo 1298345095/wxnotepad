@@ -40,10 +40,7 @@ void TypingAssistance::CharacterAdded(const Scintilla::NotificationData& notific
         CompleteTagOrMemberAccess();
         return;
     }
-    if (ch == '(' || ch == '{' || ch == '[' || ch == '<' || ch == '"' || ch == '\'' || ch == '`' || ch == ',') {
-        InsertMatchingCharacter(ch);
-        return;
-    }
+    if (InsertMatchingCharacter(ch)) return;
     if (ShouldCompleteTypedWord(notification))
         completionHandler_(editor_.Send(Message::AutoCActive) ? WordCompletionCondition::CharacterAdded
                                                               : WordCompletionCondition::Normal);

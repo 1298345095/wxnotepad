@@ -77,55 +77,47 @@ bool EditorControl::Core::UsesInlineIme() const noexcept {
 
 std::optional<intptr_t> EditorControl::Core::ImeMessage(unsigned message, uintptr_t wParam, intptr_t& lParam) {
     const auto flags = static_cast<uintptr_t>(lParam);
-    try {
-        switch (message) {
-        case WM_IME_STARTCOMPOSITION:
-            UpdateSystemCaret();
-            imeComposing_ = true;
-            if (UsesInlineIme()) return 0;
-            DropCaret();
-            break;
-        case WM_IME_ENDCOMPOSITION:
-            imeComposing_ = false;
-            view.imeCaretBlockOverride = false;
-            pdoc->TentativeUndo();
-            ShowCaretAtCurrentPosition();
-            UpdateSystemCaret();
-            break;
-        case WM_IME_COMPOSITION:
-            if (UsesInlineIme()) return InlineComposition(flags);
-            if (flags & GCS_RESULTSTR) {
-                if (const InputContext context(static_cast<HWND>(window_.GetHandle())); context)
-                    InsertImeText(context.Text(GCS_RESULTSTR), Scintilla::CharacterSource::ImeResult);
-                UpdateSystemCaret();
-                return 0;
-            }
-            UpdateSystemCaret();
-            break;
-        case WM_IME_SETCONTEXT:
-            if (wParam && UsesInlineIme())
-                lParam = static_cast<intptr_t>(flags & ~static_cast<uintptr_t>(ISC_SHOWUICOMPOSITIONWINDOW));
-            UpdateSystemCaret();
-            break;
-        case WM_INPUTLANGCHANGE:
-            UpdateSystemCaret();
-            break;
-        case WM_LBUTTONDOWN:
-        case WM_KILLFOCUS:
-            // Original MouseMessage/FocusMessage complete preedit before the
-            // click changes the selection or the editor loses native focus.
+    switch (message) {
+    case WM_IME_STARTCOMPOSITION:
+        UpdateSystemCaret();
+        imeComposing_ = true;
+        if (UsesInlineIme()) return 0;
+        DropCaret();
+        break;
+    case WM_IME_ENDCOMPOSITION:
+        imeComposing_ = false;
+        view.imeCaretBlockOverride = false;
+        pdoc->TentativeUndo();
+        ShowCaretAtCurrentPosition();
+        UpdateSystemCaret();
+        break;
+    case WM_IME_COMPOSITION:
+        if (UsesInlineIme()) return InlineComposition(flags);
+        if (flags & GCS_RESULTSTR) {
             if (const InputContext context(static_cast<HWND>(window_.GetHandle())); context)
-                ImmNotifyIME(context.Get(), NI_COMPOSITIONSTR, CPS_COMPLETE, 0);
-            break;
-        default:
-            break;
+                InsertImeText(context.Text(GCS_RESULTSTR), Scintilla::CharacterSource::ImeResult);
+            UpdateSystemCaret();
+            return 0;
         }
-    } catch (const std::bad_alloc&) {
-        errorStatus = Scintilla::Status::BadAlloc;
-        return 0;
-    } catch (const core::Failure& failure) {
-        errorStatus = failure.status;
-        return 0;
+        UpdateSystemCaret();
+        break;
+    case WM_IME_SETCONTEXT:
+        if (wParam && UsesInlineIme())
+            lParam = static_cast<intptr_t>(flags & ~static_cast<uintptr_t>(ISC_SHOWUICOMPOSITIONWINDOW));
+        UpdateSystemCaret();
+        break;
+    case WM_INPUTLANGCHANGE:
+        UpdateSystemCaret();
+        break;
+    case WM_LBUTTONDOWN:
+    case WM_KILLFOCUS:
+        // Original MouseMessage/FocusMessage complete preedit before the
+        // click changes the selection or the editor loses native focus.
+        if (const InputContext context(static_cast<HWND>(window_.GetHandle())); context)
+            ImmNotifyIME(context.Get(), NI_COMPOSITIONSTR, CPS_COMPLETE, 0);
+        break;
+    default:
+        break;
     }
     return std::nullopt;
 }

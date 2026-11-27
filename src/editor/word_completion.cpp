@@ -319,11 +319,8 @@ class Collector final {
         if (wordLength >= iRootLen && (pWord[0] != ':' || pWord[1] == ':') &&
             pWList.MatchesPrefix({pWord, static_cast<size_t>(wordLength)})) {
             AppendDocumentSuffix(pWord, wordLength, wordEnd, style);
-
-            if (wordLength >= iRootLen) {
-                pWord[wordLength] = '\0';
-                pWList.AddDocumentWord({pWord, static_cast<size_t>(wordLength)}, bSubWord);
-            }
+            pWord[wordLength] = '\0';
+            pWList.AddDocumentWord({pWord, static_cast<size_t>(wordLength)}, bSubWord);
         }
     }
 

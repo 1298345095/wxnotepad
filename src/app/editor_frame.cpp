@@ -40,8 +40,8 @@
 namespace {
 wxString DocumentEncodingLabel(const DocumentSession& document) {
     const auto encoding = document.Encoding();
-    const auto* info = FindFileEncodingInfo(encoding);
-    const wxString name = info ? info->displayName : "UTF-8";
+    const auto& info = FindFileEncodingInfo(encoding);
+    const wxString name = info.displayName;
     if (document.IsDefaultEncoding()) {
         switch (encoding) {
             using enum FileEncoding;
@@ -50,7 +50,7 @@ wxString DocumentEncodingLabel(const DocumentSession& document) {
         case Big5:
         case Windows932:
         case Windows949:
-            return wxString::Format("ANSI (CP%u)", info->codePage);
+            return wxString::Format("ANSI (CP%u)", info.codePage);
         default:
             return "ANSI (" + name + ")";
         }
@@ -119,10 +119,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
     ApplyIndentationGuides(*editor_, document_.Language(), preferences.showIndentGuides,
                            preferences.simpleIndentGuides);
-    editor_->Send(Scintilla::Message::SetEdgeColumn,
-                  settings ? settings->values.longLinesLimit : defaults_.longLinesLimit);
-    if (settings && settings->values.markLongLines) {
-        editor_->Send(Scintilla::Message::SetEdgeMode, settings->values.longLineMode);
+    editor_->Send(Scintilla::Message::SetEdgeColumn, preferences.longLinesLimit);
+    if (preferences.markLongLines) {
+        editor_->Send(Scintilla::Message::SetEdgeMode, preferences.longLineMode);
         ApplyLongLineColour(*editor_);
     }
     indentation_.Apply(*editor_, document_.Language());
@@ -920,9 +919,10 @@ bool EditorFrame::CanDiscardUntitledWhitespace() const {
     constexpr intptr_t UntitledWhitespacePromptThresholdBytes = 2048;
     if (!document_.Path().empty()) return false;
     const auto length = editor_->Send(Scintilla::Message::GetLength);
+    if (length == 0) return true;
     if (length >= UntitledWhitespacePromptThresholdBytes) return false;
     const auto* bytes = reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
-    for (intptr_t index = 0; bytes && index < length; ++index) {
+    for (intptr_t index = 0; index < length; ++index) {
         const char ch = bytes[index];
         if (!(ch == ' ' || (ch >= '\t' && ch <= '\r'))) return false;
     }

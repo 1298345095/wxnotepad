@@ -62,12 +62,12 @@ bool LaunchDesktopApplication(GAppInfo* application, const wxString& target, con
 }
 #endif
 
-bool LaunchDesktopTarget(wxWindow* parent, const wxString& target, const wxString& workingDirectory, wxString& error) {
+bool LaunchDesktopTarget(wxWindow& parent, const wxString& target, const wxString& workingDirectory, wxString& error) {
 #ifdef __WXMSW__
     SHELLEXECUTEINFOW launch{};
     launch.cbSize = sizeof(launch);
     launch.fMask = SEE_MASK_FLAG_NO_UI;
-    launch.hwnd = parent ? static_cast<HWND>(parent->GetHandle()) : nullptr;
+    launch.hwnd = static_cast<HWND>(parent.GetHandle());
     launch.lpFile = target.wc_str();
     launch.lpDirectory = workingDirectory.empty() ? nullptr : workingDirectory.wc_str();
     launch.nShow = SW_SHOWNORMAL;

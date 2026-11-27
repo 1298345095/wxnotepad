@@ -192,7 +192,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     if (loaded.systemDefault && (loaded.encoding != Utf8 || nativeAnsiCodePage)) {
         // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
         // through Unicode, just like the native Base64 Decode boundary.
-        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw, nativeAnsiCodePage);
+        bytes = NativeDefaultEncodingBuffer(bytes, loaded.raw, nativeAnsiCodePage);
     } else if (loaded.encoding == Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));

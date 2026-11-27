@@ -35,7 +35,7 @@ private:
     void CharacterAdded(const Scintilla::NotificationData& notification);
     void CompleteTagOrMemberAccess();
     bool ShouldCompleteTypedWord(const Scintilla::NotificationData& notification);
-    void InsertMatchingCharacter(int ch);
+    bool InsertMatchingCharacter(int ch);
     // False retains the original failed-tag member-arrow completion path.
     bool CloseTag();
     void IndentNewLine();

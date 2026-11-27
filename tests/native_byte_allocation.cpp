@@ -157,7 +157,7 @@ public:
             try {
                 Require(presented, "native compositor presents the provenance allocation fixture");
                 NativeByteRanges raw;
-                const auto decoded = NativeDefaultEncodingBuffer(std::string(1, '\xff'), &raw);
+                const auto decoded = NativeDefaultEncodingBuffer(std::string(1, '\xff'), raw);
                 if (NativeEncodingChoice() && decoded == std::string(1, '\xff') && raw == NativeByteRanges{{0, 1}}) {
                     CheckRecovery(frame);
                     CheckDeletionAndHistory(frame);

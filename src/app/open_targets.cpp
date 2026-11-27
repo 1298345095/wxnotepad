@@ -261,7 +261,6 @@ wxString ExternalTarget(const wxString& target, const std::optional<wxString>& p
 } // namespace
 
 bool EditorFrame::ShowContainingFolder(const wxString& path) {
-    auto* parent = this;
 #ifdef __WXMSW__
     const bool rootDirectory = PathIsRootW(path.wc_str()) != FALSE;
 #else
@@ -269,7 +268,7 @@ bool EditorFrame::ShowContainingFolder(const wxString& path) {
 #endif
     if (wxDirExists(path) && rootDirectory) {
         wxString error;
-        return LaunchDesktopTarget(parent, path, path, error);
+        return LaunchDesktopTarget(*this, path, path, error);
     }
     const auto directory = wxFileName(path).GetPath();
     if (!wxDirExists(directory)) return false;
@@ -299,17 +298,15 @@ bool EditorFrame::ShowContainingFolder(const wxString& path) {
     if (failure) g_error_free(failure);
 #endif
     wxString error;
-    return LaunchDesktopTarget(parent, directory, directory, error);
+    return LaunchDesktopTarget(*this, directory, directory, error);
 }
 
 void EditorFrame::AppendOpenTargetCommands(wxMenu* menu) {
     for (const bool folder : {false, true}) {
-        int& id = folder ? selectionFolderId_ : openSelectionId_;
-        const bool alreadyBound = id != wxID_NONE;
-        if (!alreadyBound) id = wxWindow::NewControlId();
+        const int id = wxWindow::NewControlId();
+        if (!folder) openSelectionId_ = id;
         // TRANSLATORS: Original Action on Selection commands; open the target or its containing directory.
         menu->Append(id, folder ? _("Open Containing &Folder") : _("&Open File, Folder, Link, etc."));
-        if (alreadyBound) continue;
         Bind(
             wxEVT_MENU,
             [this, folder](wxCommandEvent&) {
@@ -367,7 +364,7 @@ bool EditorFrame::OpenSelection(bool containingFolder) {
     const auto external = ExternalTarget(target, path);
     if (!external.empty()) {
         wxString error;
-        return LaunchDesktopTarget(this, external, path ? wxFileName(*path).GetPath() : wxGetCwd(), error);
+        return LaunchDesktopTarget(*this, external, path ? wxFileName(*path).GetPath() : wxGetCwd(), error);
     }
     FindAnchor(*editor_, target);
     return true;

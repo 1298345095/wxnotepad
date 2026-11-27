@@ -206,7 +206,6 @@ AppCommand NextEolCommand(Scintilla::EndOfLine mode) {
 void EditorFrame::UpdatePositionStatus() {
     using enum Scintilla::Message;
     auto* status = GetStatusBar();
-    if (!status) return;
     const auto set = [status](int field, const wxString& text) {
         if (status->GetStatusText(field) != text) status->SetStatusText(text, field);
     };
@@ -265,7 +264,6 @@ void EditorFrame::UpdatePositionStatus() {
 
 void EditorFrame::UpdateStatusWidths() {
     auto* status = GetStatusBar();
-    if (!status) return;
     std::array<int, StatusField::Count> widths{};
 #ifdef __WXMSW__
     // wxMSW adds the native pane border and its own text margins.

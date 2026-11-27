@@ -21,6 +21,7 @@ private:
     wxCheckBox* remember_;
     wxTextCtrl* capacity_;
     std::function<void(size_t)> removeHistory_;
+    std::optional<wxString> selectedPath_;
     void Accept();
     void RefreshFiles();
 };

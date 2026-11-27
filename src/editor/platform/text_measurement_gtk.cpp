@@ -341,7 +341,7 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
         size_t extent = character - 1;
         if (!cursorPositions.empty()) {
             extent = cursorExtent;
-            if (character < cursorPositions.size() && cursorPositions[character].is_cursor_position) ++cursorExtent;
+            if (cursorPositions[character].is_cursor_position) ++cursorExtent;
         }
         const double width = extent < extents.size() ? extents[extent] : 0;
         std::fill_n(positions + byte, length, width);

@@ -27,7 +27,7 @@ struct PaddingSelection {
             if (firstLine == lastLine) {
                 firstLine = 0;
                 lastLine = editor.Send(GetLineCount) - 1;
-            } else if (selectionEnd <= editor.Send(PositionFromLine, lastLine) && lastLine - firstLine >= 1) {
+            } else if (selectionEnd <= editor.Send(PositionFromLine, lastLine)) {
                 --lastLine;
                 reducedSelection = true;
             }

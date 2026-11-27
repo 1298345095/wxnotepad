@@ -80,7 +80,6 @@ private:
     bool replacementInitialized_ = false;
     bool replacementPrepared_ = false;
     std::function<bool(SearchDirection)> confirmWrap_;
-    void ClearFindAll();
     Scintilla::FindOption SearchFlags() const;
     bool UsesRegex() const;
     FindResult SelectTarget(bool wrapped);

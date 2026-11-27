@@ -284,13 +284,11 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         if (options.windowPosition && !ApplyInitialWindowPosition(*frame, *options.windowPosition)) return false;
         bool skipLoad = options.startup.empty();
-        if (options.ordinaryFile) {
+        if (options.ordinaryFile && !options.startup.empty()) {
             // As in the original, present the owned editor before a startup
             // file confirmation. Internal relaunch failures keep their contract.
             frame->Show();
-            wxFileName path(options.startup);
-            path.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
-                           wxPATH_NORM_SHORTCUT);
+            const wxFileName path(options.startup);
             if (!path.FileExists() && !wxFileName::DirExists(path.GetFullPath())) {
                 const int choice = wxMessageBox(
                     // TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.

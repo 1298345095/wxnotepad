@@ -139,7 +139,7 @@ bool EditorControl::ConvertBase64(Base64Conversion command, const wxString& path
         if (command == Base64Conversion::DecodeAsHex)
             output = Hex(output, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
         else if (defaultEncoding)
-            output = NativeDefaultEncodingBuffer(output, &raw);
+            output = NativeDefaultEncodingBuffer(output, raw);
     }
     const auto start = Send(Message::GetSelectionStart);
     const auto end = Send(Message::GetSelectionEnd);

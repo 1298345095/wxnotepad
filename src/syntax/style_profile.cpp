@@ -2,6 +2,7 @@
 #include <Scintilla.h>
 #include <SciLexer.h>
 #include <wx/translation.h>
+#include <utility>
 
 namespace {
 struct StyleSchemeDefinition {
@@ -19,7 +20,8 @@ const char* OriginalDarkProfile() {
 }
 std::span<const StyleDefinition> SyntaxStyleDefinitions(SyntaxLanguage language) {
     const std::string_view section = SyntaxSettingsSection(language);
+    if (section == "Text File") return textProfileStyles;
     for (const auto& scheme : profileSchemes)
         if (section == scheme.section) return scheme.styles;
-    return textProfileStyles;
+    std::unreachable();
 }

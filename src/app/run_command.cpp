@@ -213,7 +213,6 @@ bool LaunchCommand(wxDialog& dialog, const wxString& command, const wxString& di
         error = parsed.error;
         return false;
     }
-    if (parsed.arguments.empty() || parsed.arguments.front().empty()) return false;
     const bool self = IsSelfAlias(parsed.arguments.front());
     if (self) {
         parsed.arguments.front() = wxStandardPaths::Get().GetExecutablePath();
@@ -234,7 +233,7 @@ bool EditorFrame::LaunchSelectionCommand(const wxString& command, const wxString
 #else
     parts.program = ExpandWindowsEnvironment(parts.program);
     parts.arguments = ExpandWindowsEnvironment(parts.arguments);
-    if (!wxURI(parts.program).GetScheme().empty()) return LaunchDesktopTarget(this, parts.program, directory, error);
+    if (!wxURI(parts.program).GetScheme().empty()) return LaunchDesktopTarget(*this, parts.program, directory, error);
     // These are original Notepad4 templates: apostrophes/$HOME are literal.
     // The toolkit supplies Windows argument splitting; Run keeps its native grammar.
     const auto parameters = wxCmdLineParser::ConvertStringToArgs(parts.arguments, wxCMD_LINE_SPLIT_DOS);

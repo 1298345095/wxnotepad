@@ -100,7 +100,7 @@ class WxSurface final : public Surface {
             dc_->SetFont(font);
             return;
         }
-        if (!sourcePrintFont_.IsOk() || !sourcePrintFont_.IsSameAs(font)) {
+        if (!sourcePrintFont_.IsSameAs(font)) {
             sourcePrintFont_ = font;
             printerFont_ = FontForPrinter(font, *dc_);
         }
@@ -132,16 +132,16 @@ class WxSurface final : public Surface {
     }
 
 public:
-    ~WxSurface() noexcept override { Release(); }
-    void Init(WindowID id) noexcept override { Initialize(Host(id), nullptr); }
-    void Init(SurfaceID dc, WindowID, bool) noexcept override { Initialize(nullptr, static_cast<wxDC*>(dc)); }
-    void InitPrint(const PrintSurface& printer) noexcept {
-        Release();
+    WxSurface() = default;
+    explicit WxSurface(const PrintSurface& printer) noexcept {
         if (!printer.dc.IsOk()) return;
         printing_ = true;
         dc_ = &printer.dc;
         measurement_ = &printer.measurement;
     }
+    ~WxSurface() noexcept override { Release(); }
+    void Init(WindowID id) noexcept override { Initialize(Host(id), nullptr); }
+    void Init(SurfaceID dc, WindowID, bool) noexcept override { Initialize(nullptr, static_cast<wxDC*>(dc)); }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
         // GTK logical coordinates need a full-resolution backing bitmap; MSW
@@ -381,9 +381,7 @@ public:
     }
 };
 std::unique_ptr<Surface> AllocatePrintSurface(const PrintSurface& printer) {
-    auto surface = std::make_unique<WxSurface>();
-    surface->InitPrint(printer);
-    return surface;
+    return std::make_unique<WxSurface>(printer);
 }
 std::unique_ptr<Surface> Surface::Allocate([[maybe_unused]] Scintilla::Technology technology) {
 #ifdef __WXMSW__
