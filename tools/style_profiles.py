@@ -11,6 +11,7 @@ import update_schemes
 from scheme_data import original_scheme, provenance, read_pinned
 
 ROOT = Path(__file__).resolve().parents[1]
+GENERATOR_NAME = "style_profiles.py"
 
 
 def style_records(text, symbol, names):
@@ -38,7 +39,7 @@ def generate(source):
     names = dict(
         re.findall(r'#define NP2(?:StyleX|STYLEX)_(\w+)\s+EDITSTYLE_\w+\(\w+, L"([^"]+)"', resources.decode("utf-8"))
     )
-    output = provenance("style_profiles.py", path, resources) + ["// clang-format off"]
+    output = provenance(GENERATOR_NAME, path, resources) + ["// clang-format off"]
     schemes = []
     for filename, symbol in [("Default", "Global"), *update_schemes.SCHEMES.items()]:
         source_file = getattr(update_schemes, "SOURCE_FILES", {}).get(filename, filename)
@@ -47,7 +48,7 @@ def generate(source):
         records = style_records(data.decode("utf-8"), symbol, names)
         if symbol != "Global":
             schemes.append((original_scheme(data, symbol)[-1], filename.lower()))
-        output += provenance("style_profiles.py", path, data)
+        output += provenance(GENERATOR_NAME, path, data)
         output += [f"constexpr StyleDefinition {filename.lower()}ProfileStyles[] = {{"]
         for key, value, ids in records:
             output += [
@@ -66,7 +67,7 @@ def generate(source):
     output += ["    {" + json.dumps(section) + ", " + name + "ProfileStyles}," for section, name in schemes]
     output += ["};"]
     data = read_pinned(source, "doc/Notepad4 DarkTheme.ini")
-    output += provenance("style_profiles.py", "doc/Notepad4 DarkTheme.ini", data)
+    output += provenance(GENERATOR_NAME, "doc/Notepad4 DarkTheme.ini", data)
     # Git stores UTF-8/LF; .gitattributes materializes UTF-16LE-BOM/CRLF.
     text = data.decode("utf-8").replace("\r\n", "\n")
     distributed = codecs.BOM_UTF16_LE + text.replace("\n", "\r\n").encode("utf-16le")

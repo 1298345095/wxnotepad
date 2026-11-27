@@ -16,7 +16,10 @@ class StateTimeout(Exception):
 
 
 def read_state(folder):
-    return dict(line.split("\t", 1) for line in (folder / "state").read_text(encoding="utf-8").splitlines())
+    return {
+        key: value
+        for key, value in (line.split("\t", 1) for line in (folder / "state").read_text(encoding="utf-8").splitlines())
+    }
 
 
 def wait_state(folder, process, predicate, timeout, clock=time.monotonic):

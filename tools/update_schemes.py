@@ -60,7 +60,7 @@ def main(schemes=None):
         scheme_id = None
         if identity:
             resources = read_pinned(args.source, "src/EditLexer.h")
-            ids = dict((key, int(value)) for key, value in re.findall(rb"#define\s+(NP2LEX_\w+)\s+(\d+)", resources))
+            ids = {key: int(value) for key, value in re.findall(rb"#define\s+(NP2LEX_\w+)\s+(\d+)", resources)}
             scheme_id = ids[identity[0]] - ids[b"NP2LEX_TEXTFILE"]
         name = filename.lower()
         output = generate_scheme(

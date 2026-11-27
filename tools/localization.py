@@ -20,7 +20,7 @@ def metadata(root):
     codes, identifiers = set(), set()
     for language in data["languages"]:
         code, identifier = language["code"], language["lang_id"]
-        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", code) or code in codes:
+        if not re.fullmatch(r"[A-Za-z]\w*", code, flags=re.ASCII) or code in codes:
             raise ValueError("Invalid or duplicate language code: " + code)
         if not isinstance(identifier, int) or not 0 < identifier <= 65535 or identifier in identifiers:
             raise ValueError("Invalid or duplicate language LANGID")

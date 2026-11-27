@@ -34,9 +34,12 @@ def digest(path, prefix=b""):
 
 def memory(pid):
     if sys.platform != "win32":
-        status = dict(
-            line.split(":", 1) for line in Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line
-        )
+        status = {
+            key: value
+            for key, value in (
+                line.split(":", 1) for line in Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line
+            )
+        }
         return {"rss_bytes": int(status["VmRSS"].split()[0]) * 1024}
 
     class Counters(ctypes.Structure):

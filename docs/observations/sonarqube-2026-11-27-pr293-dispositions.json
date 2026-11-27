@@ -1,0 +1,136 @@
+{
+  "projectKey": "1298345095_wxnotepad",
+  "pullRequest": "293",
+  "reviewedRevision": "95335f186b99d80f5d0d71e2800746fe95166ca3",
+  "policy": "Issue-specific source-to-sink and CLI contract review. Preserve developer-selected paths, literal process arguments and offline observation inputs.",
+  "dispositions": [
+    {
+      "key": "AaIeheW2iM8SkrKA8T18",
+      "rule": "pythonsecurity:S8707",
+      "file": ".github/scripts/check_sdk.py",
+      "line": 104,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The operator explicitly selects --output for the SDK JSON report. docs/ci.md documents F:/evidence/sdk-attempt-1.json, and tests/test_sdk_contract.py exercises real success/failure report writes. The local command has no restricted-root or privilege-delegation interface."
+    },
+    {
+      "key": "AaIeheX1iM8SkrKA8T2B",
+      "rule": "pythonsecurity:S8701",
+      "file": ".github/scripts/checks.py",
+      "line": 29,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The developer intentionally selects the clang-format executable; version and formatting calls pass argv lists with shell=False. Filenames come from fixed git ls-files -z -- src tests, so operands start with src/ or tests/. Choosing the local tool installation is the CLI capability, not injected shell syntax."
+    },
+    {
+      "key": "AaIeheX1iM8SkrKA8T2A",
+      "rule": "pythonsecurity:S6549",
+      "file": ".github/scripts/checks.py",
+      "line": 38,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The flagged Path.resolve call canonicalizes compilation-database paths. Existing is_relative_to checks admit only ROOT/src or ROOT/tests before invoking clang-tidy. This implements the rule's containment order, and the local tool exposes no file-existence oracle to a less-privileged caller."
+    },
+    {
+      "key": "AaIeheXNiM8SkrKA8T1_",
+      "rule": "pythonsecurity:S8705",
+      "file": ".github/scripts/ci.py",
+      "line": 35,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "Internal build/test entry points assemble argv lists and run passes them to subprocess.Popen without a shell. Jobs are positive integers, backend values use argparse choices and test expressions remain one -R argument. The Windows CMake adapter passes JSON through ConvertFrom-Json and array splatting, without command-string evaluation."
+    },
+    {
+      "key": "AaIeheXNiM8SkrKA8T19",
+      "rule": "pythonsecurity:S8705",
+      "file": ".github/scripts/ci.py",
+      "line": 88,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "probe intentionally runs the executable and literal arguments supplied after --. docs/ci.md documents this owned-process capability. tests/test_ci_probe.py::test_waits_for_every_process_and_preserves_literal_arguments uses a real child to verify spaces, dollar signs, ampersands, quotes and Chinese text remain literal; subprocess.run uses an argv list without shell interpretation."
+    },
+    {
+      "key": "AaIeheXNiM8SkrKA8T1-",
+      "rule": "pythonsecurity:S8705",
+      "file": ".github/scripts/ci.py",
+      "line": 254,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The executable is fixed ctest; the resolved build directory is one --test-dir value and the expression is one -R value. Neither is split or shell-evaluated. Out-of-source builds are documented. tests/test_ci_parallel.py exercises selection, special-character paths and CMake bracket quoting in shard registrations."
+    },
+    {
+      "key": "AaIehd7diM8SkrKA8T1s",
+      "rule": "pythonsecurity:S8707",
+      "file": "tools/capture_number_radix.py",
+      "line": 192,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The operator explicitly supplies an original executable, capture directory and optional header path. The flagged write uses the fixed original-fixtures.json filename under that selected directory; captured text never constructs a destination. The process runs with caller authority. New offline export tests preserve external output paths, UTF-8 lengths, embedded NULs and forward-only fixture selection."
+    },
+    {
+      "key": "AaIeheSZiM8SkrKA8T1u",
+      "rule": "python:S5332",
+      "file": "tools/capture_url_fixtures.py",
+      "line": 101,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "This HTTP literal is offline conversion fixture data. Its UTF-8 bytes enter the owned original editor buffer through Windows/Scintilla messages, then local URL conversion commands produce recorded document/undo/redo states. There is no HTTP client or network request. Changing the scheme would change the behavior measured in docs/observations/original-url-conversion.md."
+    },
+    {
+      "key": "AaIeheSZiM8SkrKA8T1v",
+      "rule": "python:S5332",
+      "file": "tools/capture_url_fixtures.py",
+      "line": 102,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "This HTTP literal with a Unicode authority/path is offline parser input. The capture copies bytes into the owned original editor process and applies local conversion commands; no network API consumes the URL. docs/observations/original-url-conversion.md records why the original scheme and Unicode cases must be retained."
+    },
+    {
+      "key": "AaIeheVYiM8SkrKA8T16",
+      "rule": "pythonsecurity:S6350",
+      "file": "tools/clipboard_isolated.py",
+      "line": 55,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The mailbox is in an owned TemporaryDirectory and its path is passed to the explicitly launched test child in a private DISPLAY/XAUTHORITY. Writers are test helpers, not product document input. native_key_helpers.h derives keys from KeyName and modifiers. tests/extra_escape.cpp formats gdk_x11_window_get_xid with %lu; x11-window targets must match private-server search candidates. Other XIDs come from xdotool search or the owned Weston log's digits-only regex. xdo uses fixed xdotool and shell=False. The already-executing test child has the same user authority; this protocol grants no additional filesystem or process privilege."
+    },
+    {
+      "key": "AaIeheTkiM8SkrKA8T11",
+      "rule": "pythonsecurity:S8707",
+      "file": "tools/cmake_cache.py",
+      "line": 8,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The helper reads the fixed CMakeCache.txt from the operator-selected --cmake-dir. docs/ci.md supports F:/native build/cmake and /path/to/native/cmake-build. This is intentional out-of-source build inspection with caller permissions, not an untrusted filename appended to a protected root."
+    },
+    {
+      "key": "AaIeheSwiM8SkrKA8T1x",
+      "rule": "pythonsecurity:S8707",
+      "file": "tools/csv_reference.py",
+      "line": 11,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "This offline converter reads the explicit positional capture file. JSON contents only determine TSV fields and never construct a path. docs/observations/csv.md documents the workflow. The new real CLI test verifies an outside-cwd Unicode/space-containing input, exact output bytes and unchanged input."
+    },
+    {
+      "key": "AaIeheSwiM8SkrKA8T1w",
+      "rule": "pythonsecurity:S8707",
+      "file": "tools/csv_reference.py",
+      "line": 35,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The positional output argument is the operator-selected TSV destination. Capture contents do not construct this path and there is no confinement or privilege boundary. New real-process tests cover outside-cwd output and prove malformed JSON preserves an existing destination."
+    },
+    {
+      "key": "AaIeheT4iM8SkrKA8T13",
+      "rule": "pythonsecurity:S8707",
+      "file": "tools/localization.py",
+      "line": 37,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "write_changed writes explicit header/extract destinations or a selected source root's catalog with validated metadata. cmake/Localization.cmake selects ${CMAKE_CURRENT_BINARY_DIR}/generated/ui_language_data.h, supporting an external binary tree. tests/test_localization.py verifies external CLI outputs and unchanged mtime on repeated generation. Root/cwd confinement would violate this generator contract."
+    },
+    {
+      "key": "AaIeheUNiM8SkrKA8T14",
+      "rule": "pythonsecurity:S8705",
+      "file": "tools/prepare_toolbar_art.py",
+      "line": 28,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The source path is one value consumed by fixed git -C. The show command and every revision/blob are fixed to 89b8b36e0ee2c23f73be922315f17261ccfbbe1a:res/Toolbar{16,24,32,40,48}.bmp. argv plus shell=False preserves spaces and metacharacters. A real git -C --version show check fails to change into directory --version rather than processing an option. The same sink was reviewed in sonarqube-2026-11-20-pr247-dispositions.json; its current argument ownership was rechecked."
+    },
+    {
+      "key": "AaIeheTUiM8SkrKA8T10",
+      "rule": "pythonsecurity:S8705",
+      "file": "tools/update_detection_extensions.py",
+      "line": 18,
+      "resolution": "FALSE_POSITIVE",
+      "rationale": "The developer-selected checkout path occupies one argument after fixed git -C. ls-tree, its options, pinned REVISION and src/EditLexers are fixed, and listed blobs are read at that revision. subprocess.check_output receives argv without shell expansion; source-path whitespace or metacharacters cannot create another Git argument."
+    }
+  ]
+}
