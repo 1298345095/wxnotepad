@@ -47,7 +47,7 @@ void SelectionModes(EditorFrame* frame, int id) {
     NativeSearch::Command(frame, id);
     Require(TestEditor::Text(frame) == "1+2\n3+4 7" && editor->Send(GetSelections) == 1 &&
                 editor->Send(GetAnchor) == 7 && editor->Send(GetCurrentPos) == 9,
-            "original multiple-selection evaluation uses main expression and leaves one result selection");
+            "original concatenated selection text evaluates to 7 and inserts at the main selection end");
     editor->Send(Undo);
     Require(TestEditor::Text(frame) == "1+2\n3+4" && editor->Send(GetSelections) == 2 &&
                 editor->Send(GetMainSelection) == 1 && editor->Send(GetAnchor) == 4 &&
@@ -56,6 +56,13 @@ void SelectionModes(EditorFrame* frame, int id) {
     editor->Send(Redo);
     Require(TestEditor::Text(frame) == "1+2\n3+4 7" && editor->Send(GetSelections) == 1,
             "Redo restores original main-expression result and single selection");
+    TestEditor::ResetStream(editor, "1+2\n3+4", 0, 3);
+    editor->Send(AddSelection, 7, 4);
+    editor->Send(SetMainSelection, 0);
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(frame) == "1+2 7\n3+4" && editor->Send(GetSelections) == 1 &&
+                editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 5,
+            "selection text uses document order even when the main selection is the first range");
     std::puts("PASS: original read-only, rectangle and main/multiple selection semantics");
 }
 void EncodedFiles(EditorFrame* frame, int id) {
@@ -96,6 +103,19 @@ void EncodedFiles(EditorFrame* frame, int id) {
     Require(frame->SaveAs(TestFiles::Filename(path)).status == SaveStatus::Saved &&
                 TestFiles::Bytes(path) == expression + " " + expectedResult,
             "actual native ANSI saved bytes follow independent original conversion sample");
+    if (codePage == 936 || codePage == 1252) {
+        const bool dbcs = codePage == 936;
+        const int sourceCharacters = dbcs ? 500 : 800;
+        std::string nativeExpression = "\"";
+        for (int character = 0; character < sourceCharacters; ++character)
+            nativeExpression += dbcs ? "中" : "é";
+        nativeExpression += dbcs ? "\".repeat(7)" : "\".repeat(4)";
+        TestEditor::ResetStream(editor, nativeExpression.c_str(), 0, static_cast<intptr_t>(nativeExpression.size()));
+        NativeSearch::Command(frame, id);
+        Require(TestEditor::Text(frame) == nativeExpression && !editor->Send(GetModify) && !editor->Send(CanUndo),
+                "native ANSI result capacity uses original native source bytes, rejecting oversized output without "
+                "history");
+    }
 #endif
 }
 void Clipboard(bool seed) {

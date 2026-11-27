@@ -6,8 +6,9 @@ It evaluates the selected JavaScript with `with(Math)`, inserts a space and the
 formatted result after the original expression, and selects that entire insertion
 (including the space). `^` is JavaScript XOR. There is no new shortcut.
 
-The command uses the main selection, including when several selections exist.
-The result becomes one forward selection. Undo restores the original selections
+With multiple selections, the command evaluates the original concatenated
+selection text and inserts at the main selection's end. The result becomes one
+forward selection. Undo restores the original selections
 and main selection; Redo restores the result. Empty selections disable the menu.
 Empty/null/undefined results do not edit or create history. Rectangles retain the
 original warning. Read-only selections keep the command enabled: Scintilla blocks

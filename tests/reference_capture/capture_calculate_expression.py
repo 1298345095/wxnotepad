@@ -156,7 +156,10 @@ try:
                 )
                 (output / "partial.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
                 print(expression, reverse, bytes.fromhex(after["hex"]).decode(errors="replace"), flush=True)
-        for mode in ["empty", "readonly", "rectangle", "multiple"]:
+        modes = ["empty", "readonly", "rectangle", "multiple"]
+        if "--supplement" in sys.argv[3:]:
+            modes.append("multiple-main-first")
+        for mode in modes:
             app.reset(b"1+2\n3+4", 0, 0 if mode == "empty" else 3)
             if mode == "readonly":
                 app.send(2171, 1)
@@ -164,8 +167,10 @@ try:
                 app.send(2422, 1)
                 app.send(2580, 0)
                 app.send(2578, 7)
-            if mode == "multiple":
+            if mode in ("multiple", "multiple-main-first"):
                 app.send(2573, 7, 4)
+                if mode == "multiple-main-first":
+                    app.send(2574, 0)
             before = app.state()
             menu = user.GetMenu(app.hwnd)
             user.SendMessageW(app.hwnd, 0x116, menu, 0)
@@ -240,6 +245,25 @@ try:
                         redo_saved=target.read_bytes().hex(),
                     )
                 )
+                if encoding == "ansi" and app.send(2137) == 936:
+                    expression = '"' + "中" * 500 + '".repeat(7)'
+                    data = expression.encode("gbk")
+                    app.reset(data, 0, len(data))
+                    app.command(40004)
+                    before = app.state()
+                    original_bytes = target.read_bytes().hex()
+                    app.command(CALCULATE)
+                    after = app.state()
+                    app.command(40004)
+                    rows.append(
+                        dict(
+                            mode="ansi-result-capacity",
+                            before=before,
+                            after=after,
+                            before_saved=original_bytes,
+                            saved=target.read_bytes().hex(),
+                        )
+                    )
             finally:
                 app.close()
     (output / "reference.json").write_text(

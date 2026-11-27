@@ -43,11 +43,16 @@ void EditorFrame::CalculateExpression() {
     const auto length = editor_->Send(Message::GetSelText);
     std::string selected(static_cast<size_t>(length) + 1, '\0');
     editor_->Send(Message::GetSelText, 0, reinterpret_cast<intptr_t>(selected.data()));
+    auto originalSourceBytes = selected.size();
+    if (document_.IsDefaultEncoding()) {
+        const auto native = editor_->NativeSelectedBytes(false);
+        originalSourceBytes = native.size() + 1;
+        selected = NativeDefaultEncodingUnicode(native);
+    }
     constexpr size_t OriginalMinimumCharacters = 1024;
     constexpr size_t OriginalAllocationAlignment = 16;
-    const auto allocated = std::max(OriginalMinimumCharacters, (selected.size() + OriginalAllocationAlignment - 1) &
+    const auto allocated = std::max(OriginalMinimumCharacters, (originalSourceBytes + OriginalAllocationAlignment - 1) &
                                                                    ~(OriginalAllocationAlignment - 1));
-    if (document_.IsDefaultEncoding()) selected = NativeDefaultEncodingUnicode(editor_->NativeSelectedBytes(false));
     auto result = EvaluateExpression(wxString::FromUTF8(selected.c_str()), allocated * 2 + OriginalMinimumCharacters);
     if (document_.IsDefaultEncoding()) {
         result.text = NativeDefaultEncodingText(result.text);
