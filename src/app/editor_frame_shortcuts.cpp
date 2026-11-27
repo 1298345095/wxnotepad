@@ -295,6 +295,22 @@ bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int 
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetModifiers() == wxMOD_ALT) {
+        if (event.GetKeyCode() == 'I') {
+            OpenFileFavorites();
+            return true;
+        }
+        if (event.GetKeyCode() == 'K') {
+            AddFileFavorite();
+            return true;
+        }
+#ifndef __WXMSW__
+        if (event.GetKeyCode() == WXK_F9) {
+            ManageFileFavorites();
+            return true;
+        }
+#endif
+    }
     if (event.GetKeyCode() == 'H' && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
         !event.MetaDown()) {
         ShowRecentFiles();
