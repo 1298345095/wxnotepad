@@ -921,6 +921,15 @@ msgstr "ASS — 启用对称交换(&S)"
 msgid "Action on &Selection"
 msgstr "对选中内容执行操作(&S)"
 
+msgid "&Calculate Expression"
+msgstr "计算表达式(&C)"
+
+msgid "Unexpected end of expression."
+msgstr "表达式意外结束。"
+
+msgid "Evaluate the selected JavaScript expression in Math scope."
+msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
+
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
 msgstr "别名"

@@ -21,3 +21,8 @@ if(WIN32)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/base64_clipboard_error.py" "$<TARGET_FILE:base64_conversion>")
     set_tests_properties(native_base64_clipboard_error PROPERTIES TIMEOUT 20)
 endif()
+add_editor_test(calculate_expression original_calculate_expression 60)
+add_test(NAME packaged_calculate_expression COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/calculate_expression_packaged.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/calculation-package")
+set_tests_properties(packaged_calculate_expression PROPERTIES TIMEOUT 180)

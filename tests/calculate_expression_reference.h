@@ -1,0 +1,87 @@
+#pragma once
+// Independent pinned original real-app capture, 89b8b36.
+// Original executable SHA-256: 1425c9a4b5ab2ea1fa3ba088f38dd987b763b7b8feff23dde6243f7855e86a78
+struct CalculationReference {
+    const char* expression;
+    const char* inserted;
+    bool error;
+};
+inline constexpr CalculationReference CalculationReferences[] = {
+    // Additional original system conversion probes retain decimal/scientific spellings.
+    {R"calc(0.1)calc", " 0.1", false},
+    {R"calc(0.2)calc", " 0.2", false},
+    {R"calc(0.3)calc", " 0.3", false},
+    {R"calc(1.23)calc", " 1.23", false},
+    {R"calc(0.0000001)calc", " 0.0000001", false},
+    {R"calc(1e-9)calc", " 0.000000001", false},
+    {R"calc(1.2345678901234567)calc", " 1.23456789012345669", false},
+    {R"calc(1.2345678901234567e-7)calc", " 1.23456789012345658e-007", false},
+    {R"calc(1000000000000000000)calc", " 1E+18", false},
+    {R"calc(100000000000000000)calc", " 1E+17", false},
+    {R"calc(1.2345678901234567e18)calc", " 1.23456789012345677e+018", false},
+    {R"calc(1.2345678901234567e19)calc", " 1.23456789012345672e+019", false},
+    {R"calc(Math.log(2))calc", " 0.693147180559945286", false},
+    {R"calc(0.00001/3)calc", " 3.33333333333333375e-006", false},
+    {R"calc(1e-15)calc", " 0.000000000000001", false},
+    {R"calc(1e-16)calc", " 1E-16", false},
+    {R"calc(1e14)calc", " 100000000000000", false},
+    {R"calc(1e15)calc", " 1E+15", false},
+    {R"calc(1e16)calc", " 1E+16", false},
+    {R"calc(1234567890123456)calc", " 1234567890123456", false},
+    {R"calc(1.23456789e-12)calc", " 1.23456789E-12", false},
+    {R"calc(1.23456789e15)calc", " 1.23456789E+15", false},
+    // Independent original ActiveScript/propsys probe: embedded NUL results
+    // stop at the same original null-terminated insertion boundary.
+    {R"calc("a\u0000b")calc", " a", false},
+    {R"calc("\u0000")calc", "", false},
+    // Independent original engine error values, with unchanged document bytes.
+    {"throw null", "", true},
+    {"throw undefined", "", true},
+    {"throw 7", "", true},
+    {R"calc(1+2*3)calc", R"calc( 7)calc", false},
+    {R"calc((1+2)*3)calc", R"calc( 9)calc", false},
+    {R"calc(2^3)calc", R"calc( 1)calc", false},
+    {R"calc(0xff + 0b10 + 0o10)calc", R"calc( 265)calc", false},
+    {R"calc(1e3 + .5)calc", R"calc( 1000.5)calc", false},
+    {R"calc(-7%3)calc", R"calc( -1)calc", false},
+    {R"calc(1<<4|3)calc", R"calc( 19)calc", false},
+    {R"calc(sqrt(81))calc", R"calc( 9)calc", false},
+    {R"calc(PI)calc", R"calc( 3.14159265358979312)calc", false},
+    {R"calc(sin(PI/2))calc", R"calc( 1)calc", false},
+    {R"calc(pow(2,10))calc", R"calc( 1024)calc", false},
+    {R"calc(0.1+0.2)calc", R"calc( 0.300000000000000044)calc", false},
+    {R"calc(1/3)calc", R"calc( 0.333333333333333315)calc", false},
+    {R"calc(1e20)calc", R"calc( 1E+20)calc", false},
+    {R"calc(1e21)calc", R"calc( 1E+21)calc", false},
+    {R"calc(NaN)calc", R"calc( -1.#IND)calc", false},
+    {R"calc(Infinity)calc", R"calc( inf)calc", false},
+    {R"calc(-Infinity)calc", R"calc( -inf)calc", false},
+    {R"calc(-0)calc", R"calc( -0)calc", false},
+    {R"calc(true)calc", R"calc( -1)calc", false},
+    {R"calc(false)calc", R"calc( 0)calc", false},
+    {R"calc(null)calc", R"calc()calc", false},
+    {R"calc(undefined)calc", R"calc()calc", false},
+    {R"calc("")calc", R"calc()calc", false},
+    {R"calc("a"+3)calc", R"calc( a3)calc", false},
+    {R"calc([1,2,3])calc", R"calc( 1,2,3)calc", false},
+    {R"calc(({a:1}))calc", R"calc( [object Object])calc", false},
+    {R"calc(({toString:function(){return "hello";}}))calc", R"calc( hello)calc", false},
+    {R"calc(var x=3;x)calc", R"calc( 3)calc", false},
+    {R"calc(typeof x)calc", R"calc( undefined)calc", false},
+    {R"calc((()=>42)())calc", R"calc( 42)calc", false},
+    {R"calc(let x=4;x)calc", R"calc( 4)calc", false},
+    {R"calc(1+)calc", R"calc()calc", true},
+    {R"calc(foo)calc", R"calc()calc", true},
+    {R"calc(sqrt())calc", R"calc( -1.#IND)calc", false},
+    {R"calc(2**3)calc", R"calc( 8)calc", false},
+    {R"calc(077)calc", R"calc( 63)calc", false},
+    {R"calc(new Map([[1,2]]).get(1))calc", R"calc( 2)calc", false},
+    {R"calc("中文😀")calc", R"calc( 中文😀)calc", false},
+    {R"calc("a\nb")calc", R"calc( a
+b)calc",
+     false},
+    {R"calc(1 +
+2)calc",
+     R"calc( 3)calc", false},
+    {R"calc(throw new Error("owned error"))calc", R"calc()calc", true},
+};
