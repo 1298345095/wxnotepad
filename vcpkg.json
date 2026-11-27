@@ -5,7 +5,8 @@
   "dependencies": [
     {"name": "gettext", "host": true, "default-features": false, "features": ["tools"]},
     {"name": "wxwidgets", "default-features": false},
-    {"name": "gtk3", "default-features": false, "features": ["wayland"], "platform": "linux"}
+    {"name": "gtk3", "default-features": false, "features": ["wayland"], "platform": "linux"},
+    {"name": "quickjs-ng", "default-features": false, "platform": "linux"}
   ],
   "overrides": [{"name": "wxwidgets", "version": "3.3.4", "port-version": 1}]
 }
