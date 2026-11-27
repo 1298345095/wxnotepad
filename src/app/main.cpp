@@ -21,6 +21,7 @@ namespace {
 struct StartupOptions : WindowRequest {
     wxString observation;
     std::optional<wxString> windowPosition;
+    bool publicWindowPosition = false;
     wxString schemeName;
     std::optional<unsigned> unsupportedSourceCodePage;
     wxString missingParameter;
@@ -113,7 +114,11 @@ struct StartupOptions : WindowRequest {
                 startup = argv[i++];
             else if (argument == "--window-position" && i < argc)
                 windowPosition = argv[i++];
-            else if (argument == "--read-only")
+            else if (option.CmpNoCase("pos") == 0) {
+                if (i == argc || !ParseWindowPosition(argv[i])) return false;
+                windowPosition = argv[i++];
+                publicWindowPosition = true;
+            } else if (argument == "--read-only")
                 readOnly = true;
             else if (argument == "--startup-encoding" && i < argc) {
                 if (!ParseEncoding(argv[i++])) return false;
@@ -198,6 +203,12 @@ wxString StartupHelp() {
                        "-ns  Match an existing window only for the same file.\n"
                        "-r  Reuse an available window.\n"
                        "-rs  Reuse without a file; otherwise match only the same file.");
+    // TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
+    text += "\n" + _("-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1).");
+#ifdef __WXGTK__
+    // TRANSLATORS: Wayland cannot export or apply global window coordinates.
+    text += "\n" + _("Wayland applies size and maximized state; coordinates and default positioning are unavailable.");
+#endif
 #ifdef __WXMSW__
     // TRANSLATORS: New wxnotepad help; /option, -option and --option show literal option-prefix spellings.
     text += "\n\n" + _("Windows: /option, -option and --option.");
@@ -282,7 +293,10 @@ public:
             return true;
         }
         auto* frame = new EditorFrame(settings_.get());
-        if (options.windowPosition && !ApplyInitialWindowPosition(*frame, *options.windowPosition)) return false;
+        if (options.windowPosition &&
+            !(options.publicWindowPosition ? ApplyPublicWindowPosition(*frame, *options.windowPosition)
+                                           : ApplyInitialWindowPosition(*frame, *options.windowPosition)))
+            return false;
         bool skipLoad = options.startup.empty();
         if (options.ordinaryFile && !options.startup.empty()) {
             // As in the original, present the owned editor before a startup

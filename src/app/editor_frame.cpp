@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/new_window.h"
 #ifdef __WXMSW__
 #include "app/explorer_selections.h"
 #endif
@@ -106,6 +107,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     });
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!FullScreenActive() && !IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+        CaptureNormalWindowPosition();
+        ApplyPendingWindowPosition();
+        event.Skip();
+    });
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event) {
+        CaptureNormalWindowPosition();
         event.Skip();
     });
     editor_->SetFontSettings(preferences.fonts);
@@ -203,6 +210,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
 #endif
+    RestoreWindowPosition();
     UpdateDocumentState();
     editor_->SetFocus();
 }
@@ -260,6 +268,7 @@ bool EditorFrame::FullScreenActive() const {
 
 void EditorFrame::SetFullScreen(bool active) {
     if (active == FullScreenActive()) return;
+    if (active) CaptureNormalWindowPosition();
 #ifdef __WXMSW__
     const auto window = static_cast<HWND>(GetHandle());
     if (active) {
@@ -365,6 +374,8 @@ void EditorFrame::ApplyBarVisibility() {
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
+    CaptureNormalWindowPosition();
+    settings_->CaptureWindowPosition(normalWindowPosition_);
 #ifdef __WXMSW__
     settings_->values.renderingTechnology = static_cast<int>(editor_->Send(Scintilla::Message::GetTechnology));
     settings_->values.fontQuality = static_cast<int>(editor_->Send(Scintilla::Message::GetFontQuality));

@@ -666,6 +666,11 @@ msgstr ""
 msgid "&Standard"
 msgstr ""
 
+#. TRANSLATORS: Original IDM_VIEW_STICKY_WINDOW_POSITION under Settings > Window Options.
+#: src/app/window_position.cpp
+msgid "&Sticky Window Position"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Strip trailing blanks when saving."
 msgstr ""
@@ -746,6 +751,11 @@ msgstr ""
 msgid "&Wildcard search"
 msgstr ""
 
+#. TRANSLATORS: Original CMD_COPYWINPOS, Edit > Copy to Clipboard.
+#: src/app/window_position.cpp
+msgid "&Window Position\tCtrl+Shift+K"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Windows (CR+LF)"
 msgstr ""
@@ -786,6 +796,11 @@ msgid ""
 "-ns  Match an existing window only for the same file.\n"
 "-r  Reuse an available window.\n"
 "-rs  Reuse without a file; otherwise match only the same file."
+msgstr ""
+
+#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
+#: src/app/main.cpp
+msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
 msgstr ""
 
 #: src/app/editor_frame_settings_commands.cpp
@@ -1249,6 +1264,11 @@ msgstr ""
 msgid "Clear History"
 msgstr ""
 
+#. TRANSLATORS: Original IDM_VIEW_CLEARWINPOS under Settings > Window Options.
+#: src/app/window_position.cpp
+msgid "Clear Position &History"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Click here to &select default encoding."
 msgstr ""
@@ -1598,7 +1618,7 @@ msgstr ""
 
 #. TRANSLATORS: wxnotepad title for a settings-file write failure.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
-#: src/app/language_commands.cpp
+#: src/app/language_commands.cpp src/app/window_position.cpp
 msgid "Could not save settings"
 msgstr ""
 
@@ -1608,7 +1628,7 @@ msgstr ""
 
 #. TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
-#: src/app/language_commands.cpp
+#: src/app/language_commands.cpp src/app/window_position.cpp
 #, c-format
 msgid "Could not write %s"
 msgstr ""
@@ -4404,6 +4424,11 @@ msgstr ""
 msgid "WJ — &Word joiner"
 msgstr ""
 
+#. TRANSLATORS: Wayland cannot export or apply global window coordinates.
+#: src/app/main.cpp
+msgid "Wayland applies size and maximized state; coordinates and default positioning are unavailable."
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Web Source Code"
 msgstr ""
@@ -4428,6 +4453,11 @@ msgstr ""
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Window Title Displa&y"
+msgstr ""
+
+#. TRANSLATORS: Wayland limitation: no compositor global-position protocol is available.
+#: src/app/window_position.cpp
+msgid "Window coordinates and default positioning are unavailable on Wayland."
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp

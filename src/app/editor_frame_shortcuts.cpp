@@ -16,6 +16,16 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetModifiers() == (wxMOD_CONTROL | wxMOD_SHIFT)) {
+        if (event.GetKeyCode() == 'P') {
+            DefaultWindowPosition();
+            return true;
+        }
+        if (event.GetKeyCode() == 'K') {
+            CopyWindowPosition();
+            return true;
+        }
+    }
     if (HandleSelectionActionKey(event)) return true;
     if (event.GetKeyCode() == WXK_F12 && !event.HasAnyModifiers()) {
         ShowSyntaxScheme();

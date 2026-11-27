@@ -794,6 +794,11 @@ msgstr "分割行(&S)\tCtrl+I"
 msgid "&Standard"
 msgstr "標準(&S)"
 
+#. TRANSLATORS: Original IDM_VIEW_STICKY_WINDOW_POSITION under Settings > Window Options.
+#: src/app/window_position.cpp
+msgid "&Sticky Window Position"
+msgstr "固定視窗位置(&S)"
+
 # Original Notepad4 zh-Hant: IDD_DEFEOLMODE/IDC_AUTOSTRIPBLANKS; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Strip trailing blanks when saving."
@@ -887,6 +892,11 @@ msgstr "網頁原始碼(&W)"
 msgid "&Wildcard search"
 msgstr "萬用字元搜尋(&I)"
 
+#. TRANSLATORS: Original CMD_COPYWINPOS, Edit > Copy to Clipboard.
+#: src/app/window_position.cpp
+msgid "&Window Position\tCtrl+Shift+K"
+msgstr "視窗位置(&W)\tCtrl+Shift+K"
+
 # Original Notepad4 zh-Hant: IDM_LINEENDINGS_CRLF; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Windows (CR+LF)"
@@ -938,6 +948,11 @@ msgstr ""
 "-ns  僅當開啟相同檔案時使用現有視窗。\n"
 "-r  重用可用視窗。\n"
 "-rs  無檔案時重用視窗；否則僅比對相同檔案。"
+
+#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
+#: src/app/main.cpp
+msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
+msgstr "-pos x,y,width,height,maximized  一般視窗外框矩形和最大化狀態（0 或 1）。"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
@@ -1430,6 +1445,11 @@ msgstr "清除剪貼簿(&B)"
 msgid "Clear History"
 msgstr "清除歷史"
 
+#. TRANSLATORS: Original IDM_VIEW_CLEARWINPOS under Settings > Window Options.
+#: src/app/window_position.cpp
+msgid "Clear Position &History"
+msgstr "清除位置記錄(&H)"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING/IDC_ENCODING_LINK; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Click here to &select default encoding."
@@ -1789,7 +1809,7 @@ msgstr "無法儲存檔案"
 
 #. TRANSLATORS: wxnotepad title for a settings-file write failure.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
-#: src/app/language_commands.cpp
+#: src/app/language_commands.cpp src/app/window_position.cpp
 msgid "Could not save settings"
 msgstr "無法儲存設定"
 
@@ -1799,7 +1819,7 @@ msgstr "無法啟動另一個 wxnotepad 處理程序。"
 
 #. TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
-#: src/app/language_commands.cpp
+#: src/app/language_commands.cpp src/app/window_position.cpp
 #, c-format
 msgid "Could not write %s"
 msgstr "無法寫入 %s"
@@ -4808,6 +4828,11 @@ msgstr "突顯符合括號(&V)\tCtrl+Shift+V"
 msgid "WJ — &Word joiner"
 msgstr "WJ — 單詞連接符號(&W)"
 
+#. TRANSLATORS: Wayland cannot export or apply global window coordinates.
+#: src/app/main.cpp
+msgid "Wayland applies size and maximized state; coordinates and default positioning are unavailable."
+msgstr "Wayland 套用視窗大小和最大化狀態；座標和預設定位無法使用。"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Web Source Code"
 msgstr "網頁原始碼"
@@ -4834,6 +4859,11 @@ msgstr "視窗選項(&P)"
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Window Title Displa&y"
 msgstr "視窗標題顯示(&Y)"
+
+#. TRANSLATORS: Wayland limitation: no compositor global-position protocol is available.
+#: src/app/window_position.cpp
+msgid "Window coordinates and default positioning are unavailable on Wayland."
+msgstr "Wayland 上無法取得視窗座標或還原預設位置。"
 
 # Original Notepad4 zh-Hant: IDS_EOLMODENAME_CRLF; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp

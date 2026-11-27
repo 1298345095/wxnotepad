@@ -12,6 +12,7 @@
 #include "app/file_change_monitor.h"
 #include "app/word_wrap_state.h"
 #include "app/status_fields.h"
+#include "settings/window_position.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -63,6 +64,7 @@ public:
     bool OpenSelection(bool containingFolder = false);
     bool OpenContainingFolder();
     bool Restart();
+    void RememberInitialWindowPosition(bool maximized);
     OpenStatus ReceiveWindowRequest(const WindowRequest& request);
     bool ExecuteDocument();
     bool OpenDocumentWith();
@@ -75,6 +77,16 @@ private:
     SettingsStore* settings_;
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
+    WindowPosition normalWindowPosition_;
+    bool pendingInitialMaximize_ = false;
+    std::optional<wxRect> pendingDefaultPosition_;
+    void ApplyPendingWindowPosition();
+    void CaptureNormalWindowPosition();
+    void RestoreWindowPosition();
+    void DefaultWindowPosition();
+    void CopyWindowPosition();
+    void AppendWindowPositionCommands(wxMenu* menu);
+    void AppendCopyWindowPosition(wxMenu* menu);
     bool FullScreenActive() const;
     void SetFullScreen(bool active);
     void HandleFullScreenKey(int modifiers);

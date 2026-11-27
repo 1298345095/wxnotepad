@@ -38,6 +38,7 @@ struct OriginalSettings {
     bool saveBeforeRunningTools = false;
     bool reuseWindow = false;
     bool singleFileInstance = true;
+    bool stickyWindowPosition = false;
     wxString openWithDirectory;
     int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;

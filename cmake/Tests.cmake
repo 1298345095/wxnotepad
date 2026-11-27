@@ -21,3 +21,13 @@ if(WIN32)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/base64_clipboard_error.py" "$<TARGET_FILE:base64_conversion>")
     set_tests_properties(native_base64_clipboard_error PROPERTIES TIMEOUT 20)
 endif()
+
+add_gui_program(window_position tests/window_position.cpp app_shell)
+add_test(NAME original_window_position COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "$<TARGET_FILE:window_position>")
+set_tests_properties(original_window_position PROPERTIES TIMEOUT 60)
+add_test(NAME original_window_position_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_position_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}")
+set_tests_properties(original_window_position_process PROPERTIES TIMEOUT 90)
