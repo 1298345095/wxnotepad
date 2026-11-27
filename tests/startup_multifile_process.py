@@ -15,22 +15,36 @@ from pathlib import Path
 from localization_native import Dialogs
 from localization_package import Child, Process, bundle_application, environment, menu_id, settings
 from resource_process import wait_state
-from startup_options_process import unreadable
+from startup_options_process import start, unreadable
 
 
 def children(root, count):
+    # Match wait_child: each next independent child has its own discovery
+    # deadline. There is no aggregate 15-second startup budget for 32 peers.
     deadline = time.monotonic() + 15
-    while time.monotonic() < deadline:
+    started = time.monotonic()
+    result = []
+    seen = set()
+    while len(result) < count and time.monotonic() < deadline:
         folders = [path for path in root.iterdir() if path.name.isdigit() and (path / "state").exists()]
-        if len(folders) == count:
-            result = []
-            for folder in folders:
-                app = Process.__new__(Process)
-                app.folder = folder
-                app.sequence = 0
-                app.process = Child(int(folder.name))
-                app.state = wait_state(folder, app.process, lambda state: state["shown"] == "1")
-                result.append(app)
+        assert len(folders) <= count, f"Expected {count} editors, found an extra process: {folders}"
+        for folder in folders:
+            if folder.name in seen:
+                continue
+            app = Process.__new__(Process)
+            app.folder = folder
+            app.sequence = 0
+            app.process = Child(int(folder.name))
+            app.state = wait_state(folder, app.process, lambda state: state["shown"] == "1")
+            result.append(app)
+            seen.add(folder.name)
+            deadline = time.monotonic() + 15
+            if count > 2:
+                print(
+                    f"Discovered child {len(result)}/{count} at {time.monotonic() - started:.3f}s: PID {app.process.pid}",
+                    flush=True,
+                )
+        if len(result) == count:
             return result
         time.sleep(0.01)
     raise AssertionError(f"Expected {count} independent documents, found {folders}")
@@ -44,6 +58,7 @@ def launch_list(executable, folder, working, arguments, expected, language="en",
     apps = []
     env = environment(executable, observed, language)
     env.update(overrides or {})
+    previous_pids = package_pids(executable)
     with (folder / "parent.log").open("wb") as log:
         parent = subprocess.Popen([str(executable), *arguments], cwd=working, env=env, stdout=log, stderr=log)
         try:
@@ -66,6 +81,10 @@ def launch_list(executable, folder, working, arguments, expected, language="en",
         finally:
             for app in apps:
                 app.stop()
+            for pid in package_pids(executable) - previous_pids - {parent.pid}:
+                peer = Child(pid)
+                peer.terminate()
+                peer.wait(timeout=5)
             if parent.poll() is None:
                 parent.terminate()
                 parent.wait(timeout=5)
@@ -126,12 +145,12 @@ def routing_matrix(executable, root, language, config=None, overrides=None):
                 target.write_bytes(original)
             keeper_environment = environment(executable, folder / "unused", language)
             keeper_environment.update(overrides or {})
-            keeper = Process(
+            keeper = start(
                 executable,
                 folder / "existing",
                 keeper_environment,
                 startup=targets[0],
-                arguments=("-e", "cp1252"),
+                arguments=("-n", "-e", "cp1252"),
                 cwd=folder,
             )
             before = dict(keeper.state)
@@ -328,53 +347,64 @@ def two_files(executable, root, default=False):
     print("PASS: + dispatch, caller-relative Unicode paths, independent text and parent exit", flush=True)
 
 
+def package_pids(executable):
+    """Find only native processes running this exact disposable package."""
+    pids = set()
+    if sys.platform != "win32":
+        for entry in Path("/proc").iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                if (entry / "exe").resolve(strict=True) == executable:
+                    pids.add(int(entry.name))
+            except FileNotFoundError, PermissionError:
+                pass
+    else:
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel.QueryFullProcessImageNameW.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            wintypes.LPWSTR,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+
+        user = ctypes.WinDLL("user32", use_last_error=True)
+        callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
+        user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+
+        @callback
+        def visit(window, unused):
+            pid = wintypes.DWORD()
+            user.GetWindowThreadProcessId(window, ctypes.byref(pid))
+            handle = kernel.OpenProcess(0x1000, False, pid.value)
+            if handle:
+                try:
+                    path = ctypes.create_unicode_buffer(32768)
+                    size = wintypes.DWORD(len(path))
+                    if (
+                        kernel.QueryFullProcessImageNameW(handle, 0, path, ctypes.byref(size))
+                        and Path(path.value) == executable
+                    ):
+                        pids.add(pid.value)
+                finally:
+                    kernel.CloseHandle(handle)
+            return True
+
+        user.EnumWindows(visit, 0)
+    return pids
+
+
 def pending_peer(dialogs, executable, exclude):
     """Identify only a visible peer belonging to this disposable package."""
     deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
-        pids = set()
-        if sys.platform != "win32":
-            for entry in Path("/proc").iterdir():
-                if not entry.name.isdigit():
-                    continue
-                try:
-                    if (entry / "exe").resolve(strict=True) == executable:
-                        pids.add(int(entry.name))
-                except FileNotFoundError, PermissionError:
-                    pass
-        else:
-            from ctypes import wintypes
-
-            kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-            kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-            kernel.OpenProcess.restype = wintypes.HANDLE
-            kernel.CloseHandle.argtypes = [wintypes.HANDLE]
-            kernel.QueryFullProcessImageNameW.argtypes = [
-                wintypes.HANDLE,
-                wintypes.DWORD,
-                wintypes.LPWSTR,
-                ctypes.POINTER(wintypes.DWORD),
-            ]
-
-            @dialogs.callback
-            def visit(window, unused):
-                pid = wintypes.DWORD()
-                dialogs.user.GetWindowThreadProcessId(window, ctypes.byref(pid))
-                handle = kernel.OpenProcess(0x1000, False, pid.value)
-                if handle:
-                    try:
-                        path = ctypes.create_unicode_buffer(32768)
-                        size = wintypes.DWORD(len(path))
-                        if (
-                            kernel.QueryFullProcessImageNameW(handle, 0, path, ctypes.byref(size))
-                            and Path(path.value) == executable
-                        ):
-                            pids.add(pid.value)
-                    finally:
-                        kernel.CloseHandle(handle)
-                return True
-
-            dialogs.user.EnumWindows(visit, 0)
+        pids = package_pids(executable)
         pending = pids - set(exclude)
         if len(pending) == 1:
             return Child(pending.pop())
