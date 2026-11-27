@@ -251,11 +251,15 @@ void Check(EditorFrame* frame) {
         verify(true);
         NativeKeys::Shortcut(frame, WXK_F11, false);
         NativeKeys::Shortcut(frame, WXK_F11, false);
+        Await([&] { return frame->GetRect() == bounds; },
+              "native fullscreen restoration reaches the original placement before topmost invariants");
         verify(true);
         frame->Iconize();
         Await([&] { return frame->IsIconized(); }, "owned topmost frame minimizes");
         frame->Iconize(false);
         Await([&] { return !frame->IsIconized(); }, "owned topmost frame restores");
+        Await([&] { return frame->GetRect() == bounds; },
+              "native minimize restoration reaches the original placement before topmost invariants");
         verify(true);
         NativeSearch::Command(frame, command);
         verify(false);
