@@ -147,6 +147,11 @@ public:
                           "default and clear");
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
+                const auto rect = frame->GetRect();
+                const auto work = wxDisplay(frame).GetClientArea();
+                DiagnosticPrint::Print(stderr, "native state: rect={},{},{},{} work={},{},{},{} maximized={} dpi={}\n",
+                                       rect.x, rect.y, rect.width, rect.height, work.x, work.y, work.width, work.height,
+                                       frame->IsMaximized(), frame->GetDPI().x);
                 status_ = 1;
             }
             frame->Destroy();
