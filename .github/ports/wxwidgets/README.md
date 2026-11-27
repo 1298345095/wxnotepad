@@ -45,12 +45,17 @@ this change reduces SDK downloads, compilation and installed SDK size.
 Linux otherwise keeps the original options and dependency declarations. Its
 GTK overlay and static linkage are unchanged.
 
-Version 5 also synchronizes the wxMSW pending-watch removal vector. The UI
-thread appends retired watches while the IOCP worker erases completed ones;
-without a shared lock, reallocation and erase can destroy the same watch twice.
-The patch locks both operations with one wxCriticalSection and leaves directory
-notifications and the existing watcher shutdown order intact. This addresses the
-race captured in the native file-watcher lifetime regression. Upstream
+Version 5 synchronized the wxMSW pending-watch removal vector, and version 7
+extends that synchronization to the IOCP active-watch map used when the worker
+re-arms a directory watch in `wxFSWatcherImplMSW::SetUpWatch`. Previously the
+worker read `wxFSWatcherImpl::m_watches` without a lock while the UI thread
+cleared or inserted entries, causing a use-after-free, and checked by directory
+path rather than watch identity, which could re-arm a retired watch after a
+same-directory refresh. The patch protects both `wxIOCPService::m_watches` and
+`m_removedWatches` with one `wxCriticalSection`, registers watches before
+issuing `ReadDirectoryChangesW`, verifies exact watch identity before
+re-arming, completes pending removals before overflow handling, and releases
+completed retired watches outside the lock. Upstream
 [issue 15995](https://github.com/wxWidgets/wxWidgets/issues/15995) explains why
 these retired watches need their own lifetime container; its earlier vector
 change does not synchronize concurrent mutations.

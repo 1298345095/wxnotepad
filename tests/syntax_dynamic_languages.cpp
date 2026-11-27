@@ -8,6 +8,7 @@
 #include "tab_settings_helpers.h"
 #include <wx/wx.h>
 #include <array>
+#include <cstdio>
 #include <tuple>
 
 namespace {
@@ -185,6 +186,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
 class DynamicApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
 #ifdef __WXMSW__
         if (wxGetenv("WXNOTEPAD_DYNAMIC_DPI96"))
             Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,

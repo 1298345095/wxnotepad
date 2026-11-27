@@ -8,32 +8,169 @@
  #include "wx/msw/private.h"
  
  // ============================================================================
-@@ -160,6 +161,8 @@
+@@ -150,8 +151,31 @@
+         }
+ 
+         // add to watch map
++        wxCriticalSectionLocker lock(m_watchesLock);
+         wxFSWatchEntries::value_type val(watch->GetPath(), watch);
+         return m_watches.insert(val).second;
++    }
++
++    // Undo Add() when the initial ReadDirectoryChangesW() fails to start.
++    void RemoveFailed(const wxSharedPtr<wxFSWatchEntryMSW>& watch)
++    {
++        wxCriticalSectionLocker lock(m_watchesLock);
++        wxFSWatchEntries::iterator it = m_watches.find(watch->GetPath());
++        if ( it != m_watches.end() && it->second.get() == watch.get() )
++        {
++            m_watches.erase(it);
++        }
++    }
++
++    wxCriticalSection& GetWatchesLock()
++    {
++        return m_watchesLock;
++    }
++
++    bool IsActiveWatchLocked(const wxFSWatchEntryMSW* watch) const
++    {
++        wxFSWatchEntries::const_iterator it = m_watches.find(watch->GetPath());
++        return it != m_watches.end() && it->second.get() == watch;
+     }
+ 
+     // Removes a watch we're currently using. Notice that this doesn't happen
+@@ -160,6 +184,8 @@
      // using it.
      bool ScheduleForRemoval(const wxSharedPtr<wxFSWatchEntryMSW>& watch)
      {
-+        wxCriticalSectionLocker lock(m_removedWatchesLock);
++        wxCriticalSectionLocker lock(m_watchesLock);
 +
          wxCHECK_MSG( m_iocp != INVALID_HANDLE_VALUE, false, "IOCP not init" );
          wxCHECK_MSG( watch->IsOk(), false, "Invalid watch" );
  
-@@ -185,6 +188,8 @@
+@@ -185,20 +211,26 @@
      // this case we'll just return false and do nothing.
      bool CompleteRemoval(wxFSWatchEntryMSW* watch)
      {
-+        wxCriticalSectionLocker lock(m_removedWatchesLock);
+-        for ( Watches::iterator it = m_removedWatches.begin();
+-              it != m_removedWatches.end();
+-              ++it )
+-        {
+-            if ( (*it).get() == watch )
++        wxSharedPtr<wxFSWatchEntryMSW> removed;
++        {
++            wxCriticalSectionLocker lock(m_watchesLock);
 +
-         for ( Watches::iterator it = m_removedWatches.begin();
-               it != m_removedWatches.end();
-               ++it )
-@@ -281,6 +286,10 @@
++            for ( Watches::iterator it = m_removedWatches.begin();
++                  it != m_removedWatches.end();
++                  ++it )
+             {
+-                // Removing the object from here will result in deleting the
+-                // watch itself as it's not referenced from anywhere else now.
+-                m_removedWatches.erase(it);
+-                return true;
++                if ( (*it).get() == watch )
++                {
++                    // Removing the object from here will result in deleting the
++                    // watch itself as it's not referenced from anywhere else now.
++                    removed = *it;
++                    m_removedWatches.erase(it);
++                    break;
++                }
+             }
+         }
+ 
+-        return false;
++        return removed.get() != nullptr;
+     }
+ 
+     // post completion packet
+@@ -277,6 +309,10 @@
+ 
+     HANDLE m_iocp;
+ 
++    // The UI thread adds watches and schedules removals while the IOCP worker
++    // checks active watch identity and completes pending removals.
++    wxCriticalSection m_watchesLock;
++
+     // The hash containing all the wxFSWatchEntryMSW objects currently being
      // watched keyed by their paths.
      wxFSWatchEntries m_watches;
- 
-+    // The UI thread schedules removals while the IOCP worker completes them.
-+    // Protect both vector storage and its shared-pointer elements during changes.
-+    wxCriticalSection m_removedWatchesLock;
+--- a/src/msw/fswatcher.cpp
++++ b/src/msw/fswatcher.cpp
+@@ -95,12 +95,19 @@
+ // adds watch to be monitored for file system changes
+ bool wxFSWatcherImplMSW::DoAdd(wxSharedPtr<wxFSWatchEntryMSW> watch)
+ {
++    // associating handle with completion port and registering watch before
++    // issuing ReadDirectoryChangesW avoids racing early completions
++    if (!m_iocp.Add(watch))
++        return false;
 +
-     // Contains the watches which had been removed but are still pending.
-     typedef wxVector< wxSharedPtr<wxFSWatchEntryMSW> > Watches;
-     Watches m_removedWatches;
+     // setting up wait for directory changes
+     if (!DoSetUpWatch(*watch))
++    {
++        m_iocp.RemoveFailed(watch);
+         return false;
+-
+-    // associating handle with completion port
+-    return m_iocp.Add(watch);
++    }
++
++    return true;
+ }
+ 
+ bool
+@@ -113,15 +120,18 @@
+ bool wxFSWatcherImplMSW::SetUpWatch(wxFSWatchEntryMSW& watch)
+ {
+     wxCHECK_MSG( watch.IsOk(), false, "Invalid watch" );
+-    if (m_watches.find(watch.GetPath()) == m_watches.end())
+-    {
+-        wxLogTrace(wxTRACE_FSWATCHER, "Path '%s' is not watched",
+-                   watch.GetPath());
+-        return false;
+-    }
+-
+-    wxLogTrace(wxTRACE_FSWATCHER, "Setting up watch for file system changes...");
+-    return DoSetUpWatch(watch);
++    {
++        wxCriticalSectionLocker lock(m_iocp.GetWatchesLock());
++        if (!m_iocp.IsActiveWatchLocked(&watch))
++        {
++            wxLogTrace(wxTRACE_FSWATCHER, "Path '%s' is not watched",
++                       watch.GetPath());
++            return false;
++        }
++
++        wxLogTrace(wxTRACE_FSWATCHER, "Setting up watch for file system changes...");
++        return DoSetUpWatch(watch);
++    }
+ }
+ 
+ void wxFSWatcherImplMSW::SendEvent(wxFileSystemWatcherEvent& evt)
+@@ -248,6 +258,11 @@
+             return false; // stop reading events
+     }
+ 
++    // First check if we're still interested in this watch, we could have
++    // removed it in the meanwhile (including on overflow/zero-byte completions).
++    if ( watch && m_iocp->CompleteRemoval(watch) )
++        return true;
++
+     // if the thread got woken up but we got an empty packet it means that
+     // there was an overflow, too many events and not all could fit in
+     // the watch buffer.  In this case, ReadDirectoryChangesW dumps the
+@@ -277,11 +292,6 @@
+ 
+     wxLogTrace( wxTRACE_FSWATCHER, "[iocp] Read entry: path='%s'",
+                 watch->GetPath());
+-
+-    // First check if we're still interested in this watch, we could have
+-    // removed it in the meanwhile.
+-    if ( m_iocp->CompleteRemoval(watch) )
+-        return true;
+ 
+     // extract events from buffer info our vector container
+     wxVector<wxEventProcessingData> events;
