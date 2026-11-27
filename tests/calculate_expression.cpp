@@ -81,6 +81,22 @@ void EncodedFiles(EditorFrame* frame, int id) {
                                          "Redo and Save restore result encoded bytes"});
     }
     std::puts("PASS: all ten delivered encodings, Unicode results, BOM/EOL and saved Undo/Redo bytes");
+#ifdef __WXMSW__
+    Require(frame->NewDocument(), "new empty native ANSI document");
+    Require(frame->SelectEncoding(*NativeEncodingChoice()), "choose actual native ANSI encoding on empty document");
+    const auto codePage = GetACP();
+    const bool capturedAnsi = codePage == 936 || codePage == 1252 || codePage == CP_UTF8;
+    const std::string expression = capturedAnsi ? R"("\ud83d\ude00")" : R"("A")";
+    const std::string expectedResult = codePage == CP_UTF8 ? "😀" : capturedAnsi ? "??" : "A";
+    TestEditor::ResetStream(editor, expression.c_str(), 0, static_cast<intptr_t>(expression.size()));
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(frame) == expression + " " + expectedResult,
+            "native ANSI calculation retains original code-page substitution, including surrogate pairs");
+    const auto path = TestFiles::TemporaryDirectory() / "native-ansi.txt";
+    Require(frame->SaveAs(TestFiles::Filename(path)).status == SaveStatus::Saved &&
+                TestFiles::Bytes(path) == expression + " " + expectedResult,
+            "actual native ANSI saved bytes follow independent original conversion sample");
+#endif
 }
 void Clipboard(bool seed) {
     wxTheClipboard->UsePrimarySelection(false);
