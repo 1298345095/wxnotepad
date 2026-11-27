@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include "app/command_ids.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include "editor_test_helpers.h"
@@ -174,6 +175,27 @@ private:
             case 3:
                 if (!Spelling("ceshi")) return;
                 Require(editor_->InputMethodComposing(), "real second Pinyin composition is active before Escape");
+                {
+                    const auto composition = preedit_;
+                    const auto document = TestEditor::Text(editor_);
+                    const auto layout = GetKeyboardLayout(0);
+                    const auto context = ImmGetContext(window_);
+                    Require(context != nullptr, "real Pinyin has its original native input context");
+                    ImmReleaseContext(window_, context);
+                    NativeSearch::Command(frame_, std::to_underlying(AppCommand::AlwaysOnTop));
+                    NativeSearch::Command(frame_, std::to_underlying(AppCommand::AlwaysOnTop));
+                    const auto after = ImmGetContext(window_);
+                    const bool sameContext = after == context;
+                    if (after) ImmReleaseContext(window_, after);
+                    Require(editor_->InputMethodComposing() && preedit_ == composition && !ended_,
+                            "topmost toggles preserve actual active Pinyin preedit");
+                    Require(TestEditor::Text(editor_) == document,
+                            "topmost toggles preserve committed and tentative document bytes during preedit");
+                    Require(sameContext && GetKeyboardLayout(0) == layout,
+                            "topmost toggles preserve native Pinyin context and keyboard layout");
+                    Require(GetFocus() == window_, "topmost toggles preserve actual native Pinyin input focus");
+                    std::puts("PASS: Always On Top preserves real Microsoft Pinyin composition and native focus");
+                }
                 std::puts("PASS: actual Microsoft Pinyin ceshi preedit follows the committed Chinese word");
                 Key(VK_ESCAPE);
                 Next();

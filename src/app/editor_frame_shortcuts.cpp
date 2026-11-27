@@ -36,7 +36,12 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
     }
     if (HandleTabConversionKey(event) || HandleCaseConversionKey(event)) return true;
     if (event.GetKeyCode() == 'T' && event.AltDown()) {
-        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        if (!event.ControlDown() && !event.MetaDown()) {
+            if (event.ShiftDown())
+                ToggleAlwaysOnTop();
+            else
+                editor_->StripTrailingBlanks();
+        }
         return true;
     }
     return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
