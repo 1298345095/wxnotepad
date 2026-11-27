@@ -315,35 +315,16 @@ def two_files(executable, root, default=False):
     data = [b"first\r\n", "second 中文😀\r\n".encode()]
     for target, content in zip(targets, data, strict=True):
         target.write_bytes(content)
-    observed = root / "children"
-    observed.mkdir()
-    apps = []
-    with (root / "parent.log").open("wb") as log:
-        parent = subprocess.Popen(
-            [str(executable), *([] if default else ["+"]), targets[0].name, str(targets[1])],
-            cwd=working,
-            env=environment(executable, observed),
-            stdout=log,
-            stderr=log,
-        )
-        try:
-            assert parent.wait(timeout=5) == 0, "Multi-file dispatcher exits without an empty editor"
-            apps = children(observed, 2)
-            by_path = {Path(app.state["document_path"]): app for app in apps}
-            assert set(by_path) == set(targets), by_path
-            for index, (target, content) in enumerate(zip(targets, data, strict=True)):
-                app = by_path[target]
-                assert app.state["length"] == str(len(content)), app.state
-                saved = root / f"saved-{index}.txt"
-                app.send("save", str(saved))
-                assert saved.read_bytes() == content
-                app.close()
-        finally:
-            for app in apps:
-                app.stop()
-            if parent.poll() is None:
-                parent.terminate()
-                parent.wait(timeout=5)
+    arguments = [*([] if default else ["+"]), targets[0].name, str(targets[1])]
+    with launch_list(executable, root / "dispatch", working, arguments, 2) as apps:
+        by_path = {Path(app.state["document_path"]): app for app in apps}
+        assert set(by_path) == set(targets), by_path
+        for index, (target, content) in enumerate(zip(targets, data, strict=True)):
+            app = by_path[target]
+            assert app.state["length"] == str(len(content)), app.state
+            saved = root / f"saved-{index}.txt"
+            app.send("save", str(saved))
+            assert saved.read_bytes() == content
     print("PASS: + dispatch, caller-relative Unicode paths, independent text and parent exit", flush=True)
 
 

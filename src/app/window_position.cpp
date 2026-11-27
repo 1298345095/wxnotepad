@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <utility>
 #include <limits>
+#include <cstdint>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
@@ -108,18 +109,26 @@ void SetInitialWindowRectangle(EditorFrame& window, const wxRect& rectangle, int
 
 bool ApplyPublicWindowPosition(EditorFrame& window, const wxString& argument) {
     const auto position = ParseWindowPosition(argument);
-    if (!position) return false;
+    return position && ApplyWindowPosition(window, *position);
+}
+
+bool ApplyWindowPosition(EditorFrame& window, const WindowPosition& position) {
+    const auto& rectangle = position.normal;
+    if (rectangle.width <= 0 || rectangle.height <= 0 ||
+        static_cast<int64_t>(rectangle.x) + rectangle.width > std::numeric_limits<int>::max() ||
+        static_cast<int64_t>(rectangle.y) + rectangle.height > std::numeric_limits<int>::max())
+        return false;
     if (!HasGlobalWindowCoordinates()) {
-        window.SetSize(position->normal.GetSize());
+        window.SetSize(position.normal.GetSize());
         // Before first map GTK can defer size notifications until after the
         // compositor maximizes. Capture the requested normal size first.
         window.SendSizeEvent();
-        window.RememberInitialWindowPosition(position->maximized);
-        window.Maximize(position->maximized);
+        window.RememberInitialWindowPosition(position.maximized);
+        window.Maximize(position.maximized);
         return true;
     }
-    auto display = RectangleDisplay(position->normal);
-    wxRect normal = position->normal;
+    auto display = RectangleDisplay(position.normal);
+    wxRect normal = position.normal;
 #ifdef __WXMSW__
     // WINDOWPLACEMENT exports workspace coordinates. CreateWindow/SetSize take
     // screen coordinates: add the monitor's taskbar work-area offset exactly once.
@@ -128,8 +137,8 @@ bool ApplyPublicWindowPosition(EditorFrame& window, const wxString& argument) {
 #endif
     SetInitialWindowRectangle(window, FitRectangle(normal, display.GetClientArea()), wxSIZE_ALLOW_MINUS_ONE);
     window.SendSizeEvent();
-    window.RememberInitialWindowPosition(position->maximized);
-    window.Maximize(position->maximized);
+    window.RememberInitialWindowPosition(position.maximized);
+    window.Maximize(position.maximized);
     return true;
 }
 
@@ -171,9 +180,7 @@ void EditorFrame::RestoreWindowPosition() {
     if (!settings_) return;
     const auto saved = settings_->LoadWindowPosition(normalWindowPosition_.screen, normalWindowPosition_.coordinates);
     if (saved) {
-        const auto& rect = saved->normal;
-        ApplyPublicWindowPosition(
-            *this, wxString::Format("%d,%d,%d,%d,%d", rect.x, rect.y, rect.width, rect.height, saved->maximized));
+        ApplyWindowPosition(*this, *saved);
         // Applying the placement caches the fitted normal rectangle before
         // maximize. Keep it when the saved monitor no longer fits this desktop.
         normalWindowPosition_.coordinates = saved->coordinates;
