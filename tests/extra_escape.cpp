@@ -394,43 +394,6 @@ void WidgetEscape(wxWindow* control) {
     control->SetFocus();
     wxYield();
 #ifdef __WXMSW__
-    class Observation final : public wxEventFilter {
-    public:
-        explicit Observation(HWND window) : window_(window) {
-            wxEvtHandler::AddFilter(this);
-            Require(SetWindowSubclass(window_, WindowMessage, 1, 0), "observe the native field message boundary");
-        }
-        ~Observation() override {
-            if (IsWindow(window_)) RemoveWindowSubclass(window_, WindowMessage, 1);
-            wxEvtHandler::RemoveFilter(this);
-        }
-        int FilterEvent(wxEvent& event) override {
-            if (event.GetEventType() == wxEVT_CHAR_HOOK || event.GetEventType() == wxEVT_KEY_DOWN ||
-                event.GetEventType() == wxEVT_KEY_UP) {
-                const auto& key = static_cast<wxKeyEvent&>(event);
-                if (key.GetKeyCode() == WXK_ESCAPE)
-                    std::fprintf(stderr, "WIDGET event=%s modifiers=%d target=%p focus=%p\n",
-                                 event.GetEventType() == wxEVT_CHAR_HOOK  ? "char-hook"
-                                 : event.GetEventType() == wxEVT_KEY_DOWN ? "key-down"
-                                                                          : "key-up",
-                                 key.GetModifiers(), static_cast<void*>(event.GetEventObject()),
-                                 static_cast<void*>(wxWindow::FindFocus()));
-            }
-            return Event_Skip;
-        }
-        static LRESULT CALLBACK WindowMessage(HWND window, UINT message, WPARAM key, LPARAM flags, UINT_PTR,
-                                              DWORD_PTR) {
-            if (message == WM_KEYDOWN || message == WM_KEYUP || message == WM_CHAR || message == WM_IME_KEYDOWN ||
-                message == WM_IME_KEYUP)
-                std::fprintf(stderr, "WIDGET native hwnd=%p message=%u key=%llu flags=%lld\n",
-                             static_cast<void*>(window), message, static_cast<unsigned long long>(key),
-                             static_cast<long long>(flags));
-            return DefSubclassProc(window, message, key, flags);
-        }
-
-    private:
-        HWND window_;
-    } observation(static_cast<HWND>(control->GetHandle()));
     auto* dialog = wxDynamicCast(wxGetTopLevelParent(control), wxDialog);
     Require(dialog, "native widget belongs to an owned dialog");
     if (dialog->IsModal())
@@ -445,12 +408,6 @@ void WidgetEscape(wxWindow* control) {
         NativeFocus::Activate(window, focused);
         Await([window, focused] { return GetForegroundWindow() == window && GetFocus() == focused; },
               "the owned modeless field receives native foreground focus");
-        wchar_t type[128]{};
-        GetClassNameW(focused, type, 128);
-        std::fprintf(stderr, "WIDGET focus hwnd=%p root=%p process=%lu class=%ls foreground=%p capture=%p layout=%p\n",
-                     static_cast<void*>(GetFocus()), static_cast<void*>(window), process, type,
-                     static_cast<void*>(GetForegroundWindow()), static_cast<void*>(GetCapture()),
-                     static_cast<void*>(GetKeyboardLayout(0)));
         INPUT input[2]{};
         for (auto& key : input) {
             key.type = INPUT_KEYBOARD;
@@ -469,34 +426,6 @@ void WidgetEscape(wxWindow* control) {
     gdk_event_free(event);
 #endif
     wxYield();
-}
-// Observation-only baseline comparison; the registered fixture keeps its dismissal assertion.
-void ProbeWidgetFocus(EditorFrame* frame, bool compositionReplay = false) {
-#ifdef __WXMSW__
-    std::fprintf(stderr, "WIDGET probe compositionReplay=%d interaction=%lld\n", compositionReplay,
-                 static_cast<long long>(frame->Editor()->Send(Scintilla::Message::GetIMEInteraction)));
-    if (compositionReplay) {
-        const auto editor = static_cast<HWND>(frame->Editor()->GetHandle());
-        SendMessageW(editor, WM_IME_STARTCOMPOSITION, 0, 0);
-        SendMessageW(editor, WM_IME_ENDCOMPOSITION, 0, 0);
-    }
-#else
-    wxUnusedVar(compositionReplay);
-#endif
-    NativeKeys::Shortcut(frame, 'F', true);
-    auto* query = wxWindow::FindWindowByName("Find query", frame);
-    Require(query, "baseline probe locates the actual Find field");
-    auto* dialog = wxDynamicCast(wxGetTopLevelParent(query), wxDialog);
-    Require(dialog && dialog->IsShown(), "baseline probe opens the modeless Find dialog");
-    WidgetEscape(query);
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
-    while (dialog->IsShown() && std::chrono::steady_clock::now() < deadline) {
-        wxYield();
-        wxMilliSleep(10);
-    }
-    std::println(stderr, "WIDGET outcome dialogShown={:d} mainShown={:d} mainDeleting={:d}", dialog->IsShown(),
-                 frame->IsShown(), frame->IsBeingDeleted());
-    if (dialog->IsShown()) NativeSearch::Click(dialog, wxID_CANCEL);
 }
 void CheckWidgetFocus(EditorFrame* frame) {
     NativeSearch::Command(frame, Setting(frame, "Exit wxnotepad")->GetId());
@@ -623,12 +552,6 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
             try {
                 Require(ready, "owned Escape test frame is presented");
-                if (argc == 2 && (argv[1] == "--widget-probe" || argv[1] == "--widget-ime-probe")) {
-                    ProbeWidgetFocus(frame, argv[1] == "--widget-ime-probe");
-                    status_ = 0;
-                    frame->Destroy();
-                    return;
-                }
                 if (argc == 4) {
                     const std::array<const char*, 3> labels = {"None", "Minimize wxnotepad", "Exit wxnotepad"};
                     const auto expected = wxAtoi(argv[1]);

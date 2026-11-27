@@ -1,0 +1,89 @@
+name: Wayland JSON investigation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: json-investigation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  investigate:
+    name: Repeat Wayland JSON with timeout evidence
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: '1'
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
+      - name: Set up compiler cache
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.19.0
+      - name: Configure
+        shell: bash
+        env:
+          CXXFLAGS: '-g1'
+        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
+      - name: Build JSON target
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build .ci/build/cmake --config Release --parallel --target syntax_json \
+            2>&1 | tee .ci/reports/json-build.log
+      - name: Enable native timeout cores
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v gdb
+          mkdir -p .ci/reports/cores
+          sudo sysctl -w "kernel.core_pattern=$PWD/.ci/reports/cores/core.%p.%E"
+      - name: Repeat original JSON case
+        shell: bash
+        env:
+          WXNOTEPAD_DISPLAY_LOG_DIR: ${{ github.workspace }}/.ci/reports/json-repeat-display
+        run: |
+          set -euo pipefail
+          ulimit -c unlimited
+          xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' dbus-run-session -- \
+            python -X utf8 tools/clipboard_isolated.py wayland \
+            ctest --test-dir .ci/build/cmake -C Release -R '^json_highlighting$' \
+            --repeat until-fail:20 --output-on-failure --no-tests=error \
+            --output-junit "$GITHUB_WORKSPACE/.ci/reports/json-repeat.xml" \
+            --output-log "$GITHUB_WORKSPACE/.ci/reports/json-repeat.log"
+      - name: Collect native crash evidence
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: python -X utf8 .github/scripts/collect_cores.py
+      - name: Preserve investigation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: json-wayland-investigation-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/build/cmake/Testing/Temporary/
+            .ci/build/cmake/syntax_json
+            .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
+            .ci/build/original-core/wxnotepad-source.json
+            vcpkg.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14

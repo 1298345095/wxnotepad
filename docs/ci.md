@@ -112,15 +112,6 @@ accelerator translation path; it does not insert physical keys with `SendInput`.
 Both clipboard endpoints additionally require their top-level HWND to equal
 `GetForegroundWindow()`. The original first-pointer probe still uses `SendInput`.
 
-The workflow-only `escape-x11` scenario builds `extra_escape` and repeats its
-original registered case in four independent X11 sessions, matching the failing
-hosted run's concurrency. `runs` is the attempt count per session. Each attempt
-retains fresh reports; the first failure stops new attempts while already-running
-cases finish and retain their own verdicts. Presentation setup observes actual
-GTK mapping and focus before hiding the frame. The original 250 ms delayed map,
-3 s activation deadline, 60 s case timeout, and all input/result assertions remain.
-This fixture sends wx logs to captured stderr instead of opening modal log dialogs.
-
 The prefix target list is explicit because CTest omits command paths for unbuilt
 executables. Update `PREFIX_TARGETS` when a new predecessor requires another
 program. Test selection still comes from the current CTest registration.
@@ -151,9 +142,8 @@ The separate **Native investigation** workflow is manually dispatched. Its
 Windows scenarios use the same Windows 2025 runner, pinned SDK, compiler cache
 and display conditions. Its default is three prefix
 attempts, with the original independent reference controls run first. It builds
-only the selected native targets; `escape-x11` instead uses Ubuntu 26.04 and the
-private X11 sessions described above. Neither job runs coverage, packaging or a
-complete platform suite. Keep investigation branches without a pull request
+only the selected native targets, without coverage, packaging or a complete
+platform suite. Keep investigation branches without a pull request
 so their pushes do not trigger the ordinary PR workflows. Pushes alone do not
 start the investigation either. Transfer final changes to the repair PR once
 ready for complete validation.
@@ -631,8 +621,17 @@ file, so that load cannot replace the requested selection. On Linux with CMake
 3.27 or newer, its unchanged 60-second timeout sends SIGQUIT with a five-second
 dump grace period.
 The existing Linux core collector retains its executable and GDB thread stacks.
-After the complete Linux suites, a separate private Wayland session repeats this
-case up to 20 times, stopping at the first failure; its logs remain separate.
+The ordinary and coverage suites each retain this registered case. The separate
+**Wayland JSON investigation** workflow (`json-investigation.yml`) manually
+builds only `syntax_json` and repeats that same case up to 20 times in a private
+Wayland session, stopping at the first failure. It retains the original timeout,
+SIGQUIT grace period, JUnit, display logs, core/stack evidence and matching
+executable. It does not run automatically on pushes or pull requests. Dispatch it
+against the desired revision when a focused repetition is needed:
+
+```text
+gh workflow run json-investigation.yml --ref codex/branch-to-investigate
+```
 
 The search-seeding fixture uses the same SIGQUIT mechanism under its original
 60-second deadline. Its flushed monotonic stage logs distinguish the 1 MiB

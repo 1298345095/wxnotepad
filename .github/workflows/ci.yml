@@ -208,20 +208,6 @@ jobs:
         run: |
           ulimit -c unlimited
           python -X utf8 .github/scripts/ci.py test --backend wayland
-      - name: Repeat native JSON Wayland regression with timeout evidence
-        if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
-        shell: bash
-        env:
-          WXNOTEPAD_DISPLAY_LOG_DIR: ${{ github.workspace }}/.ci/reports/json-repeat-display
-        run: |
-          set -euo pipefail
-          ulimit -c unlimited
-          xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' dbus-run-session -- \
-            python -X utf8 tools/clipboard_isolated.py wayland \
-            ctest --test-dir .ci/build/cmake -C Release -R '^json_highlighting$' \
-            --repeat until-fail:20 --output-on-failure --no-tests=error \
-            --output-junit "$GITHUB_WORKSPACE/.ci/reports/json-repeat.xml" \
-            --output-log "$GITHUB_WORKSPACE/.ci/reports/json-repeat.log"
       - name: Build opt-in diagnostic binaries
         id: diagnostic_build
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
