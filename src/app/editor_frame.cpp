@@ -225,8 +225,8 @@ bool EditorFrame::Destroy() {
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     const bool keyDown = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
     const auto handle = static_cast<HWND>(GetHandle());
-    const bool windowModeKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE;
-    if (keyDown && windowModeKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
+    const bool interceptedKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE || message->wParam == VK_F9;
+    if (keyDown && interceptedKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
         const int modifiers = (::GetKeyState(VK_CONTROL) < 0 ? wxMOD_CONTROL : 0) |
                               (::GetKeyState(VK_MENU) < 0 ? wxMOD_ALT : 0) |
                               (::GetKeyState(VK_SHIFT) < 0 ? wxMOD_SHIFT : 0) |
@@ -236,6 +236,12 @@ bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
             return true;
         }
         if (message->wParam == VK_ESCAPE && HandleEscapeKey(modifiers)) return true;
+        if (message->wParam == VK_F9 && modifiers == wxMOD_ALT) {
+            // Run after native message retrieval, not in WH_KEYBOARD: shell
+            // dispatch pumps messages and could otherwise replay this as F9.
+            ManageFileFavorites();
+            return true;
+        }
     }
     // A hidden native menu receives no WM_INITMENU to refresh command state.
     // Refresh command gestures, leaving ordinary character input alone.

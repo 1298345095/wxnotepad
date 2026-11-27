@@ -89,7 +89,7 @@ msgstr "「%s」是唯讀的。是否儲存到另一個檔案？"
 
 #. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.
 #. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname received by IPC.
-#: src/app/main.cpp src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/main.cpp src/app/new_window.cpp
 #, c-format
 msgid ""
 "\"%s\" not found.\n"
@@ -147,6 +147,10 @@ msgstr[0] "取代 %zu 處"
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Add ->"
 msgstr "新增(&A) ->"
+
+#: src/app/editor_frame_favorites.cpp
+msgid "&Add Current File...\tAlt+K"
+msgstr "加入目前檔案(&A)...\tAlt+K"
 
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_view_commands.cpp
@@ -389,6 +393,10 @@ msgstr "儲存檔案時確保換行字元一致(&E)。"
 msgid "&Favorite Schemes..."
 msgstr "常用語法高亮(&F)..."
 
+#: src/app/editor_frame_favorites.cpp
+msgid "&Favorites"
+msgstr "我的最愛(&F)"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/File menu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&File"
@@ -510,6 +518,10 @@ msgstr "長行標記(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小寫(&L)\tCtrl+U"
 
+#: src/app/editor_frame_favorites.cpp
+msgid "&Manage...\tAlt+F9"
+msgstr "管理(&M)...\tAlt+F9"
+
 #. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_MANUALLYDELETE checkbox; retain old backups for manual deletion.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "&Manually delete backups."
@@ -606,6 +618,10 @@ msgstr "一頁(&O)"
 #: src/app/editor_frame_commands.cpp
 msgid "&Open"
 msgstr "開啟(&O)"
+
+#: src/app/editor_frame_favorites.cpp
+msgid "&Open Favorites...\tAlt+I"
+msgstr "開啟我的最愛(&O)...\tAlt+I"
 
 #: src/app/open_targets.cpp
 msgid "&Open File, Folder, Link, etc."
@@ -962,6 +978,10 @@ msgstr "1/4 頁(&4)"
 msgid "<- &Remove"
 msgstr "<- 移除(&R)"
 
+#: src/app/file_favorites.cpp
+msgid "A favorite with this name already exists."
+msgstr "已存在同名的我的最愛項目。"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings/Advanced Settings submenu; adapted where needed.
 #: src/app/editor_frame_settings_commands.cpp
 msgid "A&dvanced Settings"
@@ -1003,6 +1023,10 @@ msgstr "ASS — 啟用對稱字元交換(&S)"
 #: src/app/editor_frame_commands.cpp
 msgid "Action on &Selection"
 msgstr "對選取內容執行動作(&S)"
+
+#: src/app/dialogs/file_favorites_dialog.cpp src/app/editor_frame_favorites.cpp
+msgid "Add to Favorites"
+msgstr "加入我的最愛"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
@@ -1408,6 +1432,14 @@ msgstr "儲存前請先選擇檔案名稱。"
 msgid "Choose an existing file to open."
 msgstr "選擇要開啟的現有檔案。"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Choose favorites &directory..."
+msgstr "選擇我的最愛目錄(&D)..."
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Choose favorites directory"
+msgstr "選擇我的最愛目錄"
+
 #. TRANSLATORS: IDD_RUN Browse action; title of the native executable chooser.
 #: src/app/run_command.cpp
 msgid "Choose program"
@@ -1672,8 +1704,12 @@ msgstr "無法關閉已寫入完成的暫存檔案。"
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr "無法在目的檔案旁建立暫存檔案。請檢查資料夾及存取權限。"
 
+#: src/app/file_favorites.cpp
+msgid "Could not create the favorite. Check the name and directory permissions."
+msgstr "無法建立我的最愛項目。請檢查名稱與目錄權限。"
+
 #. TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
-#: src/app/main.cpp src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/main.cpp src/app/new_window.cpp
 msgid "Could not create the file."
 msgstr "無法建立檔案。"
 
@@ -1711,8 +1747,8 @@ msgstr "無法使用所選程式開啟文件"
 #. TRANSLATORS: wxnotepad title for failure to load or create the requested file.
 #. TRANSLATORS: wxnotepad title for failure to load the requested file received by IPC.
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
-#: src/app/editor_frame_file_watching.cpp src/app/main.cpp
-#: src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/editor_frame_file_watching.cpp
+#: src/app/main.cpp src/app/new_window.cpp
 msgid "Could not open file"
 msgstr "無法開啟檔案"
 
@@ -1737,6 +1773,10 @@ msgstr "無法開啟目的檔案進行寫入。"
 #: src/app/new_window.cpp
 msgid "Could not open the document in a new window."
 msgstr "無法在新視窗中開啟文件。"
+
+#: src/app/editor_frame_favorites.cpp
+msgid "Could not open the favorites directory."
+msgstr "無法開啟我的最愛目錄。"
 
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
@@ -1769,6 +1809,10 @@ msgstr "無法讀取檔案權限：%s"
 msgid "Could not read the complete file."
 msgstr "無法讀取完整檔案。"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Could not read the favorites directory."
+msgstr "無法讀取我的最愛目錄。"
+
 #. TRANSLATORS: IDD_OPENWITH failure reading the selected program directory; no parameters.
 #: src/app/document_tools.cpp
 msgid "Could not read the program directory."
@@ -1782,6 +1826,10 @@ msgstr "無法重新載入檔案"
 #, c-format
 msgid "Could not replace the destination: %s"
 msgstr "無法取代目的檔案：%s"
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Could not resolve the favorite. The link may be damaged or unsupported."
+msgstr "無法解析我的最愛項目。連結可能已損壞或不受支援。"
 
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
@@ -1820,7 +1868,7 @@ msgid "Could not write the complete file. Check free space and access permission
 msgstr "無法寫入完整檔案。請檢查可用空間及存取權限。"
 
 #. TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
-#: src/app/main.cpp src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/main.cpp src/app/new_window.cpp
 msgid "Create file?"
 msgstr "建立檔案？"
 
@@ -2108,6 +2156,14 @@ msgstr "僅限輸入法英文模式"
 msgid "Enter"
 msgstr "Enter"
 
+#: src/app/file_favorites.cpp
+msgid "Enter a valid name for the favorite."
+msgstr "請輸入有效的我的最愛名稱。"
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Enter the name for the new favorites item:"
+msgstr "請輸入新我的最愛項目的名稱："
+
 #: src/syntax/generated/style_profiles.h
 msgid "Enumeration"
 msgstr "列舉"
@@ -2165,6 +2221,14 @@ msgstr "FSI — 首個強方向字元隔離(&F)"
 msgid "Favorite Schemes"
 msgstr "常用語法高亮"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Favorite name"
+msgstr "我的最愛名稱"
+
+#: src/app/dialogs/file_favorites_dialog.cpp src/app/editor_frame_favorites.cpp
+msgid "Favorites"
+msgstr "我的最愛"
+
 #: src/app/dialogs/recent_files_dialog.cpp
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "File"
@@ -2198,6 +2262,10 @@ msgstr "檔案名與副檔名(&E)\tShift+F9"
 #: src/app/editor_frame_edit_commands.cpp
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "檔案名與副檔名(&X)\tCtrl+F9"
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "File favorites"
+msgstr "檔案我的最愛"
 
 #. TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -3102,6 +3170,10 @@ msgstr "NADS — 使用各國數字字形(&A)"
 msgid "NODS — Nominal (European) &digit shapes"
 msgstr "NODS — 使用標準（歐洲）數字字形(&D)"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Name"
+msgstr "名稱"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Near borders"
 msgstr "靠近邊界"
@@ -3776,6 +3848,11 @@ msgstr "建立新文件前是否儲存對 %s 的變更？"
 msgid "Save changes to %s before opening another file?"
 msgstr "開啟另一個檔案前是否儲存對 %s 的變更？"
 
+#: src/app/editor_frame_favorites.cpp
+#, c-format
+msgid "Save changes to %s before opening favorites?"
+msgstr "開啟我的最愛前儲存 %s 的變更？"
+
 # Original Notepad4 zh-Hant: IDS_ASK_SAVE (recent-file context); adapted where needed.
 #: src/app/editor_frame.cpp
 #, c-format
@@ -4423,6 +4500,10 @@ msgstr "無法將文件編碼為 UTF-16BE。"
 msgid "The document could not be encoded as UTF-16LE."
 msgstr "無法將文件編碼為 UTF-16LE。"
 
+#: src/app/editor_frame_favorites.cpp
+msgid "The favorite was added successfully."
+msgstr "已成功加入我的最愛。"
+
 #: src/document/document_session.cpp
 msgid "The file could not be decoded with the selected Chinese encoding."
 msgstr "無法使用所選中文編碼解碼檔案。"
@@ -5061,6 +5142,9 @@ msgstr "m4"
 
 #~ msgid "CSS"
 #~ msgstr "CSS"
+
+#~ msgid "Could not resolve the favorite. Its target may be missing or the link unsupported."
+#~ msgstr "無法解析我的最愛項目。目標可能不存在，或連結不受支援。"
 
 #~ msgid "HSS"
 #~ msgstr "HSS"

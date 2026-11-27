@@ -132,6 +132,10 @@ private:
     void ShowEditorContextMenu(wxContextMenuEvent& event);
     void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
+    void AppendFileFavorites(wxMenu* file);
+    void AddFileFavorite();
+    void OpenFileFavorites();
+    void ManageFileFavorites();
     void AppendReloadEncodingCommands(wxMenu* reload);
     void AppendEncodingCommands(wxMenu* file);
     wxMenu* CreateEditMenu();

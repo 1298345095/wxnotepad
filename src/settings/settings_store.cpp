@@ -1,4 +1,5 @@
 #include "settings/settings_store.h"
+#include "settings/environment_expansion.h"
 #include "settings/style_profile_io.h"
 #include <utility>
 #include "search/search_limits.h"
@@ -111,6 +112,8 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     values.saveBeforeRunningTools = document_.ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
     const auto openWith = document_.ReadString("OpenWithDir", {});
     if (!openWith.empty()) values.openWithDirectory = RecentFiles::ExpandPath(openWith);
+    const auto favorites = document_.ReadString("Favorites", {});
+    if (!favorites.empty()) values.favoritesDirectory = RecentFiles::ExpandPath(ExpandWindowsEnvironment(favorites));
     values.runCommandWidthDIP = std::max(0, document_.ReadInt("RunDlgSizeX", defaults.runCommandWidthDIP, "wxnotepad"));
     auto& print = values.printing;
     print.header = static_cast<PrintHeader>(
@@ -464,6 +467,12 @@ bool SettingsStore::Save(bool explicitSave) {
                                                               RecentFiles::PathKind::Directory),
                               {});
         document_.WriteInt("RunDlgSizeX", values.runCommandWidthDIP, defaults.runCommandWidthDIP, "wxnotepad");
+        document_.WriteString("Favorites",
+                              values.favoritesDirectory.empty()
+                                  ? wxString{}
+                                  : RecentFiles::PortablePath(values.favoritesDirectory, true, values.portableMyDocs,
+                                                              RecentFiles::PathKind::Directory),
+                              {});
         const auto& print = values.printing;
         const auto& defaultPrint = defaults.printing;
         document_.WriteInt("PrintHeader", std::to_underlying(print.header), std::to_underlying(defaultPrint.header));
