@@ -12,6 +12,23 @@ from pathlib import Path
 
 from capture_printing import Native, add_unsaved_text
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+BM_CLICK = 0xF5
+MEM_COMMIT_RESERVE = 0x3000
+MEM_RELEASE = 0x8000
+MF_BYPOSITION = 0x400
+PAGE_READWRITE = 4
+PROCESS_VM_OPERATION_READ_WRITE = 0x38
+SCI_GETLENGTH = 2006
+SCI_GETMODIFY = 2159
+SCI_GETTEXT = 2182
+SCI_SETSAVEPOINT = 2014
+VK_DOWN = 0x28
+VK_HOME = 0x24
+WM_CLOSE = 0x10
+WM_COMMAND = 0x111
+WM_KEYDOWN = 0x100
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from file_favorites_packaged import shortcut  # noqa: E402 -- Shared independent OS shortcut reader.
 from localization_layout import screenshot_windows  # noqa: E402 -- Use owned-window capture.
@@ -29,33 +46,33 @@ def read_editor(native, editor):
     kernel.ReadProcessMemory.argtypes = [w.HANDLE, c.c_void_p, c.c_void_p, c.c_size_t, c.c_void_p]
     kernel.VirtualFreeEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD]
     kernel.CloseHandle.argtypes = [w.HANDLE]
-    length = native.send(editor, 2006, 0, 0)
-    process = kernel.OpenProcess(0x38, False, native.process.pid)
-    remote = kernel.VirtualAllocEx(process, None, length + 1, 0x3000, 4)
+    length = native.send(editor, SCI_GETLENGTH, 0, 0)
+    process = kernel.OpenProcess(PROCESS_VM_OPERATION_READ_WRITE, False, native.process.pid)
+    remote = kernel.VirtualAllocEx(process, None, length + 1, MEM_COMMIT_RESERVE, PAGE_READWRITE)
     try:
         assert remote
-        native.send(editor, 2182, length + 1, remote)
+        native.send(editor, SCI_GETTEXT, length + 1, remote)
         buffer = c.create_string_buffer(length + 1)
         assert kernel.ReadProcessMemory(process, remote, buffer, length + 1, None)
         return buffer.raw[:length]
     finally:
         if remote:
-            kernel.VirtualFreeEx(process, remote, 0, 0x8000)
+            kernel.VirtualFreeEx(process, remote, 0, MEM_RELEASE)
         kernel.CloseHandle(process)
 
 
 def select(native, dialog, index=0):
     control = native.item(dialog, 100)
-    native.send(control, 0x100, 0x24, 1)
+    native.send(control, WM_KEYDOWN, VK_HOME, 1)
     for _ in range(index):
-        native.send(control, 0x100, 0x28, 1)
+        native.send(control, WM_KEYDOWN, VK_DOWN, 1)
     native.respond(dialog, 1)
 
 
 def answer(native, dialog, caption):
     for button in native.windows(dialog):
         if native.class_name(button) == "Button" and native.text(button).replace("&", "") == caption:
-            native.post(button, 0xF5, 0, 0)
+            native.post(button, BM_CLICK, 0, 0)
             return
     raise AssertionError((caption, native.controls(dialog)))
 
@@ -81,7 +98,7 @@ def observe_manage(native, frame, favorites, output):
         try:
             native.wait((output / "explorer-ready").exists, "Explorer baseline")
             (output / "folder-request-1").write_text(f"{favorites}\n\n{native.process.pid}\n", encoding="utf-8")
-            native.post(frame, 0x111, MANAGE, 0)
+            native.post(frame, WM_COMMAND, MANAGE, 0)
             assert observer.wait(timeout=25) == 0
         finally:
             if observer.poll() is None:
@@ -127,7 +144,7 @@ def main():
         favorites_menu = None
         for index in range(native.user.GetMenuItemCount(file_menu)):
             label = c.create_unicode_buffer(256)
-            native.user.GetMenuStringW(file_menu, index, label, len(label), 0x400)
+            native.user.GetMenuStringW(file_menu, index, label, len(label), MF_BYPOSITION)
             if label.value == "&Favorites":
                 rows["favorites_menu_index"] = index
                 favorites_menu = native.user.GetSubMenu(file_menu, index)
@@ -135,7 +152,7 @@ def main():
         rows["commands"] = []
         for index in range(native.user.GetMenuItemCount(favorites_menu)):
             label = c.create_unicode_buffer(256)
-            native.user.GetMenuStringW(favorites_menu, index, label, len(label), 0x400)
+            native.user.GetMenuStringW(favorites_menu, index, label, len(label), MF_BYPOSITION)
             rows["commands"].append([native.user.GetMenuItemID(favorites_menu, index), label.value])
         assert rows["commands"] == [
             [OPEN, "&Open Favorites...\tAlt+I"],
@@ -182,7 +199,7 @@ def main():
         rows["save_question_before_picker"] = native.controls(question)
         answer(native, question, "Cancel")
         native.closed(question)
-        assert native.send(editor, 2159, 0, 0)
+        assert native.send(editor, SCI_GETMODIFY, 0, 0)
         question = native.open(frame, OPEN)
         answer(native, question, "Yes")
         native.closed(question)
@@ -191,7 +208,7 @@ def main():
         native.respond(dialog, 2)
         native.closed(dialog)
         rows["saved_target_hex"] = target.read_bytes().hex()
-        assert not native.send(editor, 2159, 0, 0)
+        assert not native.send(editor, SCI_GETMODIFY, 0, 0)
         add_unsaved_text(native, editor, "discard")
         question = native.open(frame, OPEN)
         answer(native, question, "No")
@@ -234,7 +251,9 @@ def main():
             answer(native, response, caption)
             native.closed(response)
             if caption == "Yes":
-                native.wait(lambda: native.send(editor, 2006, 0, 0) == 0, "original missing target opens empty")
+                native.wait(
+                    lambda: native.send(editor, SCI_GETLENGTH, 0, 0) == 0, "original missing target opens empty"
+                )
             rows["missing_choices"][caption].update(
                 hex=read_editor(native, editor).hex(),
                 exists=(output / "missing-target.txt").exists(),
@@ -270,11 +289,11 @@ def main():
         if process.poll() is None:
             for window in native.windows():
                 if native.class_name(window) == "#32770":
-                    native.post(window, 0x10, 0, 0)
+                    native.post(window, WM_CLOSE, 0, 0)
             if editor:
-                native.post(editor, 2014, 0, 0)
+                native.post(editor, SCI_SETSAVEPOINT, 0, 0)
             if frame:
-                native.post(frame, 0x10, 0, 0)
+                native.post(frame, WM_CLOSE, 0, 0)
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:

@@ -14,6 +14,26 @@ from pathlib import Path
 
 from original_windows import find_frames
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+CF_UNICODETEXT = 13
+CMD_COPYWINPOS = 40581
+CMD_DEFAULTWINPOS = 40582
+IDM_VIEW_CLEARWINPOS = 40045
+IDM_VIEW_SAVESETTINGS = 40443
+IDM_VIEW_SAVESETTINGSNOW = 40444
+IDM_VIEW_STICKY_WINDOW_POSITION = 40472
+IDM_VIEW_TOGGLE_FULLSCREEN = 40468
+MONITORINFOF_PRIMARY = 1
+MONITOR_DEFAULTTONEAREST = 2
+SWP_NOZORDER_NOACTIVATE = 0x14
+SW_MAXIMIZE = 3
+SW_MINIMIZE = 6
+SW_RESTORE = 9
+WM_CLOSE = 0x10
+WM_COMMAND = 0x111
+WM_INITMENU = 0x116
+WPF_RESTORETOMAXIMIZED = 2
+
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
 ORIGINAL_SHA256 = "1425c9a4b5ab2ea1fa3ba088f38dd987b763b7b8feff23dde6243f7855e86a78"
 
@@ -89,17 +109,17 @@ def main():
         assert user.GetWindowPlacement(frame, c.byref(placement))
         assert user.GetWindowRect(frame, c.byref(outer))
         current_monitor = Monitor(c.sizeof(Monitor))
-        assert user.GetMonitorInfoW(user.MonitorFromWindow(frame, 2), c.byref(current_monitor))
+        assert user.GetMonitorInfoW(user.MonitorFromWindow(frame, MONITOR_DEFAULTTONEAREST), c.byref(current_monitor))
         stored = configparser.ConfigParser(interpolation=None)
         stored.read(config, encoding="utf-16")
-        user.SendMessageW(frame, 0x116, user.GetMenu(frame), 0)  # Original native menu preparation.
+        user.SendMessageW(frame, WM_INITMENU, user.GetMenu(frame), 0)  # Original native menu preparation.
         records.append(
             dict(
                 case=label,
                 outer=rect(outer),
                 normal=rect(placement.normal),
-                maximized=bool(user.IsZoomed(frame) or placement.flags & 2),
-                clear_state=user.GetMenuState(user.GetMenu(frame), 40045, 0),
+                maximized=bool(user.IsZoomed(frame) or placement.flags & WPF_RESTORETOMAXIMIZED),
+                clear_state=user.GetMenuState(user.GetMenu(frame), IDM_VIEW_CLEARWINPOS, 0),
                 dpi=user.GetDpiForWindow(frame),
                 monitor=rect(current_monitor.screen),
                 work=rect(current_monitor.work),
@@ -108,13 +128,13 @@ def main():
         )
 
     def command(identity):
-        if identity == 40581:
+        if identity == CMD_COPYWINPOS:
             assert user.OpenClipboard(frame)
             try:
                 assert user.EmptyClipboard()
             finally:
                 user.CloseClipboard()
-        pending = threading.Thread(target=lambda: user.SendMessageW(frame, 0x111, identity, 0), daemon=True)
+        pending = threading.Thread(target=lambda: user.SendMessageW(frame, WM_COMMAND, identity, 0), daemon=True)
         pending.start()
         deadline = time.monotonic() + 4
         while pending.is_alive() and time.monotonic() < deadline:
@@ -129,7 +149,7 @@ def main():
                     title = c.create_unicode_buffer(256)
                     user.GetWindowTextW(hwnd, title, len(title))
                     print(f"Dismissing owned command {identity} information dialog: {title.value}", flush=True)
-                    user.PostMessageW(hwnd, 0x10, 0, 0)  # Owned Save Settings Now information dialog.
+                    user.PostMessageW(hwnd, WM_CLOSE, 0, 0)  # Owned Save Settings Now information dialog.
                 return True
 
             user.EnumWindows(callback(dismiss), 0)
@@ -139,7 +159,7 @@ def main():
     def clipboard():
         assert user.OpenClipboard(frame)
         try:
-            data = user.GetClipboardData(13)
+            data = user.GetClipboardData(CF_UNICODETEXT)
             pointer = kernel.GlobalLock(data)
             assert pointer
             value = c.wstring_at(pointer)
@@ -154,41 +174,41 @@ def main():
         frame = frames[0]
         time.sleep(0.3)
         monitor = Monitor(c.sizeof(Monitor))
-        assert user.GetMonitorInfoW(user.MonitorFromWindow(frame, 2), c.byref(monitor))
+        assert user.GetMonitorInfoW(user.MonitorFromWindow(frame, MONITOR_DEFAULTTONEAREST), c.byref(monitor))
         state("startup-pos")
-        command(40581)
+        command(CMD_COPYWINPOS)
         copied = clipboard()
-        command(40472)
+        command(IDM_VIEW_STICKY_WINDOW_POSITION)
         state("sticky-enabled-save-off")
-        user.SetWindowPos(frame, None, 180, 210, 700, 510, 0x14)
-        command(40444)
+        user.SetWindowPos(frame, None, 180, 210, 700, 510, SWP_NOZORDER_NOACTIVATE)
+        command(IDM_VIEW_SAVESETTINGSNOW)
         state("sticky-moved-explicit-save")
-        command(40472)
-        command(40444)
+        command(IDM_VIEW_STICKY_WINDOW_POSITION)
+        command(IDM_VIEW_SAVESETTINGSNOW)
         state("ordinary-save-before-fullscreen")
-        command(40468)
-        command(40444)
+        command(IDM_VIEW_TOGGLE_FULLSCREEN)
+        command(IDM_VIEW_SAVESETTINGSNOW)
         state("fullscreen-save")
-        command(40581)
+        command(CMD_COPYWINPOS)
         fullscreen_copied = clipboard()
-        command(40468)
-        user.ShowWindow(frame, 6)
-        command(40444)
+        command(IDM_VIEW_TOGGLE_FULLSCREEN)
+        user.ShowWindow(frame, SW_MINIMIZE)
+        command(IDM_VIEW_SAVESETTINGSNOW)
         state("minimized-save")
-        user.ShowWindow(frame, 9)
-        command(40045)
+        user.ShowWindow(frame, SW_RESTORE)
+        command(IDM_VIEW_CLEARWINPOS)
         state("history-cleared")
-        command(40582)
+        command(CMD_DEFAULTWINPOS)
         state("default-right")
-        command(40582)
+        command(CMD_DEFAULTWINPOS)
         state("default-left")
-        user.ShowWindow(frame, 3)
+        user.ShowWindow(frame, SW_MAXIMIZE)
         time.sleep(0.2)
-        command(40582)
+        command(CMD_DEFAULTWINPOS)
         state("default-from-maximized")
-        command(40444)
+        command(IDM_VIEW_SAVESETTINGSNOW)
         state("explicit-save")
-        user.SendMessageW(frame, 0x10, 0, 0)
+        user.SendMessageW(frame, WM_CLOSE, 0, 0)
         process.wait(timeout=10)
         process = subprocess.Popen([str(executable), "/n", *copied.split()])
         frames = find_frames(user, process, callback)
@@ -196,12 +216,12 @@ def main():
         frame = frames[0]
         time.sleep(0.2)
         state("clipboard-relaunch")
-        command(40443)  # Enable ordinary exit saving, then observe Clear -> exit -> restart.
-        user.SetWindowPos(frame, None, 180, 210, 700, 510, 0x14)
-        command(40444)
-        command(40045)
+        command(IDM_VIEW_SAVESETTINGS)  # Enable ordinary exit saving, then observe Clear -> exit -> restart.
+        user.SetWindowPos(frame, None, 180, 210, 700, 510, SWP_NOZORDER_NOACTIVATE)
+        command(IDM_VIEW_SAVESETTINGSNOW)
+        command(IDM_VIEW_CLEARWINPOS)
         state("clear-with-exit-saving")
-        user.SendMessageW(frame, 0x10, 0, 0)
+        user.SendMessageW(frame, WM_CLOSE, 0, 0)
         process.wait(timeout=10)
         process = subprocess.Popen([str(executable), "/n"])
         frames = find_frames(user, process, callback)
@@ -219,17 +239,17 @@ def main():
 
         assert user.EnumDisplayMonitors(None, None, monitor_callback(collect_monitor), 0)
         for index, info in enumerate(monitors):
-            if info.flags & 1:  # MONITORINFOF_PRIMARY.
+            if info.flags & MONITORINFOF_PRIMARY:  # MONITORINFOF_PRIMARY.
                 continue
-            user.SetWindowPos(frame, None, info.work.left + 40, info.work.top + 40, 640, 480, 0x14)
+            user.SetWindowPos(frame, None, info.work.left + 40, info.work.top + 40, 640, 480, SWP_NOZORDER_NOACTIVATE)
             time.sleep(0.2)
-            command(40582)
+            command(CMD_DEFAULTWINPOS)
             state(f"non-primary-default-{index}")
-            command(40581)
+            command(CMD_COPYWINPOS)
             exported = clipboard()
             rectangle = records[-1]["normal"]
             assert exported == "/pos " + ",".join(map(str, (*rectangle, 0)))
-            user.SendMessageW(frame, 0x10, 0, 0)
+            user.SendMessageW(frame, WM_CLOSE, 0, 0)
             process.wait(timeout=10)
             process = subprocess.Popen([str(executable), "/n", *exported.split()])
             frames = find_frames(user, process, callback)
@@ -239,10 +259,10 @@ def main():
             state(f"non-primary-clipboard-relaunch-{index}")
             assert records[-1]["normal"] == rectangle
             if not records[-1]["ini"]["Settings"].get("savesettings", "1").startswith("0"):
-                command(40443)
-            command(40045)
+                command(IDM_VIEW_SAVESETTINGS)
+            command(IDM_VIEW_CLEARWINPOS)
             state(f"non-primary-clear-save-off-{index}")
-            user.SendMessageW(frame, 0x10, 0, 0)
+            user.SendMessageW(frame, WM_CLOSE, 0, 0)
             process.wait(timeout=10)
             process = subprocess.Popen([str(executable), "/n"])
             frames = find_frames(user, process, callback)
@@ -257,7 +277,8 @@ def main():
             fullscreen_copied=fullscreen_copied,
             dpi=user.GetDpiForWindow(frame),
             monitors=[
-                dict(screen=rect(info.screen), work=rect(info.work), primary=bool(info.flags & 1)) for info in monitors
+                dict(screen=rect(info.screen), work=rect(info.work), primary=bool(info.flags & MONITORINFOF_PRIMARY))
+                for info in monitors
             ],
             monitor=rect(monitor.screen),
             work=rect(monitor.work),
@@ -266,7 +287,7 @@ def main():
         (args.output / "reference.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        user.SendMessageW(frame, 0x10, 0, 0)
+        user.SendMessageW(frame, WM_CLOSE, 0, 0)
         process.wait(timeout=10)
         assert copied == "/pos 100,120,640,480,0", copied
         relaunched = next(record for record in records if record["case"] == "clipboard-relaunch")

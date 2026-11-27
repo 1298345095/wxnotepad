@@ -17,6 +17,20 @@ from localization_native import Dialogs, plain
 from localization_package import Process, bundle_application, environment, menu_id, menus, settings
 from resource_process import native_edit, process_windows, wait_state
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+BM_CLICK = 0xF5
+GA_ROOT = 2
+KEYEVENTF_KEYUP = 2
+VK_DOWN = 0x28
+VK_F9 = 0x78
+VK_HOME = 0x24
+VK_MENU = 0x12
+WM_COMMAND = 0x111
+WM_GETMINMAXINFO = 0x24
+WM_GETTEXT = 0xD
+WM_KEYDOWN = 0x100
+WM_SETTEXT = 0xC
+
 CAPTIONS = {
     1033: (
         "en",
@@ -90,7 +104,7 @@ def default_name(dialogs, window, name_label, target):
                 entries.append(child)
         assert len(entries) == 1, entries
         value = ctypes.create_unicode_buffer(1024)
-        dialogs.user.SendMessageW(entries[0], 0xD, len(value), ctypes.addressof(value))
+        dialogs.user.SendMessageW(entries[0], WM_GETTEXT, len(value), ctypes.addressof(value))
         observed = value.value
     else:
         entries = [
@@ -138,16 +152,16 @@ def select_favorite(dialogs, app, window, index=0):
         assert len(controls) == 1, controls
         # Deliver the control's native navigation keys, preserving its real
         # selection notifications and the dialog's ordinary OK enablement.
-        dialogs.user.SendMessageW(controls[0], 0x100, 0x24, 1)  # WM_KEYDOWN, VK_HOME
+        dialogs.user.SendMessageW(controls[0], WM_KEYDOWN, VK_HOME, 1)  # WM_KEYDOWN, VK_HOME
         for _ in range(index):
-            dialogs.user.SendMessageW(controls[0], 0x100, 0x28, 1)  # VK_DOWN
+            dialogs.user.SendMessageW(controls[0], WM_KEYDOWN, VK_DOWN, 1)  # VK_DOWN
         for child in dialogs.children(window):
             kind = ctypes.create_unicode_buffer(256)
             dialogs.user.GetClassNameW(child, kind, len(kind))
             if kind.value == "Button" and dialogs.title(child).replace("&", "") == "OK":
                 # A failed resolution opens its message inside the button event.
                 # Queue the native click so the external driver can answer it.
-                assert dialogs.user.PostMessageW(child, 0xF5, 0, 0)
+                assert dialogs.user.PostMessageW(child, BM_CLICK, 0, 0)
                 return
         raise AssertionError("Favorites OK button")
     else:
@@ -164,8 +178,8 @@ def choose_file(dialogs, app, window, target):
             dialogs.user.GetClassNameW(child, kind, len(kind))
             if kind.value == "Edit":
                 value = ctypes.create_unicode_buffer(str(target))
-                dialogs.user.SendMessageW(child, 0xC, 0, ctypes.cast(value, ctypes.c_void_p).value)
-                dialogs.user.PostMessageW(window, 0x111, 1, 0)
+                dialogs.user.SendMessageW(child, WM_SETTEXT, 0, ctypes.cast(value, ctypes.c_void_p).value)
+                dialogs.user.PostMessageW(window, WM_COMMAND, 1, 0)
                 return
         raise AssertionError("Native file chooser filename input")
     dialogs.key(app, "ctrl+l", window)
@@ -190,17 +204,17 @@ def favorite_key(dialogs, app, key):
     user = dialogs.user
     user.GetAncestor.argtypes = [ctypes.c_void_p, ctypes.c_uint]
     user.GetAncestor.restype = ctypes.c_void_p
-    root = user.GetAncestor(int(app.state["editor_handle"]), 2)
+    root = user.GetAncestor(int(app.state["editor_handle"]), GA_ROOT)
     dialogs.activate(root)
     assert user.GetForegroundWindow() == root, "Native shortcut targets the owned foreground application"
     user.keybd_event.argtypes = [ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_uint, ctypes.c_size_t]
-    virtual = 0x78 if key == "F9" else ord(key.upper())
-    user.keybd_event(0x12, 0, 0, 0)
+    virtual = VK_F9 if key == "F9" else ord(key.upper())
+    user.keybd_event(VK_MENU, 0, 0, 0)
     try:
         user.keybd_event(virtual, 0, 0, 0)
-        user.keybd_event(virtual, 0, 2, 0)
+        user.keybd_event(virtual, 0, KEYEVENTF_KEYUP, 0)
     finally:
-        user.keybd_event(0x12, 0, 2, 0)
+        user.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
 
 
 def resize_policy(dialogs, app, window, horizontal_only, destination):
@@ -214,7 +228,7 @@ def resize_policy(dialogs, app, window, horizontal_only, destination):
 
         bounds = MinMax()
         bounds.maximum.x = bounds.maximum.y = 32767
-        dialogs.user.SendMessageW(window, 0x24, 0, ctypes.addressof(bounds))  # WM_GETMINMAXINFO
+        dialogs.user.SendMessageW(window, WM_GETMINMAXINFO, 0, ctypes.addressof(bounds))  # WM_GETMINMAXINFO
         assert bounds.maximum.x > bounds.minimum.x
         assert (bounds.maximum.y == bounds.minimum.y) == horizontal_only
         result = {"minimum": [bounds.minimum.x, bounds.minimum.y], "maximum": [bounds.maximum.x, bounds.maximum.y]}

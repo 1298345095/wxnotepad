@@ -16,6 +16,12 @@ from pathlib import Path
 
 from localization_package import Process, bundle_application, menu_id, menus, read_settings
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+CF_UNICODETEXT = 13
+CSIDL_LOCAL_APPDATA = 0x1C
+MONITOR_DEFAULTTONEAREST = 2
+SPI_GETWORKAREA = 0x30
+
 CAPTIONS = {
     1033: ("Sticky Window Position", "Clear Position History", "Window Position", "Save Settings Now"),
     2052: ("固定窗口位置(S)", "清除位置记录(H)", "窗口位置(W)", "立即保存设置(N)"),
@@ -68,7 +74,7 @@ def native_clipboard():
         kernel.GlobalUnlock.argtypes = [w.HANDLE]
         assert user.OpenClipboard(None)
         try:
-            handle = user.GetClipboardData(13)
+            handle = user.GetClipboardData(CF_UNICODETEXT)
             pointer = kernel.GlobalLock(handle)
             assert pointer
             try:
@@ -123,7 +129,9 @@ def native_work_area(app):
         user.MonitorFromWindow.restype = w.HANDLE
         user.GetMonitorInfoW.argtypes = [w.HANDLE, c.POINTER(Monitor)]
         monitor = Monitor(c.sizeof(Monitor))
-        assert user.GetMonitorInfoW(user.MonitorFromWindow(int(app.state["frame_handle"]), 2), c.byref(monitor))
+        assert user.GetMonitorInfoW(
+            user.MonitorFromWindow(int(app.state["frame_handle"]), MONITOR_DEFAULTTONEAREST), c.byref(monitor)
+        )
         return monitor.work.left, monitor.work.top, monitor.work.right, monitor.work.bottom
     values = subprocess.check_output(["xprop", "-root", "_NET_WORKAREA"], text=True).split("=", 1)[1]
     x, y, width, height = [int(value) for value in values.split(",")[:4]]
@@ -170,7 +178,7 @@ def primary_windows_default():
     user = c.WinDLL("user32")
     user.SystemParametersInfoW.argtypes = [w.UINT, w.UINT, w.LPVOID, w.UINT]
     work = w.RECT()
-    assert user.SystemParametersInfoW(0x30, 0, c.byref(work), 0)  # SPI_GETWORKAREA.
+    assert user.SystemParametersInfoW(SPI_GETWORKAREA, 0, c.byref(work), 0)  # SPI_GETWORKAREA.
     height = work.bottom - work.top - 32
     width = min(work.right - work.left - 32, height)
     # Native placement is in primary workspace coordinates, excluding the
@@ -210,7 +218,7 @@ def main():
         if installed:
             if sys.platform == "win32":
                 native = c.create_unicode_buffer(32768)
-                assert c.windll.shell32.SHGetFolderPathW(None, 0x1C, None, 0, native) == 0
+                assert c.windll.shell32.SHGetFolderPathW(None, CSIDL_LOCAL_APPDATA, None, 0, native) == 0
                 config = Path(native.value) / "Notepad4" / "Notepad4.ini"
                 assert not config.exists(), "Windows installed tests use the approved isolated VM with no user INI"
                 fixtures.callback(config.unlink, missing_ok=True)

@@ -11,6 +11,19 @@ from pathlib import Path
 
 from original_host import Original, user
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+DESKTOP_ALL_ACCESS = 0x1FF
+IDM_EDIT_CODE_COMPRESS = 40378
+IDM_EDIT_CODE_PRETTY = 40379
+IDM_FILE_SAVE = 40004
+SCI_EMPTYUNDOBUFFER = 2175
+SCI_GETLENGTH = 2006
+SCI_SETEOLMODE = 2031
+SCI_SETSAVEPOINT = 2014
+SCI_SETSEL = 2160
+SCI_SETTABWIDTH = 2036
+SCI_SETUSETABS = 2124
+
 executable, output = map(Path, sys.argv[1:3])
 output.mkdir(parents=True, exist_ok=True)
 host = output / "original-portable"
@@ -21,7 +34,7 @@ user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWO
 user.CreateDesktopW.restype = w.HANDLE
 user.CloseDesktop.argtypes = [w.HANDLE]
 name = "wxnotepad-code-format-files-" + str(os.getpid())
-desktop = user.CreateDesktopW(name, None, None, 0, 0x1FF, None)
+desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_ALL_ACCESS, None)
 assert desktop
 rows = []
 try:
@@ -43,15 +56,15 @@ try:
                     path, host / "Notepad4.exe", desktop, name, "utf-8" if encoding == "utf-8-bom" else encoding
                 )
                 try:
-                    original.send(2031, eol)
-                    original.send(2036, 2)
-                    original.send(2124, 0)
-                    original.send(2160, 0, original.send(2006))
-                    original.send(2175)
-                    original.send(2014)
-                    original.command(40378 + formatting)
+                    original.send(SCI_SETEOLMODE, eol)
+                    original.send(SCI_SETTABWIDTH, 2)
+                    original.send(SCI_SETUSETABS, 0)
+                    original.send(SCI_SETSEL, 0, original.send(SCI_GETLENGTH))
+                    original.send(SCI_EMPTYUNDOBUFFER)
+                    original.send(SCI_SETSAVEPOINT)
+                    original.command(IDM_EDIT_CODE_COMPRESS + formatting)
                     after = original.state()
-                    original.command(40004)
+                    original.command(IDM_FILE_SAVE)
                     saved = path.read_bytes()
                     rows.append(
                         dict(
@@ -71,8 +84,8 @@ try:
         original = Original(path, host / "Notepad4.exe", desktop, name)
         try:
             original.reset(text, len(text), 0)
-            original.send(2031, 0)
-            original.command(40379)
+            original.send(SCI_SETEOLMODE, 0)
+            original.command(IDM_EDIT_CODE_PRETTY)
             rows.append(
                 dict(encoding="same-length", pretty=1, eol=0, input=text.hex(), after=original.state(), saved="-")
             )

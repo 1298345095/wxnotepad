@@ -17,6 +17,9 @@ from localization_package import Child, Process, bundle_application, environment
 from resource_process import wait_state
 from startup_options_process import start, unreadable
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
 
 def children(root, count):
     # Match wait_child: each next independent child has its own discovery
@@ -363,7 +366,7 @@ def package_pids(executable):
         def visit(window, unused):
             pid = wintypes.DWORD()
             user.GetWindowThreadProcessId(window, ctypes.byref(pid))
-            handle = kernel.OpenProcess(0x1000, False, pid.value)
+            handle = kernel.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
             if handle:
                 try:
                     path = ctypes.create_unicode_buffer(32768)

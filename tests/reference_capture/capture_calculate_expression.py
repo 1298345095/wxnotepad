@@ -17,6 +17,23 @@ from pathlib import Path
 
 from original_host import CALLBACK, Original, user
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+DESKTOP_ALL_ACCESS = 0x1FF
+IDM_ENCODING_ANSI = 40100
+IDM_FILE_SAVE = 40004
+SCI_ADDSELECTION = 2573
+SCI_GETCODEPAGE = 2137
+SCI_REDO = 2011
+SCI_SETMAINSELECTION = 2574
+SCI_SETREADONLY = 2171
+SCI_SETSEL = 2160
+SCI_SETSELECTIONMODE = 2422
+SCI_SETSELECTIONNANCHOR = 2578
+SCI_SETSELECTIONNCARETVIRTUALSPACE = 2580
+SCI_UNDO = 2176
+WM_CLOSE = 0x10
+WM_INITMENU = 0x116
+
 CALCULATE = 40588
 exe, output = map(Path, sys.argv[1:3])
 output.mkdir(parents=True, exist_ok=False)
@@ -33,7 +50,7 @@ user.GetMenu.argtypes = [w.HWND]
 user.GetMenu.restype = w.HMENU
 user.GetMenuState.argtypes = [w.HMENU, w.UINT, w.UINT]
 name = "wxnotepad-calculate-reference-" + str(os.getpid())
-desktop = user.CreateDesktopW(name, None, None, 0, 0x1FF, None)
+desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_ALL_ACCESS, None)
 assert desktop
 rows = []
 
@@ -55,7 +72,7 @@ def invoke(app, rectangle=False):
             user.GetClassNameW(hwnd, kind, 100)
             if pid.value == app.process.pid and kind.value == "#32770" and hwnd not in dialogs:
                 dialogs.append(hwnd)
-                user.PostMessageW(hwnd, 0x10, 0, 0)
+                user.PostMessageW(hwnd, WM_CLOSE, 0, 0)
             return True
 
         user.EnumDesktopWindows(desktop, CALLBACK(window), 0)
@@ -137,11 +154,11 @@ try:
                 before = app.state()
                 invoke(app)
                 after = app.state()
-                app.command(40004)  # Save, not direct file reconstruction.
+                app.command(IDM_FILE_SAVE)  # Save, not direct file reconstruction.
                 saved = document.read_bytes().hex()
-                app.send(2176)
+                app.send(SCI_UNDO)
                 undo = app.state()
-                app.send(2011)
+                app.send(SCI_REDO)
                 redo = app.state()
                 rows.append(
                     dict(
@@ -162,24 +179,24 @@ try:
         for mode in modes:
             app.reset(b"1+2\n3+4", 0, 0 if mode == "empty" else 3)
             if mode == "readonly":
-                app.send(2171, 1)
+                app.send(SCI_SETREADONLY, 1)
             if mode == "rectangle":
-                app.send(2422, 1)
-                app.send(2580, 0)
-                app.send(2578, 7)
+                app.send(SCI_SETSELECTIONMODE, 1)
+                app.send(SCI_SETSELECTIONNCARETVIRTUALSPACE, 0)
+                app.send(SCI_SETSELECTIONNANCHOR, 7)
             if mode in ("multiple", "multiple-main-first"):
-                app.send(2573, 7, 4)
+                app.send(SCI_ADDSELECTION, 7, 4)
                 if mode == "multiple-main-first":
-                    app.send(2574, 0)
+                    app.send(SCI_SETMAINSELECTION, 0)
             before = app.state()
             menu = user.GetMenu(app.hwnd)
-            user.SendMessageW(app.hwnd, 0x116, menu, 0)
+            user.SendMessageW(app.hwnd, WM_INITMENU, menu, 0)
             enabled = not (user.GetMenuState(menu, CALCULATE, 0) & 3)
             dialogs = invoke(app, mode == "rectangle")
             after = app.state()
-            app.send(2176)
+            app.send(SCI_UNDO)
             undo = app.state()
-            app.send(2011)
+            app.send(SCI_REDO)
             rows.append(
                 dict(
                     mode=mode,
@@ -215,23 +232,23 @@ try:
             app = Original(target, portable / "Notepad4.exe", desktop, name, encoding)
             try:
                 if encoding == "ansi":
-                    app.command(40100)
+                    app.command(IDM_ENCODING_ANSI)
                     # Like the existing Base64 original capture, choose ANSI
                     # on an empty file before setting its native document bytes.
                     app.reset(content.encode("ascii"), 4 + len(expression), 4)
-                app.send(2160, 4 + len(expression), 4)
+                app.send(SCI_SETSEL, 4 + len(expression), 4)
                 before = app.state()
                 app.command(CALCULATE)
                 after = app.state()
-                app.command(40004)
+                app.command(IDM_FILE_SAVE)
                 saved = target.read_bytes().hex()
-                app.send(2176)
+                app.send(SCI_UNDO)
                 undo = app.state()
-                app.command(40004)
+                app.command(IDM_FILE_SAVE)
                 undo_saved = target.read_bytes().hex()
-                app.send(2011)
+                app.send(SCI_REDO)
                 redo = app.state()
-                app.command(40004)
+                app.command(IDM_FILE_SAVE)
                 rows.append(
                     dict(
                         encoding=encoding,
@@ -245,16 +262,16 @@ try:
                         redo_saved=target.read_bytes().hex(),
                     )
                 )
-                if encoding == "ansi" and app.send(2137) == 936:
+                if encoding == "ansi" and app.send(SCI_GETCODEPAGE) == 936:
                     expression = '"' + "中" * 500 + '".repeat(7)'
                     data = expression.encode("gbk")
                     app.reset(data, 0, len(data))
-                    app.command(40004)
+                    app.command(IDM_FILE_SAVE)
                     before = app.state()
                     original_bytes = target.read_bytes().hex()
                     app.command(CALCULATE)
                     after = app.state()
-                    app.command(40004)
+                    app.command(IDM_FILE_SAVE)
                     rows.append(
                         dict(
                             mode="ansi-result-capacity",

@@ -13,6 +13,14 @@ from types import SimpleNamespace
 
 from original_host import CALLBACK, Original, kernel, user
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+DESKTOP_READOBJECTS = 1
+GW_HWNDPREV = 3
+PM_REMOVE = 1
+UOI_NAME = 2
+WM_CLOSE = 0x10
+WS_VISIBLE_OVERLAPPEDWINDOW = 0x10CF0000
+
 ALWAYS_ON_TOP = 40425
 SAVE_SETTINGS_NOW = 40444
 GWL_EXSTYLE = -20
@@ -112,13 +120,13 @@ def main():
     user.OpenInputDesktop.argtypes = [w.DWORD, w.BOOL, w.DWORD]
     user.OpenInputDesktop.restype = w.HANDLE
     user.GetUserObjectInformationW.argtypes = [w.HANDLE, c.c_int, c.c_void_p, w.DWORD, c.POINTER(w.DWORD)]
-    input_desktop = user.OpenInputDesktop(0, False, 1)
+    input_desktop = user.OpenInputDesktop(0, False, DESKTOP_READOBJECTS)
     assert input_desktop, "reference requires the granted input desktop"
     desktop_names = []
     for handle in (desktop, input_desktop):
         value = c.create_unicode_buffer(128)
         needed = w.DWORD()
-        assert user.GetUserObjectInformationW(handle, 2, value, c.sizeof(value), c.byref(needed))
+        assert user.GetUserObjectInformationW(handle, UOI_NAME, value, c.sizeof(value), c.byref(needed))
         desktop_names.append(value.value)
     assert user.CloseDesktop(input_desktop)
     assert desktop_names == ["Default", "Default"], desktop_names
@@ -126,7 +134,7 @@ def main():
 
     def pump():
         message = w.MSG()
-        while user.PeekMessageW(c.byref(message), None, 0, 0, 1):
+        while user.PeekMessageW(c.byref(message), None, 0, 0, PM_REMOVE):
             user.TranslateMessage(c.byref(message))
             user.DispatchMessageW(c.byref(message))
 
@@ -134,11 +142,11 @@ def main():
         return bool(user.GetWindowLongPtrW(app.hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
 
     def above(app, peer):
-        window = user.GetWindow(peer.hwnd, 3)  # GW_HWNDPREV: preceding native Z-order window.
+        window = user.GetWindow(peer.hwnd, GW_HWNDPREV)  # GW_HWNDPREV: preceding native Z-order window.
         while window:
             if window == app.hwnd:
                 return True
-            window = user.GetWindow(window, 3)
+            window = user.GetWindow(window, GW_HWNDPREV)
         return False
 
     def save_now(app):
@@ -173,7 +181,7 @@ def main():
                 if "The current program settings have been saved." not in text:
                     time.sleep(0.01)
                     continue
-                assert user.PostMessageW(dialogs[0], 0x10, 0, 0)
+                assert user.PostMessageW(dialogs[0], WM_CLOSE, 0, 0)
                 while pending.is_alive() and time.monotonic() < deadline:
                     pump()
                     pending.join(0.01)
@@ -246,7 +254,7 @@ def main():
                             0,
                             peer_class.name,
                             "Owned original topmost peer",
-                            0x10CF0000,
+                            WS_VISIBLE_OVERLAPPEDWINDOW,
                             *position,
                             400,
                             300,
