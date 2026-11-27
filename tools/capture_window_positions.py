@@ -238,6 +238,18 @@ def main():
             time.sleep(0.2)
             state(f"non-primary-clipboard-relaunch-{index}")
             assert records[-1]["normal"] == rectangle
+            if not records[-1]["ini"]["Settings"].get("savesettings", "1").startswith("0"):
+                command(40443)
+            command(40045)
+            state(f"non-primary-clear-save-off-{index}")
+            user.SendMessageW(frame, 0x10, 0, 0)
+            process.wait(timeout=10)
+            process = subprocess.Popen([str(executable), "/n"])
+            frames = find_frames(user, process, callback)
+            assert len(frames) == 1
+            frame = frames[0]
+            time.sleep(0.2)
+            state(f"non-primary-cleared-history-restart-{index}")
         report = dict(
             revision=REVISION,
             executable_sha256=digest,

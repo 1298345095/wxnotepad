@@ -166,6 +166,18 @@ def secondary_windows_positions():
     return result
 
 
+def primary_windows_default():
+    user = c.WinDLL("user32")
+    user.SystemParametersInfoW.argtypes = [w.UINT, w.UINT, w.LPVOID, w.UINT]
+    work = w.RECT()
+    assert user.SystemParametersInfoW(0x30, 0, c.byref(work), 0)  # SPI_GETWORKAREA.
+    height = work.bottom - work.top - 32
+    width = min(work.right - work.left - 32, height)
+    # Native placement is in primary workspace coordinates, excluding the
+    # work-area offset which CreateWindow/SetSize need in screen coordinates.
+    return work.right - work.left - width - 16, 16, width, height
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
@@ -325,6 +337,7 @@ def main():
                     app.choose(menu_id(app.state, "Window Position"))
                     copied = native_clipboard()
                     assert copied == "/pos " + argument
+                    app.choose(menu_id(app.state, "Save Settings Now"))
                     app.close()
                 finally:
                     app.stop()
@@ -332,6 +345,15 @@ def main():
                 try:
                     assert native_rectangle(app) == position, (
                         "non-primary copied launch preserves physical normal rectangle"
+                    )
+                    app.choose(menu_id(app.state, "Clear Position History"))
+                    app.close()
+                finally:
+                    app.stop()
+                app = launch()
+                try:
+                    assert native_rectangle(app) == primary_windows_default(), (
+                        "cleared non-primary history restarts with original primary-workspace default"
                     )
                     app.close()
                 finally:
