@@ -145,6 +145,7 @@ public:
                 Require(TestEditor::Text(frame) == text, "all position commands leave current document usable");
                 std::puts("PASS: sticky, save-off/explicit-save, normal/fullscreen/maximized history, clipboard, "
                           "default and clear");
+                std::println("Observed native DPI={}, display count={}", frame->GetDPI().x, wxDisplay::GetCount());
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
                 const auto rect = frame->GetRect();

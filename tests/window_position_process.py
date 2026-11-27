@@ -179,11 +179,14 @@ def main():
                 config = folder / "user-config" / "Notepad4" / "Notepad4.ini"
             config.parent.mkdir(parents=True, exist_ok=True)
         run = 0
+        tested_dpi = set()
 
         def launch(arguments=()):
             nonlocal run
             run += 1
-            return Process(executable, folder / f"observed-{run}", environment, arguments=arguments)
+            app = Process(executable, folder / f"observed-{run}", environment, arguments=arguments)
+            tested_dpi.add(int(app.state["dpi"]))
+            return app
 
         for language, captions in CAPTIONS.items():
             config.write_text(f"[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage={language}\n", encoding="utf-16")
@@ -285,6 +288,7 @@ def main():
         finally:
             app.stop()
         print("PASS: English/Simplified/Traditional commands, real INI restore and copied public five-field launch")
+        print(f"Observed native DPI: {sorted(tested_dpi)}")
 
 
 if __name__ == "__main__":
