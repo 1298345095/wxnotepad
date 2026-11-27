@@ -15,7 +15,7 @@ from private_desktop import Process
 
 # Pinned Notepad4/Scintilla and native platform protocol values.
 BM_CLICK = 0xF5
-DESKTOP_ALL_ACCESS = 0x1FF
+DESKTOP_OBJECT_ACCESS = 0x1FF
 IDM_VIEW_REUSEWINDOW = 40423
 IDM_VIEW_SINGLEFILEINSTANCE = 40040
 MEM_COMMIT_RESERVE = 0x3000
@@ -124,7 +124,7 @@ def main():
     user.GetMenu.restype = w.HMENU
     user.GetMenuState.argtypes = [w.HMENU, w.UINT, w.UINT]
     name = "wxnotepad-multifile-reference-287"
-    desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_ALL_ACCESS, None)
+    desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_OBJECT_ACCESS, None)
     assert desktop
     result = {"revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a", "executable_sha256": original_hash, "cases": []}
     targets = [portable / f"file {index} 中文😀.txt" for index in range(35)]

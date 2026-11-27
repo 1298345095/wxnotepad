@@ -18,7 +18,7 @@ from pathlib import Path
 from original_host import CALLBACK, Original, user
 
 # Pinned Notepad4/Scintilla and native platform protocol values.
-DESKTOP_ALL_ACCESS = 0x1FF
+DESKTOP_OBJECT_ACCESS = 0x1FF
 IDM_ENCODING_ANSI = 40100
 IDM_FILE_SAVE = 40004
 SCI_ADDSELECTION = 2573
@@ -50,7 +50,7 @@ user.GetMenu.argtypes = [w.HWND]
 user.GetMenu.restype = w.HMENU
 user.GetMenuState.argtypes = [w.HMENU, w.UINT, w.UINT]
 name = "wxnotepad-calculate-reference-" + str(os.getpid())
-desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_ALL_ACCESS, None)
+desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_OBJECT_ACCESS, None)
 assert desktop
 rows = []
 

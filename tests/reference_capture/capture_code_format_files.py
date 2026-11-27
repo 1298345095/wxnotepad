@@ -12,7 +12,7 @@ from pathlib import Path
 from original_host import Original, user
 
 # Pinned Notepad4/Scintilla and native platform protocol values.
-DESKTOP_ALL_ACCESS = 0x1FF
+DESKTOP_OBJECT_ACCESS = 0x1FF
 IDM_EDIT_CODE_COMPRESS = 40378
 IDM_EDIT_CODE_PRETTY = 40379
 IDM_FILE_SAVE = 40004
@@ -34,7 +34,7 @@ user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWO
 user.CreateDesktopW.restype = w.HANDLE
 user.CloseDesktop.argtypes = [w.HANDLE]
 name = "wxnotepad-code-format-files-" + str(os.getpid())
-desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_ALL_ACCESS, None)
+desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_OBJECT_ACCESS, None)
 assert desktop
 rows = []
 try:
