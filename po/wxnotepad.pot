@@ -779,6 +779,14 @@ msgstr ""
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr ""
 
+#. TRANSLATORS: Multi-file help; keep + file1 file2 ..., [Settings2] MultiFileArg=1, - and -- literal.
+#: src/app/main.cpp
+msgid ""
+"+ file1 file2 ...  Open up to 32 files (additional paths are ignored).\n"
+"[Settings2] MultiFileArg=1 uses this mode by default; - or -- forces one path.\n"
+"Multiple files always open in separate new windows; preceding options apply to every file."
+msgstr ""
+
 #. TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
 #: src/app/main.cpp
 msgid ""

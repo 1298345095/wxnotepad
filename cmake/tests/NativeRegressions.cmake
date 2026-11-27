@@ -624,6 +624,40 @@ add_test(NAME packaged_startup_options COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
     --cmake-dir "${CMAKE_BINARY_DIR}")
 set_tests_properties(packaged_startup_options PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_multifile COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}")
+set_tests_properties(packaged_startup_multifile PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_multifile_default COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario default)
+set_tests_properties(packaged_startup_multifile_default PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_multifile_counts COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario counts)
+set_tests_properties(packaged_startup_multifile_counts PROPERTIES TIMEOUT 120)
+add_test(NAME packaged_startup_multifile_single COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --scenario single)
+set_tests_properties(packaged_startup_multifile_single PROPERTIES TIMEOUT 120)
+foreach(scenario IN ITEMS directory failures)
+    add_test(NAME packaged_startup_multifile_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario ${scenario})
+    set_tests_properties(packaged_startup_multifile_${scenario} PROPERTIES TIMEOUT 120)
+endforeach()
+if(NOT WIN32)
+    add_test(NAME packaged_startup_multifile_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario installed)
+    set_tests_properties(packaged_startup_multifile_installed PROPERTIES TIMEOUT 120)
+endif()
+foreach(language IN ITEMS en zh_CN zh_TW)
+    add_test(NAME packaged_startup_multifile_matrix_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_multifile_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --scenario matrix --language ${language})
+    set_tests_properties(packaged_startup_multifile_matrix_${language} PROPERTIES TIMEOUT 120)
+endforeach()
 add_test(NAME packaged_startup_encodings COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/startup_options_process.py" "$<TARGET_FILE:wxnotepad>"
     --cmake-dir "${CMAKE_BINARY_DIR}" --scenario encodings)
