@@ -139,6 +139,33 @@ def within_work_area(app):
     )
 
 
+def secondary_windows_positions():
+    from capture_window_positions import Monitor
+
+    user = c.WinDLL("user32")
+    callback = c.WINFUNCTYPE(w.BOOL, w.HANDLE, w.HDC, c.POINTER(w.RECT), w.LPARAM)
+    user.EnumDisplayMonitors.argtypes = [w.HDC, c.POINTER(w.RECT), callback, w.LPARAM]
+    user.GetMonitorInfoW.argtypes = [w.HANDLE, c.POINTER(Monitor)]
+    result = []
+
+    def monitor(handle, _dc, _rect, _data):
+        info = Monitor(c.sizeof(Monitor))
+        assert user.GetMonitorInfoW(handle, c.byref(info))
+        if not info.flags & 1:  # MONITORINFOF_PRIMARY.
+            result.append(
+                (
+                    info.screen.left + 40,
+                    info.screen.top + 40,
+                    min(640, info.work.right - info.work.left - 80),
+                    min(480, info.work.bottom - info.work.top - 80),
+                )
+            )
+        return True
+
+    assert user.EnumDisplayMonitors(None, None, callback(monitor), 0)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
@@ -287,6 +314,28 @@ def main():
             app.close()
         finally:
             app.stop()
+        if sys.platform == "win32":
+            for position in secondary_windows_positions():
+                config.write_text("[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16")
+                argument = ",".join(map(str, (*position, 0)))
+                app = launch(("-pos", argument))
+                try:
+                    assert native_rectangle(app) == position, (native_rectangle(app), position)
+                    seed_clipboard()
+                    app.choose(menu_id(app.state, "Window Position"))
+                    copied = native_clipboard()
+                    assert copied == "/pos " + argument
+                    app.close()
+                finally:
+                    app.stop()
+                app = launch(tuple(copied.split()))
+                try:
+                    assert native_rectangle(app) == position, (
+                        "non-primary copied launch preserves physical normal rectangle"
+                    )
+                    app.close()
+                finally:
+                    app.stop()
         print("PASS: English/Simplified/Traditional commands, real INI restore and copied public five-field launch")
         print(f"Observed native DPI: {sorted(tested_dpi)}")
 

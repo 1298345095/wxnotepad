@@ -142,6 +142,37 @@ public:
                 for (const auto& name : ini.SectionNames())
                     Require(!name.StartsWith("Window Position") && name != "wxnotepad Wayland Window",
                             "clear removes all original resolution histories and Wayland size history");
+                if (coordinates) {
+                    for (unsigned index = 1; index < wxDisplay::GetCount(); ++index) {
+                        const wxDisplay display(index);
+                        const auto work = display.GetClientArea();
+                        frame->SetSize(work.x + 16, work.y + 16, std::min(640, work.width - 32),
+                                       std::min(480, work.height - 32));
+                        Await([&] { return wxDisplay::GetFromWindow(frame) == static_cast<int>(index); },
+                              "owned frame reaches the selected non-primary monitor");
+                        NativeKeys::Shortcut(frame, 'P', true, false, true);
+                        const int height = work.height - 32;
+                        const int width = std::min(work.width - 32, height);
+                        const wxRect expected(work.x + work.width - width - 16, work.y + 16, width, height);
+                        Await([&] { return frame->GetRect() == expected; },
+                              "default position uses the non-primary monitor work area in native units");
+                        auto position = expected.GetPosition();
+#ifdef __WXMSW__
+                        position -= work.GetPosition() - display.GetGeometry().GetPosition();
+                        constexpr auto prefix = "/pos";
+#else
+                        constexpr auto prefix = "-pos";
+#endif
+                        Require(Copy(*frame) ==
+                                    wxString::Format("%s %d,%d,%d,%d,0", prefix, position.x, position.y, width, height)
+                                        .utf8_string(),
+                                "non-primary copy uses the same ordinary native/workspace units");
+                        Choose(*frame, "Save Settings Now");
+                        SavedRectangle(path_, expected.GetSize(), PositionSection(*frame));
+                        std::println("Non-primary monitor {}: DPI={} work={},{},{},{}", index, frame->GetDPI().x,
+                                     work.x, work.y, work.width, work.height);
+                    }
+                }
                 Require(TestEditor::Text(frame) == text, "all position commands leave current document usable");
                 std::puts("PASS: sticky, save-off/explicit-save, normal/fullscreen/maximized history, clipboard, "
                           "default and clear");

@@ -51,6 +51,8 @@ def main():
     user.SetProcessDpiAwarenessContext.argtypes = [w.HANDLE]
     assert user.SetProcessDpiAwarenessContext(w.HANDLE(-4)), "capture process must use physical PMv2 geometry"
     callback = c.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
+    monitor_callback = c.WINFUNCTYPE(w.BOOL, w.HANDLE, w.HDC, c.POINTER(w.RECT), w.LPARAM)
+    user.EnumDisplayMonitors.argtypes = [w.HDC, c.POINTER(w.RECT), monitor_callback, w.LPARAM]
     user.SendMessageW.argtypes = [w.HWND, w.UINT, w.WPARAM, w.LPARAM]
     user.SendMessageW.restype = c.c_ssize_t
     user.PostMessageW.argtypes = [w.HWND, w.UINT, w.WPARAM, w.LPARAM]
@@ -86,6 +88,8 @@ def main():
         outer = w.RECT()
         assert user.GetWindowPlacement(frame, c.byref(placement))
         assert user.GetWindowRect(frame, c.byref(outer))
+        current_monitor = Monitor(c.sizeof(Monitor))
+        assert user.GetMonitorInfoW(user.MonitorFromWindow(frame, 2), c.byref(current_monitor))
         stored = configparser.ConfigParser(interpolation=None)
         stored.read(config, encoding="utf-16")
         user.SendMessageW(frame, 0x116, user.GetMenu(frame), 0)  # Original native menu preparation.
@@ -96,6 +100,9 @@ def main():
                 normal=rect(placement.normal),
                 maximized=bool(user.IsZoomed(frame) or placement.flags & 2),
                 clear_state=user.GetMenuState(user.GetMenu(frame), 40045, 0),
+                dpi=user.GetDpiForWindow(frame),
+                monitor=rect(current_monitor.screen),
+                work=rect(current_monitor.work),
                 ini={name: dict(stored[name]) for name in stored.sections()},
             )
         )
@@ -202,12 +209,44 @@ def main():
         frame = frames[0]
         time.sleep(0.2)
         state("restart-after-clear-with-exit-saving")
+        monitors = []
+
+        def collect_monitor(handle, _dc, _rect, _data):
+            info = Monitor(c.sizeof(Monitor))
+            assert user.GetMonitorInfoW(handle, c.byref(info))
+            monitors.append(info)
+            return True
+
+        assert user.EnumDisplayMonitors(None, None, monitor_callback(collect_monitor), 0)
+        for index, info in enumerate(monitors):
+            if info.flags & 1:  # MONITORINFOF_PRIMARY.
+                continue
+            user.SetWindowPos(frame, None, info.work.left + 40, info.work.top + 40, 640, 480, 0x14)
+            time.sleep(0.2)
+            command(40582)
+            state(f"non-primary-default-{index}")
+            command(40581)
+            exported = clipboard()
+            rectangle = records[-1]["normal"]
+            assert exported == "/pos " + ",".join(map(str, (*rectangle, 0)))
+            user.SendMessageW(frame, 0x10, 0, 0)
+            process.wait(timeout=10)
+            process = subprocess.Popen([str(executable), "/n", *exported.split()])
+            frames = find_frames(user, process, callback)
+            assert len(frames) == 1
+            frame = frames[0]
+            time.sleep(0.2)
+            state(f"non-primary-clipboard-relaunch-{index}")
+            assert records[-1]["normal"] == rectangle
         report = dict(
             revision=REVISION,
             executable_sha256=digest,
             copied=copied,
             fullscreen_copied=fullscreen_copied,
             dpi=user.GetDpiForWindow(frame),
+            monitors=[
+                dict(screen=rect(info.screen), work=rect(info.work), primary=bool(info.flags & 1)) for info in monitors
+            ],
             monitor=rect(monitor.screen),
             work=rect(monitor.work),
             records=records,
