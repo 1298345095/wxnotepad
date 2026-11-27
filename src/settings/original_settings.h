@@ -39,6 +39,7 @@ struct OriginalSettings {
     bool reuseWindow = false;
     bool singleFileInstance = true;
     bool stickyWindowPosition = false;
+    bool multiFileArg = false;
     wxString openWithDirectory;
     int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;

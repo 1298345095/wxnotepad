@@ -1,4 +1,4 @@
-# Opening a file from the command line
+# Opening files from the command line
 
 Run `wxnotepad [options] [file]`. A relative file path is resolved from the
 caller's working directory. Quote paths containing spaces. File paths can contain
@@ -14,6 +14,7 @@ wxnotepad "notes 中文.txt"
 wxnotepad --e windows-1252 --s json "data.txt"
 wxnotepad --g 12,5 --ro "source.cpp"
 wxnotepad -- --leading-name.txt
+wxnotepad -e windows-1252 -s json -ro -g 2,2 + "first.txt" "second 中文😀.txt"
 ```
 
 | Option | Meaning |
@@ -34,8 +35,34 @@ view.
 
 Opening a missing path asks whether to create an empty file. Yes creates the file,
 No keeps an empty document, and Cancel exits. A read failure reports an error and
-keeps an empty document; it does not rewrite the target. Only one file is opened
-per invocation.
+keeps an empty document; it does not rewrite the target.
+
+A standalone `+` starts a multi-file list. Each following argument is one path,
+including names that resemble options. Quote each path containing spaces. The
+first 32 paths are collected; additional paths are ignored, matching the pinned
+original. A list with no paths opens the usual empty window. One path follows
+ordinary single-file startup and its configured window routing. Two or more
+paths launch independent editor processes and the dispatcher exits without an
+extra blank window.
+
+Set `[Settings2] MultiFileArg=1` in the selected portable or installed INI to use
+multi-file collection without `+` (default `0`). A standalone `-` or `--` still
+forces the remaining arguments to form one path, including unquoted spaces.
+wxnotepad reads this default before parsing paths. This fixes the pinned
+original's startup-order defect: it reads `MultiFileArg` after parsing, leaving
+the setting ineffective unless `+` was already present. The working default is
+an explicitly approved compatibility correction.
+
+Options before a multi-file list apply to every target. Each dispatched child
+receives a final new-window override, so even Reuse Window, Single File Instance,
+or an explicit `-rs` does not replace an existing document. Duplicate targets
+open independently. These temporary overrides do not change saved window
+preferences. Paths resolve from the original caller's working directory, and
+arguments pass directly to the process launcher without an additional shell.
+Missing-file confirmations, cancellation, directory targets and reading errors
+are handled independently in each child; another target's failure leaves the
+other documents intact. Internal Restart and New Window arguments retain their
+single-document meaning even when `MultiFileArg` is enabled.
 
 The `e`, `s`, `g` and `G` options require a following parameter. A missing
 parameter shows a localized error and exits unsuccessfully without opening or

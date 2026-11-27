@@ -130,6 +130,7 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     values.reuseWindow = document_.ReadBool("ReuseWindow", defaults.reuseWindow, "Settings2");
     values.singleFileInstance = document_.ReadBool("SingleFileInstance", defaults.singleFileInstance, "Settings2");
     values.stickyWindowPosition = document_.ReadBool("StickyWindowPosition", false, "Settings2");
+    values.multiFileArg = document_.ReadBool("MultiFileArg", defaults.multiFileArg, "Settings2");
     const int recent = document_.ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
     values.saveRecentFiles = (recent & 1) != 0;
     values.maxRecentFiles = std::max(recent >> 1, RecentFiles::MinimumCapacity);
