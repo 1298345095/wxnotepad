@@ -70,6 +70,12 @@ debug symbols and the relocated GIO helper. ELF inspection confirms static
 wxWidgets/GTK and dynamic system runtimes/interfaces; Windows retains `/MD`.
 Required hosted workflows validate the complete suites and analysis separately.
 
+The first hosted coverage run subsequently exposed two fixture observations
+affected by deliberate 3.3.4 modal-loop/accelerator changes. Their approved
+adjustments and old/new controls are recorded in
+[the validation follow-up](wxwidgets-3.3.4-validation.md). The separate main X11
+activation-readiness fix from PR285 is also integrated in this branch.
+
 Local evidence is retained under
 `F:/wxnotepad-evidence/wxwidgets-3.3.4-upgrade-2026-11-26/` and the native ext4
 build at `/home/ctrls/wxnotepad-wxwidgets-3.3.4-2026-11-26/`. Initial linker and
