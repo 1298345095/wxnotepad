@@ -12,6 +12,9 @@ import time
 from ctypes import wintypes as w
 from pathlib import Path
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+WM_CLOSE = 0x10
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from capture_window_positions import ORIGINAL_SHA256, REVISION, Placement  # noqa: E402 -- Bootstrap source tools first.
 from localization_package import Process, read_settings  # noqa: E402 -- Bootstrap source tools first.
@@ -42,7 +45,7 @@ def original(executable, arguments):
             normal=[rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top],
             dpi=user.GetDpiForWindow(frame),
         )
-        user.SendMessageW(frame, 0x10, 0, 0)
+        user.SendMessageW(frame, WM_CLOSE, 0, 0)
         assert process.wait(timeout=10) == 0
         return result
     finally:

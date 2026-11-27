@@ -121,7 +121,9 @@ std::optional<wxString> FileFavorites::Resolve(const wxString& entry) {
             if (depth == MaximumSymbolicLinks) return {};
             const auto target = std::filesystem::read_symlink(path, error);
             if (error) return {};
-            path = (target.is_absolute() ? target : path.parent_path() / target).lexically_normal();
+            // Keep '..' until filesystem-aware resolution follows preceding
+            // directory symlinks, including when the final target is missing.
+            path = target.is_absolute() ? target : path.parent_path() / target;
         } else {
             if (error && error != std::errc::no_such_file_or_directory) return {};
             // Preserve the actual missing target for the original Create prompt.

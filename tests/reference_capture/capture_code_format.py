@@ -15,6 +15,29 @@ from pathlib import Path
 
 from original_host import Original, user
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+DESKTOP_OBJECT_ACCESS = 0x1FF
+IDM_EDIT_CODE_COMPRESS = 40378
+IDM_LEXER_CSS = 40703
+IDM_LEXER_HSS = 40706
+IDM_LEXER_JAVASCRIPT = 40707
+IDM_LEXER_JAVASCRIPT_JSX = 40708
+IDM_LEXER_LESS = 40705
+IDM_LEXER_SCSS = 40704
+IDM_LEXER_TYPESCRIPT = 40709
+IDM_LEXER_TYPESCRIPT_TSX = 40710
+SCI_ADDSELECTION = 2573
+SCI_GETUSETABS = 2125
+SCI_REDO = 2011
+SCI_SETEOLMODE = 2031
+SCI_SETMAINSELECTION = 2574
+SCI_SETMULTIPLESELECTION = 2563
+SCI_SETREADONLY = 2171
+SCI_SETSELECTIONMODE = 2422
+SCI_SETTABWIDTH = 2036
+SCI_SETUSETABS = 2124
+SCI_UNDO = 2176
+
 executable, output = map(Path, sys.argv[1:3])
 rectangles_only = "--rectangles-only" in sys.argv[3:]
 tabs_only = "--tabs-only" in sys.argv[3:]
@@ -30,7 +53,7 @@ user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWO
 user.CreateDesktopW.restype = w.HANDLE
 user.CloseDesktop.argtypes = [w.HANDLE]
 name = "wxnotepad-code-format-" + str(os.getpid())
-desktop = user.CreateDesktopW(name, None, None, 0, 0x1FF, None)
+desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_OBJECT_ACCESS, None)
 assert desktop
 rows = []
 
@@ -44,14 +67,14 @@ def packed(state):
 
 try:
     for language, suffix, command in [
-        ("Css", ".css", 40703),
-        ("Scss", ".scss", 40704),
-        ("Less", ".less", 40705),
-        ("Hss", ".hss", 40706),
-        ("JavaScript", ".js", 40707),
-        ("Jsx", ".jsx", 40708),
-        ("TypeScript", ".ts", 40709),
-        ("Tsx", ".tsx", 40710),
+        ("Css", ".css", IDM_LEXER_CSS),
+        ("Scss", ".scss", IDM_LEXER_SCSS),
+        ("Less", ".less", IDM_LEXER_LESS),
+        ("Hss", ".hss", IDM_LEXER_HSS),
+        ("JavaScript", ".js", IDM_LEXER_JAVASCRIPT),
+        ("Jsx", ".jsx", IDM_LEXER_JAVASCRIPT_JSX),
+        ("TypeScript", ".ts", IDM_LEXER_TYPESCRIPT),
+        ("Tsx", ".tsx", IDM_LEXER_TYPESCRIPT_TSX),
         ("Json", ".json", None),
     ]:
         path = host / ("fixture" + suffix)
@@ -100,14 +123,14 @@ try:
                             if mode == "reverse":
                                 anchor, caret = caret, anchor
                             original.reset(before, anchor, caret)
-                            original.send(2031, eol)
-                            original.send(2036, 2)
-                            original.send(2124, 0)
-                            original.command(40378 + formatting)
+                            original.send(SCI_SETEOLMODE, eol)
+                            original.send(SCI_SETTABWIDTH, 2)
+                            original.send(SCI_SETUSETABS, 0)
+                            original.command(IDM_EDIT_CODE_COMPRESS + formatting)
                             after = original.state()
-                            original.send(2176)
+                            original.send(SCI_UNDO)
                             undo = original.state()
-                            original.send(2011)
+                            original.send(SCI_REDO)
                             redo = original.state()
                             rows.append(
                                 [
@@ -138,26 +161,26 @@ try:
                     if mode == "empty-main":
                         anchor = caret = 3
                     original.reset(before, anchor, caret)
-                    original.send(2031, 2)
-                    original.send(2036, 2)
+                    original.send(SCI_SETEOLMODE, 2)
+                    original.send(SCI_SETTABWIDTH, 2)
                     if use_tabs != (mode == "tabs"):
                         original.command(INSERT_TABS_AS_SPACES)
                         use_tabs = mode == "tabs"
-                    assert bool(original.send(2125)) == use_tabs
+                    assert bool(original.send(SCI_GETUSETABS)) == use_tabs
                     if mode in ["multiple", "empty-main"]:
-                        original.send(2563, 1)
-                        original.send(2573, 7, 4)
-                        original.send(2574, 0)
+                        original.send(SCI_SETMULTIPLESELECTION, 1)
+                        original.send(SCI_ADDSELECTION, 7, 4)
+                        original.send(SCI_SETMAINSELECTION, 0)
                     if mode == "rectangle":
-                        original.send(2422, 1)
+                        original.send(SCI_SETSELECTIONMODE, 1)
                         original.send(SET_RECTANGULAR_ANCHOR, anchor)
                         original.send(SET_RECTANGULAR_CARET, caret)
-                    original.send(2171, int(mode == "readonly"))
-                    original.command(40378 + formatting)
+                    original.send(SCI_SETREADONLY, int(mode == "readonly"))
+                    original.command(IDM_EDIT_CODE_COMPRESS + formatting)
                     after = original.state()
-                    original.send(2176)
+                    original.send(SCI_UNDO)
                     undo = original.state()
-                    original.send(2011)
+                    original.send(SCI_REDO)
                     redo = original.state()
                     rows.append(
                         [

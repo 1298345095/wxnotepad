@@ -117,6 +117,30 @@ def main():
                 app.close()
             finally:
                 app.stop()
+            # A removed equal-resolution monitor still selects an existing
+            # group. Maximized history must retain the fitted normal rectangle.
+            config.write_text(
+                "[Settings]\nSaveSettings=0\nWindowPosX=100000\nWindowPosY=100000\n"
+                "[Settings2]\nUILanguage=1033\n[Window Position 1600x1000]\n"
+                "WindowPosX=100000\nWindowPosY=100000\nWindowSizeX=4000\nWindowSizeY=3000\nWindowMaximized=1\n",
+                encoding="utf-16",
+            )
+            app = Process(executable, folder / "maximized-fitted", environment)
+            try:
+                assert app.state["maximized"] == "1", app.state
+                seed_clipboard()
+                app.choose(menu_id(app.state, "Window Position"))
+                exported = native_clipboard()
+                assert exported == "-pos 0,0,1600,1000,1", exported
+                app.choose(menu_id(app.state, "Save Settings Now"))
+                saved = read_settings(config)["Window Position 1600x1000"]
+                assert tuple(
+                    int(saved[key])
+                    for key in ("WindowPosX", "WindowPosY", "WindowSizeX", "WindowSizeY", "WindowMaximized")
+                ) == (0, 0, 1600, 1000, 1), dict(saved)
+                app.close()
+            finally:
+                app.stop()
             print(
                 "PASS: actual non-primary XRandR outer coordinates, right/left default, copy and removed-monitor history"
             )

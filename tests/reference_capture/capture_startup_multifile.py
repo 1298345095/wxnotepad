@@ -13,6 +13,17 @@ from capture_startup_files import controls
 from original_host import CALLBACK, Original, kernel, user
 from private_desktop import Process
 
+# Pinned Notepad4/Scintilla and native platform protocol values.
+BM_CLICK = 0xF5
+DESKTOP_OBJECT_ACCESS = 0x1FF
+IDM_VIEW_REUSEWINDOW = 40423
+IDM_VIEW_SINGLEFILEINSTANCE = 40040
+MEM_COMMIT_RESERVE = 0x3000
+PAGE_READWRITE = 4
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+PROCESS_VM_OPERATION_READ_WRITE = 0x38
+SYNCHRONIZE = 0x100000
+
 
 def windows(desktop):
     found = []
@@ -38,12 +49,12 @@ def attach(hwnd, editor, pid):
     app.hwnd, app.editor = hwnd, editor
     app.process = Process.__new__(Process)
     app.process.pid = pid
-    app.process.handle = kernel.OpenProcess(0x100000 | 0x1000, False, pid)
+    app.process.handle = kernel.OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     assert app.process.handle
     assert user.WaitForInputIdle(app.process.handle, 15000) == 0
-    app.handle = kernel.OpenProcess(0x38, False, pid)
+    app.handle = kernel.OpenProcess(PROCESS_VM_OPERATION_READ_WRITE, False, pid)
     assert app.handle
-    app.memory = kernel.VirtualAllocEx(app.handle, None, 1048576, 0x3000, 4)
+    app.memory = kernel.VirtualAllocEx(app.handle, None, 1048576, MEM_COMMIT_RESERVE, PAGE_READWRITE)
     assert app.memory
     return app
 
@@ -81,7 +92,7 @@ def settle(app, desktop, cancel=False):
             prompts.append(text)
             button = user.GetDlgItem(dialog, 2) if cancel else user.GetDlgItem(dialog, 7) or user.GetDlgItem(dialog, 1)
             assert button, text
-            user.SendMessageW(button, 0xF5, 0, 0)
+            user.SendMessageW(button, BM_CLICK, 0, 0)
         if len(controls(app)["status"]) > 1 and not dialogs:
             return prompts
         time.sleep(0.03)
@@ -113,7 +124,7 @@ def main():
     user.GetMenu.restype = w.HMENU
     user.GetMenuState.argtypes = [w.HMENU, w.UINT, w.UINT]
     name = "wxnotepad-multifile-reference-287"
-    desktop = user.CreateDesktopW(name, None, None, 0, 0x1FF, None)
+    desktop = user.CreateDesktopW(name, None, None, 0, DESKTOP_OBJECT_ACCESS, None)
     assert desktop
     result = {"revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a", "executable_sha256": original_hash, "cases": []}
     targets = [portable / f"file {index} 中文😀.txt" for index in range(35)]
@@ -168,8 +179,10 @@ def main():
                         "parent": app.process.pid == parent.pid,
                         **app.state(),
                         **controls(app),
-                        "reuse_checked": bool(user.GetMenuState(user.GetMenu(app.hwnd), 40423, 0) & 8),
-                        "single_checked": bool(user.GetMenuState(user.GetMenu(app.hwnd), 40040, 0) & 8),
+                        "reuse_checked": bool(user.GetMenuState(user.GetMenu(app.hwnd), IDM_VIEW_REUSEWINDOW, 0) & 8),
+                        "single_checked": bool(
+                            user.GetMenuState(user.GetMenu(app.hwnd), IDM_VIEW_SINGLEFILEINSTANCE, 0) & 8
+                        ),
                     }
                     for app in apps
                 ]
