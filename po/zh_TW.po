@@ -882,6 +882,11 @@ msgstr "&Visual Studio"
 msgid "&Web Source Code"
 msgstr "網頁原始碼(&W)"
 
+#. TRANSLATORS: Original Tools/Web Tools submenu.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Tools"
+msgstr "Web開發(&W)"
+
 # Original Notepad4 zh-Hant: IDD_FIND/IDC_WILDCARDSEARCH; adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
@@ -1309,6 +1314,14 @@ msgstr[0] "CR：%llu 行。"
 #: src/syntax/syntax_catalog.cpp
 msgid "CSS Style Sheet"
 msgstr "CSS 樣式表"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Compress"
+msgstr "CSS/JS/JSON 壓縮(&C)"
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Pretty"
+msgstr "CSS/JS/JSON 美化(&P)"
 
 #. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
 #: src/syntax/syntax_catalog.cpp
