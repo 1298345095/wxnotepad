@@ -554,7 +554,7 @@ def exercise(app, dialogs, favorite_directory, target, other, evidence):
         relative = favorite_directory / "C relative"
         resolved = project / "existing-target.txt"
         resolved.write_bytes(b"filesystem-resolved directory symlink target\n")
-        relative_target = os.path.relpath(alias / ".." / resolved.name, favorite_directory)
+        relative_target = str(Path(os.path.relpath(alias, favorite_directory)) / ".." / resolved.name)
         relative.symlink_to(relative_target)
         assert os.readlink(relative) == relative_target
         app.begin("menu", str(open_favorites))
