@@ -301,7 +301,9 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
                 shutil.copytree(temporary, reports / f'{report}-ctest', dirs_exist_ok=True)
         return
 
+    cmake_dir = cmake_dir.resolve()
     environment = dict(os.environ)
+    coverage_enabled = False
     # CTest-only display probes have no application SDK. A cache selecting the
     # application or either SDK field must still validate its complete helper path.
     if (cmake_dir / 'CMakeCache.txt').exists():
@@ -309,8 +311,9 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
         if (cache.get('CMAKE_PROJECT_NAME') == 'wxnotepad' or
                 'VCPKG_INSTALLED_DIR' in cache or 'VCPKG_TARGET_TRIPLET' in cache):
             environment['GIO_LAUNCH_DESKTOP'] = str(linux_gio_helper(cache))
+        coverage_enabled = cache.get('WXNOTEPAD_ENABLE_COVERAGE', '').upper() in ('ON', 'TRUE', '1', 'YES')
 
-    shards = test_shards(cmake_dir.resolve(), expression, jobs, reports / report)
+    shards = test_shards(cmake_dir, expression, jobs, reports / report)
     print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
           f'{len(shards)} concurrent sessions', flush=True)
     plan = [{'shard': index, 'tests': names} for index, (_, names) in enumerate(shards, 1)]
@@ -323,6 +326,11 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
                     '--output-on-failure', '--no-tests=error', '-R', selection,
                     '--output-junit', workspace / 'tests.xml']
         child_environment = dict(environment, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
+        if coverage_enabled:
+            gcov_dir = cmake_dir / 'gcov-shards' / f'{report}-shard-{index}'
+            gcov_dir.mkdir(parents=True, exist_ok=True)
+            child_environment['GCOV_PREFIX'] = str(gcov_dir)
+            child_environment['GCOV_PREFIX_STRIP'] = str(len(cmake_dir.parts) - 1)
         isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]

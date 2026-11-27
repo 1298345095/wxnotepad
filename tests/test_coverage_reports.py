@@ -1,6 +1,7 @@
 """Check real GCC counters, unexecuted code, shared headers and collection failures."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -29,6 +30,45 @@ class MissingCoverage(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, 'No coverage notes'):
                 COLLECTOR.collect(directory / 'build', directory / 'reports', directory)
             self.assertFalse((directory / 'reports').exists())
+
+    def test_shard_discovery_and_task_pairing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            build = Path(temporary).resolve() / 'build'
+            tu_dir = build / 'CMakeFiles/app.dir'
+            tu_dir.mkdir(parents=True)
+            note_direct = tu_dir / 'direct.cpp.gcno'
+            note_sharded = tu_dir / 'sharded.cpp.gcno'
+            note_unused = tu_dir / 'unused.cpp.gcno'
+            for note in (note_direct, note_sharded, note_unused):
+                note.write_bytes(b'note')
+            direct_counter = note_direct.with_suffix('.gcda')
+            direct_counter.write_bytes(b'direct')
+            self.assertEqual(COLLECTOR.shard_directories(build), [])
+
+            shards_root = build / COLLECTOR.GCOV_SHARDS_DIR
+            shard_one = shards_root / 'wayland-shard-1'
+            shard_two = shards_root / 'wayland-shard-2'
+            (shard_one / 'CMakeFiles/app.dir').mkdir(parents=True)
+            (shard_two / 'CMakeFiles/app.dir').mkdir(parents=True)
+            (shards_root / 'note.txt').write_text('ignored', encoding='utf-8')
+            counter_one = shard_one / 'CMakeFiles/app.dir/sharded.cpp.gcda'
+            counter_two = shard_two / 'CMakeFiles/app.dir/sharded.cpp.gcda'
+            counter_one.write_bytes(b'shard-1')
+            counter_two.write_bytes(b'shard-2')
+
+            shards = COLLECTOR.shard_directories(build)
+            self.assertEqual(shards, [shard_one, shard_two])
+            notes = sorted(build.rglob('*.gcno'))
+            tasks = COLLECTOR.note_tasks(build, notes, shards)
+            self.assertEqual(
+                [(note.name, tag, counter) for _, note, tag, counter in tasks],
+                [
+                    ('direct.cpp.gcno', 'direct', direct_counter),
+                    ('sharded.cpp.gcno', 'wayland-shard-1', counter_one),
+                    ('sharded.cpp.gcno', 'wayland-shard-2', counter_two),
+                    ('unused.cpp.gcno', 'none', None),
+                ],
+            )
 
 
 @unittest.skipUnless(sys.platform == 'linux' and shutil.which('g++-15') and shutil.which('gcov-15'),
@@ -184,6 +224,68 @@ class GCCReports(unittest.TestCase):
         self.assertEqual(handler.attrib['covered'], 'false')
         self.assertTrue(all(name.startswith('src/') for name in files))
         self.assertTrue(list((output / 'gcov').glob('*.gcov')))
+
+    @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
+    def test_sharded_gcov_prefix_counters_merge_without_shared_gcda_writes(self):
+        shared_source = self.root / 'src/shared_branch.cpp'
+        shared_source.write_text(
+            'int SharedBranch(bool flag) {\n'
+            '    if (flag) return 10;\n'
+            '    return 20;\n}\n', encoding='utf-8')
+        shared_driver = self.root / 'tests/shared_branch_main.cpp'
+        shared_driver.write_text(
+            'int SharedBranch(bool);\n'
+            'int main(int argc, char**) { return SharedBranch(argc > 1) != (argc > 1 ? 10 : 20); }\n',
+            encoding='utf-8')
+        shared_exe = self.build / 'shared_branch_driver'
+        self.compile(shared_source, shared_driver, '-o', shared_exe)
+
+        for counter in self.build.rglob('*.gcda'):
+            counter.unlink()
+
+        resolved_build = self.build.resolve()
+        strip = str(len(resolved_build.parts) - 1)
+        shard_one = resolved_build / COLLECTOR.GCOV_SHARDS_DIR / 'wayland-shard-1'
+        shard_two = resolved_build / COLLECTOR.GCOV_SHARDS_DIR / 'wayland-shard-2'
+        shard_one.mkdir(parents=True)
+        shard_two.mkdir(parents=True)
+
+        env_one = dict(os.environ, GCOV_PREFIX=str(shard_one), GCOV_PREFIX_STRIP=strip)
+        env_two = dict(os.environ, GCOV_PREFIX=str(shard_two), GCOV_PREFIX_STRIP=strip)
+        subprocess.run([self.build / 'first'], env=env_one, check=True)
+        subprocess.run([shared_exe, 'true'], env=env_one, check=True)
+        subprocess.run([self.build / 'second'], env=env_two, check=True)
+        subprocess.run([shared_exe], env=env_two, check=True)
+
+        direct_counters = [path for path in resolved_build.rglob('*.gcda')
+                           if not path.is_relative_to(resolved_build / COLLECTOR.GCOV_SHARDS_DIR)]
+        self.assertEqual(direct_counters, [])
+        self.assertTrue(list(shard_one.rglob('*.gcda')))
+        self.assertTrue(list(shard_two.rglob('*.gcda')))
+
+        output = self.root / 'sharded-reports'
+        COLLECTOR.collect(self.build, output, self.root)
+        COLLECTOR.write_sonar_report(output, self.root)
+        summary = json.loads((output / 'summary.json').read_text(encoding='utf-8'))
+        self.assertEqual(summary['shards'], ['wayland-shard-1', 'wayland-shard-2'])
+
+        files = {item.attrib['path']: item for item in ET.parse(output / 'sonar.xml').getroot()}
+        self.assert_unique_source_lines(files)
+        self.assert_raw_template_instances(output / 'coverage.json', 2)
+        self.assert_header_branches(files, 2)
+        shared = files['src/shared_branch.cpp'].find("lineToCover[@lineNumber='2']")
+        self.assertEqual(shared.attrib['covered'], 'true')
+        self.assertEqual(shared.attrib['branchesToCover'], '2')
+        self.assertEqual(shared.attrib['coveredBranches'], '2')
+        untouched = files['src/never.cpp'].find("lineToCover[@lineNumber='1']")
+        self.assertEqual(untouched.attrib['covered'], 'false')
+
+        corrupt = next(shard_two.rglob('*second*.gcda'))
+        corrupt.write_bytes(b'corrupt sharded gcov counter')
+        corrupt_output = self.root / 'sharded-corrupt-reports'
+        with self.assertRaisesRegex(SystemExit, 'gcov failed'):
+            COLLECTOR.collect(self.build, corrupt_output, self.root)
+        self.assertFalse((corrupt_output / 'summary.json').exists())
 
     @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
     def test_backend_json_merge_unions_branches_and_retains_coverage_policy(self):

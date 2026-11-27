@@ -41,8 +41,9 @@ class Dialogs:
             sys.path.append('/usr/lib/python3/dist-packages')
             import gi
             gi.require_version('Atspi', '2.0')
-            from gi.repository import Atspi
+            from gi.repository import Atspi, GLib
             self.atspi = Atspi
+            self.glib = GLib
             Atspi.set_timeout(1000, 1000)
 
     def windows(self, process):
@@ -81,7 +82,6 @@ class Dialogs:
 
     def children(self, window):
         if sys.platform != 'win32':
-            from gi.repository import GLib
             result = []
             try:
                 for index in range(window.get_child_count()):
@@ -90,7 +90,7 @@ class Dialogs:
                         continue
                     result.append(child)
                     result.extend(self.children(child))
-            except GLib.GError as error:
+            except self.glib.GError as error:
                 # GTK replaces file-list objects while a folder loads; removed
                 # descendants are absent from this snapshot.
                 if 'does not exist' not in str(error):
@@ -109,18 +109,33 @@ class Dialogs:
 
     def texts(self, window):
         if sys.platform != 'win32':
-            from gi.repository import GLib
             texts = []
             for child in self.children(window):
                 try:
                     texts.append(self.title(child))
-                except GLib.GError as error:
+                except self.glib.GError as error:
                     if 'does not exist' not in str(error):
                         raise
             return texts
         texts = [self.title(child) for child in self.children(window)]
         texts.extend(self.accessible_names(window, entries_only=False))
         return texts
+
+    def _matches_window(self, window, title, message):
+        if self.title(window) == title:
+            return True
+        if message is not None and any(message in text for text in self.texts(window)):
+            return True
+        if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
+            # GTK3 exposes the alert type (Question/Error) as its AT-SPI
+            # name. Select the actual visible application message.
+            fragments = {'wxnotepad': 'Changing the UI language requires a restart of wxnotepad, restart now?',
+                         'Save changes?': 'Save changes to ',
+                         'Restart failed': 'Could not restart wxnotepad.',
+                         'Could not save settings': 'Could not write '}
+            if title in fragments and any(fragments[title] in text for text in self.texts(window)):
+                return True
+        return False
 
     def wait(self, process, title, message=None):
         deadline = time.monotonic() + 10
@@ -131,28 +146,18 @@ class Dialogs:
             assert process.poll() is None, process.returncode
             observed = self.windows(process)
             for window in observed:
-                if self.title(window) == title:
-                    if sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland':
-                        return window
-                    mapped, scene = self.wayland_mapping(process.pid, title, deadline)
-                    window.clear_cache()
-                    if mapped and window.get_state_set().contains(self.atspi.StateType.SHOWING):
-                        self.retain_native_scene(process.pid, 'mapped', scene)
-                        return window
-                    if not mapping_observed:
-                        self.retain_native_scene(process.pid, 'before-map', scene)
-                        mapping_observed = True
-                if message is not None and any(message in text for text in self.texts(window)):
+                if not self._matches_window(window, title, message):
+                    continue
+                if sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland':
                     return window
-                if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
-                    # GTK3 exposes the alert type (Question/Error) as its AT-SPI
-                    # name. Select the actual visible application message.
-                    fragments = {'wxnotepad': 'Changing the UI language requires a restart of wxnotepad, restart now?',
-                                 'Save changes?': 'Save changes to ',
-                                 'Restart failed': 'Could not restart wxnotepad.',
-                                 'Could not save settings': 'Could not write '}
-                    if title in fragments and any(fragments[title] in text for text in self.texts(window)):
-                        return window
+                mapped, scene = self.wayland_mapping(process.pid, title, deadline)
+                window.clear_cache()
+                if mapped and window.get_state_set().contains(self.atspi.StateType.SHOWING):
+                    self.retain_native_scene(process.pid, 'mapped', scene)
+                    return window
+                if not mapping_observed:
+                    self.retain_native_scene(process.pid, 'before-map', scene)
+                    mapping_observed = True
             time.sleep(.03)
         self.observe_wait_failure(process, title, observed)
         raise AssertionError(f'Native dialog {title!r} not ready: {[self.title(w) for w in observed]}')
@@ -197,6 +202,71 @@ class Dialogs:
             pixbuf = Gdk.pixbuf_get_from_window(root, 0, 0, root.get_width(), root.get_height())
             assert pixbuf and pixbuf.savev(str(prefix.with_suffix('.png')), 'png', [], [])
 
+    def _button_ready(self, child):
+        child.clear_cache()
+        states = child.get_state_set()
+        return (states.contains(self.atspi.StateType.VISIBLE)
+                and states.contains(self.atspi.StateType.SHOWING)
+                and states.contains(self.atspi.StateType.SENSITIVE))
+
+    def _alert_showing(self, window):
+        try:
+            window.clear_cache()
+            return window.get_state_set().contains(self.atspi.StateType.SHOWING)
+        except self.glib.GError as error:
+            message = str(error)
+            if any(token in message for token in (
+                    'does not exist',
+                    'was not provided by any .service files',
+                    'Message recipient disconnected',
+                    'No such object')):
+                return False
+            if (error.domain == 'atspi_error' and error.code == ATSPI_IPC_ERROR and
+                    error.message == 'timeout from dbind'):
+                return True
+            raise
+
+    def _wait_alert_dismissed(self, window, label, deadline):
+        while time.monotonic() < deadline:
+            if not self._alert_showing(window):
+                return
+            time.sleep(.03)
+        raise AssertionError(f'Native alert dialog did not close after {label!r}')
+
+    def _click_linux(self, window, captions, label, deadline, *, roles):
+        observed = []
+        while time.monotonic() < deadline:
+            # A removed descendant can leave children() with a partial tree.
+            # Refresh native roles/names before deciding the button is absent.
+            window.clear_cache()
+            observed = []
+            for child in self.children(window):
+                try:
+                    role = child.get_role()
+                    if role not in roles:
+                        continue
+                    name = plain(child.get_name())
+                    ready = self._button_ready(child)
+                    observed.append((str(role), name, ready))
+                    if name not in captions or not ready:
+                        continue
+                    action = child.get_action_iface()
+                    is_alert = window.get_role() == self.atspi.Role.ALERT
+                except self.glib.GError as error:
+                    if 'does not exist' not in str(error):
+                        raise
+                    continue
+                # Lookup waits for publication and sensitivity; activation is attempted once.
+                assert action and action.do_action(0), label
+                if is_alert:
+                    # GTK3's AT-SPI button action schedules a low-priority idle
+                    # callback and returns immediately; wait until the alert closes.
+                    self._wait_alert_dismissed(window, label, deadline)
+                return
+            time.sleep(.03)
+        raise AssertionError(
+            f'Native button {label!r} not ready; observed button roles/names/ready: {observed}')
+
     def click(self, window, caption, *, deadline=None):
         if deadline is None:
             deadline = time.monotonic() + 10
@@ -221,32 +291,9 @@ class Dialogs:
                 time.sleep(.03)
             raise AssertionError(f'Native button {caption!r} not ready; observed button names/enabled: {observed}')
         else:
-            from gi.repository import GLib
-            observed = []
-            while time.monotonic() < deadline:
-                # A removed descendant can leave children() with a partial tree.
-                # Refresh native roles/names before deciding the button is absent.
-                window.clear_cache()
-                observed = []
-                for child in self.children(window):
-                    try:
-                        role = child.get_role()
-                        if role not in (self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX):
-                            continue
-                        name = plain(child.get_name())
-                        observed.append((str(role), name))
-                        if name != caption:
-                            continue
-                        action = child.get_action_iface()
-                    except GLib.GError as error:
-                        if 'does not exist' not in str(error):
-                            raise
-                        continue
-                    # Lookup waits for publication; activation is attempted once.
-                    assert action and action.do_action(0), caption
-                    return
-                time.sleep(.03)
-            raise AssertionError(f'Native button {caption!r} not ready; observed button roles/names: {observed}')
+            self._click_linux(
+                window, (caption,), caption, deadline,
+                roles=(self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX))
 
     def wait_text(self, window, text):
         deadline = time.monotonic() + 10
@@ -612,11 +659,9 @@ class Dialogs:
         else:
             captions = {'yes': ('Yes', 'Save', '是(Y)', '是'), 'no': ('No', 'Discard', '否(N)', '否'),
                         'cancel': ('Cancel', '取消'), 'ok': ('OK', '确定', '確定')}
-            for child in self.children(window):
-                if child.get_role() == self.atspi.Role.PUSH_BUTTON and plain(child.get_name()) in captions[choice]:
-                    assert child.get_action_iface().do_action(0), choice
-                    return window
-            raise AssertionError((choice, self.texts(window)))
+            self._click_linux(
+                window, captions[choice], choice, time.monotonic() + 10,
+                roles=(self.atspi.Role.PUSH_BUTTON,))
         return window
 
     def accessible_names(self, window, entries_only=True):
