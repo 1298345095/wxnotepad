@@ -8,6 +8,11 @@ import time
 from localization_native import Dialogs, plain
 
 TITLE = 'Native button readiness'
+ALERT_TITLE = '保存修改？'
+ALERT_MESSAGE = '打开另一个文件前保存对 policy-A.txt 的修改？'
+ALERT_FRAGMENT = '打开另一个文件前'
+ALERT_BUTTON_MNEMONIC = '保存(_S)'
+ALERT_BUTTON_CAPTION = '保存(S)'
 BUTTON_PUBLICATION_DELAY_MS = 250
 COMMAND_POLL_MS = 10
 PROPERTY_BUSY_SECONDS = 3.5  # A finite native property delay inside the existing ten-second readiness budget.
@@ -24,12 +29,60 @@ def publisher(root):
     gi.require_version('Gtk', '3.0')
     gi.require_version('Atk', '1.0')
     from gi.repository import Atk, GLib, Gtk
+    input_mode = (root / 'input-mode').exists()
+    alert_mode = (root / 'alert-mode').exists()
+    actions = 0
+
+    def record_action():
+        nonlocal actions
+        actions += 1
+        pending = root / 'actions.tmp'
+        pending.write_text(str(actions), encoding='utf-8')
+        pending.replace(root / 'actions')
+
+    if alert_mode:
+        dialog = Gtk.MessageDialog(
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text=ALERT_MESSAGE,
+        )
+        dialog.set_title(ALERT_TITLE)
+        button = dialog.add_button(ALERT_BUTTON_MNEMONIC, Gtk.ResponseType.YES)
+        button.set_sensitive(False)
+        (root / 'disabled-button').touch()
+
+        def on_response(widget, response_id):
+            assert response_id == Gtk.ResponseType.YES, response_id
+            record_action()
+            (root / 'responded').touch()
+            widget.destroy()
+
+        dialog.connect('response', on_response)
+        dialog.show_all()
+
+        def enable_alert():
+            button.set_sensitive(True)
+            (root / 'published').touch()
+            return GLib.SOURCE_REMOVE
+
+        def alert_commands():
+            if (root / 'stop').exists():
+                Gtk.main_quit()
+                return GLib.SOURCE_REMOVE
+            if (root / 'initial-observed').exists() and (root / 'publish').exists():
+                (root / 'publish').unlink()
+                GLib.timeout_add(BUTTON_PUBLICATION_DELAY_MS, enable_alert)
+            return GLib.SOURCE_CONTINUE
+
+        GLib.timeout_add(COMMAND_POLL_MS, alert_commands)
+        Gtk.main()
+        return
+
     window = Gtk.Window(title=TITLE)
     # Wayland's client-side titlebar otherwise adds its own Close push button.
     window.set_decorated(False)
     contents = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     window.add(contents)
-    input_mode = (root / 'input-mode').exists()
     if input_mode:
         class BusyAccessible(Gtk.EntryAccessible):
             __gtype_name__ = 'NativeReadinessBusyAccessible'
@@ -56,14 +109,9 @@ def publisher(root):
         placeholder = Gtk.Label(label='Close')
         contents.pack_start(placeholder, True, True, 0)
     window.show_all()
-    actions = 0
 
     def clicked(button):
-        nonlocal actions
-        actions += 1
-        pending = root / 'actions.tmp'
-        pending.write_text(str(actions), encoding='utf-8')
-        pending.replace(root / 'actions')
+        record_action()
 
     if input_mode:
         def changed(entry):
@@ -74,10 +122,18 @@ def publisher(root):
     def publish():
         placeholder.destroy()
         button = Gtk.Button(label='Close')
+        button.set_sensitive(False)
         button.connect('clicked', clicked)
         contents.pack_start(button, True, True, 0)
         button.show()
-        (root / 'published').touch()
+        (root / 'disabled-button').touch()
+
+        def enable():
+            button.set_sensitive(True)
+            (root / 'published').touch()
+            return GLib.SOURCE_REMOVE
+
+        GLib.timeout_add(BUTTON_PUBLICATION_DELAY_MS, enable)
         return GLib.SOURCE_REMOVE
 
     def commands():
@@ -171,63 +227,81 @@ def main():
     with tempfile.TemporaryDirectory(prefix='native-button-readiness-') as name:
         root = Path(name)
         input_mode = sys.argv[1:] == ['--input']
+        alert_mode = sys.argv[1:] == ['--alert']
         if input_mode:
             (root / 'input-mode').touch()
+        if alert_mode:
+            (root / 'alert-mode').touch()
         # Windows venv python.exe redirects to a different process; the native
         # PID observer must own the stdlib-only publisher's actual process.
         publisher_python = Path(sys.base_prefix) / 'python.exe' if sys.platform == 'win32' else sys.executable
         child = subprocess.Popen([publisher_python, __file__, '--publisher', str(root)])
         try:
             dialogs = Dialogs()
-            window = dialogs.wait(child, TITLE)
-            if input_mode:
-                from gi.repository import GLib
-                dialogs.wait_text(window, INPUT_NAME)
-                field = next(node for node in dialogs.children(window)
-                             if node.get_role() in (dialogs.atspi.Role.TEXT, dialogs.atspi.Role.ENTRY)
-                             and node.get_name() == INPUT_NAME)
-                (root / 'stall-role').touch()
-                field.clear_cache()
-                try:
-                    dialogs.set_input(window, INPUT_NAME, INPUT_TEXT)
-                except GLib.GError as error:
-                    wait_marker(root / 'resumed')
-                    assert not (root / 'actions').exists(), 'A failed lookup must not mutate the input'
-                    print('Read-only failure recovered:', repr(error), dialogs.title(window), flush=True)
-                    raise
-                assert (root / 'resumed').exists()
-                assert (root / 'value').read_text(encoding='utf-8') == INPUT_TEXT
-            else:
-                dialogs.wait_text(window, 'Close')
-                if sys.platform == 'win32':
-                    import ctypes
-                    def role(node):
-                        name = ctypes.create_unicode_buffer(256)
-                        dialogs.user.GetClassNameW(node, name, len(name))
-                        return name.value
-                    before = [(role(node), plain(dialogs.title(node))) for node in dialogs.children(window)]
-                    assert ('Static', 'Close') in before, before
-                    assert ('Button', 'Close') not in before, before
-                else:
-                    before = [(node.get_role_name(), plain(node.get_name())) for node in dialogs.children(window)]
-                    assert ('label', 'Close') in before, before
-                    assert ('push button', 'Close') not in before, before
+            if alert_mode:
+                window = dialogs.wait(child, ALERT_TITLE, message=ALERT_FRAGMENT)
+                assert window.get_role() == dialogs.atspi.Role.ALERT, window.get_role()
+                assert dialogs.title(window) != ALERT_TITLE, dialogs.title(window)
+                assert (root / 'disabled-button').exists()
                 assert not (root / 'published').exists()
                 (root / 'initial-observed').touch()
                 (root / 'publish').touch()
-                try:
-                    dialogs.click(window, 'Close')
-                except AssertionError:
-                    print('Initial native tree:', before, flush=True)
-                    raise
-                assert (root / 'published').exists(), 'The native button must be published before activation'
-                if sys.platform == 'win32':
+                dialogs.click(window, ALERT_BUTTON_CAPTION)
+                assert (root / 'published').exists(), 'The alert button must become sensitive before activation'
+                assert (root / 'responded').exists(), 'Alert click must wait for idle response and dismissal'
+                assert (root / 'actions').read_text(encoding='utf-8') == '1', 'Exactly one alert action is delivered'
+                (root / 'stop').touch()
+                assert child.wait(timeout=10) == 0
+                assert (root / 'actions').read_text(encoding='utf-8') == '1'
+            else:
+                window = dialogs.wait(child, TITLE)
+                if input_mode:
+                    from gi.repository import GLib
+                    dialogs.wait_text(window, INPUT_NAME)
+                    field = next(node for node in dialogs.children(window)
+                                 if node.get_role() in (dialogs.atspi.Role.TEXT, dialogs.atspi.Role.ENTRY)
+                                 and node.get_name() == INPUT_NAME)
+                    (root / 'stall-role').touch()
+                    field.clear_cache()
+                    try:
+                        dialogs.set_input(window, INPUT_NAME, INPUT_TEXT)
+                    except GLib.GError as error:
+                        wait_marker(root / 'resumed')
+                        assert not (root / 'actions').exists(), 'A failed lookup must not mutate the input'
+                        print('Read-only failure recovered:', repr(error), dialogs.title(window), flush=True)
+                        raise
+                    assert (root / 'resumed').exists()
+                    assert (root / 'value').read_text(encoding='utf-8') == INPUT_TEXT
+                else:
+                    dialogs.wait_text(window, 'Close')
+                    if sys.platform == 'win32':
+                        import ctypes
+                        def role(node):
+                            name = ctypes.create_unicode_buffer(256)
+                            dialogs.user.GetClassNameW(node, name, len(name))
+                            return name.value
+                        before = [(role(node), plain(dialogs.title(node))) for node in dialogs.children(window)]
+                        assert ('Static', 'Close') in before, before
+                        assert ('Button', 'Close') not in before, before
+                    else:
+                        before = [(node.get_role_name(), plain(node.get_name())) for node in dialogs.children(window)]
+                        assert ('label', 'Close') in before, before
+                        assert ('push button', 'Close') not in before, before
+                    assert not (root / 'published').exists()
+                    (root / 'initial-observed').touch()
+                    (root / 'publish').touch()
+                    try:
+                        dialogs.click(window, 'Close')
+                    except AssertionError:
+                        print('Initial native tree:', before, flush=True)
+                        raise
+                    assert (root / 'published').exists(), 'The native button must be published before activation'
                     assert (root / 'disabled-button').exists(), 'The native button must become enabled before activation'
-            wait_marker(root / 'actions')
-            assert (root / 'actions').read_text(encoding='utf-8') == '1', 'Exactly one native action is delivered'
-            (root / 'stop').touch()
-            assert child.wait(timeout=10) == 0
-            assert (root / 'actions').read_text(encoding='utf-8') == '1'
+                wait_marker(root / 'actions')
+                assert (root / 'actions').read_text(encoding='utf-8') == '1', 'Exactly one native action is delivered'
+                (root / 'stop').touch()
+                assert child.wait(timeout=10) == 0
+                assert (root / 'actions').read_text(encoding='utf-8') == '1'
         finally:
             if child.poll() is None:
                 child.terminate()

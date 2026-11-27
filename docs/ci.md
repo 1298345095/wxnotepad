@@ -457,15 +457,17 @@ console fixtures. Imported SDK targets keep their normal Release configuration.
 
 The complete X11 and Wayland suites each collect into their own fresh coverage tree. GCC writes
 counters on orderly process exit; a forcibly terminated process is not evidence
-of executed application lines. Local-filesystem profile locking merges counters
-from independent test processes. The existing private-session sharder is reused.
+of executed application lines. The existing private-session sharder isolates each
+concurrent Linux coverage shard under `<build>/gcov-shards/<backend>-shard-<N>`
+via `GCOV_PREFIX` and `GCOV_PREFIX_STRIP`, eliminating cross-shard `libgcov`
+profile-file lock contention while keeping per-shard counter merging intact.
 The byte-exact large-file language test has a 120-second guard in coverage builds
 and 60 seconds in ordinary builds. The instrumented scenario completed all checks
 in 88.50 seconds under controlled CPU contention. Supported Linux CMake versions
 use SIGQUIT on timeout so the existing crash collector can preserve a core/stack.
 
-`collect_coverage.py` runs GCC 15's `gcov` separately for every notes file, including
-translation units without counters. It preserves unmodified maintained `src/`
+`collect_coverage.py` runs GCC 15's `gcov` for every notes file paired with any
+direct or per-shard counter files, including translation units without counters. It preserves unmodified maintained `src/`
 reports, zero-hit records and per-translation-unit header branches. GCC's filename
 option avoids filesystem name-length limits; source identity comes from each
 report's `Source:` record. Corrupt counters fail collection. Reusing an existing

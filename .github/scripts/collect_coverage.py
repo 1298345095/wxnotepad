@@ -1,6 +1,8 @@
 """Collect GCC coverage or merge backend reports for maintained C++ sources."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -9,6 +11,60 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+GCOV_SHARDS_DIR = 'gcov-shards'
+
+
+def shard_directories(build):
+    root = build / GCOV_SHARDS_DIR
+    if not root.is_dir():
+        return []
+    return sorted(path for path in root.iterdir() if path.is_dir())
+
+
+def note_tasks(build, notes, shards):
+    tasks = []
+    for index, note in enumerate(notes):
+        relative_counter = note.relative_to(build).with_suffix('.gcda')
+        matched = []
+        direct = note.with_suffix('.gcda')
+        if direct.is_file():
+            matched.append(('direct', direct))
+        for shard in shards:
+            counter = shard / relative_counter
+            if counter.is_file():
+                matched.append((shard.name, counter))
+        if not matched:
+            matched.append(('none', None))
+        for tag, counter in matched:
+            tasks.append((index, note, tag, counter))
+    return tasks
+
+
+def run_gcov(task, reports, root):
+    index, note, tag, counter = task
+    with tempfile.TemporaryDirectory(prefix='wxnotepad-gcov-') as temporary:
+        temp_dir = Path(temporary)
+        if counter is not None and counter.parent != note.parent:
+            target = temp_dir / note.name
+            shutil.copy2(note, target)
+            shutil.copy2(counter, temp_dir / counter.name)
+        else:
+            target = note
+        command = ['gcov-15', '-b', '-c', '-p', '-l', '--hash-filenames', '--', str(target)]
+        result = subprocess.run(command, cwd=temp_dir, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, encoding='utf-8')
+        entry = '+ ' + ' '.join(command) + '\n' + result.stdout
+        if result.returncode or 'stamp mismatch' in result.stdout:
+            return entry, 0, note
+        kept = 0
+        for report in sorted(temp_dir.glob('*.gcov')):
+            with report.open(encoding='utf-8') as stream:
+                header = stream.readline()
+            source = Path(header.split('Source:', 1)[1].strip())
+            if source.is_absolute() and source.resolve().is_relative_to(root / 'src'):
+                shutil.copy2(report, reports / f'{index}-{tag}-{report.name}')
+                kept += 1
+        return entry, kept, None
 
 
 def collect(build, output, root=ROOT):
@@ -16,30 +72,28 @@ def collect(build, output, root=ROOT):
     notes = sorted(build.rglob('*.gcno'))
     if not notes:
         raise SystemExit(f'No coverage notes found under {build}')
+    shards = shard_directories(build)
+    tasks = note_tasks(build, notes, shards)
     reports = output / 'gcov'
     reports.mkdir(parents=True, exist_ok=False)
     kept = 0
+    failed = None
     with (output / 'gcov.log').open('w', encoding='utf-8') as log:
         version = subprocess.check_output(['gcov-15', '--version'], text=True, encoding='utf-8')
         log.write(version)
-        for index, note in enumerate(notes):
-            with tempfile.TemporaryDirectory(prefix='wxnotepad-gcov-') as temporary:
-                command = ['gcov-15', '-b', '-c', '-p', '-l', '--hash-filenames', '--', str(note)]
-                result = subprocess.run(command, cwd=temporary, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, text=True, encoding='utf-8')
-                log.write('+ ' + ' '.join(command) + '\n' + result.stdout)
-                if result.returncode or 'stamp mismatch' in result.stdout:
-                    raise SystemExit(f'gcov failed for {note}; inspect {output / "gcov.log"}')
-                for report in sorted(Path(temporary).glob('*.gcov')):
-                    with report.open(encoding='utf-8') as stream:
-                        header = stream.readline()
-                    source = Path(header.split('Source:', 1)[1].strip())
-                    if source.is_absolute() and source.resolve().is_relative_to(root / 'src'):
-                        shutil.copy2(report, reports / f'{index}-{report.name}')
-                        kept += 1
+        workers = min(os.cpu_count() or 1, len(tasks))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for entry, count, error_note in pool.map(lambda item: run_gcov(item, reports, root), tasks):
+                log.write(entry)
+                kept += count
+                if error_note is not None and failed is None:
+                    failed = error_note
+    if failed is not None:
+        raise SystemExit(f'gcov failed for {failed}; inspect {output / "gcov.log"}')
     if not kept:
         raise SystemExit('No maintained src/ coverage reports were generated')
-    summary = {'notes': len(notes), 'reports': kept, 'build': str(build), 'source': str(root)}
+    summary = {'notes': len(notes), 'shards': [path.name for path in shards],
+               'reports': kept, 'build': str(build), 'source': str(root)}
     (output / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
     print(f'Collected {kept} maintained-source reports from {len(notes)} translation units')
 

@@ -123,6 +123,41 @@ class ParallelCTest(unittest.TestCase):
         CI.test('x11', self.build, '^owned-custom$', 1, report_directory=reports)
         self.assertEqual((self.results / '2.done').read_text(encoding='utf-8'), '2')
         self.assertIn('100% tests passed', (reports / 'x11-shard-1-ctest.log').read_text(encoding='utf-8'))
+        self.assertFalse((self.build / 'gcov-shards').exists())
+
+    def test_coverage_build_isolates_gcov_prefix_per_shard_and_ordinary_build_omits_it(self):
+        captured = []
+
+        def fake_run(command, log, env=None, check=True):
+            captured.append((log.name, dict(env or {})))
+            return 0
+
+        clean_env = {key: value for key, value in CI.os.environ.items() if not key.startswith('GCOV_PREFIX')}
+        with mock.patch.dict(CI.os.environ, clean_env, clear=True), \
+                mock.patch.object(CI, 'WINDOWS', False), mock.patch.object(CI, 'run', side_effect=fake_run):
+            CI.test('wayland', self.build, None, 2, report_directory=self.directory / 'ordinary reports')
+            self.assertEqual(len(captured), 2)
+            for _, env in captured:
+                self.assertNotIn('GCOV_PREFIX', env)
+                self.assertNotIn('GCOV_PREFIX_STRIP', env)
+            self.assertFalse((self.build / 'gcov-shards').exists())
+
+            captured.clear()
+            with (self.build / 'CMakeCache.txt').open('a', encoding='utf-8') as output:
+                output.write('\nWXNOTEPAD_ENABLE_COVERAGE:BOOL=ON\n')
+            CI.test('wayland', self.build, None, 2, report_directory=self.directory / 'coverage reports')
+
+        self.assertEqual(len(captured), 2)
+        resolved = self.build.resolve()
+        expected_strip = str(len(resolved.parts) - 1)
+        prefixes = {env['GCOV_PREFIX'] for _, env in captured}
+        self.assertEqual(prefixes, {
+            str(resolved / 'gcov-shards' / 'wayland-shard-1'),
+            str(resolved / 'gcov-shards' / 'wayland-shard-2'),
+        })
+        for _, env in captured:
+            self.assertEqual(env['GCOV_PREFIX_STRIP'], expected_strip)
+            self.assertTrue(Path(env['GCOV_PREFIX']).is_dir())
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux GLib runtime provisioning')
     def test_selected_sdk_missing_helper_fails_before_starting_any_session(self):
