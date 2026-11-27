@@ -44,7 +44,7 @@ bool ApplyInitialWindowPosition(EditorFrame& window, const wxString& argument) {
     if (!position) return false;
     const auto& normal = position->normal;
 #ifdef __WXMSW__
-    window.SetSize(normal);
+    SetInitialWindowRectangle(window, normal, wxSIZE_AUTO);
 #else
     window.SetSize(normal.GetSize());
 #endif

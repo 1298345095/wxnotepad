@@ -183,6 +183,7 @@ def main():
     parser.add_argument("executable", type=Path)
     parser.add_argument("--installed-directory", type=Path)
     parser.add_argument("--cmake-dir", type=Path)
+    parser.add_argument("--scenario", choices=("full", "startup-dpi"), default="full")
     args = parser.parse_args()
     if sys.platform == "win32":
         user = c.WinDLL("user32", use_last_error=True)
@@ -226,6 +227,19 @@ def main():
             app = Process(executable, folder / f"observed-{run}", environment, arguments=arguments)
             tested_dpi.add(int(app.state["dpi"]))
             return app
+
+        if args.scenario == "startup-dpi":
+            config.write_text("[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16")
+            app = launch(("-pos", "100000,100000,640,480,0"))
+            try:
+                actual = native_rectangle(app)
+                print(f"Physical startup rectangle={actual}, DPI={app.state['dpi']}", flush=True)
+                assert app.state["dpi"] == "96", "reproduction requires the user's secondary 100% monitor"
+                assert actual[2:] == (640, 480), actual
+                app.close()
+            finally:
+                app.stop()
+            return
 
         for language, captions in CAPTIONS.items():
             config.write_text(f"[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage={language}\n", encoding="utf-16")
@@ -298,7 +312,7 @@ def main():
             app = launch(("-pos", "100000,100000,640,480,0"))
             try:
                 within_work_area(app)
-                assert native_rectangle(app)[2:] == (640, 480)
+                assert native_rectangle(app)[2:] == (640, 480), native_rectangle(app)
                 app.close()
             finally:
                 app.stop()
@@ -355,6 +369,12 @@ def main():
                     assert native_rectangle(app) == primary_windows_default(), (
                         "cleared non-primary history restarts with original primary-workspace default"
                     )
+                    app.close()
+                finally:
+                    app.stop()
+                app = launch(("--window-position", argument))
+                try:
+                    assert native_rectangle(app) == position, "internal startup retains physical secondary dimensions"
                     app.close()
                 finally:
                     app.stop()

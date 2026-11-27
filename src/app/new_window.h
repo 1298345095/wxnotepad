@@ -12,3 +12,4 @@ bool ApplyInitialWindowPosition(EditorFrame& window, const wxString& argument);
 bool HasGlobalWindowCoordinates();
 std::optional<WindowPosition> ParseWindowPosition(const wxString& argument);
 bool ApplyPublicWindowPosition(EditorFrame& window, const wxString& argument);
+void SetInitialWindowRectangle(EditorFrame& window, const wxRect& rectangle, int sizeFlags);

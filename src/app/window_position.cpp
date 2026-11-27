@@ -92,6 +92,20 @@ bool HasGlobalWindowCoordinates() {
 #endif
 }
 
+void SetInitialWindowRectangle(EditorFrame& window, const wxRect& rectangle, int sizeFlags) {
+#ifdef __WXMSW__
+    const auto previousDpi = window.GetDPI();
+#endif
+    window.SetSize(rectangle, sizeFlags);
+#ifdef __WXMSW__
+    // wxNonOwnedWindow::HandleDPIChange applies Windows' scaled suggested
+    // rectangle during a cross-monitor move. Explicit position arguments and
+    // saved outer rectangles are physical pixels, so restore their size after
+    // that synchronous DPI transition. Ordinary user moves keep wx's scaling.
+    if (window.GetDPI() != previousDpi) window.SetSize(rectangle, sizeFlags);
+#endif
+}
+
 bool ApplyPublicWindowPosition(EditorFrame& window, const wxString& argument) {
     const auto position = ParseWindowPosition(argument);
     if (!position) return false;
@@ -112,7 +126,7 @@ bool ApplyPublicWindowPosition(EditorFrame& window, const wxString& argument) {
     const auto offset = display.GetClientArea().GetPosition() - display.GetGeometry().GetPosition();
     normal.Offset(offset);
 #endif
-    window.SetSize(FitRectangle(normal, display.GetClientArea()), wxSIZE_ALLOW_MINUS_ONE);
+    SetInitialWindowRectangle(window, FitRectangle(normal, display.GetClientArea()), wxSIZE_ALLOW_MINUS_ONE);
     window.SendSizeEvent();
     window.RememberInitialWindowPosition(position->maximized);
     window.Maximize(position->maximized);
