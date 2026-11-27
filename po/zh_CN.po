@@ -53,7 +53,7 @@ msgstr "“%s”是只读的。是否保存到另一个文件？"
 
 #. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.
 #. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname received by IPC.
-#: src/app/main.cpp src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/main.cpp src/app/new_window.cpp
 #, c-format
 msgid ""
 "\"%s\" not found.\n"
@@ -111,6 +111,10 @@ msgstr[0] "%zu 处替换"
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "&Add ->"
 msgstr "添加(&A) ->"
+
+#: src/app/editor_frame_favorites.cpp
+msgid "&Add Current File...\tAlt+K"
+msgstr "添加当前文件(&A)...\tAlt+K"
 
 #. TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
 #: src/app/editor_frame_view_commands.cpp
@@ -184,6 +188,10 @@ msgstr "浏览(&B)..."
 #: src/syntax/syntax_catalog.cpp
 msgid "&CSS Style Sheet"
 msgstr "CSS 样式表(&H)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Calculate Expression"
+msgstr "计算表达式(&C)"
 
 #: src/app/editor_frame.cpp
 msgid "&Cancel"
@@ -347,6 +355,10 @@ msgstr "保存时确保换行符一致(&E)。"
 msgid "&Favorite Schemes..."
 msgstr "常用语法高亮(&F)..."
 
+#: src/app/editor_frame_favorites.cpp
+msgid "&Favorites"
+msgstr "收藏夹(&F)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / File menu.
 #: src/app/editor_frame_commands.cpp
 msgid "&File"
@@ -462,6 +474,10 @@ msgstr "长行标记(&L)\tCtrl+Shift+L"
 msgid "&Lower Case\tCtrl+U"
 msgstr "小写(&L)\tCtrl+U"
 
+#: src/app/editor_frame_favorites.cpp
+msgid "&Manage...\tAlt+F9"
+msgstr "管理(&M)...\tAlt+F9"
+
 #. TRANSLATORS: IDD_AUTOSAVE IDC_AUTOSAVE_MANUALLYDELETE checkbox; retain old backups for manual deletion.
 #: src/app/dialogs/auto_save_settings_dialog.cpp
 msgid "&Manually delete backups."
@@ -548,6 +564,10 @@ msgstr "一页(&O)"
 #: src/app/editor_frame_commands.cpp
 msgid "&Open"
 msgstr "打开(&O)"
+
+#: src/app/editor_frame_favorites.cpp
+msgid "&Open Favorites...\tAlt+I"
+msgstr "打开收藏夹(&O)...\tAlt+I"
 
 #: src/app/open_targets.cpp
 msgid "&Open File, Folder, Link, etc."
@@ -884,6 +904,15 @@ msgstr ""
 "-r  重用可用窗口。\n"
 "-rs  无文件时重用窗口；否则仅匹配同一文件。"
 
+#. TRANSLATORS: Original temporary topmost switches; keep -o, -o0, -o- and -oo unchanged.
+#: src/app/main.cpp
+msgid ""
+"-o  Always On Top for this launch.\n"
+"-o0, -o-, -oo  Disable Always On Top for this launch."
+msgstr ""
+"-o  仅本次启动始终置顶。\n"
+"-o0, -o-, -oo  仅本次启动关闭始终置顶。"
+
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
 msgstr "1/3 页(&3)"
@@ -895,6 +924,10 @@ msgstr "1/4 页(&4)"
 #: src/app/dialogs/toolbar_customization_dialog.cpp
 msgid "<- &Remove"
 msgstr "<- 移除(&R)"
+
+#: src/app/file_favorites.cpp
+msgid "A favorite with this name already exists."
+msgstr "已存在同名收藏。"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "A&dvanced Settings"
@@ -937,14 +970,9 @@ msgstr "ASS — 启用对称交换(&S)"
 msgid "Action on &Selection"
 msgstr "对选中内容执行操作(&S)"
 
-msgid "&Calculate Expression"
-msgstr "计算表达式(&C)"
-
-msgid "Unexpected end of expression."
-msgstr "表达式意外结束。"
-
-msgid "Evaluate the selected JavaScript expression in Math scope."
-msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
+#: src/app/dialogs/file_favorites_dialog.cpp src/app/editor_frame_favorites.cpp
+msgid "Add to Favorites"
+msgstr "添加到收藏夹"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Alias"
@@ -971,6 +999,17 @@ msgstr "所有文件 (%s)"
 #: src/app/run_command.cpp
 msgid "All files (*)|*"
 msgstr "所有文件 (*)|*"
+
+#. TRANSLATORS: Original IDM_VIEW_ALWAYSONTOP, first in Window Options.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Always On &Top\tAlt+Shift+T"
+msgstr "始终置顶(&T)\tAlt+Shift+T"
+
+#. TRANSLATORS: This desktop backend has no supported client window-stacking interface.
+#. TRANSLATORS: Explain why the adjacent Always On Top command is disabled.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Always On Top is unavailable on this desktop."
+msgstr "当前桌面不支持窗口置顶。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Anchor"
@@ -1340,6 +1379,14 @@ msgstr "请先选择文件名再保存。"
 msgid "Choose an existing file to open."
 msgstr "选择要打开的现有文件。"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Choose favorites &directory..."
+msgstr "选择收藏目录(&D)..."
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Choose favorites directory"
+msgstr "选择收藏目录"
+
 #. TRANSLATORS: IDD_RUN Browse action; title of the native executable chooser.
 #: src/app/run_command.cpp
 msgid "Choose program"
@@ -1601,8 +1648,12 @@ msgstr "无法关闭已写入完毕的临时文件。"
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr "无法在目标文件旁创建临时文件。请检查文件夹和访问权限。"
 
+#: src/app/file_favorites.cpp
+msgid "Could not create the favorite. Check the name and directory permissions."
+msgstr "无法创建收藏。请检查名称和目录权限。"
+
 #. TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
-#: src/app/main.cpp src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/main.cpp src/app/new_window.cpp
 msgid "Could not create the file."
 msgstr "无法创建文件。"
 
@@ -1640,8 +1691,8 @@ msgstr "无法使用所选程序打开文档"
 #. TRANSLATORS: wxnotepad title for failure to load or create the requested file.
 #. TRANSLATORS: wxnotepad title for failure to load the requested file received by IPC.
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
-#: src/app/editor_frame_file_watching.cpp src/app/main.cpp
-#: src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/editor_frame_file_watching.cpp
+#: src/app/main.cpp src/app/new_window.cpp
 msgid "Could not open file"
 msgstr "无法打开文件"
 
@@ -1666,6 +1717,10 @@ msgstr "无法打开目标文件以写入。"
 #: src/app/new_window.cpp
 msgid "Could not open the document in a new window."
 msgstr "无法在新窗口中打开文档。"
+
+#: src/app/editor_frame_favorites.cpp
+msgid "Could not open the favorites directory."
+msgstr "无法打开收藏目录。"
 
 #: src/document/document_session.cpp
 msgid "Could not open the file for reading."
@@ -1698,6 +1753,10 @@ msgstr "无法读取文件权限：%s"
 msgid "Could not read the complete file."
 msgstr "无法完整读取文件。"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Could not read the favorites directory."
+msgstr "无法读取收藏目录。"
+
 #. TRANSLATORS: IDD_OPENWITH failure reading the selected program directory; no parameters.
 #: src/app/document_tools.cpp
 msgid "Could not read the program directory."
@@ -1711,6 +1770,10 @@ msgstr "无法重新加载文件"
 #, c-format
 msgid "Could not replace the destination: %s"
 msgstr "无法替换目标文件: %s"
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Could not resolve the favorite. The link may be damaged or unsupported."
+msgstr "无法解析收藏。链接可能已损坏或不受支持。"
 
 #: src/app/new_window.cpp
 msgid "Could not restart wxnotepad."
@@ -1749,7 +1812,7 @@ msgid "Could not write the complete file. Check free space and access permission
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
 
 #. TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
-#: src/app/main.cpp src/app/new_window.cpp
+#: src/app/editor_frame_favorites.cpp src/app/main.cpp src/app/new_window.cpp
 msgid "Create file?"
 msgstr "创建文件？"
 
@@ -2029,6 +2092,14 @@ msgstr "仅在英文输入法模式下触发自动完成"
 msgid "Enter"
 msgstr "回车键"
 
+#: src/app/file_favorites.cpp
+msgid "Enter a valid name for the favorite."
+msgstr "请输入有效的收藏名称。"
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Enter the name for the new favorites item:"
+msgstr "请输入新收藏的名称："
+
 #: src/syntax/generated/style_profiles.h
 msgid "Enumeration"
 msgstr "枚举"
@@ -2050,6 +2121,10 @@ msgstr "转义序列"
 #: src/app/dialogs/csv_options_dialog.cpp
 msgid "Escape with backslash."
 msgstr "使用反斜线转义"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Evaluate the selected JavaScript expression in Math scope."
+msgstr "在 Math 作用域内计算选中的 JavaScript 表达式。"
 
 #: src/syntax/generated/style_profiles.h
 msgid "Example List"
@@ -2085,6 +2160,14 @@ msgstr "FSI — 首个强方向隔离符(&F)"
 msgid "Favorite Schemes"
 msgstr "常用语法高亮"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Favorite name"
+msgstr "收藏名称"
+
+#: src/app/dialogs/file_favorites_dialog.cpp src/app/editor_frame_favorites.cpp
+msgid "Favorites"
+msgstr "收藏夹"
+
 #: src/app/dialogs/recent_files_dialog.cpp
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "File"
@@ -2116,6 +2199,10 @@ msgstr "文件名和扩展名(&E)\tShift+F9"
 #: src/app/editor_frame_edit_commands.cpp
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "文件名和扩展名(&X)\tCtrl+F9"
+
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "File favorites"
+msgstr "文件收藏"
 
 #. TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
 #: src/app/dialogs/print_page_setup_dialog.cpp
@@ -2993,6 +3080,10 @@ msgstr "NADS — 使用本国数字字形(&A)"
 msgid "NODS — Nominal (European) &digit shapes"
 msgstr "NODS — 使用标准(欧洲)数字字形(&G)"
 
+#: src/app/dialogs/file_favorites_dialog.cpp
+msgid "Name"
+msgstr "名称"
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Near borders"
 msgstr "靠近边界"
@@ -3644,6 +3735,11 @@ msgstr "创建新文档前保存对 %s 的修改？"
 msgid "Save changes to %s before opening another file?"
 msgstr "打开另一个文件前保存对 %s 的修改？"
 
+#: src/app/editor_frame_favorites.cpp
+#, c-format
+msgid "Save changes to %s before opening favorites?"
+msgstr "打开收藏夹前保存对 %s 的更改？"
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "Save changes to %s before opening recent files?"
@@ -4274,6 +4370,10 @@ msgstr "无法将文档编码为 UTF-16BE。"
 msgid "The document could not be encoded as UTF-16LE."
 msgstr "无法将文档编码为 UTF-16LE。"
 
+#: src/app/editor_frame_favorites.cpp
+msgid "The favorite was added successfully."
+msgstr "已成功添加收藏。"
+
 #: src/document/document_session.cpp
 msgid "The file could not be decoded with the selected Chinese encoding."
 msgstr "无法使用所选中文编码解码文件。"
@@ -4337,6 +4437,7 @@ msgid "This operation can't be performed (lines too long)."
 msgstr "此操作不能执行(行太长)。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT.
+#: src/app/calculate_expression.cpp
 #: src/app/dialogs/enclose_selection_dialog.cpp
 #: src/app/dialogs/insert_tag_dialog.cpp
 #: src/app/dialogs/modify_lines_dialog.cpp src/app/editor_frame_commands.cpp
@@ -4508,6 +4609,10 @@ msgstr "撤销重做时记住选区(&U)"
 #: src/app/editor_frame_edit_commands.cpp
 msgid "Unescape HTML/&XML Chars\tAlt+Shift+H"
 msgstr "反转义 HTML/XML 字符(&X)\tAlt+Shift+H"
+
+#: src/app/expression_evaluator_qjs.cpp
+msgid "Unexpected end of expression."
+msgstr "表达式意外结束。"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Unicode"
@@ -4895,6 +5000,9 @@ msgstr "m4"
 
 #~ msgid "CSS"
 #~ msgstr "CSS"
+
+#~ msgid "Could not resolve the favorite. Its target may be missing or the link unsupported."
+#~ msgstr "无法解析收藏。目标可能不存在，或链接不受支持。"
 
 #~ msgid "HSS"
 #~ msgstr "HSS"

@@ -22,6 +22,11 @@ if(WIN32)
     set_tests_properties(native_base64_clipboard_error PROPERTIES TIMEOUT 20)
 endif()
 
+add_test(NAME packaged_file_favorites COMMAND "${Python3_EXECUTABLE}" -X utf8
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/file_favorites_packaged.py" "$<TARGET_FILE:wxnotepad>"
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/file-favorites")
+set_tests_properties(packaged_file_favorites PROPERTIES TIMEOUT 180)
+
 add_editor_test(code_format original_code_format 120)
 target_compile_definitions(code_format PRIVATE
     "CODE_FORMAT_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/code_format_reference.tsv\""

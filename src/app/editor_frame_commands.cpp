@@ -439,6 +439,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, containingFolder);
     file->Append(updateTime, _("Update File Time"));
     file->AppendSeparator();
+    AppendFileFavorites(file);
     AppendRecentFilesCommand(file);
     file->AppendSeparator();
     // TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.

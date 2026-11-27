@@ -30,6 +30,7 @@ struct StartupOptions : WindowRequest {
     wxString missingParameter;
     bool help = false;
     std::optional<std::pair<bool, bool>> routing;
+    std::optional<bool> alwaysOnTop;
     // Pinned Notepad4::lpFileList collects at most 32 arguments.
     static constexpr size_t MaximumFiles = 32;
     std::vector<wxString> files;
@@ -153,6 +154,10 @@ struct StartupOptions : WindowRequest {
                 routing = std::pair{option.Lower().StartsWith("r"), option.length() == 2};
             } else if (option.CmpNoCase("ro") == 0) {
                 readOnly = true;
+            } else if (option.CmpNoCase("o") == 0) {
+                alwaysOnTop = true;
+            } else if (option.CmpNoCase("o0") == 0 || option.CmpNoCase("o-") == 0 || option.CmpNoCase("oo") == 0) {
+                alwaysOnTop = false;
             } else if (option == "?") {
                 help = true;
             } else if ((option == "g" || option == "G") && i < argc) {
@@ -222,6 +227,8 @@ wxString StartupHelp() {
                        "-ns  Match an existing window only for the same file.\n"
                        "-r  Reuse an available window.\n"
                        "-rs  Reuse without a file; otherwise match only the same file.");
+    // TRANSLATORS: Original temporary topmost switches; keep -o, -o0, -o- and -oo unchanged.
+    text += "\n\n" + _("-o  Always On Top for this launch.\n-o0, -o-, -oo  Disable Always On Top for this launch.");
 #ifdef __WXMSW__
     // TRANSLATORS: New wxnotepad help; /option, -option and --option show literal option-prefix spellings.
     text += "\n\n" + _("Windows: /option, -option and --option.");
@@ -337,7 +344,7 @@ public:
             startupExitCode_ = routed == WindowRouting::Result::Handled ? 0 : 2;
             return true;
         }
-        auto* frame = new EditorFrame(settings_.get());
+        auto* frame = new EditorFrame(settings_.get(), options.alwaysOnTop);
         if (options.windowPosition && !ApplyInitialWindowPosition(*frame, *options.windowPosition)) return false;
         bool skipLoad = options.startup.empty();
         if (options.ordinaryFile && !options.startup.empty()) {
