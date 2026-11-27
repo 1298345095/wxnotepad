@@ -189,6 +189,19 @@ def main():
         frame = frames[0]
         time.sleep(0.2)
         state("clipboard-relaunch")
+        command(40443)  # Enable ordinary exit saving, then observe Clear -> exit -> restart.
+        user.SetWindowPos(frame, None, 180, 210, 700, 510, 0x14)
+        command(40444)
+        command(40045)
+        state("clear-with-exit-saving")
+        user.SendMessageW(frame, 0x10, 0, 0)
+        process.wait(timeout=10)
+        process = subprocess.Popen([str(executable), "/n"])
+        frames = find_frames(user, process, callback)
+        assert len(frames) == 1
+        frame = frames[0]
+        time.sleep(0.2)
+        state("restart-after-clear-with-exit-saving")
         report = dict(
             revision=REVISION,
             executable_sha256=digest,
@@ -205,7 +218,8 @@ def main():
         user.SendMessageW(frame, 0x10, 0, 0)
         process.wait(timeout=10)
         assert copied == "/pos 100,120,640,480,0", copied
-        assert records[-1]["normal"] == [100, 120, 640, 480], records[-1]
+        relaunched = next(record for record in records if record["case"] == "clipboard-relaunch")
+        assert relaunched["normal"] == [100, 120, 640, 480], relaunched
         print("PASS: owned pinned original position, sticky, clear, defaults, clipboard and relaunch")
     finally:
         if process.poll() is None:
