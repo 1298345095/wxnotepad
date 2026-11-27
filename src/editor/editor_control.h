@@ -41,6 +41,7 @@ enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
 enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSibling };
 enum class FoldCommand { DefaultLevels, AllLevels, CurrentBlock, CurrentLevel, NumericLevel };
+enum class CodeFormatting { Compress, Pretty };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -82,6 +83,7 @@ public:
     std::string UrlEncodedSelection();
     bool ConvertBase64(Base64Conversion command, const wxString& path = {}, bool defaultEncoding = false);
     void CopyAsRtf(bool nativeAnsi);
+    void FormatCode(CodeFormatting command, const SyntaxDefinition& syntax);
     NativeByteSnapshot RawNativeBytes() const;
     std::string NativeSelectedBytes(bool binary = true);
     std::string NativeBytesAfter(intptr_t position);

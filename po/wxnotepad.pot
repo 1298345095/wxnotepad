@@ -742,6 +742,11 @@ msgstr ""
 msgid "&Web Source Code"
 msgstr ""
 
+#. TRANSLATORS: Original Tools/Web Tools submenu.
+#: src/app/editor_frame_commands.cpp
+msgid "&Web Tools"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "&Wildcard search"
 msgstr ""
@@ -1144,6 +1149,14 @@ msgstr[1] ""
 #. TRANSLATORS: Original CSS stylesheet scheme title.
 #: src/syntax/syntax_catalog.cpp
 msgid "CSS Style Sheet"
+msgstr ""
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Compress"
+msgstr ""
+
+#: src/app/code_format.cpp
+msgid "CSS/JS/JSON &Pretty"
 msgstr ""
 
 #. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
