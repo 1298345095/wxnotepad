@@ -134,6 +134,7 @@ public:
     void CutLine();
     void DeleteLine();
     void JumpToPosition(intptr_t position);
+    void JumpToInitialPosition(intptr_t position);
     void GoToBlock(BlockNavigation command);
     void SelectWord();
     void SelectLines(bool currentBlock = false);
@@ -199,6 +200,7 @@ private:
     // Keep automatic-typing state alive until the notifying core has shut down.
     TypingAssistance typing_{*this};
     std::unique_ptr<Core> core_;
+    bool initialPositionPending_ = false;
     // Select the replacement using the main selection's original direction.
     void ReplaceRangeAndSelect(intptr_t start, intptr_t end, std::string_view replacement);
     void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);

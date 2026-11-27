@@ -4,7 +4,9 @@ A native wxWidgets editor using Notepad4's custom Scintilla core. The original
 core owns the text, edit history and save point, and paints through the
 wx platform adapter. There is no wxSTC control or second text document.
 
-The editor starts with an empty document. Type ordinary characters, Enter and
+Start with an empty document or run `wxnotepad "file.txt"` to open a file.
+See [command-line options](docs/command-line.md) for source encoding, syntax,
+initial position and read-only mode. Type ordinary characters, Enter and
 Tab; use Backspace and Delete to remove text. Edit → Undo/Redo and Ctrl+Z/Ctrl+Y
 follow the core's history. A `*` in the title marks changes from the save point;
 undoing to that point removes it. Ctrl+Shift+Z also redoes.
@@ -321,7 +323,7 @@ For opt-in native input, clipboard and shutdown tracing, see
 [native diagnostics](docs/diagnostics.md). Ordinary builds exclude tracing.
 
 Prerequisites: Git, Python 3.14+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
-**3.3.3#6** from vcpkg. CI uses MSVC and GCC 15. On Linux use Ubuntu 26.04+ and
+**3.3.3#7** from vcpkg. CI uses MSVC and GCC 15. On Linux use Ubuntu 26.04+ and
 GTK3 with `gtk+-3.0`, `wayland-egl` and `wayland-cursor` development packages,
 Ninja, and a working desktop. Keep WSL sources and builds on its Linux filesystem.
 The SDK capability test compiles and runs C++23 `std::print` and `std::println`,

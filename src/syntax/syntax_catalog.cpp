@@ -35,6 +35,10 @@ namespace {
 #include "syntax/generated/ini_scheme_data.h"
 #include "syntax/generated/make_scheme_data.h"
 #include "syntax/generated/diff_scheme_data.h"
+#include "syntax/generated/ruby_scheme_data.h"
+#include "syntax/generated/perl_scheme_data.h"
+#include "syntax/generated/tcl_scheme_data.h"
+#include "syntax/generated/csv_scheme_data.h"
 
 constexpr auto textExtensions = std::to_array<const char*>({"txt"});
 constexpr auto cppExtensions = std::to_array<const char*>({"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"});
@@ -962,6 +966,78 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
      nullptr,
      diffOriginal,
      {SyntaxMenuFamily::Standalone, 25}},
+    // TRANSLATORS: Original lexRuby / NP2LEX_RUBY scheme name, used in menus, status and file filters.
+    {wxTRANSLATE("Ruby Script"),
+     rubyExtensions,
+     rubyLists,
+     rubyStyles,
+     {},
+     SCLEX_RUBY,
+     SyntaxLanguage::Ruby,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_RB_COMMENTLINE,
+     false,
+     false,
+     "ruby",
+     rubyOriginal,
+     {SyntaxMenuFamily::Standalone, 85}},
+    // TRANSLATORS: Original lexPerl / NP2LEX_PERL scheme name, used in menus, status and file filters.
+    {wxTRANSLATE("Perl Script"),
+     perlExtensions,
+     perlLists,
+     perlStyles,
+     {},
+     SCLEX_PERL,
+     SyntaxLanguage::Perl,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_PL_COMMENTLINE,
+     false,
+     false,
+     "perl",
+     perlOriginal,
+     {SyntaxMenuFamily::Standalone, 75}},
+    // TRANSLATORS: Original lexTcl / NP2LEX_TCL scheme name, used in menus, status and file filters.
+    {wxTRANSLATE("Tcl Script"),
+     tclExtensions,
+     tclLists,
+     tclStyles,
+     {},
+     SCLEX_TCL,
+     SyntaxLanguage::Tcl,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_TCL_TASKMARKER,
+     false,
+     false,
+     "wish",
+     tclOriginal,
+     {SyntaxMenuFamily::Standalone, 105}},
+    // TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
+    {wxTRANSLATE("CSV File"),
+     csvExtensions,
+     csvLists,
+     csvStyles,
+     {},
+     SCLEX_CSV,
+     SyntaxLanguage::Csv,
+     true,
+     nullptr,
+     nullptr,
+     nullptr,
+     0,
+     false,
+     false,
+     nullptr,
+     csvOriginal,
+     {SyntaxMenuFamily::Standalone, 20}},
 });
 
 } // namespace
@@ -1053,6 +1129,12 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
 const char* SyntaxSettingsSection(SyntaxLanguage language) {
     switch (SyntaxSettingsLanguage(language)) {
         using enum SyntaxLanguage;
+    case Ruby:
+        return rubySettingsSection;
+    case Perl:
+        return perlSettingsSection;
+    case Tcl:
+        return tclSettingsSection;
     case Cpp:
         return "C/C++ Source";
     case Java:
@@ -1105,6 +1187,8 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return makeSettingsSection;
     case Diff:
         return diffSettingsSection;
+    case Csv:
+        return csvSettingsSection;
     default:
         return "Text File";
     }

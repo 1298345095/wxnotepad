@@ -17,6 +17,7 @@ class EditorControl;
 class FindReplaceDialog;
 class SettingsStore;
 class wxMenu;
+struct WindowRequest;
 #ifdef __WXMSW__
 class ExplorerSelections;
 #endif
@@ -63,11 +64,12 @@ public:
     bool OpenContainingFolder();
     void AppendOpenTargetCommands(wxMenu* menu);
     bool Restart();
+    OpenStatus ReceiveWindowRequest(const WindowRequest& request);
     bool ExecuteDocument();
     bool OpenDocumentWith();
     OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                    std::optional<SyntaxLanguage> language, bool readOnly, Scintilla::Position line,
-                                   Scintilla::Position column);
+                                   Scintilla::Position column, DocumentLoad::SourceDecoding source = {});
 
 private:
     EditorControl* editor_;
@@ -224,7 +226,8 @@ private:
     wxSize statusMeasuredSize_;
     int statusFeedbackWidth_ = 0;
     void ChooseDefaultFont(bool code);
-    void ChooseLanguage(std::optional<SyntaxLanguage> language);
+    void ChooseLanguage(std::optional<SyntaxLanguage> language, bool namedScheme = false);
+    void ChooseCsvLanguage();
     void ShowSyntaxScheme(bool favorite = false);
     void CustomizeStyles();
     bool ConfirmDiscardChanges(const wxString& action);

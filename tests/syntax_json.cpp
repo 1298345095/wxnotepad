@@ -5,6 +5,7 @@
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "native_dialog_helpers.h"
+#include "syntax_menu_helpers.h"
 #include <SciLexer.h>
 #include <wx/app.h>
 #include <wx/menu.h>
@@ -47,7 +48,7 @@ void Choose(EditorFrame* frame, const wxString& label) {
     Command(frame, id);
     auto* bar = frame->GetMenuBar();
     for (const auto& definition : SyntaxCatalog()) {
-        const auto* item = bar->FindItem(bar->FindMenuItem("Scheme", LanguageName(definition.language)));
+        const auto* item = bar->FindItem(TestSyntax::SchemeCommand(*bar, LanguageName(definition.language)));
         Require(item && item->IsCheckable() && item->IsChecked() == (item->GetId() == id),
                 "language choices must be exclusive across families");
     }

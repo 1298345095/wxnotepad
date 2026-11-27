@@ -127,6 +127,8 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     for (size_t index = 0; index < PrintMarginKeys.size(); ++index)
         print.margins[index] = std::max(document_.ReadInt(PrintMarginKeys[index], print.margins[index]), -1);
     values.uiLanguage = UILanguage::Normalize(document_.ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
+    values.reuseWindow = document_.ReadBool("ReuseWindow", defaults.reuseWindow, "Settings2");
+    values.singleFileInstance = document_.ReadBool("SingleFileInstance", defaults.singleFileInstance, "Settings2");
     const int recent = document_.ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
     values.saveRecentFiles = (recent & 1) != 0;
     values.maxRecentFiles = std::max(recent >> 1, RecentFiles::MinimumCapacity);
@@ -207,6 +209,9 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     values.renderingTechnology = std::clamp(document_.ReadInt("RenderingTechnology", defaults.renderingTechnology),
                                             std::to_underlying(Scintilla::Technology::Default),
                                             std::to_underlying(Scintilla::Technology::DirectWrite1));
+    values.fontQuality = std::clamp(document_.ReadInt("FontQuality", defaults.fontQuality),
+                                    std::to_underlying(Scintilla::FontQuality::QualityDefault),
+                                    std::to_underlying(Scintilla::FontQuality::QualityLcdOptimized));
     int caretStyle = document_.ReadInt("CaretStyle", defaults.caret.lineWidth);
     values.caret.blockAfterSelection = caretStyle >= 100;
     caretStyle %= 100;
@@ -516,6 +521,7 @@ bool SettingsStore::Save(bool explicitSave) {
         document_.WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
 #ifdef __WXMSW__
         document_.WriteInt("RenderingTechnology", values.renderingTechnology, defaults.renderingTechnology);
+        document_.WriteInt("FontQuality", values.fontQuality, defaults.fontQuality);
 #endif
         document_.WriteInt("CaretStyle",
                            values.caret.lineWidth + (values.caret.overstrikeBlock ? 10 : 0) +
@@ -608,6 +614,23 @@ bool SettingsStore::SaveUILanguage(int language) {
     document_.WriteInt("UILanguage", normalized, -1, "Settings2");
     if (!document_.Save()) return false;
     values.uiLanguage = normalized;
+    return true;
+}
+
+bool SettingsStore::SaveWindowRouting(bool reuseWindow, bool singleFileInstance) {
+    const wxLogNull noGuiLog;
+    if (wxFileExists(document_.Path()) && !wxIsWritable(document_.Path())) return false;
+    if (!document_.Load()) return false;
+    const OriginalSettings defaults;
+    // Original commands write their own key immediately. An independent window
+    // can have changed the other preference since this process loaded its INI.
+    if (reuseWindow != values.reuseWindow)
+        document_.WriteBool("ReuseWindow", reuseWindow, defaults.reuseWindow, "Settings2");
+    if (singleFileInstance != values.singleFileInstance)
+        document_.WriteBool("SingleFileInstance", singleFileInstance, defaults.singleFileInstance, "Settings2");
+    if (!document_.Save()) return false;
+    values.reuseWindow = reuseWindow;
+    values.singleFileInstance = singleFileInstance;
     return true;
 }
 

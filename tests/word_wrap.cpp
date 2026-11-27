@@ -304,15 +304,13 @@ public:
                 Layout(frame);
                 const auto rows = editor->Send(WrapCount, 0);
                 const auto continuationHitY = editor->Send(TextHeight, 0) + 2;
-#ifdef __WXMSW__
                 const auto firstVisible = editor->Send(GetFirstVisibleLine);
-#endif
                 frame->SetSize(280, 240);
                 Layout(frame);
                 Require(editor->Send(WrapCount, 0) > rows, "resizing recomputes continuation rows");
-#ifdef __WXMSW__
                 Require(editor->Send(GetFirstVisibleLine) == firstVisible,
                         "native resizing preserves the original physical viewport");
+#ifdef __WXMSW__
                 // Keep the full caret row and both later continuation-row input
                 // points inside the viewport after native chrome is laid out.
                 const int lineHeight = static_cast<int>(editor->Send(TextHeight, 0));
@@ -330,9 +328,9 @@ public:
                         "the continuation-row hit and mouse points lie inside the native viewport");
                 Require(editor->Send(GetFirstVisibleLine) == firstVisible,
                         "viewport-height setup preserves the original physical top line");
+#endif
                 editor->Send(ScrollCaret);
                 Layout(frame);
-#endif
                 const auto caretY = editor->Send(PointYFromPosition, 0, textEnd);
                 Require(caretY >= 0 && caretY + editor->Send(TextHeight, 0) <= editor->GetClientSize().y,
                         "caret reveal after resizing keeps the caret visible");

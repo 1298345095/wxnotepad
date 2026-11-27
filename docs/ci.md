@@ -300,7 +300,7 @@ utility cannot read that private directory; its system policy remains unchanged.
   otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
   package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
-  **3.3.3#6**. Only core features are requested, matching the prepared development
+  **3.3.3#7**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
 - The wxWidgets overlay disables JPEG, TIFF and WebP codecs and their package
   dependencies on Windows. PNG/SVG art and native bitmap support remain enabled.

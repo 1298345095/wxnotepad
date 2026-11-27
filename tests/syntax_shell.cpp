@@ -375,11 +375,20 @@ public:
                 settings_->values.noCgiGuess = true;
                 auto* gated = new EditorFrame(settings_.get());
                 gated->ShowWithoutActivating();
+                const auto unknown = directory / "gated.unknown";
+                std::ofstream(unknown, std::ios::binary) << "#!/bin/csh\necho gated\n";
+                Require(gated->Open(TestFiles::Filename(unknown)).status == OpenStatus::Opened &&
+                            StatusMetadata(gated).Contains(" | Plain Text | ") &&
+                            gated->Editor()->Send(Message::GetLexer) == SCLEX_NULL,
+                        "NoCGIGuess must suppress shell interpreter selection for unknown extensions");
                 const auto cgi = directory / "gated.cgi";
                 std::ofstream(cgi, std::ios::binary) << "#!/bin/csh\necho gated\n";
                 Require(gated->Open(TestFiles::Filename(cgi)).status == OpenStatus::Opened &&
-                            StatusMetadata(gated).Contains(" | Plain Text | "),
+                            gated->Editor()->Send(Message::GetLexer) != SCLEX_BASH,
                         "NoCGIGuess must suppress shell interpreter selection");
+                Require(StatusMetadata(gated).Contains(" | Perl Script | ") &&
+                            gated->Editor()->Send(Message::GetLexer) == SCLEX_PERL,
+                        "NoCGIGuess suppresses shell sniffing while preserving the original .cgi Perl association");
                 Require(gated->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                             StatusMetadata(gated).Contains(" | Bash | "),
                         "NoCGIGuess must retain original filename associations");

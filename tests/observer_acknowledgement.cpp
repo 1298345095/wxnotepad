@@ -7,6 +7,7 @@
 #include "settings/settings_store.h"
 #include <wx/ffile.h>
 #include <wx/log.h>
+#include <wx/utils.h>
 #include <chrono>
 #include <cstdio>
 #include <memory>
@@ -183,6 +184,35 @@ private:
         const auto path = directory_.Path() / "state";
         return std::filesystem::exists(path) && TestFiles::Bytes(path).starts_with(sequence);
     }
+    void CaptureWarmFailure() const noexcept {
+        try {
+            const auto destination = std::filesystem::path("Testing/Temporary/observer-acknowledgement-failures") /
+                                     (directory_.Path().filename().string() + "-" + std::to_string(wxGetProcessId()));
+            std::error_code error;
+            std::filesystem::create_directories(destination, error);
+            std::fprintf(stderr, "Warm acknowledgement capture: %s (create: %s)\n", destination.string().c_str(),
+                         error ? error.message().c_str() : "ok");
+            for (const char* name : {"command", "state", "state.tmp"}) {
+                const auto source = directory_.Path() / name;
+                const auto status = std::filesystem::status(source, error);
+                if (!std::filesystem::exists(status)) {
+                    std::fprintf(stderr, "%s: absent (status: %s)\n", name, error ? error.message().c_str() : "ok");
+                } else if (std::filesystem::is_directory(status)) {
+                    std::fprintf(stderr, "%s: directory\n", name);
+                } else if (std::filesystem::is_regular_file(status)) {
+                    std::filesystem::copy_file(source, destination / name, error);
+                    std::fprintf(stderr, "%s: regular file (copy: %s)\n", name, error ? error.message().c_str() : "ok");
+                } else {
+                    std::fprintf(stderr, "%s: other file type (status: %s)\n", name,
+                                 error ? error.message().c_str() : "ok");
+                }
+            }
+        } catch (const std::exception& error) {
+            std::fprintf(stderr, "Warm acknowledgement capture failed: %s\n", error.what());
+        } catch (...) {
+            std::fputs("Warm acknowledgement capture failed\n", stderr);
+        }
+    }
     void Run() {
         auto* editor = frame_->Editor();
 #ifdef __WXGTK__
@@ -192,7 +222,12 @@ private:
         NativeKeys::Shortcut(frame_, 'A', true);
 #endif
         Command(1);
-        Await([this] { return Sequence("sequence\t1\n"); }, "warm unchanged-state acknowledgement is published");
+        try {
+            Await([this] { return Sequence("sequence\t1\n"); }, "warm unchanged-state acknowledgement is published");
+        } catch (...) {
+            CaptureWarmFailure();
+            throw;
+        }
         selection_ = editor->SelectionRevision();
         size_ = frame_->GetSize();
         active_ = frame_->IsActive();

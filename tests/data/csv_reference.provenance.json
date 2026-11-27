@@ -1,0 +1,16 @@
+{
+  "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+  "executable_sha256": "c4ae363348fe833b39c9d9b77f1f0b85565f140f7c5e52c51a0b91cf896227d9",
+  "source": "Notepad4 pinned owned reference executable",
+  "license": "licenses/Notepad4.txt",
+  "captures": {
+    "original-01": "b126f1ed7e617e1b3b23cec318d4112a8f18381758dca04bb3e93815c05e5efc",
+    "original-options-01": "028133071b9fc8991de19698112da1f58cfb27605224b62cbc3634dd53dfe5eb"
+  },
+  "source_paths": [
+    "scintilla/lexers/LexCSV.cxx",
+    "src/EditLexers/stlDefault.cpp",
+    "src/Styles.cpp",
+    "src/Notepad4.rc"
+  ]
+}

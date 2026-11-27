@@ -57,6 +57,10 @@ enum class SyntaxLanguage : uint8_t {
     Ini,
     Makefile,
     Diff,
+    Ruby,
+    Perl,
+    Tcl,
+    Csv,
     Count
 };
 using SyntaxExtensions = std::map<SyntaxLanguage, wxString>;

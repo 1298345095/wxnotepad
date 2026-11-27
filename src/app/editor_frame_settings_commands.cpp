@@ -185,8 +185,44 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     AppendAppearanceOptions(view);
+    auto* windowOptions = new wxMenu;
+    const auto appendRouting = [this](wxMenu* menu, const wxString& label, bool reuse) {
+        const int id = wxWindow::NewControlId();
+        menu->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, reuse](wxCommandEvent&) {
+                auto& values = settings_ ? settings_->values : defaults_;
+                const bool nextReuse = reuse ? !values.reuseWindow : values.reuseWindow;
+                const bool nextSingle = reuse ? values.singleFileInstance : !values.singleFileInstance;
+                if (settings_) {
+                    if (!settings_->SaveWindowRouting(nextReuse, nextSingle))
+                        // TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
+                        wxMessageBox(wxString::Format(_("Could not write %s"), settings_->Path()),
+                                     // TRANSLATORS: wxnotepad title for a settings-file write failure.
+                                     _("Could not save settings"), wxOK | wxICON_ERROR, this);
+                } else {
+                    values.reuseWindow = nextReuse;
+                    values.singleFileInstance = nextSingle;
+                }
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, reuse](wxUpdateUIEvent& event) {
+                const auto& values = settings_ ? settings_->values : defaults_;
+                event.Check(reuse ? values.reuseWindow : values.singleFileInstance);
+            },
+            id);
+    };
+    // TRANSLATORS: Original IDM_VIEW_REUSEWINDOW menu caption under Window Options.
+    appendRouting(windowOptions, _("&Reuse Window"), true);
+    // TRANSLATORS: Original Notepad4.rc Window Options submenu under Settings.
+    view->AppendSubMenu(windowOptions, _("Window O&ptions"));
     AppendWindowTitleOptions(view);
     view->AppendSeparator();
+    // TRANSLATORS: Original IDM_VIEW_SINGLEFILEINSTANCE menu caption under Settings.
+    appendRouting(view, _("Single &File Instance"), false);
     const int fileChanges = wxWindow::NewControlId();
     view->AppendCheckItem(fileChanges, _("File &Change Notification...\tAlt+F5"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);
@@ -275,6 +311,33 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             id);
     }
     advanced->AppendSubMenu(rendering, _("Ren&dering Technology"));
+    auto* qualityMenu = new wxMenu;
+    for (const auto& [label, quality] :
+         {// TRANSLATORS: Original IDM_VIEW_FONTQUALITY_DEFAULT; default Windows font antialiasing.
+          std::pair{wxTRANSLATE("&Default"), Scintilla::FontQuality::QualityDefault},
+          // TRANSLATORS: Original IDM_VIEW_FONTQUALITY_NONE; disable Windows font antialiasing.
+          std::pair{wxTRANSLATE("&None"), Scintilla::FontQuality::QualityNonAntialiased},
+          // TRANSLATORS: Original IDM_VIEW_FONTQUALITY_STANDARD; grayscale Windows font antialiasing.
+          std::pair{wxTRANSLATE("&Standard"), Scintilla::FontQuality::QualityAntialiased},
+          // TRANSLATORS: Original IDM_VIEW_FONTQUALITY_CLEARTYPE; ClearType is the Windows rendering-mode name.
+          std::pair{wxTRANSLATE("&ClearType"), Scintilla::FontQuality::QualityLcdOptimized}}) {
+        const int id = wxWindow::NewControlId();
+        qualityMenu->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, quality](wxCommandEvent&) {
+                editor_->Send(Scintilla::Message::SetFontQuality, std::to_underlying(quality));
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, quality](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetFontQuality) == std::to_underlying(quality));
+            },
+            id);
+    }
+    // TRANSLATORS: Original Notepad4.rc Font Quality submenu under Settings / Advanced Settings.
+    advanced->AppendSubMenu(qualityMenu, _("Font &Quality"));
     view->AppendSubMenu(advanced, _("A&dvanced Settings"));
 #endif
     AppendSettingsCommands(view);

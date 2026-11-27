@@ -19,6 +19,23 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
                              0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
     // Original pinned generated cache cases. Keep masks independent of display styles.
     switch (definition.language) {
+    case Ruby:
+        for (const auto ch : {'!', '$', '?', '@'})
+            result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
+        result.rawStrings[SCE_RB_STRING_SQ >> 5] |= 1U << (SCE_RB_STRING_SQ & 31);
+        result.plainText[SCE_RB_DATASECTION >> 5] |= 1U << (SCE_RB_DATASECTION & 31);
+        break;
+    case Perl:
+        for (const auto ch : {'$', '@'})
+            result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
+        result.rawStrings[SCE_PL_STRING_SQ >> 5] |= 1U << (SCE_PL_STRING_SQ & 31);
+        for (const auto style : {SCE_PL_POD, SCE_PL_POD_VERB, SCE_PL_DATASECTION})
+            result.plainText[style >> 5] |= 1U << (style & 31);
+        break;
+    case Tcl:
+        for (const auto ch : {'$', '@'})
+            result.wordCharacters[ch >> 5] |= 1U << (ch & 31);
+        break;
     case Makefile:
         for (const auto ch : {'!', '$', '-'})
             result.wordCharacters[ch >> 5] |= 1U << (ch & 31);

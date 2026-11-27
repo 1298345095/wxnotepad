@@ -37,13 +37,17 @@ void AppendClosingLine(EditorControl& editor, intptr_t line, bool delimiter, std
     }
 }
 
-// Pinned EditAutoC.cpp::EditKeywordIndent, NP2LEX_MAKEFILE branch. The original
+// Pinned EditAutoC.cpp::EditKeywordIndent, NP2LEX_MAKEFILE/RUBY branches. The original
 // compares the first case-sensitive alphabetic word, bounded by its 16-byte buffer.
-std::string_view MakeKeywordEnd(std::string_view head) {
+std::string_view KeywordEnd(int lexer, std::string_view head) {
     constexpr size_t MaximumKeywordLength = 15;
     const auto length =
         std::min(head.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), MaximumKeywordLength);
     const auto word = head.substr(0, length);
+    if (lexer == SCLEX_RUBY) {
+        if (word == "if" || word == "do" || word == "while" || word == "for") return "end";
+        return {};
+    }
     if (word == "if") return "endif";
     if (word == "define") return "endef";
     if (word == "for") return "endfor";
@@ -65,7 +69,7 @@ void EditorControl::IndentLines(bool forwards) {
 
 // Adapted from Notepad4 EditAutoC.cpp::EditAutoIndent, pinned 89b8b36.
 // Copyright and license: licenses/Notepad4.txt. Delimiter/colon/comment rules
-// are scheme independent; Makefile also has the original keyword/fold path.
+// are scheme independent; Makefile and Ruby also have the original keyword/fold path.
 void TypingAssistance::IndentNewLine() {
     using Scintilla::Message;
     const auto position = editor_.Send(Message::GetCurrentPos);
@@ -91,9 +95,9 @@ void TypingAssistance::IndentNewLine() {
     std::string insertion = previous.substr(0, first);
     const auto leading = static_cast<intptr_t>(insertion.size());
     std::string_view keywordEnd;
-    if (!indent && styles_.lexer == SCLEX_MAKEFILE && first < contentLength &&
+    if (!indent && (styles_.lexer == SCLEX_MAKEFILE || styles_.lexer == SCLEX_RUBY) && first < contentLength &&
         editor_.Send(Message::GetStyleIndexAt, previousStart + leading) == styles_.autoIndentWordStyle) {
-        keywordEnd = MakeKeywordEnd(std::string_view(previous).substr(first, contentLength - first));
+        keywordEnd = KeywordEnd(styles_.lexer, std::string_view(previous).substr(first, contentLength - first));
         indent = !keywordEnd.empty();
         if (indent &&
             !(editor_.Send(Message::GetFoldLevel, line) & std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) {

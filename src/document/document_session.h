@@ -6,6 +6,7 @@
 #include <cstdint>
 #include "ScintillaTypes.h"
 #include "syntax/syntax_detection.h"
+#include "syntax/csv_options.h"
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
 #include "editor/native_byte_history.h"
@@ -37,9 +38,13 @@ struct SaveResult {
 };
 enum class OpenStatus { Opened, Cancelled, Failed };
 namespace DocumentLoad {
+// The public ANSI source alias follows the original legacy recode decision;
+// it is distinct from selecting the editor's native current format.
+struct NativeAnsiSource {};
 // Automatic detection, an explicit codec or native identity, or a quick
 // command's source. Detection supplies the loaded document's BOM.
-using SourceDecoding = std::variant<std::monostate, FileEncoding, EncodingChoice, QuickReloadEncoding>;
+using SourceDecoding =
+    std::variant<std::monostate, FileEncoding, EncodingChoice, QuickReloadEncoding, NativeAnsiSource>;
 struct Open {
     std::optional<wxString> source;
     SourceDecoding decoding{};
@@ -131,7 +136,9 @@ public:
     std::optional<SyntaxLanguage> LanguageOverride() const {
         return languageOverride_ ? std::optional(EffectiveLanguage()) : std::nullopt;
     }
-    void SelectLanguage(std::optional<SyntaxLanguage> language);
+    void SelectLanguage(std::optional<SyntaxLanguage> language, bool namedScheme = false);
+    uint32_t CsvOptions() const { return csvOptions_; }
+    void SetCsvOptions(uint32_t options);
     void SetSyntaxDetectionOptions(SyntaxDetectionOptions options) { detection_ = options; }
 
 private:
@@ -169,6 +176,7 @@ private:
     // independently name a document-type dialect for canonical Web/XML choices.
     std::optional<SyntaxLanguage> markupDialect_;
     SyntaxDetectionOptions detection_;
+    uint32_t csvOptions_ = CsvOption::Default;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
     void ApplyEmptySchemeDefaults(bool overrideEncoding);

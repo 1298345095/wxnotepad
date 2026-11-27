@@ -21,6 +21,7 @@
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #include <gdk/gdkwayland.h>
+#include <gdk/gdkx.h>
 #endif
 
 namespace {
@@ -58,6 +59,7 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
     if (operation == "save")
         result = (source.empty() ? frame.Save() : frame.SaveAs(source)).status == SaveStatus::Saved ? "ok" : "failed";
     if (operation == "close") result = "ok";
+    if (operation == "snapshot") result = "ok";
     if (operation == "menu") {
         long numericId = 0;
         int id = wxNOT_FOUND;
@@ -224,6 +226,12 @@ void ProcessObserver::Publish() {
                                  static_cast<long long>(frame_->Editor()->Send(GetCurrentPos)),
                                  static_cast<long long>(frame_->Editor()->Send(GetReadOnly)), frame_->GetClientSize().y,
                                  static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->GetHandle())));
+#ifdef __WXGTK__
+    auto* nativeFrame = gtk_widget_get_window(GTK_WIDGET(frame_->GetHandle()));
+    if (nativeFrame && GDK_IS_X11_WINDOW(nativeFrame))
+        contents += wxString::Format("frame_x11_window\t%llu\n",
+                                     static_cast<unsigned long long>(gdk_x11_window_get_xid(nativeFrame)));
+#endif
     const auto position = frame_->GetPosition();
     const auto size = frame_->GetSize();
     lastFrameSize_ = size;
@@ -234,6 +242,13 @@ void ProcessObserver::Publish() {
     contents += wxString::Format("selection_start\t%lld\nselection_end\t%lld\n",
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionStart)),
                                  static_cast<long long>(frame_->Editor()->Send(GetSelectionEnd)));
+    contents += wxString::Format(
+        "first_visible_line\t%lld\ncaret_visible_line\t%lld\nlines_on_screen\t%lld\nx_offset\t%lld\n",
+        static_cast<long long>(frame_->Editor()->Send(GetFirstVisibleLine)),
+        static_cast<long long>(frame_->Editor()->Send(
+            VisibleFromDocLine, frame_->Editor()->Send(LineFromPosition, frame_->Editor()->Send(GetCurrentPos)))),
+        static_cast<long long>(frame_->Editor()->Send(LinesOnScreen)),
+        static_cast<long long>(frame_->Editor()->Send(GetXOffset)));
     contents += wxString::Format("can_undo\t%d\ncan_redo\t%d\n", frame_->Editor()->Send(CanUndo) != 0,
                                  frame_->Editor()->Send(CanRedo) != 0);
     contents += "fold_headers\t" + ObserveFoldHeaders(*frame_->Editor()) + "\n";

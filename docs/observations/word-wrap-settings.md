@@ -122,3 +122,27 @@ and inputs remain in CI evidence. `WXNOTEPAD_ORIGINAL_WRAP_REFERENCE` selects th
 generated record directories; standalone runs without it keep using the frozen
 tables. This changes the layout reference source, with no changes to assertions,
 deadlines, parallelism or application font/rendering behavior.
+
+## Wrapped resize viewport rule
+
+Native resize preserves the physical viewport, matching pinned
+`ScintillaWin::SizeWindow` and `Editor::WrapLines`. GTK can allocate a new
+scrollbar width after the user scrolls; rewrapping that allocation must not
+unconditionally reveal an offscreen caret. Ordinary GTK resize now rewraps
+without `EnsureCaretVisible`. Explicit font, mode and margin updates retain
+their existing paths, and an initial startup jump still requests `ScrollCaret`
+after resize until its first paint.
+
+The integration failure was traced through an actual native scroll to display
+line 200, followed by a 328-to-334-pixel size event resetting the view to line 0.
+The startup-position flag was false throughout. The complete scroll fixture now
+also checks a real width change after scrolling in all five original modes,
+retaining two wrapped rows per logical line, exact limits and the offscreen
+selection. All earlier geometry and history checks still run first.
+
+The user approved unifying the GTK acceptance rule with the original Windows
+path on 2026-11-26. `word_wrap_view` now checks the existing exact physical
+viewport oracle on GTK as well, then explicitly requests caret reveal on both
+platforms before the unchanged caret-visibility and selection assertions. The
+Windows DPI/client-height checks, all other assertions, deadlines, guards and
+parallelism remain unchanged.

@@ -351,7 +351,11 @@ void EditorFrame::CreatePositionStatus() {
             id = std::to_underlying(AppCommand::ChooseEncoding);
             break;
         case StatusField::Scheme: {
-            if (wxMenu* scheme = nullptr; GetMenuBar()->FindItem(std::to_underlying(AppCommand::SyntaxScheme), &scheme))
+            // Pinned Notepad4.cpp StatusItem_Lexer opens CSV Options directly.
+            if (document_.Language() == SyntaxLanguage::Csv)
+                ChooseCsvLanguage();
+            else if (wxMenu* scheme = nullptr;
+                     GetMenuBar()->FindItem(std::to_underlying(AppCommand::SyntaxScheme), &scheme))
                 PopupMenu(scheme);
             break;
         }

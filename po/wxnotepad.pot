@@ -45,6 +45,15 @@ msgstr ""
 msgid "\"%s\" is read only. Save to a different file?"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname.
+#. TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname received by IPC.
+#: src/app/main.cpp src/app/new_window.cpp
+#, c-format
+msgid ""
+"\"%s\" not found.\n"
+"Would you like to create this file?"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s - wxnotepad"
@@ -178,6 +187,11 @@ msgstr ""
 msgid "&Clear All\tAlt+F2"
 msgstr ""
 
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_CLEARTYPE; ClearType is the Windows rendering-mode name.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&ClearType"
+msgstr ""
+
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Closing tag (can be edited):"
 msgstr ""
@@ -227,7 +241,8 @@ msgstr ""
 msgid "&Decode"
 msgstr ""
 
-#: src/app/editor_frame_commands.cpp
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_DEFAULT; default Windows font antialiasing.
+#: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 msgid "&Default"
 msgstr ""
 
@@ -458,6 +473,7 @@ msgstr ""
 msgid "&No Highlight"
 msgstr ""
 
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_NONE; disable Windows font antialiasing.
 #: src/app/editor_frame_edit_commands.cpp
 #: src/app/editor_frame_settings_commands.cpp
 msgid "&None"
@@ -577,6 +593,11 @@ msgstr ""
 msgid "&Restart"
 msgstr ""
 
+#. TRANSLATORS: Original IDM_VIEW_REUSEWINDOW menu caption under Window Options.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Reuse Window"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Revert\tF5"
 msgstr ""
@@ -638,6 +659,11 @@ msgstr ""
 
 #: src/app/editor_frame_edit_commands.cpp
 msgid "&Split Lines\tCtrl+I"
+msgstr ""
+
+#. TRANSLATORS: Original IDM_VIEW_FONTQUALITY_STANDARD; grayscale Windows font antialiasing.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "&Standard"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -753,6 +779,15 @@ msgstr ""
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr ""
 
+#. TRANSLATORS: New wxnotepad help for original LoadFlags; keep -n, -ns, -r and -rs unchanged.
+#: src/app/main.cpp
+msgid ""
+"-n  Always open a new window.\n"
+"-ns  Match an existing window only for the same file.\n"
+"-r  Reuse an available window.\n"
+"-rs  Reuse without a file; otherwise match only the same file."
+msgstr ""
+
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
 msgstr ""
@@ -848,6 +883,10 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Array @var"
 msgstr ""
 
 #. TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
@@ -1099,6 +1138,16 @@ msgstr[1] ""
 msgid "CSS Style Sheet"
 msgstr ""
 
+#. TRANSLATORS: Original lexCSV / NP2LEX_CSV scheme name, used in menus, status and file filters.
+#: src/syntax/syntax_catalog.cpp
+msgid "CSV File"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS dialog title.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "CSV Options"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "CallTip"
 msgstr ""
@@ -1249,12 +1298,67 @@ msgstr ""
 msgid "Column &Wrap..."
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Column 1"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 10"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 2"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 3"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 4"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 5"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 6"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 7"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 8"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Column 9"
+msgstr ""
+
 #: src/app/dialogs/column_wrap_dialog.cpp
 msgid "Column Wrap"
 msgstr ""
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_COMMA; preserve the literal comma (,).
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Comma (,)"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Command"
+msgstr ""
+
+#. TRANSLATORS: New wxnotepad title for an invalid command-line option operand.
+#: src/app/main.cpp
+msgid "Command Line Error"
+msgstr ""
+
+#. TRANSLATORS: New wxnotepad title for the delivered command-line help.
+#: src/app/main.cpp
+msgid "Command Line Help"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -1366,6 +1470,11 @@ msgstr ""
 msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
 msgstr ""
 
+#. TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
+#: src/app/main.cpp src/app/new_window.cpp
+msgid "Could not create the file."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not determine the file size."
 msgstr ""
@@ -1394,8 +1503,14 @@ msgstr ""
 msgid "Could not open document with program"
 msgstr ""
 
+#. TRANSLATORS: wxnotepad title for failure to load the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+#. TRANSLATORS: wxnotepad title for failure to load the requested file received by IPC.
 #: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
-#: src/app/editor_frame_file_watching.cpp
+#: src/app/editor_frame_file_watching.cpp src/app/main.cpp
+#: src/app/new_window.cpp
 msgid "Could not open file"
 msgstr ""
 
@@ -1481,6 +1596,7 @@ msgstr ""
 msgid "Could not save file"
 msgstr ""
 
+#. TRANSLATORS: wxnotepad title for a settings-file write failure.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 #: src/app/language_commands.cpp
 msgid "Could not save settings"
@@ -1490,6 +1606,7 @@ msgstr ""
 msgid "Could not start another wxnotepad process."
 msgstr ""
 
+#. TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
 #: src/app/language_commands.cpp
 #, c-format
@@ -1498,6 +1615,11 @@ msgstr ""
 
 #: src/document/document_file.cpp
 msgid "Could not write the complete file. Check free space and access permissions."
+msgstr ""
+
+#. TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
+#: src/app/main.cpp src/app/new_window.cpp
+msgid "Create file?"
 msgstr ""
 
 #. TRANSLATORS: IDR_POPUPMENU cut selection to the clipboard.
@@ -1547,6 +1669,11 @@ msgstr ""
 msgid "Custom Action &2\tCtrl+Shift+2"
 msgstr ""
 
+#. TRANSLATORS: New wxnotepad accessible name for original IDC_CSV_DELIMITER_OTHER_TEXT, the delimiter entry.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Custom delimiter"
+msgstr ""
+
 #: src/app/editor_frame_toolbar.cpp
 msgid "Customi&ze Toolbar..."
 msgstr ""
@@ -1573,6 +1700,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Dar&k"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Data Section"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -1635,7 +1766,8 @@ msgstr ""
 msgid "Definition List"
 msgstr ""
 
-#: src/syntax/generated/style_profiles.h
+#. TRANSLATORS: Original IDD_CSV_OPTIONS delimiter group caption.
+#: src/app/dialogs/csv_options_dialog.cpp src/syntax/generated/style_profiles.h
 msgid "Delimiter"
 msgstr ""
 
@@ -1686,6 +1818,11 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Double Quoted String"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_DOUBLE, double-quote text qualifier.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Double quote"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1770,6 +1907,11 @@ msgstr ""
 msgid "Escape Sequence"
 msgstr ""
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_BACKSLASH_ESCAPE checkbox; backslash means the literal '\\'.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Escape with backslash."
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Example List"
 msgstr ""
@@ -1777,6 +1919,11 @@ msgstr ""
 #. TRANSLATORS: IDM_FILE_LAUNCH menu command; open the current disk file with its native association.
 #: src/app/document_tools.cpp
 msgid "Execute &Document\tCtrl+L"
+msgstr ""
+
+#. TRANSLATORS: Original IDS_ERR_PREVWINDISABLED; wxnotepad is the application name.
+#: src/app/window_routing.cpp
+msgid "Existing wxnotepad window is busy or has an active dialog box. Would you like to open another wxnotepad window?"
 msgstr ""
 
 #: src/app/dialogs/style_customization.cpp
@@ -1897,6 +2044,11 @@ msgstr ""
 msgid "Folding Marker"
 msgstr ""
 
+#. TRANSLATORS: Original Notepad4.rc Font Quality submenu under Settings / Advanced Settings.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Font &Quality"
+msgstr ""
+
 #. TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
 #: src/app/dialogs/print_page_setup_dialog.cpp
 msgid "Footer:"
@@ -1908,6 +2060,14 @@ msgstr ""
 
 #: src/app/dialogs/style_customization.cpp
 msgid "For&e..."
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Body"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Format Identifier"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2066,6 +2226,10 @@ msgid "Hard Line Break"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Hash %var"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Header 1"
 msgstr ""
 
@@ -2099,7 +2263,15 @@ msgid "Headers and Footers"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Backticks)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Here-doc (Delimiter)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Here-doc (Double Quoted)"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2270,6 +2442,16 @@ msgstr ""
 msgid "JSX"
 msgstr ""
 
+#. TRANSLATORS: Original IDS_ENCODINGGROUP_JAPANESE, encoding-selection tree category.
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Japanese"
+msgstr ""
+
+#. TRANSLATORS: Original IDS_ENCODING_SHIFT_JIS; Shift-JIS names the Windows-932 encoding.
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Japanese (Shift-JIS)"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Java Source"
 msgstr ""
@@ -2292,6 +2474,16 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Keyword"
+msgstr ""
+
+#. TRANSLATORS: Original IDS_ENCODINGGROUP_KOREAN, encoding-selection tree category.
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Korean"
+msgstr ""
+
+#. TRANSLATORS: Original IDS_ENCODING_UHC; Unified Hangul Code names the Windows-949 encoding.
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Korean (Unified Hangul Code)"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -2426,6 +2618,11 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Link Text"
+msgstr ""
+
+#. TRANSLATORS: New wxnotepad help; -option and --option are option spellings, / is the literal path prefix.
+#: src/app/main.cpp
+msgid "Linux: -option and --option; / starts an absolute file path."
 msgstr ""
 
 #: src/app/process_observer.cpp
@@ -2585,8 +2782,16 @@ msgstr ""
 msgid "Minimum word length"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Modifier"
+msgstr ""
+
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Modify Lines"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Module"
 msgstr ""
 
 #: src/app/dialogs/toolbar_customization_dialog.cpp
@@ -2647,6 +2852,8 @@ msgstr ""
 msgid "No wrap indent"
 msgstr ""
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_NONE, no text qualifier.
+#: src/app/dialogs/csv_options_dialog.cpp
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "None"
 msgstr ""
@@ -2759,12 +2966,23 @@ msgstr ""
 msgid "Operator"
 msgstr ""
 
+#. TRANSLATORS: New wxnotepad missing-operand error; %s is the literal option token, such as /s or -e.
+#: src/app/main.cpp
+#, c-format
+msgid "Option \"%s\" requires a parameter."
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Ordered List"
 msgstr ""
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Other Sett&ings"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_OTHER; select a custom delimiter character.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Other:"
 msgstr ""
 
 #: src/app/editor_frame_view_commands.cpp
@@ -2781,6 +2999,18 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "PHP Tag"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Common)"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "POD (Verbatim)"
 msgstr ""
 
 #: src/editor/special_insert.h
@@ -2835,6 +3065,16 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "Parsing Error"
+msgstr ""
+
+#. TRANSLATORS: Original lexPerl / NP2LEX_PERL scheme name, used in menus, status and file filters.
+#: src/syntax/syntax_catalog.cpp
+msgid "Perl Script"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_PIPE; preserve the literal pipe (|).
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Pipe (|)"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -2917,6 +3157,10 @@ msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Prototype"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
@@ -3108,6 +3352,11 @@ msgstr ""
 msgid "Right:"
 msgstr ""
 
+#. TRANSLATORS: Original lexRuby / NP2LEX_RUBY scheme name, used in menus, status and file filters.
+#: src/syntax/syntax_catalog.cpp
+msgid "Ruby Script"
+msgstr ""
+
 #. TRANSLATORS: IDD_RUN dialog title.
 #: src/app/run_command.cpp
 msgid "Run Command"
@@ -3196,7 +3445,8 @@ msgstr ""
 msgid "Save changes to %s before creating a new document?"
 msgstr ""
 
-#: src/app/editor_frame.cpp
+#. TRANSLATORS: wxnotepad save/discard confirmation for original WM_COPYDATA replacement; %s is the document name.
+#: src/app/editor_frame.cpp src/app/new_window.cpp
 #, c-format
 msgid "Save changes to %s before opening another file?"
 msgstr ""
@@ -3386,6 +3636,11 @@ msgstr ""
 msgid "Selected Text"
 msgstr ""
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SEMICOLON; preserve the literal semicolon (;).
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Semicolon (;)"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Send Key"
 msgstr ""
@@ -3473,8 +3728,18 @@ msgstr ""
 msgid "Simplified Chinese (GBK, GB2312)"
 msgstr ""
 
+#. TRANSLATORS: Original IDM_VIEW_SINGLEFILEINSTANCE menu caption under Settings.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Single &File Instance"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Single Quoted String"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_QUALIFIER_SINGLE, single-quote text qualifier.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Single quote"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -3505,7 +3770,15 @@ msgstr ""
 msgid "Source encoding"
 msgstr ""
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SPACE; a space character delimiter.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Space"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_SPACE; a space delimiter.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
 msgid "Space"
 msgstr ""
 
@@ -3539,6 +3812,10 @@ msgstr ""
 
 #: src/syntax/generated/style_profiles.h
 msgid "String"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "String Array"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -3582,6 +3859,10 @@ msgid "Subscript"
 msgstr ""
 
 #: src/syntax/generated/style_profiles.h
+msgid "Substitution"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
 msgid "Superscript"
 msgstr ""
 
@@ -3597,12 +3878,24 @@ msgstr ""
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
 msgstr ""
 
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol"
+msgstr ""
+
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &after wrap:"
 msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Symbol &before wrap:"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Array"
+msgstr ""
+
+#: src/syntax/generated/style_profiles.h
+msgid "Symbol Table *var"
 msgstr ""
 
 #: src/app/dialogs/scheme_chooser.cpp
@@ -3634,7 +3927,15 @@ msgstr ""
 msgid "TSX"
 msgstr ""
 
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_TAB; a tab character delimiter.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Tab"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_DELIMITER_TAB; a tab delimiter.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgctxt "CSV delimiter"
 msgid "Tab"
 msgstr ""
 
@@ -3694,6 +3995,11 @@ msgstr ""
 msgid "Task Marker"
 msgstr ""
 
+#. TRANSLATORS: Original lexTcl / NP2LEX_TCL scheme name, used in menus, status and file filters.
+#: src/syntax/syntax_catalog.cpp
+msgid "Tcl Script"
+msgstr ""
+
 #: src/syntax/generated/style_profiles.h
 msgid "Template Literal"
 msgstr ""
@@ -3705,6 +4011,11 @@ msgstr ""
 #. TRANSLATORS: Scheme chooser title; original NP2LEX_TEXTFILE. Not an INI section key.
 #: src/syntax/syntax_catalog.cpp
 msgid "Text File"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS text-qualifier group caption.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Text qualifier"
 msgstr ""
 
 #. TRANSLATORS: Linux IDD_RUN parser error; a single or double quote was not closed.
@@ -3741,6 +4052,11 @@ msgstr ""
 msgid "The file could not be decoded with the selected Chinese encoding."
 msgstr ""
 
+#. TRANSLATORS: New wxnotepad source-decoding failure for Windows-932 or Windows-949 files.
+#: src/document/document_session.cpp
+msgid "The file could not be decoded with the selected Japanese or Korean encoding."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "The file is not valid GBK (CP936). The document was not changed."
 msgstr ""
@@ -3761,7 +4077,8 @@ msgstr ""
 msgid "The line endings in this file are not consistent:"
 msgstr ""
 
-#: src/document/document_session.cpp
+#. TRANSLATORS: New wxnotepad unsupported-source-encoding error; %u is its numeric code page.
+#: src/app/main.cpp src/document/document_session.cpp
 #, c-format
 msgid "The selected encoding (code page %u) is not migrated. The document was not changed."
 msgstr ""
@@ -3863,6 +4180,11 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Transform &backslashes"
+msgstr ""
+
+#. TRANSLATORS: Original IDD_CSV_OPTIONS / IDC_CSV_MERGE_DELIMITER checkbox.
+#: src/app/dialogs/csv_options_dialog.cpp
+msgid "Treat consecutive delimiters as one."
 msgstr ""
 
 #: src/app/editor_frame_edit_commands.cpp
@@ -3997,6 +4319,27 @@ msgstr ""
 msgid "Update File Time"
 msgstr ""
 
+#. TRANSLATORS: New wxnotepad command-line help. Keep literal switches -e, -s, -g, -G, -ro, -? and
+#. encoding aliases ANSI/OEM unchanged; bracketed operands describe user-supplied values.
+#: src/app/main.cpp
+msgid ""
+"Usage: wxnotepad [options] [file]\n"
+"\n"
+"-e encoding  Source encoding (original aliases, including ANSI and OEM).\n"
+"-s scheme  Syntax scheme extension or name.\n"
+"-g line[,character[,bytes]]  Character position; an odd third value counts bytes.\n"
+"-G line[,column[,tab-width]]  Display column; optional tab width (maximum 256).\n"
+"-ro  Read-only editing mode; disk permissions stay unchanged.\n"
+"-?  Show this help.\n"
+"\n"
+"Positions are one-based. A negative line jumps to the end; a negative column counts characters without expanding tabs."
+msgstr ""
+
+#. TRANSLATORS: New wxnotepad help; preserve the literal option terminators - and --.
+#: src/app/main.cpp
+msgid "Use - or -- to end options and open the remaining single file path."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Use Default &Code Style\tShift+F12"
 msgstr ""
@@ -4078,12 +4421,22 @@ msgstr ""
 msgid "Whole &word"
 msgstr ""
 
+#. TRANSLATORS: Original Notepad4.rc Window Options submenu under Settings.
+#: src/app/editor_frame_settings_commands.cpp
+msgid "Window O&ptions"
+msgstr ""
+
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Window Title Displa&y"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"
+msgstr ""
+
+#. TRANSLATORS: New wxnotepad help; /option, -option and --option show literal option-prefix spellings.
+#: src/app/main.cpp
+msgid "Windows: /option, -option and --option."
 msgstr ""
 
 #. TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).

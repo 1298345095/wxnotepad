@@ -280,12 +280,17 @@ void ImportExport(EditorFrame* frame, SettingsStore& settings) {
     const auto exported = TestFiles::TemporaryDirectory("style-export.ini");
     TestFiles::WriteBytes(imported, "[Global Styles]\nDefault Code Style=font:$(Code); size:21\n"
                                     "[C/C++ Source]\nUseDefaultCodeStyle=0\nComment=fore:#AA5533\n"
-                                    "[File Extensions]\nC/C++ Source=import264\n[Custom Colors]\n01=#112233\n");
+                                    "[File Extensions]\nC/C++ Source=import264\n[Custom Colors]\n01=#112233\n"
+                                    "[CSV File]\nUseDefaultCodeStyle=1\nColumn 1=fore:#123456\n"
+                                    "Column 10=fore:#654321\nDelimiter=fore:#246810\n");
     const auto originalStyle = settings.values.fonts.codeStyle;
     const auto originalExtension = SyntaxExtensionsFor(SyntaxLanguage::Cpp, settings.values.schemeExtensions);
     Picker picker;
     picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
         FileButton(dialog, "Import schemes", "Import Schemes", TestFiles::Filename(imported));
+        SelectStyle(tree, "CSV File", "Column 1");
+        Require(edit.GetValue() == "fore:#123456",
+                "CSV column style imports through the original shared scheme dialog");
         Require(NativeDialogs::SelectTreeLabel(tree, "C/C++ Source") && edit.GetValue() == "import264",
                 "original sparse scheme import updates extension text");
         NativeSearch::Click(&dialog, wxID_APPLY);
@@ -302,6 +307,10 @@ void ImportExport(EditorFrame* frame, SettingsStore& settings) {
                 !settings.values.fonts.Scheme(SyntaxLanguage::Cpp).useCode,
             "import then Cancel restores strings/extensions while original imported inheritance survives");
     const auto text = ReadIni(exported);
+    Require(text.Contains("[CSV File]") && text.Contains("Column 1=fore:#123456") &&
+                text.Contains("Column 10=fore:#654321") && text.Contains("Delimiter=fore:#246810") &&
+                settings.values.fonts.Scheme(SyntaxLanguage::Csv).useCode,
+            "CSV exports all original column/delimiter keys and retains imported code-style inheritance on Cancel");
     Require(text.Contains("C/C++ Source=import264") && text.Contains("Comment=fore:#AA5533") &&
                 text.Contains("01=#112233") && text.Contains("size:21"),
             "export includes pending styles extensions and the approved original-format custom palette");
@@ -310,6 +319,50 @@ void ImportExport(EditorFrame* frame, SettingsStore& settings) {
         Require(wxCopyFile(TestFiles::Filename(exported), wxFileName(evidence, "export.ini").GetFullPath()),
                 "retain actual scheme export for independent original interoperability capture");
 }
+void DynamicSchemeImportExport(EditorFrame* frame) {
+    for (const auto& [name, style] : {std::pair{"Ruby Script", SCE_RB_COMMENTLINE},
+                                      {"Perl Script", SCE_PL_COMMENTLINE},
+                                      {"Tcl Script", SCE_TCL_COMMENT}}) {
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", name));
+        const auto imported = TestFiles::TemporaryDirectory(std::string(name) + "-import.ini");
+        const auto exported = TestFiles::TemporaryDirectory(std::string(name) + "-export.ini");
+        const auto contents = std::string("[") + name + "]\nComment=fore:#AA5533\n";
+        TestFiles::WriteBytes(imported, contents);
+#ifdef __WXGTK__
+        NativeSearch::FeedbackResponse response;
+#endif
+        Picker picker;
+        picker.action = [&](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
+            const auto editScheme = [&] {
+                SelectStyle(tree, name, "Comment");
+                Require(edit.GetValue().Contains("fore:#608060"),
+                        "each dynamic scheme exposes its original editable comment style");
+                FileButton(dialog, "Import schemes", "Import Schemes", TestFiles::Filename(imported));
+                NativeSearch::Click(&dialog, wxID_APPLY);
+                Require(frame->Editor()->Send(Message::StyleGetFore, style) == 0x3355aa,
+                        "imported original section applies to the real dynamic lexer style");
+                FileButton(dialog, "Export schemes", "Export Schemes", TestFiles::Filename(exported));
+            };
+#ifdef __WXGTK__
+            response.Respond(&dialog, wxID_OK, editScheme);
+#else
+            editScheme();
+            NativeSearch::Click(&dialog, wxID_OK);
+#endif
+        };
+        NativePaint::Complete(frame->Editor());
+        frame->SetTitle("wxnotepad dynamic customize keyboard");
+        NativeKeys::Shortcut(frame, WXK_F12, true, false, false, nullptr, "wxnotepad dynamic customize keyboard");
+        Require(picker.error.empty(), picker.error.utf8_str());
+        Require(picker.shown == 1 && frame->Editor()->Send(Message::StyleGetFore, style) == 0x3355aa,
+                "Ctrl+F12 and native acceptance commit each original dynamic scheme customization");
+        const auto saved = ReadIni(exported);
+        Require(saved.Contains(wxString("[") + name + "]") && saved.Contains("Comment=fore:#AA5533"),
+                "native export retains each dynamic scheme section and imported value");
+    }
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
+}
+
 void Grammar(EditorFrame* frame) {
     Picker picker;
     picker.action = [frame](wxDialog& dialog, wxTreeCtrl& tree, wxTextCtrl& edit) {
@@ -579,6 +632,7 @@ public:
                     ImportCancelWithoutPreview(frame, *settings_);
                     Extensions(frame);
                     ImportExport(frame, *settings_);
+                    DynamicSchemeImportExport(frame);
                     Grammar(frame);
                     InvalidInheritedSize(frame);
                     RelativeFontChooser(frame);

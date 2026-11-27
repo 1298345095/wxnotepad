@@ -7,8 +7,14 @@
 #include "native_search_helpers.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
+#include "native_completion_helpers.h"
+#include "native_tree_input.h"
+#include "settings/settings_store.h"
 #include <SciLexer.h>
 #include <wx/statusbr.h>
+#include <wx/checkbox.h>
+#include <wx/modalhook.h>
+#include <array>
 #include <fstream>
 #include <span>
 #include <sstream>
@@ -173,7 +179,9 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
         std::getline(row, deleted, '\t');
         std::getline(row, textHex, '\t');
         std::getline(row, styleHex, '\t');
-        std::getline(row, foldText);
+        std::getline(row, foldText, '	');
+        std::string lineStates;
+        std::getline(row, lineStates);
         auto* editor = frame->Editor();
         const auto text = Unhex(textHex);
         if (state == "base") {
@@ -210,8 +218,205 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
             }
             ++foldLine;
         }
+        if (!lineStates.empty()) {
+            std::istringstream states(lineStates);
+            size_t stateLine = 0;
+            while (std::getline(states, line, ',')) {
+                Require(editor->Send(Message::GetLineState, stateLine) == std::stol(line),
+                        "every incremental line state must match the pinned original");
+                ++stateLine;
+            }
+            Require(stateLine == static_cast<size_t>(editor->Send(Message::GetLineCount)),
+                    "original line states cover the whole document");
+        }
         ++rows;
     }
     return rows;
+}
+inline void ScriptChoosers(EditorFrame* frame, SettingsStore& settings, std::span<const SchemeFixture> schemes,
+                           std::span<const char* const> favorites) {
+    for (const auto& fixture : schemes) {
+        wxTimer timer;
+        std::exception_ptr failure;
+        int shown = 0;
+        timer.Bind(wxEVT_TIMER, [frame, &timer, &failure, &shown, &fixture, favorites](wxTimerEvent&) {
+            for (auto* window : wxTopLevelWindows) {
+                auto* dialog = wxDynamicCast(window, wxDialog);
+                if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Select Scheme") continue;
+                timer.Stop();
+                ++shown;
+                try {
+                    auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Syntax schemes", dialog), wxTreeCtrl);
+                    Require(tree, "script F12 chooser has its native tree");
+                    Require(NativeDialogs::SelectTreeLabel(*tree, "Favorite Schemes"), "favorites group exists");
+                    wxTreeItemIdValue cookie;
+                    auto item = tree->GetFirstChild(tree->GetSelection(), cookie);
+                    for (const auto* name : favorites) {
+                        Require(item.IsOk() && tree->GetItemText(item) == name,
+                                "script favorites retain original identity order alongside existing schemes");
+                        item = tree->GetNextChild(tree->GetSelection(), cookie);
+                    }
+                    Require(!item.IsOk(), "script favorites contain no duplicated or aliased identities");
+                    Require(NativeDialogs::SelectTreeLabel(*tree, fixture.name), "F12 offers each script scheme");
+                    auto* selected = wxDynamicCast(wxWindow::FindWindowByName("Default scheme", dialog), wxCheckBox);
+                    Require(selected, "script chooser offers original default selection");
+                    NativeSearch::Toggle(selected, true);
+                    NativeTreeInput::Present(*dialog);
+                    tree->SetFocus();
+                    NativeTreeInput::Enter(*dialog);
+                } catch (...) {
+                    failure = std::current_exception();
+                    dialog->EndModal(wxID_CANCEL);
+                }
+                return;
+            }
+        });
+        timer.Start(40);
+        NativeKeys::Shortcut(frame, WXK_F12, false);
+        timer.Stop();
+        if (failure) std::rethrow_exception(failure);
+        Require(shown == 1 && frame->Editor()->Send(Message::GetLexer) == fixture.lexer &&
+                    settings.values.defaultScheme == SyntaxFor(fixture.language).original.schemeId,
+                "native F12/Enter selects each script and commits its original default identity");
+    }
+    settings.values.defaultScheme = 0;
+}
+
+class RectangleFeedback final : public wxModalDialogHook {
+public:
+    RectangleFeedback() { Register(); }
+    int Enter(wxDialog*) override {
+        ++count;
+        return wxID_OK;
+    }
+    int count = 0;
+};
+template <class PaintDocument>
+size_t OriginalScriptOperations(EditorFrame* frame, const std::filesystem::path& reference,
+                                PaintDocument paintDocument) {
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    std::ifstream input(reference);
+    Require(input.is_open(), "independent original script operation fixtures open");
+    std::string line;
+    size_t rows = 0;
+    while (std::getline(input, line)) {
+        if (line.empty() || line.front() == '#') continue;
+        std::istringstream row(line);
+        constexpr size_t InitialCaretColumn = 13;
+        constexpr size_t InitialAnchorColumn = 14;
+        constexpr size_t ReadOnlyColumn = 15;
+        constexpr size_t SelectionModeColumn = 16;
+        constexpr size_t NoticeColumn = 17;
+        constexpr size_t EnabledColumn = 18;
+        constexpr size_t UndoAnchorColumn = 19;
+        constexpr size_t UndoCaretColumn = 20;
+        constexpr size_t RedoAnchorColumn = 21;
+        constexpr size_t RedoCaretColumn = 22;
+        std::array<std::string, RedoCaretColumn + 1> fields;
+        for (auto& field : fields)
+            std::getline(row, field, '\t');
+        std::println(stderr, "script operation {:?} {:?} {:?}", fields[0], fields[1], fields[2]);
+        editor->Send(AutoCCancel);
+        Choose(frame, fields[0].c_str());
+        const auto before = TestLanguages::Unhex(fields[2]);
+        const auto caret = std::stol(fields[InitialCaretColumn]);
+        editor->Send(SetReadOnly, 0);
+        // Each original operation has a fresh editor. Match EditNewText's reset,
+        // including selection snapshots retained separately from the byte history.
+        const auto history = editor->Send(GetUndoSelectionHistory);
+        editor->Send(SetUndoSelectionHistory, 0);
+        TestEditor::ResetStream(editor, before.c_str(), std::stol(fields[InitialAnchorColumn]), caret,
+                                Scintilla::EndOfLine::CrLf);
+        editor->Send(SetUndoSelectionHistory, static_cast<uintptr_t>(history));
+        editor->Send(SetSelectionMode, std::stoul(fields[SelectionModeColumn]));
+        if (fields[SelectionModeColumn] == "1") {
+            editor->Send(SetRectangularSelectionAnchor, std::stoul(fields[InitialAnchorColumn]));
+            editor->Send(SetRectangularSelectionCaret, caret);
+        }
+        editor->Send(SetReadOnly, std::stoul(fields[ReadOnlyColumn]));
+        paintDocument(frame);
+        RectangleFeedback feedback;
+        const auto character = std::stoi(fields[3]);
+        if (character == 13) {
+            editor->Send(NewLine);
+        } else if (character) {
+            wxKeyEvent event(wxEVT_CHAR);
+            event.m_keyCode = character;
+            event.m_uniChar = character;
+            event.SetEventObject(editor);
+            editor->GetEventHandler()->ProcessEvent(event);
+            wxYield();
+        } else {
+            const auto command = fields[1] == "completion" ? "Complete Word" : fields[1].c_str();
+            const auto identifier = frame->GetMenuBar()->FindMenuItem("Edit", command);
+            frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            const bool enabled = fields[EnabledColumn] == "1";
+            Require(frame->GetMenuBar()->IsEnabled(identifier) == enabled,
+                    "original script commands retain their supported/unsupported native menu state");
+            if (enabled) TestSyntax::Command(frame, identifier);
+        }
+        Require(feedback.count == std::stoi(fields[NoticeColumn]), "original rectangular-selection feedback count");
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[4]), "original completion/typing bytes");
+        TestEditor::RequireSelection(editor, std::stol(fields[5]), std::stol(fields[6]), "original typing selection");
+        std::vector<std::string> expected;
+        std::istringstream words(fields[7]);
+        std::string word;
+        while (std::getline(words, word, ','))
+            expected.push_back(TestLanguages::Unhex(word));
+        const auto actual = NativeCompletion::Candidates(editor);
+        if (actual != expected)
+            for (const auto& candidate : actual)
+                std::println(stderr, "actual candidate [{}]", candidate.c_str());
+        Require(actual == expected, "original manual/automatic native completion order");
+        if (!expected.empty() && fields[1] == "completion") {
+            editor->Send(AutoCSelect, 0, reinterpret_cast<intptr_t>(expected.front().c_str()));
+#ifdef __WXMSW__
+            NativeCompletion::Key(editor, VK_RETURN);
+#else
+            NativeCompletion::Key(editor, GDK_KEY_Return);
+#endif
+        }
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[8]), "original completion confirmation bytes");
+        TestEditor::RequireSelection(editor, std::stol(fields[9]), std::stol(fields[10]), "original confirmed caret");
+        editor->Send(AutoCCancel);
+        TestSyntax::Command(frame, wxID_UNDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[11]), "original single-step Undo bytes");
+        TestEditor::RequireSelection(editor, std::stol(fields[UndoAnchorColumn]), std::stol(fields[UndoCaretColumn]),
+                                     "original Undo caret/anchor");
+        TestSyntax::Command(frame, wxID_REDO);
+        Require(TestEditor::Text(editor) == TestLanguages::Unhex(fields[12]), "original Redo bytes");
+        TestEditor::RequireSelection(editor, std::stol(fields[RedoAnchorColumn]), std::stol(fields[RedoCaretColumn]),
+                                     "original Redo caret/anchor");
+        editor->Send(SetReadOnly, 0);
+        editor->Send(SetSelectionMode, 0);
+        editor->Send(SetSavePoint);
+        ++rows;
+    }
+    return rows;
+}
+
+template <class PaintDocument>
+void ScriptSchemeHistory(EditorFrame* frame, const SchemeFixture& fixture, PaintDocument paintDocument) {
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    editor->Send(SetSel, 1, 4);
+    editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("changed"));
+    const auto changed = TestEditor::Text(editor);
+    const auto caret = editor->Send(GetCurrentPos);
+    Choose(frame, "C/C++");
+    Choose(frame, fixture.name);
+    Require(TestEditor::Text(editor) == changed && editor->Send(CanUndo), "scheme switches preserve history");
+    TestEditor::RequireSelection(editor, caret, caret, "scheme switches preserve caret");
+    TestSyntax::Command(frame, wxID_UNDO);
+    Require(TestEditor::Text(editor) == fixture.text, "Undo survives script switch");
+    TestSyntax::Command(frame, wxID_REDO);
+    Require(TestEditor::Text(editor) == changed, "Redo survives script switch");
+    TestSyntax::Command(frame, wxID_UNDO);
+    Choose(frame, "Automatic");
+    paintDocument(frame);
+    TestLanguages::FoldCommands(frame);
+    Require(frame->ReloadCurrentFile().status == OpenStatus::Opened && editor->Send(GetLexer) == fixture.lexer,
+            "script reload restores automatic lexer");
 }
 } // namespace TestLanguages

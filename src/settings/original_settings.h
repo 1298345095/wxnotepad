@@ -36,6 +36,8 @@ struct OriginalSettings {
     SyntaxExtensions schemeExtensions;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
+    bool reuseWindow = false;
+    bool singleFileInstance = true;
     wxString openWithDirectory;
     int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;
@@ -74,6 +76,7 @@ struct OriginalSettings {
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;
     int renderingTechnology = std::to_underlying(Scintilla::Technology::DirectWrite);
+    int fontQuality = std::to_underlying(Scintilla::FontQuality::QualityLcdOptimized);
     CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;

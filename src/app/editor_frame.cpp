@@ -8,6 +8,7 @@
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/scheme_chooser.h"
+#include "app/dialogs/csv_options_dialog.h"
 #include "app/dialogs/style_customization.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
@@ -47,6 +48,8 @@ wxString DocumentEncodingLabel(const DocumentSession& document) {
         case Gbk:
         case Gb18030:
         case Big5:
+        case Windows932:
+        case Windows949:
             return wxString::Format("ANSI (CP%u)", info->codePage);
         default:
             return "ANSI (" + name + ")";
@@ -86,6 +89,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
+    editor_->Send(Scintilla::Message::SetFontQuality, preferences.fontQuality);
 #endif
     Bind(wxEVT_SHOW, [this, firstShow = true](wxShowEvent& event) mutable {
         if (event.IsShown()) {
@@ -364,6 +368,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
 #ifdef __WXMSW__
     settings_->values.renderingTechnology = static_cast<int>(editor_->Send(Scintilla::Message::GetTechnology));
+    settings_->values.fontQuality = static_cast<int>(editor_->Send(Scintilla::Message::GetFontQuality));
 #endif
     settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
@@ -533,7 +538,10 @@ void EditorFrame::ShowSyntaxScheme(bool favorite) {
         {preferences.autoSelect, preferences.noCgiGuess, preferences.noHtmlGuess,
          SyntaxFromOriginalSchemeId(preferences.defaultScheme).value_or(SyntaxLanguage::PlainText),
          preferences.schemeExtensions, preferences.favoriteSchemes});
-    if (language) ChooseLanguage(*language);
+    if (language == SyntaxLanguage::Csv) {
+        if (document_.Language() != SyntaxLanguage::Csv) ChooseCsvLanguage();
+    } else if (language)
+        ChooseLanguage(*language);
 }
 
 void EditorFrame::CustomizeStyles() {
@@ -551,8 +559,23 @@ void EditorFrame::CustomizeStyles() {
     editor_->SetFocus();
 }
 
-void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
-    document_.SelectLanguage(language);
+void EditorFrame::ChooseCsvLanguage() {
+    auto options = document_.CsvOptions();
+    const bool changed = ShowCsvOptionsDialog(this, options);
+    if (changed) document_.SetCsvOptions(options);
+    // Original cancel/no-change still selects CSV when changing schemes, while
+    // the active CSV scheme keeps its current selection/override state.
+    if (document_.Language() != SyntaxLanguage::Csv)
+        ChooseLanguage(SyntaxLanguage::Csv);
+    else if (changed) {
+        UpdateDocumentState();
+        UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    }
+    editor_->SetFocus();
+}
+
+void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language, bool namedScheme) {
+    document_.SelectLanguage(language, namedScheme);
     indentation_.Apply(*editor_, document_.Language());
     UpdateDocumentState();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);

@@ -2,12 +2,16 @@
 #include <utility>
 #include "app/editor_frame.h"
 #include "app/native_launch.h"
+#include "app/window_routing.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
 #include <wx/stdpaths.h>
 #include <wx/toplevel.h>
 #include <wx/msgdlg.h>
 #include <wx/translation.h>
+#include <wx/file.h>
+#include <wx/filename.h>
+#include <wx/log.h>
 #include <limits>
 #include <array>
 #include <vector>
@@ -41,6 +45,46 @@ bool EditorFrame::NewWindow() {
     return LaunchWindow(false);
 }
 
+OpenStatus EditorFrame::ReceiveWindowRequest(const WindowRequest& request) {
+    OpenStatus status = OpenStatus::Cancelled;
+    // TRANSLATORS: wxnotepad save/discard confirmation for original WM_COPYDATA replacement; %s is the document name.
+    if (ConfirmDiscardChanges(_("Save changes to %s before opening another file?"))) {
+        bool load = true;
+        auto source = request.source;
+        if (request.ordinaryFile && !wxFileExists(request.startup) && !wxDirExists(request.startup)) {
+            load = wxMessageBox(
+                       // TRANSLATORS: Original IDS_ASK_CREATE; %s is the literal missing-file pathname received by IPC.
+                       wxString::Format(_("\"%s\" not found.\nWould you like to create this file?"), request.startup),
+                       // TRANSLATORS: New wxnotepad title for the original IDS_ASK_CREATE confirmation.
+                       _("Create file?"), wxYES_NO | wxCANCEL | wxICON_QUESTION, this) == wxYES;
+            if (load) {
+                const wxLogNull quiet;
+                wxFile file;
+                load = file.Create(request.startup, false) && file.Close();
+                if (load && std::holds_alternative<DocumentLoad::NativeAnsiSource>(source)) {
+                    if (const auto native = NativeEncodingChoice()) source = *native;
+                }
+                if (!load)
+                    // TRANSLATORS: New wxnotepad file-creation failure in the original IDS_ASK_CREATE workflow.
+                    wxMessageBox(_("Could not create the file."),
+                                 // TRANSLATORS: wxnotepad title for failure to load or create the requested file.
+                                 _("Could not open file"), wxOK | wxICON_ERROR, this);
+            }
+        }
+        if (load) {
+            const auto result = OpenRestartDocument(request.startup, request.encoding, request.scheme, request.readOnly,
+                                                    request.line, request.column, source);
+            status = result.status;
+            if (status == OpenStatus::Failed)
+                // TRANSLATORS: wxnotepad title for failure to load the requested file received by IPC.
+                wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
+        }
+    }
+    // Original WM_COPYDATA jumps even when Save/Discard/Open was cancelled.
+    if (request.initialLocation) GoToInitialLocation(*editor_, *request.initialLocation);
+    return status;
+}
+
 bool EditorFrame::OpenInNewWindow() {
     const auto& preferences = settings_ ? settings_->values : defaults_;
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before running tools?")))
@@ -68,19 +112,27 @@ bool EditorFrame::Restart() {
 
 OpenResult EditorFrame::OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                             std::optional<SyntaxLanguage> language, bool readOnly,
-                                            Scintilla::Position line, Scintilla::Position column) {
+                                            Scintilla::Position line, Scintilla::Position column,
+                                            DocumentLoad::SourceDecoding source) {
     // Original Unicode/ANSI switches apply after automatic loading. Legacy -e
     // selects source decoding, including the native OEM encoding identity.
+    const bool explicitSource = !std::holds_alternative<std::monostate>(source);
     const bool selectAfterLoad =
-        encoding && !encoding->systemOem &&
-        (encoding->systemDefault || encoding->encoding == FileEncoding::Utf8 ||
-         encoding->encoding == FileEncoding::Utf16Le || encoding->encoding == FileEncoding::Utf16Be);
-    const DocumentLoad::SourceDecoding decoding =
-        !selectAfterLoad && encoding ? DocumentLoad::SourceDecoding(*encoding) : DocumentLoad::SourceDecoding{};
-    const auto result = LoadFile(DocumentLoad::Open{path, decoding});
+        encoding && (explicitSource ||
+                     (!encoding->systemOem &&
+                      (encoding->systemDefault || encoding->encoding == FileEncoding::Utf8 ||
+                       encoding->encoding == FileEncoding::Utf16Le || encoding->encoding == FileEncoding::Utf16Be)));
+    const DocumentLoad::SourceDecoding decoding = explicitSource ? std::move(source)
+                                                  : !selectAfterLoad && encoding
+                                                      ? DocumentLoad::SourceDecoding(*encoding)
+                                                      : DocumentLoad::SourceDecoding{};
+    const auto result =
+        path.empty() ? OpenResult{OpenStatus::Opened, {}} : LoadFile(DocumentLoad::Open{path, decoding});
     if (result.status != OpenStatus::Opened) return result;
     if (selectAfterLoad) document_.SelectEncoding(*encoding);
-    if (language) ChooseLanguage(*language);
+    // Original GetRelaunchParameters also emits -s for CSV, so public named
+    // selection, IPC replacement and internal restart all use named sniffing.
+    if (language) ChooseLanguage(*language, true);
     if (line > 0 && column > 0) {
         const auto position =
             editor_->Send(Scintilla::Message::FindColumn, static_cast<uintptr_t>(line - 1), column - 1);
@@ -114,7 +166,7 @@ bool EditorFrame::LaunchWindow(bool currentFile) {
     const wxString executable = wxStandardPaths::Get().GetExecutablePath();
     const wxString position = wxString::Format("%d,%d,%d,%d,%d", normal.GetX(), normal.GetY(), normal.GetWidth(),
                                                normal.GetHeight(), IsMaximized());
-    std::vector<wxString> arguments{executable, "--window-position", position};
+    std::vector<wxString> arguments{executable, "-n", "--window-position", position};
     if (currentFile && !document_.Path().empty()) {
         if (editor_->Send(Scintilla::Message::GetReadOnly)) arguments.emplace_back("--read-only");
         arguments.emplace_back("--startup-encoding");

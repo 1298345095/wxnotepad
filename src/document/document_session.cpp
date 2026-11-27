@@ -7,6 +7,7 @@
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/chinese_codec.h"
+#include "document/encoding/japanese_korean_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include "document/encoding/single_byte_codec.h"
 #include "editor/platform/native_encoding.h"
@@ -60,6 +61,7 @@ LegacyEncoded EncodeLegacy(std::string_view bytes, FileEncoding encoding) {
     using enum FileEncoding;
     if (encoding == Gbk) return EncodeGbk(bytes);
     if (encoding == Windows1252 || encoding == Dos437) return EncodeSingleByte(bytes, encoding);
+    if (encoding == Windows932 || encoding == Windows949) return EncodeJapaneseKorean(bytes, encoding);
     return EncodeChinese(bytes, encoding);
 }
 
@@ -110,7 +112,8 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
                                                     bool nativeDefault, const NativeByteRanges& raw,
                                                     const EncodingLossDecision& decideLoss) {
     using enum FileEncoding;
-    if (encoding == Gbk || encoding == Windows1252 || encoding == Dos437 || encoding == Gb18030 || encoding == Big5) {
+    if (encoding == Gbk || encoding == Windows1252 || encoding == Dos437 || encoding == Gb18030 || encoding == Big5 ||
+        encoding == Windows932 || encoding == Windows949) {
         const bool validUtf8 = IsUtf8(bytes);
         if (!validUtf8 && !nativeDefault)
             return SaveResult{SaveStatus::Failed, _("The document contains invalid UTF-8.")};
@@ -186,7 +189,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
-    if (loaded.systemDefault && loaded.encoding != Utf8) {
+    if (loaded.systemDefault && (loaded.encoding != Utf8 || nativeAnsiCodePage)) {
         // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
         // through Unicode, just like the native Base64 Decode boundary.
         bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw, nativeAnsiCodePage);
@@ -196,6 +199,12 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
         bytes = *decoded;
     } else if (loaded.encoding == Windows1252 || loaded.encoding == Dos437) {
         bytes = DecodeSingleByte(bytes, loaded.encoding);
+    } else if (loaded.encoding == Windows932 || loaded.encoding == Windows949) {
+        const auto decoded = DecodeJapaneseKorean(bytes, loaded.encoding);
+        if (!decoded)
+            // TRANSLATORS: New wxnotepad source-decoding failure for Windows-932 or Windows-949 files.
+            return wxString(_("The file could not be decoded with the selected Japanese or Korean encoding."));
+        bytes = *decoded;
     } else if (loaded.encoding == Gb18030 || loaded.encoding == Big5) {
         const auto decoded = DecodeChinese(bytes, loaded.encoding);
         if (!decoded) return wxString(_("The file could not be decoded with the selected Chinese encoding."));
@@ -235,8 +244,10 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path,
     else if (const auto* codec = std::get_if<FileEncoding>(&decoding))
         encoding = *codec;
     const auto* quick = std::get_if<QuickReloadEncoding>(&decoding);
-    const auto detected = quick ? DetectQuickReloadEncoding(bytes, *quick, options)
-                                : DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    const auto detected = std::holds_alternative<DocumentLoad::NativeAnsiSource>(decoding)
+                              ? DetectAnsiSourceEncoding(bytes)
+                          : quick ? DetectQuickReloadEncoding(bytes, *quick, options)
+                                  : DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
     if (!detected.encoding)
         return wxString::Format(
             _("The selected encoding (code page %u) is not migrated. The document was not changed."),
@@ -506,6 +517,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLo
 void DocumentSession::CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType) {
     const auto previousLanguage = Language();
     const auto previousDialect = EffectiveLanguage();
+    const auto previousCsvOptions = csvOptions_;
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
         if (selected) {
@@ -531,9 +543,10 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
     if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
-    if (previousLanguage != Language() || previousDialect != EffectiveLanguage()) {
+    if (previousLanguage != Language() || previousDialect != EffectiveLanguage() ||
+        (Language() == SyntaxLanguage::Csv && previousCsvOptions != csvOptions_)) {
         ApplyEmptySchemeDefaults(false);
-        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
     }
 }
 
@@ -636,7 +649,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
         markupDialect_.reset();
         unknownLanguage = !DetectAutomaticLanguage();
         ApplyEmptySchemeDefaults(false);
-        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
     }
     return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
@@ -712,9 +725,19 @@ bool DocumentSession::SelectEncoding(EncodingChoice choice, const EncodingChange
     return true;
 }
 
-void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
+void DocumentSession::SetCsvOptions(uint32_t options) {
+    if (csvOptions_ == options) return;
+    csvOptions_ = options;
+    if (Language() == SyntaxLanguage::Csv) ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
+}
+
+void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language, bool namedScheme) {
     const auto previous = Language();
     const auto previousDialect = EffectiveLanguage();
+    const auto previousCsvOptions = csvOptions_;
+    // Pinned Style_SetLexerFromName sniffs named CSV independently of the
+    // filename's automatic TSV rule. Manual selection retains session options.
+    if (namedScheme && language == SyntaxLanguage::Csv) csvOptions_ = SniffCsvOptions(editor_, csvOptions_, false);
     markupDialect_.reset();
     // Pinned Styles.cpp::Style_SelectLexer sniffs only the canonical Web/XML
     // choices; explicit dialect choices retain the user's selected language.
@@ -725,9 +748,10 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     }
     languageOverride_ = language;
     if (!language) DetectAutomaticLanguage();
-    if (previous != Language() || previousDialect != EffectiveLanguage()) {
+    if (previous != Language() || previousDialect != EffectiveLanguage() ||
+        (Language() == SyntaxLanguage::Csv && previousCsvOptions != csvOptions_)) {
         ApplyEmptySchemeDefaults(SyntaxSettingsLanguage(previous) != SyntaxSettingsLanguage(Language()));
-        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_, csvOptions_);
     }
 }
 
@@ -773,5 +797,11 @@ bool DocumentSession::DetectAutomaticLanguage() {
     const auto detected = DetectLanguage(path_, prefix.data(), detection_);
     automaticLanguage_ = detected ? detected->schemeLanguage : detection_.defaultLanguage;
     markupDialect_ = detected ? detected->markupDialect : std::nullopt;
+    if (automaticLanguage_ == SyntaxLanguage::Csv) {
+        auto path = path_;
+        if (wxFileName(path).GetExt().CmpNoCase("in") == 0) path = path.BeforeLast('.');
+        const bool tsv = wxFileName(path).GetExt().CmpNoCase("tsv") == 0;
+        csvOptions_ = SniffCsvOptions(editor_, csvOptions_, tsv);
+    }
     return detected.has_value();
 }
