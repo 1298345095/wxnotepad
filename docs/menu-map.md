@@ -115,3 +115,5 @@ wxnotepad retains these specific placements:
   All Levels, Alt+C for Current Block, and Alt+1 through Alt+9 for those levels.
 - Goto Selection Start/End now have visible entries at the original Goto positions,
   retaining Ctrl+Shift+Comma and Ctrl+Shift+Period.
+- Tools > Web Tools exposes CSS/JS/JSON Compress and Pretty in their original
+  order; only schemes carrying the original CodePretty capability enable them.

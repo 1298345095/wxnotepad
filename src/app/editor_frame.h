@@ -140,6 +140,7 @@ private:
     wxMenu* CreateSearchMenu();
     wxMenu* CreateSettingsMenu();
     wxMenu* CreateToolsMenu();
+    void AppendCodeFormatting(wxMenu* web);
     void AppendDocumentTools(wxMenu* tools);
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();

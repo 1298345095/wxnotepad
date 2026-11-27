@@ -152,6 +152,10 @@ wxMenu* EditorFrame::CreateToolsMenu() {
             id);
     }
     tools->AppendSubMenu(base64, _("&Base64"));
+    auto* web = new wxMenu;
+    AppendCodeFormatting(web);
+    // TRANSLATORS: Original Tools/Web Tools submenu.
+    tools->AppendSubMenu(web, _("&Web Tools"));
     return tools;
 }
 
