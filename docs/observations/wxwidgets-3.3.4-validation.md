@@ -81,6 +81,13 @@ checks passed once in 17.75 seconds and three monitored runs passed in
 15.81–16.40 seconds; the 3.3.3 control passed in 17.27 seconds. These are
 correctness checks, not benchmark results. They do not establish a timeout fix.
 
+A separate owned copy used Windows 11's per-process `activeCodePage=en-US`
+manifest setting while retaining the original manifest's other entries.
+The fixture confirmed GetACP=1252 (matching hosted Windows) and passed the
+complete original case. The ordinary host uses CP936. This excludes the code
+page difference alone as a local reproducer; no application manifest setting
+is changed by the PR.
+
 The fixture now flushes its major phases and reuses the existing external
 Windows hang monitor to capture at 45 seconds before the original timeout.
 The hosted artifact retains the dump and matching executable. All 498 captured

@@ -241,6 +241,9 @@ void CommandStates(EditorFrame* frame) {
         "PASS: Base64 command availability, original empty/read-only/rectangle/zero-result and pending Redo rules");
 }
 void NativeAnsiBytes(EditorFrame* frame) {
+#ifdef __WXMSW__
+    DiagnosticPrint::Print(stderr, "Base64 native ANSI code page: {}\n", GetACP());
+#endif
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
     Require(frame->NewDocument(), "start native ANSI byte preservation scenarios");
