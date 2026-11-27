@@ -64,6 +64,14 @@ screenshots. Windows captures temporarily raise only the verified owned dialog t
 topmost and restore its prior state. Existing manual-backup, watcher and document
 lifecycle suites remain applicable.
 
+The interval-reset fixture uses 5,000/3,000 ms periods and 3,500/2,000 ms waits
+to leave room for native dialog presentation and event dispatch while checking
+across the old deadline and before the restarted one. Real 125 ms timer cases,
+all functional assertions, the two-second eventual-backup wait and 90-second
+case guard remain. The user-approved adjustment and deliberate no-reset
+control are recorded in the
+[wxWidgets validation follow-up](wxwidgets-3.3.4-validation.md#periodic-backup-interval-reset-observation).
+
 The November 18, 2026 isolated original capture recorded actual 120 ms periodic
 timers, unchanged-revision skipping, seventh-file rotation, manual retention and
 ordinary-save cleanup under

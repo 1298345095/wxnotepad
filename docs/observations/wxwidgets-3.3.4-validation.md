@@ -1,4 +1,4 @@
-# wxWidgets 3.3.4 modal, accelerator and Escape observations
+# wxWidgets 3.3.4 validation observations
 
 The first PR284 coverage run failed `original_run_command` and
 `original_default_fonts` on both Linux backends:
@@ -120,6 +120,41 @@ clang-tidy completed with the project's blocking checks preserved.
 The first hosted timeout did not retain a dump, so its exact cause remains
 unconfirmed. This controlled replay fixes a proven matching timeout path;
 passing reruns alone are not treated as proof of the first timeout's cause.
+
+## Periodic-backup interval-reset observation
+
+Final-state run
+[45945472851](https://github.com/1298345095/wxnotepad/actions/runs/45945472851)
+passes Windows, ordinary Linux and X11 coverage, plus Quality, CodeQL and Fuzz.
+Only Wayland coverage fails `original_periodic_backup` at the interval-reset
+no-backup assertion; Sonar is consequently blocked before analysis.
+
+The old fixture sets a 500 ms period, waits 350 ms, changes it through the real
+settings dialog to 300 ms, and pumps another 200 ms before requiring no backup.
+Native dialog/event dispatch can consume its remaining 150/100 ms margins.
+A controlled 150 ms delay after the settings return reproduces the same
+assertion despite a correct timer: native receipts show the new timer starting
+at 345457973 ms, the backup at 345458276 ms (303 ms later), and the assertion
+after 345458328 ms. The hosted run lacks these receipts, so its exact delayed
+boundary is not established by the original log alone.
+
+The user approved scaling this fixture's periods/waits to
+5,000/3,000 ms and 3,500/2,000 ms. The sequence still crosses the old deadline
+before the no-backup observation and remains before the restarted deadline,
+with wider native scheduling margins. Failure output records actual settings
+and subsequent wait durations. All functional assertions, other inputs
+(including real 125 ms periodic/continuous-edit/rotation checks), the existing
+two-second eventual-backup wait, 90-second case guard and default concurrency
+are retained. Product timer code is unchanged; wxGTK's timer implementation
+also has no 3.3.3-to-3.3.4 change.
+
+The complete candidate passes Windows/X11/Wayland in 15.49/14.33/18.07 seconds.
+The same injected 150 ms delay passes in 18.04 seconds. Deliberately suppressing
+only the new interval's reset still fails the original no-backup assertion in
+9.12 seconds; restoring correct product code and rebuilding passes in
+18.05 seconds. All temporary delay, timer receipts and product fault injection
+are removed. The exact approved proposal, patch and controls are retained under
+`ci-284/periodic/` in the local evidence root below.
 
 ## Approval and validation
 
