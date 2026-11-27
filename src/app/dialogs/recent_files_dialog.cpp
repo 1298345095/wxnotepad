@@ -77,8 +77,7 @@ void RecentFilesDialog::RefreshFiles() {
 void RecentFilesDialog::Accept() {
     const long selected = files_->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (selected < 0) return;
-    const auto path = files_->GetItemText(selected);
-    if (wxFileExists(path)) {
+    if (const auto path = files_->GetItemText(selected); wxFileExists(path)) {
         selectedPath_ = path;
         EndModal(wxID_OK);
         return;

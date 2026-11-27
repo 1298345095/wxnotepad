@@ -539,7 +539,7 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
             wxEVT_MENU,
             [this, theme](wxCommandEvent&) {
                 if (!settings_ || settings_->values.fonts.theme == theme) return;
-                auto& preferences = settings_->values;
+                const auto& preferences = settings_->values;
                 const bool saved = settings_->SwitchStyleTheme(theme);
                 editor_->SetFontSettings(preferences.fonts);
                 ApplySyntaxStyles(*editor_, document_.Language());

@@ -62,7 +62,8 @@ bool LaunchDesktopApplication(GAppInfo* application, const wxString& target, con
 }
 #endif
 
-bool LaunchDesktopTarget(wxWindow& parent, const wxString& target, const wxString& workingDirectory, wxString& error) {
+bool LaunchDesktopTarget(const wxWindow& parent, const wxString& target, const wxString& workingDirectory,
+                         wxString& error) {
 #ifdef __WXMSW__
     SHELLEXECUTEINFOW launch{};
     launch.cbSize = sizeof(launch);

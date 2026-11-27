@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
+#include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
@@ -63,7 +64,7 @@ constexpr auto fileEncodings = std::to_array<FileEncodingInfo>({
 });
 static_assert([] {
     for (size_t index = 0; index < fileEncodings.size(); ++index) {
-        if (static_cast<size_t>(fileEncodings[index].encoding) != index) return false;
+        if (static_cast<size_t>(std::to_underlying(fileEncodings[index].encoding)) != index) return false;
     }
     return true;
 }());
@@ -419,7 +420,7 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
 } // namespace
 
 const FileEncodingInfo& FindFileEncodingInfo(FileEncoding encoding) {
-    return fileEncodings[static_cast<size_t>(encoding)];
+    return fileEncodings[static_cast<size_t>(std::to_underlying(encoding))];
 }
 
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {

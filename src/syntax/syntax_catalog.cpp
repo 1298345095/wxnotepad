@@ -1042,19 +1042,24 @@ constexpr auto definitions = std::to_array<SyntaxDefinition>({
 });
 
 constexpr auto definitionIndices = [] {
-    constexpr auto count = static_cast<size_t>(SyntaxLanguage::Count);
+    constexpr auto count = static_cast<size_t>(std::to_underlying(SyntaxLanguage::Count));
     static_assert(definitions.size() == count);
     std::array<size_t, count> indices{};
-    std::array<bool, count> seen{};
     for (size_t index = 0; index < definitions.size(); ++index) {
-        const auto key = static_cast<size_t>(definitions[index].language);
+        const auto key = static_cast<size_t>(std::to_underlying(definitions[index].language));
         indices[key] = index;
-        seen[key] = true;
     }
-    for (const bool present : seen)
-        if (!present) throw "missing syntax catalog entry";
     return indices;
 }();
+static_assert(
+    [] {
+        for (size_t key = 0; key < definitionIndices.size(); ++key) {
+            if (static_cast<size_t>(std::to_underlying(definitions[definitionIndices[key]].language)) != key)
+                return false;
+        }
+        return true;
+    }(),
+    "missing syntax catalog entry");
 
 } // namespace
 
@@ -1075,7 +1080,7 @@ std::vector<const SyntaxDefinition*> SyntaxMenuMembers(SyntaxMenuFamily family) 
 }
 
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
-    return definitions[definitionIndices[static_cast<size_t>(language)]];
+    return definitions[definitionIndices[static_cast<size_t>(std::to_underlying(language))]];
 }
 
 std::optional<SyntaxLanguage> SyntaxFromOriginalSchemeId(int identity) {
