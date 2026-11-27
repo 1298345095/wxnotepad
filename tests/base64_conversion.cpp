@@ -14,6 +14,11 @@
 #include <wx/modalhook.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/log.h>
+#ifdef __WXMSW__
+#include <semaphore>
+#include <thread>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -21,6 +26,11 @@ constexpr std::array<const char*, 5> labels = {"Standard Encode", "URL Safe Enco
                                                "Decode", "Decode as Hex"};
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
+}
+void Progress(const char* phase) {
+    std::fprintf(stderr, "Base64 stage: %s\n", phase);
+    std::fflush(stderr);
+    std::fflush(stdout);
 }
 void Menu(EditorFrame* frame, const char* label) {
     const int id = frame->GetMenuBar()->FindMenuItem("Tools", label);
@@ -144,7 +154,32 @@ public:
         }
     }
 };
-std::string ObserveCharacterInfo(EditorFrame* frame) {
+#ifdef __WXMSW__
+class BusyClipboard final {
+public:
+    BusyClipboard()
+        : worker_([this](std::stop_token stop) {
+              locked_ = OpenClipboard(nullptr) != FALSE;
+              ready_.release();
+              if (!locked_) return;
+              const auto until = std::chrono::steady_clock::now() + MaximumHold;
+              while (!stop.stop_requested() && std::chrono::steady_clock::now() < until)
+                  wxMilliSleep(1);
+              CloseClipboard();
+          }) {
+        ready_.acquire();
+        Require(locked_, "acquire the native clipboard before the actual Character Info copy");
+    }
+
+private:
+    static constexpr auto MaximumHold = std::chrono::seconds(3);
+    std::binary_semaphore ready_{0};
+    bool locked_ = false;
+    std::jthread worker_;
+};
+#endif
+std::string ObserveCharacterInfo(EditorFrame* frame, [[maybe_unused]] bool busyClipboard = false) {
+    Progress("native ANSI character information");
 #ifdef __WXGTK__
     NativeKeys::Shortcut(frame, 'A', true); // Gives Wayland the real owned input serial for clipboard publication.
 #endif
@@ -156,8 +191,13 @@ std::string ObserveCharacterInfo(EditorFrame* frame) {
     }
     const int command = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
     Require(command != wxNOT_FOUND, "reachable native Character Info command exists");
+#ifdef __WXMSW__
+    std::unique_ptr<BusyClipboard> busy;
+    if (busyClipboard) busy = std::make_unique<BusyClipboard>();
+#endif
     CharacterFeedback feedback;
     NativeSearch::Command(frame, command);
+    Progress("native ANSI character information returned");
     Require(feedback.shown == 1 && !feedback.payload.empty(), "native Character Info displays its technical payload");
     wxTextDataObject copied;
     {
@@ -234,6 +274,9 @@ void CommandStates(EditorFrame* frame) {
         "PASS: Base64 command availability, original empty/read-only/rectangle/zero-result and pending Redo rules");
 }
 void NativeAnsiBytes(EditorFrame* frame) {
+#ifdef __WXMSW__
+    DiagnosticPrint::Print(stderr, "Base64 native ANSI code page: {}\n", GetACP());
+#endif
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
     Require(frame->NewDocument(), "start native ANSI byte preservation scenarios");
@@ -374,147 +417,25 @@ void NativeAnsiBytes(EditorFrame* frame) {
     std::puts("PASS: logical native ANSI preserves arbitrary decoded bytes and Undo/Redo Save; explicit encoding rules "
               "retain their boundaries");
 }
-#ifdef __WXMSW__
-std::string HexBytes(std::string_view bytes) {
-    constexpr char digits[] = "0123456789abcdef";
-    std::string result;
-    for (const unsigned char byte : bytes) {
-        result += digits[byte >> 4];
-        result += digits[byte & 15];
-    }
-    return result;
-}
-class AnsiWarning final : public wxTimer {
-public:
-    explicit AnsiWarning(int response) : response_(response) { Start(20); }
-    int shown = 0;
-    void Notify() override {
-        for (auto* window : wxTopLevelWindows) {
-            auto* dialog = wxDynamicCast(window, wxDialog);
-            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Encoding character loss") continue;
-            Stop();
-            ++shown;
-            for (auto* child : dialog->GetChildren())
-                if (auto* text = wxDynamicCast(child, wxStaticText))
-                    std::printf("notification=%s\n", text->GetLabel().utf8_str().data());
-            NativeSearch::Click(dialog, response_);
-            return;
-        }
-    }
-
-private:
-    int response_;
-};
-void AnsiInvalidProbe(EditorFrame* frame, const wxString& output) {
-    const auto directory = std::filesystem::path(output.ToStdWstring());
-    std::filesystem::create_directories(directory);
-    const auto path = directory / "ansi.txt";
-    TestFiles::WriteBytes(path, "");
-    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
-            "open empty named ANSI diagnostic");
-    const int native = frame->GetMenuBar()->FindMenuItem("File", "ANSI");
-    Require(native != wxNOT_FOUND && GetACP() == 936, "focused original ANSI sample requires its actual CP936 locale");
-    NativeSearch::Command(frame, native);
-    auto* editor = frame->Editor();
-    TestEditor::ResetStream(editor, "gQ==", 0, 4);
-    Require(frame->Save().status == SaveStatus::Saved, "save ASCII diagnostic baseline");
-    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    std::printf("native_checked=%d encoding=%d core_codepage=%lld baseline=%s\n",
-                frame->GetMenuBar()->IsChecked(native), static_cast<int>(frame->DocumentEncoding()),
-                static_cast<long long>(editor->Send(Message::GetCodePage)), HexBytes(TestFiles::Bytes(path)).c_str());
-    Menu(frame, "Decode");
-    std::printf("decoded=%s anchor=%lld caret=%lld modified=%lld undo=%lld redo=%lld\n",
-                HexBytes(TestEditor::Text(editor)).c_str(), static_cast<long long>(editor->Send(Message::GetAnchor)),
-                static_cast<long long>(editor->Send(Message::GetCurrentPos)),
-                static_cast<long long>(editor->Send(Message::GetModify)),
-                static_cast<long long>(editor->Send(Message::CanUndo)),
-                static_cast<long long>(editor->Send(Message::CanRedo)));
-    {
-        AnsiWarning warning(wxID_CANCEL);
-        const auto status = frame->Save().status;
-        std::printf("cancel_save_status=%d notifications=%d disk=%s\n", static_cast<int>(status), warning.shown,
-                    HexBytes(TestFiles::Bytes(path)).c_str());
-    }
-    {
-        AnsiWarning warning(wxID_OK);
-        const auto status = frame->Save().status;
-        std::printf("accept_save_status=%d notifications=%d disk=%s\n", static_cast<int>(status), warning.shown,
-                    HexBytes(TestFiles::Bytes(path)).c_str());
-    }
-    TestEditor::ResetStream(editor, "wg==", 0, 4);
-    Require(frame->Save().status == SaveStatus::Saved, "save byte-composition baseline");
-    Menu(frame, "Decode");
-    std::printf("pair_first=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
-    editor->Send(Message::AppendText, 4, reinterpret_cast<intptr_t>("oA=="));
-    editor->Send(Message::SetSel, 1, 5);
-    Menu(frame, "Decode");
-    std::printf("pair_second=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
-                static_cast<long long>(editor->Send(Message::GetAnchor)),
-                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
-    const auto savePair = [&](const char* phase) {
-        AnsiWarning warning(wxID_OK);
-        const auto status = frame->Save().status;
-        std::printf("pair_%s_status=%d notifications=%d disk=%s\n", phase, static_cast<int>(status), warning.shown,
-                    HexBytes(TestFiles::Bytes(path)).c_str());
-    };
-    savePair("save");
-    editor->Send(Message::Undo);
-    std::printf("pair_undo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
-    savePair("undo_save");
-    editor->Send(Message::Redo);
-    std::printf("pair_redo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
-    savePair("redo_save");
-    TestEditor::ResetStream(editor, "wg==\noA==", 0, 4, Scintilla::EndOfLine::Lf);
-    Require(frame->Save().status == SaveStatus::Saved, "save real line-boundary composition baseline");
-    Menu(frame, "Decode");
-    editor->Send(Message::SetSel, 2, 6);
-    Menu(frame, "Decode");
-    std::printf("lines_decoded=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
-    editor->Send(Message::GotoPos, 2);
-    Backspace(frame);
-    std::printf("lines_backspace=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
-                static_cast<long long>(editor->Send(Message::GetAnchor)),
-                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
-    savePair("lines_save");
-    editor->Send(Message::Undo);
-    std::printf("lines_undo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
-    savePair("lines_undo_save");
-    editor->Send(Message::Redo);
-    std::printf("lines_redo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
-    savePair("lines_redo_save");
-    editor->Send(Message::SelectAll);
-    Menu(frame, "Standard Encode");
-    std::printf("lines_encoded=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
-                static_cast<long long>(editor->Send(Message::GetAnchor)),
-                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SelectAll);
-    const int hex = frame->GetMenuBar()->FindMenuItem("Edit", "Show Hex Code");
-    NativeSearch::Command(frame, hex);
-    std::printf("lines_hex=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
-                static_cast<long long>(editor->Send(Message::GetAnchor)),
-                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 0, 0);
-    std::printf("lines_info_hex=%s\n", HexBytes(ObserveCharacterInfo(frame)).c_str());
-}
-#endif
 class Base64App final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        // Retain clipboard errors in the test output instead of opening a
+        // second, undriven wxLogGui dialog after an assertion fails.
+        std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
+        previousLog.reset();
+#endif
         auto* frame = new EditorFrame(&settings_);
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "private compositor presents the owned editor");
 #ifdef __WXMSW__
-                wxString diagnostic;
-                if (wxGetEnv("WXNOTEPAD_BASE64_ANSI_PROBE", &diagnostic)) {
-                    AnsiInvalidProbe(frame, diagnostic);
-                    result_ = 0;
-                    frame->Editor()->Send(Message::SetSavePoint);
-                    frame->Destroy();
-                    return;
+                if (argc == 2 && argv[1] == "--clipboard-contention") {
+                    TestEditor::ResetStream(frame->Editor(), "A", 0, 1);
+                    ObserveCharacterInfo(frame, true);
+                    Require(false, "contended clipboard copy must retain its failing assertion");
                 }
 #endif
                 TestEditor::ResetStream(frame->Editor(), "abc", 0, 3);
@@ -524,14 +445,18 @@ public:
                 Require(frame->NewDocument(), "start unnamed original-path sample");
                 frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
                 Require(frame->DocumentEncoding() == FileEncoding::Utf8, "use the original UTF-8 edit buffer");
+                Progress("498 captured command samples");
                 CapturedCommands(frame);
+                Progress("command availability and selection states");
                 CommandStates(frame);
+                Progress("native ANSI byte preservation");
                 NativeAnsiBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);
+            Progress("destroy frame");
             frame->Destroy();
         });
         return true;

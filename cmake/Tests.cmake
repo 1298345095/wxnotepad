@@ -15,3 +15,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/tests/NativeRegressions.cmake")
 add_gui_program(syntax_detection tests/syntax_detection.cpp editor_runtime)
 add_test(NAME syntax_detection_contracts COMMAND syntax_detection)
 set_tests_properties(syntax_detection_contracts PROPERTIES TIMEOUT 30)
+
+if(WIN32)
+    add_test(NAME native_base64_clipboard_error COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/base64_clipboard_error.py" "$<TARGET_FILE:base64_conversion>")
+    set_tests_properties(native_base64_clipboard_error PROPERTIES TIMEOUT 20)
+endif()

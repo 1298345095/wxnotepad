@@ -195,12 +195,21 @@ void IntervalReset(EditorFrame& frame, const fs::path& root) {
     const auto source = folder / "source.txt";
     TestFiles::WriteBytes(source, "interval");
     Require(frame.Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "opens interval-reset fixture");
-    SetOptions(frame, true, false, "0.5");
+    // Leave room for native dialog presentation and event-loop scheduling
+    // while still observing after the old deadline and before the new one.
+    constexpr long BeforeChangeWaitMilliseconds = 3500;
+    constexpr long AfterChangeWaitMilliseconds = 2000;
+    SetOptions(frame, true, false, "5.0");
     TestEditor::Append(&frame, "changed");
-    Pump(350);
-    Require(Backups(folder).empty(), "original half-second period has not expired");
-    SetOptions(frame, true, false, "0.3");
-    Pump(200);
+    Pump(BeforeChangeWaitMilliseconds);
+    Require(Backups(folder).empty(), "original period has not expired");
+    TestClock::StopWatch reconfigure;
+    SetOptions(frame, true, false, "3.0");
+    const auto settingsMilliseconds = reconfigure.Time();
+    Pump(AfterChangeWaitMilliseconds);
+    if (!Backups(folder).empty())
+        std::fprintf(stderr, "interval reset: settings=%ldms, after-settings=%ldms, backups=%zu\n",
+                     settingsMilliseconds, reconfigure.Time() - settingsMilliseconds, Backups(folder).size());
     Require(Backups(folder).empty(), "changing interval resets the running timer rather than keeping its old deadline");
     Wait([&folder] { return Backups(folder).size() == 1; }, "changed interval produces a backup at its new deadline");
     SetOptions(frame, true, false, "0");

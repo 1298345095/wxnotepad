@@ -1,13 +1,15 @@
 # Locked wxWidgets stock catalogs
 
-These PO files are verbatim copies from wxWidgets 3.3.3, the application's locked
+These PO files are verbatim copies from wxWidgets 3.3.4, the application's locked
 SDK version, distributed under the wxWidgets package license. The original
 copyright and translator notices remain in each PO. The package license is
 included in [licenses/wxWidgets.txt](../../licenses/wxWidgets.txt), and the artifact
 bundler retains that notice.
 
-Canonical source tree: `E:/NewNotepad4/wx-v3.3.3/locale/` (unpacked wxWidgets 3.3.3).
-Upstream release: https://github.com/wxWidgets/wxWidgets/releases/tag/v3.3.3
+Canonical source: `locale/` at tag `v3.3.4` in `E:/NewNotepad4/wxWidgets`.
+Upstream release: https://github.com/wxWidgets/wxWidgets/releases/tag/v3.3.4
+Both catalogs are byte-identical to the previous 3.3.3 imports; their hashes and
+translator notices remain unchanged.
 
 | File | SHA-256 of imported bytes |
 | --- | --- |

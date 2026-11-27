@@ -24,7 +24,7 @@ focus, clipboard ownership, IME and window lifetime.
 
 ## Local build
 
-Use the existing wxWidgets 3.3.3 dependency and prepared original source. On
+Use the existing wxWidgets 3.3.4 dependency and prepared original source. On
 Ubuntu 26.04 the test tools are `clang-21`, `llvm-21` and `libclang-rt-21-dev`.
 Prepare the source with the existing `tools/build.py --prepare-only` entry point,
 then configure a separate build directory:

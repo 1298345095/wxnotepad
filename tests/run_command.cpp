@@ -15,7 +15,10 @@ void Require(bool condition, const char* message) {
 }
 class DialogDriver final : public wxModalDialogHook {
 public:
-    explicit DialogDriver(std::function<void(wxDialog*)> action) : action_(std::move(action)) { Register(); }
+    explicit DialogDriver(std::function<void(wxDialog*)> action, std::function<void(wxDialog*)> exited = {})
+        : action_(std::move(action)), exited_(std::move(exited)) {
+        Register();
+    }
     int Enter(wxDialog* dialog) override {
         if (dialog->GetTitle() == "Run Command") {
             opened = true;
@@ -30,6 +33,14 @@ public:
         }
         return wxID_NONE;
     }
+    void Exit(wxDialog* dialog) override {
+        if (dialog->GetTitle() != "Run Command" || !exited_) return;
+        try {
+            exited_(dialog);
+        } catch (...) {
+            if (!failure_) failure_ = std::current_exception();
+        }
+    }
     bool opened = false;
     void Check() const {
         if (failure_) std::rethrow_exception(failure_);
@@ -37,6 +48,7 @@ public:
 
 private:
     std::function<void(wxDialog*)> action_;
+    std::function<void(wxDialog*)> exited_;
     std::exception_ptr failure_;
 };
 void InitialCommand(EditorFrame* frame) {
@@ -240,17 +252,25 @@ void LiteralNamedPrograms(EditorFrame* frame) {
         const auto record = directory / (std::string(name) + ".record");
         wxSetEnv("WXNOTEPAD_RUN_RECORD", TestFiles::Filename(record));
         wxSetEnv("WXNOTEPAD_RUN_DOCUMENT", frame->DocumentPath());
-        DialogDriver driver([](wxDialog* dialog) {
-            auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
-            input->SetValue(input->GetValue() + " 'literal argument'");
-            NativeSearch::Click(dialog, wxID_OK);
-            if (dialog->IsModal()) {
-                NativeSearch::Click(dialog, wxID_CANCEL);
-                throw std::runtime_error("named-document prefill launches its literal executable path");
-            }
-        });
+        bool exited = false;
+        DialogDriver driver(
+            [](wxDialog* dialog) {
+                auto* input = wxDynamicCast(wxWindow::FindWindowByName("Command", dialog), wxTextCtrl);
+                input->SetValue(input->GetValue() + " 'literal argument'");
+                NativeSearch::Click(dialog, wxID_OK);
+                if (dialog->IsShown()) {
+                    NativeSearch::Click(dialog, wxID_CANCEL);
+                    throw std::runtime_error("named-document prefill launches its literal executable path");
+                }
+            },
+            [&exited](wxDialog* dialog) {
+                Require(!dialog->IsModal() && !dialog->IsShown() && dialog->GetReturnCode() == wxID_OK,
+                        "named-document launch finishes the modal loop with OK and a hidden window");
+                exited = true;
+            });
         NativeSearch::Command(frame, id);
         driver.Check();
+        Require(exited, "named-document launch completes its modal exit observation");
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
         while (!std::filesystem::exists(record) && std::chrono::steady_clock::now() < deadline) {
             wxYield();

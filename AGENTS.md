@@ -12,7 +12,7 @@ Prefer reusing suitable code from Notepad4 and wxSTC. Let project requirements a
 
 When developing on this machine, read upstream source code from these directories:
 
-- wxWidgets: `E:\NewNotepad4\wx-v3.3.3`
+- wxWidgets: `E:\NewNotepad4\wxWidgets` (use the pinned release tag when comparing with the SDK)
 - Notepad4: `E:\NewNotepad4\notepad4`
 
 ### Issue tracker

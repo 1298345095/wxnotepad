@@ -16,7 +16,9 @@ public:
     bool seen = false;
     int modifiers = wxMOD_NONE;
     int FilterEvent(wxEvent& event) override {
-        if (event.GetEventType() == wxEVT_KEY_DOWN) {
+        // Menu accelerators can consume the key before wxEVT_KEY_DOWN. Observe
+        // the same physical shortcut before accelerator dispatch instead.
+        if (event.GetEventType() == wxEVT_CHAR_HOOK) {
             const auto& key = static_cast<wxKeyEvent&>(event);
             if (key.GetKeyCode() == WXK_F12) {
                 seen = true;

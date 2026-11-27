@@ -1,0 +1,31 @@
+diff --git a/src/gtk/wayland.cpp b/src/gtk/wayland.cpp
+--- a/src/gtk/wayland.cpp
++++ b/src/gtk/wayland.cpp
+@@ -32,6 +32,14 @@
+ // C++, resulting in warnings, so disable them.
+ wxGCC_WARNING_SUPPRESS(attributes)
+ 
++// These generated xdg-shell objects are also defined by static GDK. Give
++// wxWidgets' private copies distinct C symbols; the protocol names on the wire
++// stay unchanged. Apply the aliases to all generated protocol references.
++#define xdg_popup_interface wx_xdg_popup_interface
++#define xdg_positioner_interface wx_xdg_positioner_interface
++#define xdg_surface_interface wx_xdg_surface_interface
++#define xdg_toplevel_interface wx_xdg_toplevel_interface
++
+ #include "wx/protocols/pointer-warp-v1-client-protocol.c"
+ 
+ #if defined(wxHAVE_WAYLAND_SESSION_MANAGEMENT) || \
+@@ -47,6 +55,11 @@
+ #include "wx/protocols/xdg-toplevel-drag-v1-client-protocol.c"
+ #endif // wxHAVE_WAYLAND_TOPLEVEL_DRAG
+ 
++#undef xdg_popup_interface
++#undef xdg_positioner_interface
++#undef xdg_surface_interface
++#undef xdg_toplevel_interface
++
+ wxGCC_WARNING_RESTORE(attributes)
+ 
+ constexpr const char* TRACE_WAYLAND = "wayland";
+

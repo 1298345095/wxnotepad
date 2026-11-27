@@ -1,8 +1,13 @@
+set(platform_patches)
+if(VCPKG_TARGET_IS_LINUX)
+    list(APPEND platform_patches gtk-static-wayland-symbols.patch)
+endif()
+
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO wxWidgets/wxWidgets
     REF "v${VERSION}"
-    SHA512 c497d6642d6f9fb7f190ab725e3c5ee0e67e96c883eebbe2d7fa7e0b3dec9847871010e53e23c5d46b9158b8a045f162592d0c25f524daedeaca8c1caa555a5a
+    SHA512 6a5cf817826b2a11b396b730211471d78b7ae5a0ee5eafdb36438ff0adbd9bd5d0fb9f55bda45b00f5116d051f6b6740621ca7414005fcdec8a12ec655487592
     HEAD_REF master
     PATCHES
         install-layout.patch
@@ -13,8 +18,7 @@ vcpkg_from_github(
         gtk3-link-libraries.patch
         sdl2.patch
         libsecret-link-dirs.patch
-        fix-wayland-build.patch # https://github.com/wxWidgets/wxWidgets/commit/c70a840f3a6dc288ff968ecd6f37df7251039483
-        msw-fswatcher-removal-lock.patch
+        ${platform_patches}
 )
 
 vcpkg_check_features(
@@ -243,13 +247,13 @@ foreach(config IN LISTS configs)
     vcpkg_replace_string("${config}" "${CURRENT_INSTALLED_DIR}/debug" [[${prefix}]])
 endforeach()
 
-# wxWidgets 3.3.3's wx_get_dependencies (build/cmake/config.cmake) leaks raw
+# wxWidgets 3.3.4's wx_get_dependencies (build/cmake/config.cmake) leaks raw
 # CMake target names into wx-config's LIBS for imported deps that lack an
 # IMPORTED_LOCATION (i.e. vcpkg's header-only NanoSVG), producing entries like
 # "-lNanoSVG::nanosvg" that later trip target_link_libraries in downstream
 # projects. Strip those; vcpkg-cmake-wrapper.cmake re-adds the real
-# NanoSVG::nanosvg{,rast} targets for static builds. Fix targeted for wx 3.3.4
-# (see wxwidgets/wxWidgets#23373).
+# NanoSVG::nanosvg{,rast} targets for static builds. The upstream 3.3.4 release
+# still needs this workaround (see wxWidgets/wxWidgets#23373).
 file(GLOB all_configs LIST_DIRECTORIES false
     "${CURRENT_PACKAGES_DIR}/lib/wx/config/*"
     "${CURRENT_PACKAGES_DIR}/debug/lib/wx/config/*"
