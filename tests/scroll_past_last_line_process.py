@@ -1,18 +1,18 @@
 """Import, save and reopen original integer scroll modes in independent GUI processes."""
+
 import argparse
-from contextlib import ExitStack
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from contextlib import ExitStack
+from pathlib import Path
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
-    parser.add_argument("--installed-directory", type=Path,
-                        default=os.environ.get("WXNOTEPAD_INSTALLED_TEST_DIR"))
+    parser.add_argument("--installed-directory", type=Path, default=os.environ.get("WXNOTEPAD_INSTALLED_TEST_DIR"))
     args = parser.parse_args()
     source = args.executable.resolve()
     with ExitStack() as stack:
@@ -30,19 +30,35 @@ def main():
         ini = config_folder / "Notepad4.ini"
 
         def run(expected, action="keep", explicit=False):
-            result = subprocess.run([str(executable), str(expected), str(action), "explicit" if explicit else "exit"],
-                                    env=environment, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                [str(executable), str(expected), str(action), "explicit" if explicit else "exit"],
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
             assert result.returncode == 0, result.stdout + result.stderr
 
         # raw INI value, original normalized value, native menu mode, save-on-exit, explicit save
-        cases = [(None, 1, "keep", True, False), ("0", 0, "keep", True, False),
-                 ("1", 1, "keep", True, False), ("2", 2, "keep", True, False),
-                 ("3", 3, "keep", True, False), ("4", 4, "keep", True, False),
-                 ("-7", 0, "keep", True, False), ("99", 4, "keep", True, False),
-                 ("invalid", 1, "keep", True, False), ("3suffix", 3, "keep", True, False)]
+        cases = [
+            (None, 1, "keep", True, False),
+            ("0", 0, "keep", True, False),
+            ("1", 1, "keep", True, False),
+            ("2", 2, "keep", True, False),
+            ("3", 3, "keep", True, False),
+            ("4", 4, "keep", True, False),
+            ("-7", 0, "keep", True, False),
+            ("99", 4, "keep", True, False),
+            ("invalid", 1, "keep", True, False),
+            ("3suffix", 3, "keep", True, False),
+        ]
         cases += [("1", 1, mode, True, False) for mode in range(5)]
-        cases += [("2", 2, 4, False, False), ("2", 2, 4, False, True),
-                  ("3", 3, 1, False, False), ("3", 3, 1, False, True)]
+        cases += [
+            ("2", 2, 4, False, False),
+            ("2", 2, 4, False, True),
+            ("3", 3, 1, False, False),
+            ("3", 3, 1, False, True),
+        ]
         for raw, imported, action, save_on_exit, explicit in cases:
             text = "[Settings]\n; retained\nCustom=保留\n"
             if raw is not None:

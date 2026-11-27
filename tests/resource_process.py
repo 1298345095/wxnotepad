@@ -1,13 +1,16 @@
 """Independent actual-app protocol check; requires a graphical session."""
+
 import argparse
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from app_observation import AppExited, StateTimeout, publish_command as command, wait_state as observe_state
+from app_observation import AppExited, StateTimeout
+from app_observation import publish_command as command
+from app_observation import wait_state as observe_state
 from resources import native_edit
 
 
@@ -17,6 +20,7 @@ def process_windows(process):
         return []
     import ctypes
     from ctypes import wintypes
+
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
     user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
@@ -33,9 +37,12 @@ def process_windows(process):
         name = ctypes.create_unicode_buffer(256)
         user32.GetWindowTextW(handle, title, len(title))
         user32.GetClassNameW(handle, name, len(name))
-        return {"title": title.value, "class": name.value,
-                "visible": bool(user32.IsWindowVisible(handle)),
-                "enabled": bool(user32.IsWindowEnabled(handle))}
+        return {
+            "title": title.value,
+            "class": name.value,
+            "visible": bool(user32.IsWindowVisible(handle)),
+            "enabled": bool(user32.IsWindowEnabled(handle)),
+        }
 
     @callback_type
     def visit(handle, _):
@@ -66,8 +73,7 @@ def observation_context(folder, process):
             files[name] = (folder / name).read_text(encoding="utf-8")
         except (OSError, UnicodeError) as error:
             files[name] = str(error)
-    return {"pid": process.pid, "returncode": process.poll(),
-            "files": files, "windows": process_windows(process)}
+    return {"pid": process.pid, "returncode": process.poll(), "files": files, "windows": process_windows(process)}
 
 
 def wait_state(folder, process, predicate, timeout=15):
@@ -88,11 +94,15 @@ def main():
         sample = folder / "input.txt"
         original = b"visible app\nsecond line\n"
         sample.write_bytes(original)
-        process = subprocess.Popen([str(args.executable.resolve()), "--observe", str(folder),
-                                    "--startup-file", str(sample)])
+        process = subprocess.Popen(
+            [str(args.executable.resolve()), "--observe", str(folder), "--startup-file", str(sample)]
+        )
         try:
-            state = wait_state(folder, process, lambda s: s["sequence"] == "0" and
-                               (s["backend"] != "GdkWaylandDisplay" or s["active"] == "1"))
+            state = wait_state(
+                folder,
+                process,
+                lambda s: s["sequence"] == "0" and (s["backend"] != "GdkWaylandDisplay" or s["active"] == "1"),
+            )
             assert state["length"] == str(len(original)), state
             assert state["shown"] == "1" and state["dirty"] == "0", state
             assert state["active"] in ("0", "1"), state

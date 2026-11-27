@@ -1,9 +1,10 @@
 """Dispatch existing shown application menus by numeric command identity."""
+
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 from resource_process import command, wait_state
 from settings_process import Application
@@ -19,7 +20,8 @@ def main():
         executable = folder / source.name
         shutil.copy2(source, executable)
         (folder / "Notepad4.ini").write_text(
-            "[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16")
+            "[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16"
+        )
         document = folder / "numeric-menu.txt"
         document.write_bytes(b"same real Save command\n")
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])

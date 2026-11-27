@@ -1,11 +1,12 @@
 """Verify original detection settings through actual independent application processes."""
-from english_settings import english_settings
+
 import argparse
 import os
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 
+from english_settings import english_settings
 from resource_process import command, wait_state
 from settings_process import Application
 
@@ -26,7 +27,7 @@ def main():
         startup.write_bytes(original)
         # Pinned original observation: NoCGIGuess disables interpreter sniffing,
         # while .cgi still selects the original Perl association now delivered.
-        pinned_python_lexer, pinned_perl_lexer = '2', '6'
+        pinned_python_lexer, pinned_perl_lexer = "2", "6"
         cases = (
             ("", "Python", "Python"),
             ("[Styles]\nAutoSelect=0\n", "Plain Text", "Plain Text"),
@@ -37,15 +38,19 @@ def main():
             ("[Settings]\nAutoSelect=0\nNoCGIGuess=1\n", "Python", "Python"),
         )
         for settings, expected, cgi_expected in cases:
-            config.write_text(english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\n" + settings), encoding="utf-16")
+            config.write_text(
+                english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\n" + settings), encoding="utf-16"
+            )
             app = Application(executable, folder, environment, startup)
             try:
                 assert app.state["document_status"] == f"UTF-8 | {expected} | EOL: CRLF", app.state
                 for item, result in (("Python", "Python (override)"), ("Automatic", expected)):
                     app.named_menu("Scheme", item)
                     assert app.state["document_status"] == f"UTF-8 | {result} | EOL: CRLF", app.state
-                for suffix, language in ((".py", "Plain Text" if "[Styles]\nAutoSelect=0" in settings else "Python"),
-                                         (".cgi", cgi_expected)):
+                for suffix, language in (
+                    (".py", "Plain Text" if "[Styles]\nAutoSelect=0" in settings else "Python"),
+                    (".cgi", cgi_expected),
+                ):
                     candidate = folder / ("script" + suffix)
                     candidate.write_bytes(original)
                     app.sequence += 1

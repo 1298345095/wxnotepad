@@ -9,7 +9,7 @@ and retain shareable results; they do not replace local verification.
 | Workflow | Trigger | Work |
 | --- | --- | --- |
 | CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 26.04/GCC 15 builds, all registered CTest tests, development build output, parallel Linux coverage backends and one merged SonarCloud analysis |
-| Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 21 |
+| Quality | Same | clang-format 23.1.2, Ruff 0.17.6 formatting/lint, Python syntax, actionlint 1.7.12, native Linux clang-tidy 21 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
 Builds and native clang-tidy use the runner's available CPU count instead of a
@@ -699,17 +699,50 @@ commit. Manual dispatch remains available. No schedule is installed.
 ## Local checks
 
 Use the normal documented build entry point and an existing vcpkg installation.
-For the additional checks:
+Install the pinned formatting and lint tools from `.github/requirements-quality.txt`
+in a repository-local Python 3.14 virtual environment, matching the Quality job:
+
+```text
+python -m venv .ci/quality-venv
+```
+
+Use `python3` to create the environment on Linux. Activate it with
+`source .ci/quality-venv/bin/activate` on Linux,
+`source .ci/quality-venv/Scripts/activate` in Windows Git Bash, or
+`.ci\quality-venv\Scripts\Activate.ps1` in PowerShell. Then install the tools:
+
+```text
+python -m pip install -r .github/requirements-quality.txt
+```
+
+Run the checks from the repository root:
 
 ```text
 python -X utf8 .github/scripts/checks.py format
+ruff format --check .github/scripts tools tests
+ruff check .github/scripts tools tests
 python -m compileall -q .github/scripts tools tests
 python -m unittest discover -s tests -p 'test_*.py' -v
 actionlint
 python3 .github/scripts/checks.py tidy --build-dir /path/to/native/cmake-build
 ```
 
-The formatter command requires clang-format 23.1.2 on PATH. The analyzer defaults
+Python scripts use `ruff.toml`: Python 3.14, 120-character lines, four-space
+indentation, double quotes and LF line endings. Stable `E4`, `E7`, `E9`, `F`
+and `I` rules cover basic errors and import organization. Ruff respects Git's
+ignored build and environment directories; its cache is also ignored. Keep
+path-dependent imports after their bootstrap code, with a specific explained
+`E402` exception where needed. Explicit same-name imports preserve intentional
+re-exports used by other test drivers.
+
+To apply fixes, run `ruff check --fix .github/scripts tools tests`, review the
+changes, then run `ruff format .github/scripts tools tests`. Use the default
+safe fixes; behavior changes belong in a separate reviewed change. Pure
+formatting and import/lint cleanup should remain separate commits. Formatting
+generator scripts must not alter generated source, catalogs or reference data.
+Python compilation, helper tests and SonarCloud checks remain enabled.
+
+The C++ formatter command requires clang-format 23.1.2 on PATH. The analyzer defaults
 to clang-tidy-21; use `--executable` for another installed native analyzer. Keep
 source and compilation-database paths consistent. A local MSVC analysis needs its
 normal Visual Studio developer environment.

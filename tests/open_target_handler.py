@@ -1,7 +1,8 @@
 """Owned desktop boundary: record exact native URI without opening an application."""
+
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 root = Path(os.environ["WXNOTEPAD_OPEN_TARGET_ROOT"])
 temporary = root / "desktop-received.tmp"

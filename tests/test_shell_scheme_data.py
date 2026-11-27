@@ -1,18 +1,18 @@
 """Check the shell import's consumed lists and original style attributes."""
-from pathlib import Path
+
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from scheme_data import generate_scheme
-from scheme_data import style_initializers
+from scheme_data import generate_scheme, style_initializers
 
 
 class ShellSchemeData(unittest.TestCase):
     def test_consumed_lists_and_eol_style(self):
         # Original declaration/marker shapes, with distinguishable lexer and
         # completion data so including the completion-only group fails.
-        source = b'''static const char * const Keywords_Bash[] = {
+        source = b"""static const char * const Keywords_Bash[] = {
 "echo if "
 , // 1 bash struct
 "fi then "
@@ -31,26 +31,25 @@ KeywordAttr32(0, KeywordAttr_PreSorted) | KeywordAttr32(1, KeywordAttr_PreSorted
 EDITLEXER_HOLE(L"Shell Script", Keywords_Bash, Styles_Bash),
 L"sh; bash",
 Keywords_Bash
-};'''
+};"""
         # Keep each upstream style record on one line, as in pinned stlBash.cpp.
-        source = source.replace(b'NP2StyleX_String,\n  L', b'NP2StyleX_String, L')
-        output = generate_scheme(source, 'Bash', 'Bash', 'bash')
+        source = source.replace(b"NP2StyleX_String,\n  L", b"NP2StyleX_String, L")
+        output = generate_scheme(source, "Bash", "Bash", "bash")
         self.assertIn('"echo if "', output)
         self.assertIn('"fi then "', output)
-        self.assertIn('BASH_VERSION', output)
+        self.assertIn("BASH_VERSION", output)
         self.assertIn('{bashKeywords[1] ? bashKeywords[1] : "", 10U << 8U}', output)
         self.assertIn('{bashKeywords[2] ? bashKeywords[2] : "", 4U << 8U}', output)
-        self.assertIn('{SCE_SH_WORD, 0xFF8000, 0xFFFFFF, true, false, false}', output)
-        for style in ('SCE_SH_HERE_DELIM', 'SCE_SH_HERE_Q'):
-            self.assertIn('{' + style + ', 0xA46000, 0xFFFFC0, false, false, true}', output)
-        self.assertIn('licenses/Notepad4.txt', output)
-        self.assertIn('89b8b36e0ee2c23f73be922315f17261ccfbbe1a', output)
+        self.assertIn("{SCE_SH_WORD, 0xFF8000, 0xFFFFFF, true, false, false}", output)
+        for style in ("SCE_SH_HERE_DELIM", "SCE_SH_HERE_Q"):
+            self.assertIn("{" + style + ", 0xA46000, 0xFFFFC0, false, false, true}", output)
+        self.assertIn("licenses/Notepad4.txt", output)
+        self.assertIn("89b8b36e0ee2c23f73be922315f17261ccfbbe1a", output)
 
     def test_existing_generator_shape_is_preserved(self):
         styles = '{ SCE_JSON_KEYWORD, NP2StyleX_Keyword, L"bold; fore:#FF8000" },'
-        self.assertEqual(style_initializers(styles, 'SCE_JSON_'),
-                         ['    {SCE_JSON_KEYWORD, 0xFF8000, 0xFFFFFF, true},'])
+        self.assertEqual(style_initializers(styles, "SCE_JSON_"), ["    {SCE_JSON_KEYWORD, 0xFF8000, 0xFFFFFF, true},"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -1,11 +1,12 @@
 """Import and persist original folding preferences in independent real applications."""
-from english_settings import english_settings
+
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 
 
@@ -22,8 +23,13 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
     environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
     config = folder / "Notepad4.ini"
     seed = folder / "Notepad4.ini-default"
-    seed.write_text(english_settings("; retained comment\n[Settings]\nSaveSettings=0\nShowCodeFolding=0suffix\n"
-                    "HighlightCurrentBlock=0suffix\nUnrelated=keep\n[Custom]\nValue=preserved\n"), encoding="utf-16")
+    seed.write_text(
+        english_settings(
+            "; retained comment\n[Settings]\nSaveSettings=0\nShowCodeFolding=0suffix\n"
+            "HighlightCurrentBlock=0suffix\nUnrelated=keep\n[Custom]\nValue=preserved\n"
+        ),
+        encoding="utf-16",
+    )
     app = Application(executable, folder, environment)
     try:
         preferences(app, False)
@@ -40,7 +46,9 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
         app.stop()
     saved = config.read_text(encoding="utf-16")
     assert "ShowCodeFolding=" not in saved and "HighlightCurrentBlock=" not in saved, saved
-    assert all(value in saved for value in ("SaveSettings=0", "Unrelated=keep", "Value=preserved", "; retained comment")), saved
+    assert all(
+        value in saved for value in ("SaveSettings=0", "Unrelated=keep", "Value=preserved", "; retained comment")
+    ), saved
     app = Application(executable, folder, environment)
     try:
         preferences(app, True)
@@ -67,8 +75,16 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
     finally:
         app.stop()
     assert "ShowCodeFolding=0" in config.read_text(encoding="utf-16")
-    for value, expected in ((None, True), ("0", False), ("1", True), ("2", True), ("-1", True),
-                            ("invalid", True), ("0suffix", False), ("1suffix", True)):
+    for value, expected in (
+        (None, True),
+        ("0", False),
+        ("1", True),
+        ("2", True),
+        ("-1", True),
+        ("invalid", True),
+        ("0suffix", False),
+        ("1suffix", True),
+    ):
         fields = "" if value is None else f"ShowCodeFolding={value}\nHighlightCurrentBlock={value}\n"
         config.write_text(english_settings("[Settings]\nSaveSettings=0\n" + fields), encoding="utf-16")
         app = Application(executable, folder, environment)
@@ -77,4 +93,6 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
             app.close()
         finally:
             app.stop()
-print("PASS: original folding defaults, prefix parsing, seed import, explicit/exit save, restart and retained INI fields")
+print(
+    "PASS: original folding defaults, prefix parsing, seed import, explicit/exit save, restart and retained INI fields"
+)

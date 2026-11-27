@@ -1,15 +1,23 @@
 """Verify original search-message suppression through independent native processes."""
+
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def run(executable, environment):
-    result = subprocess.run([str(executable)], env=environment, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, text=True, encoding="utf-8", timeout=25)
+    result = subprocess.run(
+        [str(executable)],
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        timeout=25,
+    )
     print(result.stdout, end="")
     result.check_returncode()
 

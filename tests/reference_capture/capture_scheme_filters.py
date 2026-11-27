@@ -1,15 +1,16 @@
 """Capture pinned original Scheme menus and native Open/Save filter ordering."""
+
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, CALLBACK, user, kernel
 import scheme_native_constants as win
+from original_host import CALLBACK, Original, kernel, user
 
 
 def capture(original, output, favorites="67 1 32", default=32):
@@ -20,7 +21,9 @@ def capture(original, output, favorites="67 1 32", default=32):
     shutil.copy2(original, executable)
     (portable / "Notepad4.ini").write_text(
         "[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n"
-        f"[Styles]\nFavoriteSchemes={favorites}\nDefaultScheme={default}\nAutoSelect=1\n", encoding="utf-16")
+        f"[Styles]\nFavoriteSchemes={favorites}\nDefaultScheme={default}\nAutoSelect=1\n",
+        encoding="utf-16",
+    )
     user.GetThreadDesktop.argtypes = [w.DWORD]
     user.GetThreadDesktop.restype = w.HANDLE
     kernel.GetCurrentThreadId.restype = w.DWORD
@@ -53,6 +56,7 @@ def capture(original, output, favorites="67 1 32", default=32):
             found = []
             while time.monotonic() < deadline:
                 found.clear()
+
                 @CALLBACK
                 def visit(hwnd, _):
                     pid = w.DWORD()
@@ -62,13 +66,15 @@ def capture(original, output, favorites="67 1 32", default=32):
                     if pid.value == app.process.pid and kind.value == "#32770" and user.IsWindowVisible(hwnd):
                         found.append(hwnd)
                     return True
+
                 user.EnumDesktopWindows(desktop, visit, 0)
                 if found:
                     break
-                time.sleep(.02)
+                time.sleep(0.02)
             assert len(found) == 1, (title, "owned native file dialog appeared")
             dialog = found[0]
             filters = []
+
             @CALLBACK
             def child(hwnd, _):
                 kind = c.create_unicode_buffer(128)
@@ -83,20 +89,24 @@ def capture(original, output, favorites="67 1 32", default=32):
                         user.SendMessageW(hwnd, win.CB_GETLBTEXT, index, c.addressof(value))
                         entries.append(value.value)
                     if entries and any(" (*" in value for value in entries):
-                        filters.append({"selected": user.SendMessageW(hwnd, win.CB_GETCURSEL, 0, 0), "entries": entries})
+                        filters.append(
+                            {"selected": user.SendMessageW(hwnd, win.CB_GETCURSEL, 0, 0), "entries": entries}
+                        )
                 return True
+
             # Modern file dialogs populate their native filter control asynchronously.
             while time.monotonic() < deadline and not filters:
                 user.EnumChildWindows(dialog, child, 0)
                 if not filters:
-                    time.sleep(.03)
+                    time.sleep(0.03)
             assert len(filters) == 1, (title, filters)
             flags = win.SWP_NOSIZE | win.SWP_NOMOVE | win.SWP_NOACTIVATE
             assert user.SetWindowPos(dialog, w.HWND(win.HWND_TOPMOST), 0, 0, 0, 0, flags)
-            time.sleep(.1)
+            time.sleep(0.1)
             rect = w.RECT()
             assert user.GetWindowRect(dialog, c.byref(rect))
             from PIL import ImageGrab
+
             ImageGrab.grab(bbox=(rect.left, rect.top, rect.right, rect.bottom)).save(output / f"{title.lower()}.png")
             assert user.SetWindowPos(dialog, w.HWND(win.HWND_NOTOPMOST), 0, 0, 0, 0, flags)
             records.append({"dialog": title, "filter": filters[0], "document": app.state()})
@@ -105,11 +115,21 @@ def capture(original, output, favorites="67 1 32", default=32):
         assert records[0]["filter"]["entries"][0].startswith("All Files"), records
         assert records[1]["filter"]["entries"][-1].startswith("All Files"), records
         assert all("TOML" not in entry for row in records for entry in row["filter"]["entries"]), records
-        (output / "observations.json").write_text(json.dumps({
-            "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
-            "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-            "favoriteSchemes": favorites, "defaultScheme": default,
-            "schemeMenu": labels, "records": records}, indent=2) + "\n", encoding="utf-8")
+        (output / "observations.json").write_text(
+            json.dumps(
+                {
+                    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+                    "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+                    "favoriteSchemes": favorites,
+                    "defaultScheme": default,
+                    "schemeMenu": labels,
+                    "records": records,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         print("PASS: independent native original fixed Scheme menu and current/text/favorite file filters")
     finally:
         app.close()

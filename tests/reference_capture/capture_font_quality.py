@@ -3,15 +3,16 @@
 Run with the shared desktop reserved. Screenshots cover only this owned editor;
 the temporary topmost state is used solely to expose its raster for capture.
 """
+
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
+from ctypes import wintypes as w
+from pathlib import Path
 from types import SimpleNamespace
 
 from original_host import Original, user
@@ -19,10 +20,12 @@ from original_host import Original, user
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from localization_layout import owned_topmost, screenshot_windows
 
-TEXT = ("Plain text: English office ffi Café 中文 😀 👩‍💻\r\n"
-        "// Comment: English office ffi Café 中文 😀 👩‍💻\r\n"
-        "Bold and italic: English office ffi Café 中文 😀 👩‍💻\r\n"
-        "Wrapped text: " + "English 中文 Café 😀 " * 14 + "\r\n")
+TEXT = (
+    "Plain text: English office ffi Café 中文 😀 👩‍💻\r\n"
+    "// Comment: English office ffi Café 中文 😀 👩‍💻\r\n"
+    "Bold and italic: English office ffi Café 中文 😀 👩‍💻\r\n"
+    "Wrapped text: " + "English 中文 Café 😀 " * 14 + "\r\n"
+)
 
 
 def capture(args):
@@ -34,8 +37,9 @@ def capture(args):
     executable = portable / "Notepad4.exe"
     shutil.copy2(source, executable)
     (portable / "Notepad4.ini").write_text(
-        "[Settings]\nSaveSettings=0\nWordWrap=1\nRenderingTechnology=0\n"
-        "[Settings2]\nUILanguage=1033\n", encoding="utf-16")
+        "[Settings]\nSaveSettings=0\nWordWrap=1\nRenderingTechnology=0\n[Settings2]\nUILanguage=1033\n",
+        encoding="utf-16",
+    )
     environment = {key: os.environ.get(key) for key in ("__COMPAT_LAYER", "MACTYPE_FORCE_EXCLUDE")}
     if args.dpi96:
         os.environ["__COMPAT_LAYER"] = "DPIUNAWARE"
@@ -52,7 +56,7 @@ def capture(args):
     user.GetMenuState.argtypes = [w.HMENU, w.UINT, w.UINT]
     previous = user.SetThreadDpiAwarenessContext(w.HANDLE(-1 if args.dpi96 else -4))
     assert previous
-    desktop = user.OpenInputDesktop(0, False, 0x1ff)
+    desktop = user.OpenInputDesktop(0, False, 0x1FF)
     assert desktop
     app = None
     try:
@@ -63,7 +67,7 @@ def capture(args):
         app.send(2056, 0, app.put(b"Consolas\0"))
         app.send(2061, 0, 1200)
         app.send(2051, 0, 0x141414)
-        app.send(2052, 0, 0xffffff)
+        app.send(2052, 0, 0xFFFFFF)
         app.send(2050)
         app.send(2051, 1, 0x287828)
         app.send(2063, 2, 700)
@@ -84,11 +88,14 @@ def capture(args):
                 menu = user.GetMenu(app.hwnd)
                 user.SendMessageW(app.hwnd, 0x116, menu, 0)
                 assert [bool(user.GetMenuState(menu, 40065 + item, 0) & 8) for item in range(4)] == [
-                    item == quality for item in range(4)]
+                    item == quality for item in range(4)
+                ]
                 assert user.RedrawWindow(app.editor, None, None, 0x185)
                 assert user.WaitForInputIdle(app.process.handle, 3000) == 0
-                styles = [app.send(2038, start),
-                          app.send(2038, start + len(TEXT.splitlines(keepends=True)[1].encode("utf-8")))]
+                styles = [
+                    app.send(2038, start),
+                    app.send(2038, start + len(TEXT.splitlines(keepends=True)[1].encode("utf-8"))),
+                ]
                 assert styles == [1, 2], styles
                 dpi = user.GetDpiForWindow(app.editor)
                 if args.dpi96:
@@ -97,17 +104,34 @@ def capture(args):
                 with owned_topmost(SimpleNamespace(user=user), app.process, app.hwnd):
                     user.SendMessageW(app.hwnd, 0, 0, 0)
                     screenshot_windows(user, app.editor, output / filename, presented=True)
-                records.append({"dpi": dpi, "technology": technology, "quality": quality,
-                                "font": "Consolas", "point_size": 12, "image": filename,
-                                "painted_styles": styles,
-                                "width": app.send(2276, 0, app.put("English 中文 Café 😀\0".encode("utf-8"))),
-                                "text_hex": app.text().hex()})
-        (output / "original.json").write_text(json.dumps({
-            "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
-            "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-            "capture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-            "dpi96_emulation": args.dpi96, "records": records}, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8")
+                records.append(
+                    {
+                        "dpi": dpi,
+                        "technology": technology,
+                        "quality": quality,
+                        "font": "Consolas",
+                        "point_size": 12,
+                        "image": filename,
+                        "painted_styles": styles,
+                        "width": app.send(2276, 0, app.put("English 中文 Café 😀\0".encode("utf-8"))),
+                        "text_hex": app.text().hex(),
+                    }
+                )
+        (output / "original.json").write_text(
+            json.dumps(
+                {
+                    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+                    "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+                    "capture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                    "dpi96_emulation": args.dpi96,
+                    "records": records,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     finally:
         if app:
             app.close()

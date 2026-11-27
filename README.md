@@ -420,3 +420,10 @@ regression, review and static-analysis results.
 
 Format tracked C++ files under `src/` and `tests/` with clang-format **23.1.2**
 and the repository's `.clang-format`.
+
+Python scripts under `.github/scripts/`, `tools/` and `tests/` use Ruff **0.17.6**
+with the repository's `ruff.toml`. Install the pinned quality tools in a local
+virtual environment as described in [Local checks](docs/ci.md#local-checks), then
+run `ruff check --fix .github/scripts tools tests` and
+`ruff format .github/scripts tools tests`. Quality CI checks both lint and
+formatting with the same configuration and versions.

@@ -1,11 +1,12 @@
 """Original markup detection and canonical tab sections through real app processes."""
-from english_settings import english_settings
+
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application, tabs
 
 
@@ -19,18 +20,21 @@ def main():
         config = folder / "Notepad4.ini"
         startup = folder / "untyped"
         for settings, contents, expected in (
-                ("", b"<Root/>", "XML Document"),
-                ("[Settings2]\nNoHTMLGuess=1\n", b"<Root/>", "Plain Text"),
-                ("[Settings2]\nNoHTMLGuess=1\n", b"<HTML/>", "Web Source Code"),
-                ("[Settings2]\nNoHTMLGuess=1\n", b"<?xml version=\"1.0\"?><Root/>", "XML Document"),
-                ("[Styles]\nAutoSelect=0\n", b"<!DOCTYPE html><html/>", "Plain Text"),
-                ("[Settings2]\nNoHTMLGuess=invalid\n", b"<Root/>", "XML Document"),
-                ("[Settings]\nNoHTMLGuess=1\n", b"<Root/>", "XML Document"),
-                ("", b" " * 255 + b"<html/>", "Plain Text"),
-                ("", b"<!--" + b" " * 300 + b"--><!DOCTYPE html><html/>", "Web Source Code")):
+            ("", b"<Root/>", "XML Document"),
+            ("[Settings2]\nNoHTMLGuess=1\n", b"<Root/>", "Plain Text"),
+            ("[Settings2]\nNoHTMLGuess=1\n", b"<HTML/>", "Web Source Code"),
+            ("[Settings2]\nNoHTMLGuess=1\n", b'<?xml version="1.0"?><Root/>', "XML Document"),
+            ("[Styles]\nAutoSelect=0\n", b"<!DOCTYPE html><html/>", "Plain Text"),
+            ("[Settings2]\nNoHTMLGuess=invalid\n", b"<Root/>", "XML Document"),
+            ("[Settings]\nNoHTMLGuess=1\n", b"<Root/>", "XML Document"),
+            ("", b" " * 255 + b"<html/>", "Plain Text"),
+            ("", b"<!--" + b" " * 300 + b"--><!DOCTYPE html><html/>", "Web Source Code"),
+        ):
             startup.write_bytes(contents)
-            config.write_text(english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDetectIndentation=0\n" + settings),
-                              encoding="utf-16")
+            config.write_text(
+                english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDetectIndentation=0\n" + settings),
+                encoding="utf-16",
+            )
             app = Application(executable, folder, environment, startup)
             try:
                 assert f" | {expected} | " in app.state["document_status"], app.state
@@ -45,13 +49,26 @@ def main():
             assert contents == startup.read_bytes()
             if "NoHTMLGuess=" in settings:
                 assert settings.split("NoHTMLGuess=", 1)[1].splitlines()[0] in saved.split("NoHTMLGuess=", 1)[1]
-        config.write_text(english_settings("[Settings]\nDetectIndentation=0\nTabWidth=7\nIndentWidth=3\n"
-                          "[Web Source Code]\nTabWidth=5\nIndentWidth=2\nUnrelated=keep\n"
-                          "[XML Document]\nTabWidth=9\nIndentWidth=6\nUseGlobalTabSettings=0\n"
-                          "TabsAsSpaces=1\n[Settings2]\nNoHTMLGuess=1suffix\n"), encoding="utf-16")
+        config.write_text(
+            english_settings(
+                "[Settings]\nDetectIndentation=0\nTabWidth=7\nIndentWidth=3\n"
+                "[Web Source Code]\nTabWidth=5\nIndentWidth=2\nUnrelated=keep\n"
+                "[XML Document]\nTabWidth=9\nIndentWidth=6\nUseGlobalTabSettings=0\n"
+                "TabsAsSpaces=1\n[Settings2]\nNoHTMLGuess=1suffix\n"
+            ),
+            encoding="utf-16",
+        )
         app = Application(executable, folder, environment)
         try:
-            for language in ("Web Source Code", "ASP VBScript", "ASP JavaScript", "ASP.NET C#", "ASP.NET VB", "JSP", "JSPX"):
+            for language in (
+                "Web Source Code",
+                "ASP VBScript",
+                "ASP JavaScript",
+                "ASP.NET C#",
+                "ASP.NET VB",
+                "JSP",
+                "JSPX",
+            ):
                 app.named_menu("Scheme", language)
                 tabs(app.state, 5, 2, 0)
             for language in ("XML Document", "SVG", "XML Schema", "XSLT", "DTD", "Property List"):

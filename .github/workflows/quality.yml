@@ -30,14 +30,18 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.14'
-      - name: Install canonical formatter
+      - name: Install pinned quality tools
         run: |
           set -euo pipefail
           python -m venv .ci/quality-venv
-          .ci/quality-venv/bin/python -m pip install --disable-pip-version-check clang-format==23.1.2
+          .ci/quality-venv/bin/python -m pip install --disable-pip-version-check -r .github/requirements-quality.txt
           echo "$GITHUB_WORKSPACE/.ci/quality-venv/bin" >> "$GITHUB_PATH"
       - name: Check canonical C++ formatting
         run: python -X utf8 .github/scripts/checks.py format
+      - name: Check Python formatting
+        run: ruff format --check .github/scripts tools tests
+      - name: Check Python lint
+        run: ruff check --output-format github .github/scripts tools tests
       - name: Check Python syntax
         run: python -m compileall -q .github/scripts tools tests
       - name: Restore pinned actionlint archive

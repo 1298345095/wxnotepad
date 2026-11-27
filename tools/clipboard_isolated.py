@@ -5,19 +5,21 @@ Usage: xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' \
 All focus/input stays on xvfb-run's private DISPLAY. No WSLg/Windows bridge.
 Set WXNOTEPAD_DISPLAY_LOG_DIR to retain the full private Weston log.
 """
-import os
+
 import json
-from pathlib import Path
-import signal
-import shutil
+import os
 import re
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
-import time
 import threading
+import time
 from collections import deque
-from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position
+from pathlib import Path
+
+from weston_scene import input_ready_toplevel, mapped_toplevel_position
 
 WESTON_LOG = "weston.log"
 SWITCH_WINDOW_KEY = "super+Tab"
@@ -33,6 +35,7 @@ if backend not in ("x11", "wayland") or not command:
 if os.environ.get("DISPLAY") in (None, ":0", ":0.0") or not os.environ.get("XAUTHORITY"):
     raise SystemExit("Run inside xvfb-run with its private DISPLAY and XAUTHORITY")
 
+
 def stop(process):
     if process is None:
         return
@@ -46,14 +49,15 @@ def stop(process):
         os.killpg(process.pid, signal.SIGKILL)
         process.wait()
 
+
 def xdo(*args):
     driver_trace(runtime / "focus", "driver.native-begin", args[0])
-    result = subprocess.run(["xdotool", *args], env=environment,
-                            capture_output=True, text=True, timeout=2)
+    result = subprocess.run(["xdotool", *args], env=environment, capture_output=True, text=True, timeout=2)
     driver_trace(runtime / "focus", "driver.native-complete", f"{args[0]}:{result.returncode}")
     if args[0] != "search":
         result.check_returncode()
     return result.stdout.strip()
+
 
 def acknowledge(focus, deadline_us=None):
     # Readers may already have the request open. Replace it so their ReadAll
@@ -77,7 +81,7 @@ def focus_owned_window(focus, title, deadline_us=None, *, raise_window=False):
         if title.startswith(X11_WINDOW_PREFIX):
             # A title may change while native document notifications settle.
             # Resolve the exact owned XID, retaining the native mapping check.
-            target = title[len(X11_WINDOW_PREFIX):]
+            target = title[len(X11_WINDOW_PREFIX) :]
             candidates = xdo("search", "--onlyvisible", "--class", ".").splitlines()
             windows = [target] if target in candidates else []
         else:
@@ -118,13 +122,24 @@ def retain_activation_failure(process, surface, expiry, scene, matched, queries,
             return
         if scene is not None:
             prefix.with_suffix(".scene.txt").write_text(scene, encoding="utf-8")
-        prefix.with_suffix(".json").write_text(json.dumps({
-            "request_kind": "activate", "acknowledged": False,
-            "owned_pid": int(process), "owned_surface": int(surface),
-            "deadline_monotonic_us": int(expiry), "last_scene_matched": matched,
-            "scene_queries": queries, "scene_query_timed_out": timed_out,
-            "scene_file": prefix.with_suffix(".scene.txt").name if scene is not None else None,
-        }, indent=2) + "\n", encoding="utf-8")
+        prefix.with_suffix(".json").write_text(
+            json.dumps(
+                {
+                    "request_kind": "activate",
+                    "acknowledged": False,
+                    "owned_pid": int(process),
+                    "owned_surface": int(surface),
+                    "deadline_monotonic_us": int(expiry),
+                    "last_scene_matched": matched,
+                    "scene_queries": queries,
+                    "scene_query_timed_out": timed_out,
+                    "scene_file": prefix.with_suffix(".scene.txt").name if scene is not None else None,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         print(f"Native activation failure observation: {prefix.with_suffix('.json')}", file=sys.stderr, flush=True)
     except OSError as error:
         print(f"Could not retain native activation failure observation: {error}", file=sys.stderr, flush=True)
@@ -146,16 +161,24 @@ def driver_trace(focus, event, kind=""):
     kind = kind or request_kind
     observed = time.monotonic_ns() // 1000
     failure_sequence += 1
-    failure_history.append((observed,
-        f"mono_us={observed}\tpid={os.getpid()}\ttid={threading.get_native_id()}"
-        f"\tseq={failure_sequence}\tevent={event}\tgesture={trace_gesture}\treadSeq={read_sequence}\tkind={kind}\n"))
+    failure_history.append(
+        (
+            observed,
+            f"mono_us={observed}\tpid={os.getpid()}\ttid={threading.get_native_id()}"
+            f"\tseq={failure_sequence}\tevent={event}\tgesture={trace_gesture}\treadSeq={read_sequence}\tkind={kind}\n",
+        )
+    )
     if trace_gesture == "0" or trace_failed:
         return
+
     def row(name, fields):
         global trace_sequence
         trace_sequence += 1
-        return (f"us={(time.monotonic_ns() - trace_started) // 1000}\tpid={os.getpid()}"
-                f"\ttid={threading.get_native_id()}\tseq={trace_sequence}\tevent={name}\tgesture={trace_gesture}{fields}\n")
+        return (
+            f"us={(time.monotonic_ns() - trace_started) // 1000}\tpid={os.getpid()}"
+            f"\ttid={threading.get_native_id()}\tseq={trace_sequence}\tevent={name}\tgesture={trace_gesture}{fields}\n"
+        )
+
     try:
         path = Path(str(focus) + ".diagnostics")
         first = not path.exists()
@@ -164,8 +187,13 @@ def driver_trace(focus, event, kind=""):
             trace_started = time.monotonic_ns()
         with path.open("a", encoding="utf-8") as output:
             if first:
-                output.write(row("header", f"\tbuild=private-input-driver\tbackend={backend}"
-                                 f"\twx=not-loaded\tcore=not-loaded\tcompiler=Python-{sys.version.split()[0]}"))
+                output.write(
+                    row(
+                        "header",
+                        f"\tbuild=private-input-driver\tbackend={backend}"
+                        f"\twx=not-loaded\tcore=not-loaded\tcompiler=Python-{sys.version.split()[0]}",
+                    )
+                )
             output.write(row(event, f"\tkind={kind}" if kind else ""))
             output.flush()
     except OSError:
@@ -184,21 +212,28 @@ def retain_focus_failure(focus):
         process = int(re.search(r"\bownedPid=(\d+)", snapshot).group(1))
         destination = Path(directory) / f"{backend}-{os.getpid()}-focus-failure-{process}-{failed_at}.log"
         destination.parent.mkdir(parents=True, exist_ok=True)
-        before = ''.join(row for stamp, row in failure_history if stamp <= failed_at)
-        after = ''.join(row for stamp, row in failure_history if stamp > failed_at)
+        before = "".join(row for stamp, row in failure_history if stamp <= failed_at)
+        after = "".join(row for stamp, row in failure_history if stamp > failed_at)
         # A native call may complete only after the fixture's deadline. Keep its
         # unmatched begin at the failure instant, then the actual later events.
-        destination.write_text(before + snapshot + after +
-            f"mono_us={time.monotonic_ns() // 1000}\tevent=driver.failure-observed\n", encoding="utf-8")
+        destination.write_text(
+            before + snapshot + after + f"mono_us={time.monotonic_ns() // 1000}\tevent=driver.failure-observed\n",
+            encoding="utf-8",
+        )
         marker.unlink()
         print(f"Native focus failure history: {destination}", file=sys.stderr, flush=True)
     except OSError as error:
         print(f"Could not retain native focus failure history: {error}", file=sys.stderr, flush=True)
 
+
 with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     runtime = Path(folder)
-    environment = dict(os.environ, XDG_RUNTIME_DIR=folder, GDK_BACKEND=backend,
-                       WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS=str(runtime / "focus"))
+    environment = dict(
+        os.environ,
+        XDG_RUNTIME_DIR=folder,
+        GDK_BACKEND=backend,
+        WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS=str(runtime / "focus"),
+    )
     environment.pop("WAYLAND_DISPLAY", None)
     environment.pop("WAYLAND_SOCKET", None)
     weston = test = None
@@ -206,24 +241,42 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     try:
         weston_window = None
         if backend == "wayland":
-            weston = subprocess.Popen(["weston", "--debug", "--backend=x11", "--renderer=pixman",
-                "--no-config", "--socket=wxnotepad-issue12", "--idle-time=0",
-                "--width=1600", "--height=1000"], env=environment, stdout=log,
-                stderr=subprocess.STDOUT, start_new_session=True)
+            weston = subprocess.Popen(
+                [
+                    "weston",
+                    "--debug",
+                    "--backend=x11",
+                    "--renderer=pixman",
+                    "--no-config",
+                    "--socket=wxnotepad-issue12",
+                    "--idle-time=0",
+                    "--width=1600",
+                    "--height=1000",
+                ],
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
             deadline = time.monotonic() + 8
             while not (runtime / "wxnotepad-issue12").exists():
                 if weston.poll() is not None or time.monotonic() > deadline:
                     raise RuntimeError("Private Weston did not start")
-                time.sleep(.05)
+                time.sleep(0.05)
             window = None
             while window is None and time.monotonic() < deadline:
                 window = re.search(r"x11 output .* window id (\d+)", (runtime / WESTON_LOG).read_text(encoding="utf-8"))
-                if window is None: time.sleep(.05)
-            if window is None: raise RuntimeError("Private Weston X window was not published")
+                if window is None:
+                    time.sleep(0.05)
+            if window is None:
+                raise RuntimeError("Private Weston X window was not published")
             weston_window = window.group(1)
             xdo("windowfocus", "--sync", weston_window)
             environment["WAYLAND_DISPLAY"] = "wxnotepad-issue12"
-        print(f"Private native {backend}: DISPLAY={environment['DISPLAY']}; runtime mode={oct(runtime.stat().st_mode & 0o777)}", flush=True)
+        print(
+            f"Private native {backend}: DISPLAY={environment['DISPLAY']}; runtime mode={oct(runtime.stat().st_mode & 0o777)}",
+            flush=True,
+        )
         test = subprocess.Popen(command, env=environment, start_new_session=True)
         last_switch = 0.0
         last_read = None
@@ -241,36 +294,72 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     read_sequence += 1
                 driver_trace(focus, "driver.read")
                 last_read = request
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", KEY_DELAY_PREFIX, "keydown:", "keyup:", "click:", "tree-drag:", "focus:", FOCUS_UNTIL_PREFIX, FRONT_UNTIL_PREFIX, "drag:", "front:", "activate:", "prepare:", "move-peer:", "pointer:"))) and time.monotonic() - last_switch > .25:
+            if (
+                request in ("editor", "peer", "peer-deferred", "gesture", "geometry")
+                or request.startswith(
+                    (
+                        "key:",
+                        KEY_DELAY_PREFIX,
+                        "keydown:",
+                        "keyup:",
+                        "click:",
+                        "tree-drag:",
+                        "focus:",
+                        FOCUS_UNTIL_PREFIX,
+                        FRONT_UNTIL_PREFIX,
+                        "drag:",
+                        "front:",
+                        "activate:",
+                        "prepare:",
+                        "move-peer:",
+                        "pointer:",
+                    )
+                )
+            ) and time.monotonic() - last_switch > 0.25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
                     # a receiver that replaces its focus request with a gesture.
-                    time.sleep(.1)
+                    time.sleep(0.1)
                     request = "peer"
+
                 def front(title):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
-                        if not windows: raise RuntimeError("Owned drag window missing: " + title)
+                        if not windows:
+                            raise RuntimeError("Owned drag window missing: " + title)
                         xdo("windowraise", windows[0])
                         xdo("windowfocus", "--sync", windows[0])
                     else:
                         xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
-                    time.sleep(.3)
+                    time.sleep(0.3)
+
                 if request == "geometry":
                     acknowledge(focus)
                     # Read only the two owned drag fixture surfaces. Wayland
                     # clients cannot query their global compositor positions.
                     mapping_deadline = time.monotonic() + 3
                     while True:
-                        scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
-                                               capture_output=True, text=True, timeout=2, check=True).stdout
-                        positions = {name: (int(x), int(y)) for name, x, y in re.findall(
-                            r"top-level window 'wxnotepad stream drag (main|peer)'[^\n]*\n\s*position: \((-?\d+), (-?\d+)\)", scene)}
-                        if set(positions) == {"main", "peer"}: break
+                        scene = subprocess.run(
+                            ["weston-debug", "scene-graph"],
+                            env=environment,
+                            capture_output=True,
+                            text=True,
+                            timeout=2,
+                            check=True,
+                        ).stdout
+                        positions = {
+                            name: (int(x), int(y))
+                            for name, x, y in re.findall(
+                                r"top-level window 'wxnotepad stream drag (main|peer)'[^\n]*\n\s*position: \((-?\d+), (-?\d+)\)",
+                                scene,
+                            )
+                        }
+                        if set(positions) == {"main", "peer"}:
+                            break
                         if time.monotonic() > mapping_deadline:
                             raise RuntimeError("Private compositor must map both owned drag surfaces")
-                        time.sleep(.05)
+                        time.sleep(0.05)
                     response = runtime / "geometry"
                     pending = response.with_suffix(".tmp")
                     pending.write_text(",".join(map(str, (*positions["main"], *positions["peer"]))), encoding="utf-8")
@@ -283,9 +372,9 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     xdo("mousemove", str(x1 + ox), str(y1 + oy))
                     xdo("keydown", "Super_L")
                     xdo("mousedown", "1")
-                    time.sleep(.15)
+                    time.sleep(0.15)
                     xdo("mousemove", str(x2 + ox), str(y2 + oy))
-                    time.sleep(.2)
+                    time.sleep(0.2)
                     xdo("mouseup", "1")
                     xdo("keyup", "Super_L")
                     acknowledge(focus)
@@ -297,12 +386,18 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     timed_out = acknowledged = False
                     while backend == "wayland" and time.monotonic() < deadline:
                         remaining = deadline - time.monotonic()
-                        if remaining <= 0: break
+                        if remaining <= 0:
+                            break
                         try:
                             queries += 1
-                            scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
-                                                   capture_output=True, text=True,
-                                                   timeout=min(2, remaining), check=True).stdout
+                            scene = subprocess.run(
+                                ["weston-debug", "scene-graph"],
+                                env=environment,
+                                capture_output=True,
+                                text=True,
+                                timeout=min(2, remaining),
+                                check=True,
+                            ).stdout
                         except subprocess.TimeoutExpired:
                             timed_out = True
                             break
@@ -314,7 +409,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                                     xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
                                 acknowledged = acknowledge(focus, int(expiry))
                             break
-                        time.sleep(min(.03, max(0, deadline - time.monotonic())))
+                        time.sleep(min(0.03, max(0, deadline - time.monotonic())))
                     if kind == "activate" and not acknowledged:
                         retain_activation_failure(process, surface, expiry, last_scene, matched, queries, timed_out)
                 elif request.startswith("pointer:"):
@@ -324,8 +419,14 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     if remaining <= 0:
                         acknowledge(focus, int(expiry))
                         continue
-                    scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
-                                           capture_output=True, text=True, timeout=min(2, remaining), check=True).stdout
+                    scene = subprocess.run(
+                        ["weston-debug", "scene-graph"],
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=min(2, remaining),
+                        check=True,
+                    ).stdout
                     origin = mapped_toplevel_position(scene, int(process), int(surface))
                     if origin is None and os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR"):
                         observation = Path(os.environ["WXNOTEPAD_DISPLAY_LOG_DIR"]) / "pointer-unmapped.scene.txt"
@@ -336,8 +437,11 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     values = dict(line.split("=", 1) for line in geometry.splitlines())
                     if not acknowledge(focus, int(expiry)):
                         continue
-                    xdo("mousemove", str(origin[0] + int(x) + int(values["X"])),
-                        str(origin[1] + int(y) + int(values["Y"])))
+                    xdo(
+                        "mousemove",
+                        str(origin[0] + int(x) + int(values["X"])),
+                        str(origin[1] + int(y) + int(values["Y"])),
+                    )
                 elif request.startswith("front:"):
                     front(request[6:])
                     acknowledge(focus)
@@ -349,22 +453,28 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     switch = parts[7] if len(parts) > 7 else ""
                     gesture = parts[8]
                     action = parts[9]
+
                     def wait_drag_state(suffix, phase):
                         response = Path(str(focus) + suffix)
                         expected = f"{gesture}:{phase}"
                         deadline = time.monotonic() + 5
                         while not response.exists() or response.read_text(encoding="utf-8") != expected:
                             if test.poll() is not None or time.monotonic() > deadline:
-                                raise RuntimeError(f"Native drag gesture={gesture} from={x1},{y1} to={x2},{y2} "
-                                                   f"must observe native phase {phase}")
-                            time.sleep(.01)
+                                raise RuntimeError(
+                                    f"Native drag gesture={gesture} from={x1},{y1} to={x2},{y2} "
+                                    f"must observe native phase {phase}"
+                                )
+                            time.sleep(0.01)
+
                     origin = (0, 0)
                     if backend == "wayland":
                         geometry = xdo("getwindowgeometry", "--shell", weston_window)
                         values = dict(line.split("=", 1) for line in geometry.splitlines())
                         origin = (int(values["X"]), int(values["Y"]))
+
                     def move(x, y):
                         xdo("mousemove", str(int(x) + origin[0]), str(int(y) + origin[1]))
+
                     key = {"ctrl": "Control_L", "shift": "Shift_L"}.get(modifier)
                     phase = Path(str(focus) + ".drag-phase")
                     pending = phase.with_suffix(".tmp")
@@ -374,8 +484,10 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         wait_drag_state(".drag-pressed", "start")
                         move(int(x1) + 10, y1)
                         wait_drag_state(".drag-started", "start")
-                        if key: xdo("keydown", key)
-                        if switch: front("wxnotepad stream drag " + switch)
+                        if key:
+                            xdo("keydown", key)
+                        if switch:
+                            front("wxnotepad stream drag " + switch)
                         pending.write_text(f"{gesture}:target", encoding="utf-8")
                         pending.replace(phase)
                         move(x2, y2)
@@ -385,15 +497,16 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         time.sleep(int(pause) / 1000)
                         if int(cancel):
                             xdo("key", "Escape")
-                            time.sleep(.3)
+                            time.sleep(0.3)
                             if backend == "wayland":
                                 # Nested Weston withdraws keyboard focus throughout
                                 # DnD. Cancel through a native rejected drop instead.
                                 move(1500, 950)
-                                time.sleep(.2)
+                                time.sleep(0.2)
                     finally:
                         xdo("mouseup", "1")
-                        if key: xdo("keyup", key)
+                        if key:
+                            xdo("keyup", key)
                         pending.write_text(f"{gesture}:released", encoding="utf-8")
                         pending.replace(phase)
                     wait_drag_state(".drag-ended", "end")
@@ -404,9 +517,10 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         deadline_us = int(expiry)
                     else:
                         deadline_us, title = None, request[6:]
-                    if not focus_owned_window(focus, title, deadline_us,
-                                              raise_window=request.startswith(FRONT_UNTIL_PREFIX)):
-                        time.sleep(.03)
+                    if not focus_owned_window(
+                        focus, title, deadline_us, raise_window=request.startswith(FRONT_UNTIL_PREFIX)
+                    ):
+                        time.sleep(0.03)
                         continue
                 elif request.startswith("tree-drag:"):
                     x1, y1, x2, y2 = map(int, request[10:].split(","))
@@ -422,9 +536,12 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     try:
                         motion_steps = 8
                         for step in range(1, motion_steps + 1):
-                            xdo("mousemove", str(x1 + (x2 - x1) * step // motion_steps),
-                                str(y1 + (y2 - y1) * step // motion_steps))
-                            time.sleep(.03)
+                            xdo(
+                                "mousemove",
+                                str(x1 + (x2 - x1) * step // motion_steps),
+                                str(y1 + (y2 - y1) * step // motion_steps),
+                            )
+                            time.sleep(0.03)
                     finally:
                         xdo("mouseup", "1")
                     acknowledge(focus)
@@ -459,8 +576,12 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     acknowledge(focus)
                     xdo("key", "--clearmodifiers", "Shift_L")
                 elif backend == "x11":
-                    windows = xdo("search", "--onlyvisible", "--name", "wxnotepad clipboard focus: " + request).splitlines()
-                    if not windows: time.sleep(.03); continue
+                    windows = xdo(
+                        "search", "--onlyvisible", "--name", "wxnotepad clipboard focus: " + request
+                    ).splitlines()
+                    if not windows:
+                        time.sleep(0.03)
+                        continue
                     window = windows[0]
                     acknowledge(focus)
                     xdo("windowfocus", "--sync", window)
@@ -471,7 +592,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     xdo("windowfocus", "--sync", weston_window)
                     xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
                 last_switch = time.monotonic()
-            time.sleep(.03)
+            time.sleep(0.03)
         result = test.returncode
     finally:
         retain_focus_failure(runtime / "focus")

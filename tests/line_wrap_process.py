@@ -1,10 +1,11 @@
 """Check the Column Wrap boundary imported from original INI settings."""
+
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def main():
@@ -17,8 +18,9 @@ def main():
         config = folder / "Notepad4.ini"
         for value, expected in (("91", 91), ("-1", 0), ("9999", 4096), ("invalid", 80)):
             config.write_text(f"[Settings]\nLongLinesLimit={value}\nUnrelated=keep\n", encoding="utf-16")
-            subprocess.run([executable, "--boundary-probe", str(expected)], cwd=folder,
-                           env=environment, check=True, timeout=30)
+            subprocess.run(
+                [executable, "--boundary-probe", str(expected)], cwd=folder, env=environment, check=True, timeout=30
+            )
             saved = config.read_text(encoding="utf-16")
             assert "Unrelated=keep" in saved, saved
             if expected == 80:

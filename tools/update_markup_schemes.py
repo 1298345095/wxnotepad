@@ -1,7 +1,7 @@
 """Reproduce HTML/XML and their embedded JS/CSS style data from pinned Notepad4."""
+
 import argparse
 from pathlib import Path
-import re
 
 from scheme_data import generate_scheme, provenance, read_pinned, style_initializers
 
@@ -18,11 +18,11 @@ def main():
     parser.add_argument("--source", type=Path, required=True)
     args = parser.parse_args()
     output = ["// clang-format off"]
-    for filename in ('HTML', 'XML'):
-        data = read_pinned(args.source, f'src/EditLexers/stl{filename}.cpp')
+    for filename in ("HTML", "XML"):
+        data = read_pinned(args.source, f"src/EditLexers/stl{filename}.cpp")
         name = filename.lower()
         header = generate_scheme(data, filename, filename, name)
-        (ROOT / f'src/syntax/generated/{name}_scheme_data.h').write_text(header, encoding='utf-8', newline='\n')
+        (ROOT / f"src/syntax/generated/{name}_scheme_data.h").write_text(header, encoding="utf-8", newline="\n")
     output += ["constexpr auto markupEmbeddedStyles = std::to_array<SyntaxStyle>({"]
     for filename, group, offset in [("stlJavaScript.cpp", "JS", "js_style"), ("stlCSS.cpp", "CSS", "css_style")]:
         path = "src/EditLexers/" + filename

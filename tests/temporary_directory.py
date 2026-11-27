@@ -13,12 +13,12 @@ class TemporaryDirectory(tempfile.TemporaryDirectory):
                 super().cleanup()
                 return
             except PermissionError as error:
-                if os.name != 'nt' or getattr(error, 'winerror', None) != 32:
+                if os.name != "nt" or getattr(error, "winerror", None) != 32:
                     raise
                 remaining = deadline - time.monotonic()
                 if remaining > 0:
                     time.sleep(min(0.05, remaining))
                     if time.monotonic() < deadline:
                         continue
-                error.add_note('Temporary directory cleanup exceeded the 5-second WinError 32 retry deadline.')
+                error.add_note("Temporary directory cleanup exceeded the 5-second WinError 32 retry deadline.")
                 raise

@@ -1,16 +1,17 @@
 """Compare actual application Save/reload with independently captured original bytes."""
-from english_settings import english_settings
+
 import csv
 import locale
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
-from special_insert_process import request
-from settings_process import Application
+from english_settings import english_settings
 from resource_process import command, wait_state
+from settings_process import Application
+from special_insert_process import request
 
 
 def run(source, reference):
@@ -31,6 +32,7 @@ def run(source, reference):
         native_page = 0
         if sys.platform == "win32":
             import ctypes
+
             native_page = ctypes.windll.kernel32.GetACP()
         migrated_native_pages = (437, 936, 950, 1252, 54936, 65001)
         unmigrated_native_ansi = sys.platform == "win32" and native_page not in migrated_native_pages
@@ -42,18 +44,27 @@ def run(source, reference):
             rejected_ansi = unmigrated_native_ansi and encoding == "ansi"
             if rejected_ansi:
                 expected_row = utf8_bom_rows[(row["language"], row["command"])]
-            settings = "SaveSettings=0\nWarnLineEndings=0\nLoadASCIIasUTF8=0\nLoadANSIasUTF8=0\nSkipUnicodeDetection=0\n"
-            settings += {"utf8": "DefaultEncoding=3", "utf8bom": "DefaultEncoding=4",
-                         "utf16": "DefaultEncoding=6", "utf16bom": "DefaultEncoding=1",
-                         "ansi": "DefaultEncoding=0", "gbk": "DefaultEncoding=936"}[encoding]
+            settings = (
+                "SaveSettings=0\nWarnLineEndings=0\nLoadASCIIasUTF8=0\nLoadANSIasUTF8=0\nSkipUnicodeDetection=0\n"
+            )
+            settings += {
+                "utf8": "DefaultEncoding=3",
+                "utf8bom": "DefaultEncoding=4",
+                "utf16": "DefaultEncoding=6",
+                "utf16bom": "DefaultEncoding=1",
+                "ansi": "DefaultEncoding=0",
+                "gbk": "DefaultEncoding=936",
+            }[encoding]
             config.write_text(english_settings("[Settings]\n" + settings + "\n"), encoding="utf-16")
             suffix = {"PlainText": "txt", "Cpp": "cpp", "Python": "py", "Json": "json"}[row["language"]]
             document = folder / f"header-中文😀.{suffix}"
             before = b"A\r\nB\r\nC"
             if encoding.startswith("utf16"):
                 before = "A\r\nB\r\nC".encode("utf-16-le")
-            if encoding == "utf16bom": before = b"\xff\xfe" + before
-            if encoding == "utf8bom": before = b"\xef\xbb\xbf" + before
+            if encoding == "utf16bom":
+                before = b"\xff\xfe" + before
+            if encoding == "utf8bom":
+                before = b"\xef\xbb\xbf" + before
             document.write_bytes(before)
             if rejected_ansi:
                 rejected_document, rejected_bytes = document, before
@@ -66,6 +77,7 @@ def run(source, reference):
                 host = locale.getencoding()
                 if sys.platform == "win32":
                     import ctypes
+
                     host += f" ACP={ctypes.windll.kernel32.GetACP()} OEM={ctypes.windll.kernel32.GetOEMCP()}"
                 error.add_note(f"Header startup: {row['language']}/{encoding}/{row['command']}; host={host}")
                 raise
@@ -103,15 +115,19 @@ def run(source, reference):
                 request(app, "save")
                 assert document.read_bytes() == expected, row
                 request(app, "open", document)
-                assert app.state["length"] == str(len(bytes.fromhex(expected_row["utf8"]))) and app.state["dirty"] == "0", row
+                assert (
+                    app.state["length"] == str(len(bytes.fromhex(expected_row["utf8"]))) and app.state["dirty"] == "0"
+                ), row
                 request(app, "save")
                 assert document.read_bytes() == expected, row
                 app.close()
             finally:
                 app.stop()
         assert supported + rejected == 48 and rejected == (8 if unmigrated_native_ansi else 0)
-    print(f"PASS: {supported} supported header contexts; {rejected} native ANSI Open refusal contexts "
-          f"(ACP={native_page}); 48 independent processes retain original Save/Undo/Redo/reload bytes")
+    print(
+        f"PASS: {supported} supported header contexts; {rejected} native ANSI Open refusal contexts "
+        f"(ACP={native_page}); 48 independent processes retain original Save/Undo/Redo/reload bytes"
+    )
 
 
 if __name__ == "__main__":

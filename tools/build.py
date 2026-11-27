@@ -1,15 +1,16 @@
 """Prepare the pinned original core, build wxnotepad, and optionally run CTest."""
+
 import argparse
 import ctypes
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 import tarfile
+from pathlib import Path
 
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
 UPSTREAM = "https://github.com/zufuliu/notepad4.git"
@@ -31,24 +32,40 @@ def prepare(build, source, archive):
                 run(["git", "-C", source, "remote", "add", "origin", UPSTREAM])
             run(["git", "-C", source, "fetch", "--depth=1", "origin", REVISION])
         revision = subprocess.check_output(
-            ["git", "-C", str(source), "rev-parse", f"{REVISION}^{{commit}}"], text=True).strip()
+            ["git", "-C", str(source), "rev-parse", f"{REVISION}^{{commit}}"], text=True
+        ).strip()
         if revision != REVISION:
             raise RuntimeError("Original core revision does not match the pinned commit")
         archive = build / "notepad4-source.tar"
         # Hosted Windows Git enables autocrlf; archive conversion must not change
         # the bytes covered by the pinned source hash. Keep overrides per command.
-        run([*LF_GIT, "-C", source,
-             "archive", "--format=tar", f"--output={archive}",
-             REVISION, "scintilla", "License.txt"])
+        run(
+            [
+                *LF_GIT,
+                "-C",
+                source,
+                "archive",
+                "--format=tar",
+                f"--output={archive}",
+                REVISION,
+                "scintilla",
+                "License.txt",
+            ]
+        )
     # A supplied archive must be the exact git archive of the pinned paths.
     archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     expected = (ROOT / "patches/source.sha256").read_text(encoding="utf-8").strip()
     if archive_digest != expected:
-        raise RuntimeError(f"Original source archive SHA-256 does not match the pinned source: "
-                           f"expected {expected}, got {archive_digest}")
-    record = {"revision": REVISION, "archive_sha256": archive_digest,
-              "patch_sha256": hashlib.sha256(patch.read_bytes()).hexdigest(),
-              "preparation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+        raise RuntimeError(
+            f"Original source archive SHA-256 does not match the pinned source: "
+            f"expected {expected}, got {archive_digest}"
+        )
+    record = {
+        "revision": REVISION,
+        "archive_sha256": archive_digest,
+        "patch_sha256": hashlib.sha256(patch.read_bytes()).hexdigest(),
+        "preparation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    }
     staged = build / "original-core"
     stamp = staged / "wxnotepad-source.json"
     if stamp.exists() and json.loads(stamp.read_text(encoding="utf-8")) == record:
@@ -74,22 +91,34 @@ def main():
     parser.add_argument("--source", type=Path, help="Existing original checkout (never modified)")
     parser.add_argument("--archive", type=Path, help="Pinned source archive, useful for native WSL builds")
     parser.add_argument("--build-dir", type=Path, default=ROOT / "build")
-    parser.add_argument("--vcpkg-root", type=Path, default=Path(os.environ.get(
-        "VCPKG_ROOT", "G:/vcpkg" if sys.platform == "win32" else str(Path.home() / "vcpkg"))))
+    parser.add_argument(
+        "--vcpkg-root",
+        type=Path,
+        default=Path(
+            os.environ.get("VCPKG_ROOT", "G:/vcpkg" if sys.platform == "win32" else str(Path.home() / "vcpkg"))
+        ),
+    )
     parser.add_argument("--test", action="store_true", help="Run real GUI CTest checks; requires a desktop")
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
     build = args.build_dir.resolve()
     build.mkdir(parents=True, exist_ok=True)
-    staged = prepare(build, args.source.resolve() if args.source else None,
-                     args.archive.resolve() if args.archive else None)
+    staged = prepare(
+        build, args.source.resolve() if args.source else None, args.archive.resolve() if args.archive else None
+    )
     if args.prepare_only:
         return
-    configure = ["cmake", "-S", ROOT, "-B", build / "cmake",
-                 f"-DNOTEPAD4_SOURCE={staged}",
-                 f"-DCMAKE_TOOLCHAIN_FILE={args.vcpkg_root}/scripts/buildsystems/vcpkg.cmake",
-                 f"-DPython3_EXECUTABLE={sys.executable}",
-                 "-DVCPKG_MANIFEST_MODE=OFF"]
+    configure = [
+        "cmake",
+        "-S",
+        ROOT,
+        "-B",
+        build / "cmake",
+        f"-DNOTEPAD4_SOURCE={staged}",
+        f"-DCMAKE_TOOLCHAIN_FILE={args.vcpkg_root}/scripts/buildsystems/vcpkg.cmake",
+        f"-DPython3_EXECUTABLE={sys.executable}",
+        "-DVCPKG_MANIFEST_MODE=OFF",
+    ]
     triplet = "x64-windows-static-md" if sys.platform == "win32" else "x64-linux"
     configure += [f"-DVCPKG_TARGET_TRIPLET={triplet}", f"-DVCPKG_HOST_TRIPLET={triplet}"]
     if sys.platform == "win32":

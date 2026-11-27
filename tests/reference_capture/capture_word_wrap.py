@@ -3,21 +3,23 @@
 No clipboard or desktop input is used. Normal mode uses the monitor's real DPI;
 --dpi96 uses the established complementary DPI-unaware process emulation.
 """
+
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
-from original_host import Original, CALLBACK, user, kernel
+from original_host import CALLBACK, Original, kernel, user
 
 # Pinned Notepad4 changes STYLE_DEFAULT from upstream Scintilla's 32 to zero.
 STYLE_DEFAULT = 0
 FONT_SIZE_HUNDREDTHS = 1000
+
 
 def capture(args):
     output = args.output.resolve()
@@ -30,7 +32,8 @@ def capture(args):
     (portable / "Notepad4.ini").write_text(
         "[Settings]\nSaveSettings=0\nWordWrap=1\nWordWrapMode=4\nTabWidth=8\nIndentWidth=3\nDetectIndentation=0\n"
         "[Settings2]\nUILanguage=1033\n",
-        encoding="utf-16")
+        encoding="utf-16",
+    )
     if args.dpi96:
         os.environ["__COMPAT_LAYER"] = "DPIUNAWARE"
     user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWORD, c.c_void_p]
@@ -56,7 +59,7 @@ def capture(args):
     previous_dpi = user.SetThreadDpiAwarenessContext(w.HANDLE(-1 if args.dpi96 else -4))
     assert previous_dpi, "capture thread uses the intended target DPI context"
     desktop_name = f"wxnotepad-wrap-reference-{os.getpid()}"
-    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1ff, None)
+    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1FF, None)
     assert desktop, "owned private desktop is created"
     app = None
     records = []
@@ -80,44 +83,55 @@ def capture(args):
             found = []
             deadline = time.monotonic() + 3
             while not found and time.monotonic() < deadline:
+
                 @CALLBACK
                 def window(hwnd, _):
                     pid = w.DWORD()
                     user.GetWindowThreadProcessId(hwnd, c.byref(pid))
                     name = c.create_unicode_buffer(100)
                     user.GetClassNameW(hwnd, name, 100)
-                    if (pid.value == app.process.pid and name.value == "#32770" and user.IsWindowVisible(hwnd)
-                            and all(user.GetDlgItem(hwnd, identifier) for identifier in range(100, 106))):
+                    if (
+                        pid.value == app.process.pid
+                        and name.value == "#32770"
+                        and user.IsWindowVisible(hwnd)
+                        and all(user.GetDlgItem(hwnd, identifier) for identifier in range(100, 106))
+                    ):
                         found.append(hwnd)
                     return True
+
                 user.EnumDesktopWindows(desktop, window, 0)
                 if not found:
-                    time.sleep(.01)
+                    time.sleep(0.01)
             assert len(found) == 1, "owned original wrap dialog appears"
             hwnd = found[0]
             assert user.WaitForInputIdle(app.process.handle, 3000) == 0
-            checkbox_before = user.SendMessageW(user.GetDlgItem(hwnd, 105), 0xf0, 0, 0)
+            checkbox_before = user.SendMessageW(user.GetDlgItem(hwnd, 105), 0xF0, 0, 0)
             # Original resource.h IDC_WRAP_INDENT..IDC_WRAP_HIGHLIGHT_SUBLINE.
             for identifier, value in ((100, indent), (101, 1), (102, 3), (103, mode)):
                 control = user.GetDlgItem(hwnd, identifier)
                 assert control
-                user.SendMessageW(control, 0x14e, value, 0)  # CB_SETCURSEL
+                user.SendMessageW(control, 0x14E, value, 0)  # CB_SETCURSEL
                 assert user.SendMessageW(control, 0x147, 0, 0) == value  # CB_GETCURSEL
-            user.SendMessageW(user.GetDlgItem(hwnd, 104), 0xf1, 1, 0)  # BM_SETCHECK
+            user.SendMessageW(user.GetDlgItem(hwnd, 104), 0xF1, 1, 0)  # BM_SETCHECK
             # Retain the original's active highlight state. Its dialog updates
             # the global preference but does not send the core highlight message.
-            user.SendMessageW(user.GetDlgItem(hwnd, 105), 0xf1, int(highlight), 0)
-            checkbox_selected = user.SendMessageW(user.GetDlgItem(hwnd, 105), 0xf0, 0, 0)
+            user.SendMessageW(user.GetDlgItem(hwnd, 105), 0xF1, int(highlight), 0)
+            checkbox_selected = user.SendMessageW(user.GetDlgItem(hwnd, 105), 0xF0, 0, 0)
             user.SendMessageW(hwnd, 0x111, 1, 0)
             paint()
-            return {"core_before": core_before, "checkbox_before": checkbox_before,
-                    "checkbox_selected": checkbox_selected, "core_after": app.send(2773),
-                    "wrap_mode_before": mode_before, "wrap_mode_after": app.send(2269),
-                    "requested_mode": mode, "parent_command_barrier": "WaitForInputIdle + WM_NULL + native paint"}
+            return {
+                "core_before": core_before,
+                "checkbox_before": checkbox_before,
+                "checkbox_selected": checkbox_selected,
+                "core_after": app.send(2773),
+                "wrap_mode_before": mode_before,
+                "wrap_mode_after": app.send(2269),
+                "requested_mode": mode,
+                "parent_command_barrier": "WaitForInputIdle + WM_NULL + native paint",
+            }
 
         highlight_runtime = [dialog(2, 2, False), dialog(3, 3, True)]
-        (output / "highlight-runtime.json").write_text(json.dumps(highlight_runtime, indent=2) + "\n",
-                                                        encoding="utf-8")
+        (output / "highlight-runtime.json").write_text(json.dumps(highlight_runtime, indent=2) + "\n", encoding="utf-8")
         print("Original active-highlight runtime:", json.dumps(highlight_runtime), flush=True)
 
         for sample, fixture_hex in (line.split() for line in args.inputs.read_text(encoding="ascii").splitlines()):
@@ -145,8 +159,12 @@ def capture(args):
                     app.send(2486, STYLE_DEFAULT, app.memory)
                     font = c.create_string_buffer(font_length + 1)
                     assert kernel.ReadProcessMemory(app.handle, app.memory, font, font_length + 1, None)
-                    attributes = (font.value.decode("utf-8"), app.send(2062, STYLE_DEFAULT), app.send(2374),
-                                  app.send(2631))
+                    attributes = (
+                        font.value.decode("utf-8"),
+                        app.send(2062, STYLE_DEFAULT),
+                        app.send(2374),
+                        app.send(2631),
+                    )
                     if not records:
                         print("original font attributes", attributes, flush=True)
                     assert attributes[:4] == ("Consolas", FONT_SIZE_HUNDREDTHS, 100, 0), attributes
@@ -175,38 +193,66 @@ def capture(args):
                         client, outer = w.RECT(), w.RECT()
                         user.GetClientRect(app.editor, c.byref(client))
                         user.GetWindowRect(app.editor, c.byref(outer))
-                        assert user.MoveWindow(app.editor, 0, 0,
-                                               outer.right - outer.left + width - client.right,
-                                               outer.bottom - outer.top + 340 - client.bottom, True)
+                        assert user.MoveWindow(
+                            app.editor,
+                            0,
+                            0,
+                            outer.right - outer.left + width - client.right,
+                            outer.bottom - outer.top + 340 - client.bottom,
+                            True,
+                        )
                         paint()
                         user.GetClientRect(app.editor, c.byref(client))
                         if (client.right, client.bottom) == (width, 340):
                             break
                     assert (client.right, client.bottom) == (width, 340), (client.right, client.bottom)
                     assert app.text() == text
-                    values = [app.send(message) for message in
-                              (2269, 2473, 2465, 2461, 2463, 2557, 2773)]
-                    values += [app.send(2235, 0), app.send(2228, 2), app.send(2009), app.send(2008),
-                               app.send(2159), app.send(2174), app.send(2016), app.send(2279, 0),
-                               app.send(2276, STYLE_DEFAULT, app.put(b"W\0")),
-                               app.send(2276, STYLE_DEFAULT, app.put("中文\0".encode("utf-8")))]
+                    values = [app.send(message) for message in (2269, 2473, 2465, 2461, 2463, 2557, 2773)]
+                    values += [
+                        app.send(2235, 0),
+                        app.send(2228, 2),
+                        app.send(2009),
+                        app.send(2008),
+                        app.send(2159),
+                        app.send(2174),
+                        app.send(2016),
+                        app.send(2279, 0),
+                        app.send(2276, STYLE_DEFAULT, app.put(b"W\0")),
+                        app.send(2276, STYLE_DEFAULT, app.put("中文\0".encode("utf-8"))),
+                    ]
                     records.append([sample, mode, indent, width, 340, actual_dpi, *values])
                     print(sample, mode, indent, width, actual_dpi, *values, flush=True)
         header = "sample mode indent width height dpi wrap indent_mode start_indent flags location margin subline rows visible2 anchor caret dirty undo redo line_height W CJK"
-        (output / "reference.tsv").write_text(header + "\n" +
-            "\n".join("\t".join(map(str, row)) for row in records) + "\n", encoding="ascii")
-        (output / "metadata.json").write_text(json.dumps({
-            "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
-            "executable": str(original), "sha256": hashlib.sha256(original.read_bytes()).hexdigest(),
-            "dpi": actual_dpi, "dpi96_emulation": args.dpi96, "records": len(records),
-            "capture_thread_context": "DPI_UNAWARE" if args.dpi96 else "PER_MONITOR_AWARE_V2",
-            "renderer": "GDI", "font": "Consolas", "point_size": 10, "reported_client_height": 340,
-            "tab_width": 8, "indent_width": 3, "highlight_subline_retained": True,
-            "inputs_sha256": hashlib.sha256(args.inputs.read_bytes()).hexdigest(),
-            "assumptions": "All styles plain Consolas, 1px edge margins, no margin columns; fold levels explicit. "
-                           "Client coordinates are native reported pixels, virtualized in the 96 DPI emulation. "
-                           "No pixel identity or physical monitor-transition claim."
-        }, indent=2) + "\n", encoding="utf-8")
+        (output / "reference.tsv").write_text(
+            header + "\n" + "\n".join("\t".join(map(str, row)) for row in records) + "\n", encoding="ascii"
+        )
+        (output / "metadata.json").write_text(
+            json.dumps(
+                {
+                    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+                    "executable": str(original),
+                    "sha256": hashlib.sha256(original.read_bytes()).hexdigest(),
+                    "dpi": actual_dpi,
+                    "dpi96_emulation": args.dpi96,
+                    "records": len(records),
+                    "capture_thread_context": "DPI_UNAWARE" if args.dpi96 else "PER_MONITOR_AWARE_V2",
+                    "renderer": "GDI",
+                    "font": "Consolas",
+                    "point_size": 10,
+                    "reported_client_height": 340,
+                    "tab_width": 8,
+                    "indent_width": 3,
+                    "highlight_subline_retained": True,
+                    "inputs_sha256": hashlib.sha256(args.inputs.read_bytes()).hexdigest(),
+                    "assumptions": "All styles plain Consolas, 1px edge margins, no margin columns; fold levels explicit. "
+                    "Client coordinates are native reported pixels, virtualized in the 96 DPI emulation. "
+                    "No pixel identity or physical monitor-transition claim.",
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         print(f"PASS: {len(records)} independent original native-dialog wrap records at {actual_dpi} DPI")
     finally:
         if app:

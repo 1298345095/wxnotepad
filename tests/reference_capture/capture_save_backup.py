@@ -1,18 +1,18 @@
 """Capture the original File > Save Backup command on a private desktop."""
+
 import ctypes as c
-from ctypes import wintypes as w
-from datetime import datetime, timedelta
-from hashlib import sha256
 import json
 import os
-from pathlib import Path
 import shutil
 import sys
 import time
+from ctypes import wintypes as w
+from datetime import datetime, timedelta
+from hashlib import sha256
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from original_host import Original, kernel, user
-
 
 SAVE_BACKUP = 40028
 
@@ -65,7 +65,7 @@ def wait_ready(original, basename):
     while time.monotonic() < deadline:
         if window_title(original).startswith(basename):
             return
-        time.sleep(.03)
+        time.sleep(0.03)
     raise TimeoutError(f"original never opened {basename}: {window_title(original)}")
 
 
@@ -137,9 +137,17 @@ def capture_case(executable, desktop, desktop_name, output, fallback, run_id, ca
         assert all(item.read_bytes() == expected for item, expected in collisions.items())
         if path and path.exists():
             assert path.read_bytes() == source
-        return {"case": label, "path": str(path) if path else None, "source_hex": source.hex(),
-                "before": before, "after": after, "menu": menu, "backups": observed,
-                "local_start": timer_start.isoformat(), "local_end": datetime.now().isoformat()}
+        return {
+            "case": label,
+            "path": str(path) if path else None,
+            "source_hex": source.hex(),
+            "before": before,
+            "after": after,
+            "menu": menu,
+            "backups": observed,
+            "local_start": timer_start.isoformat(),
+            "local_end": datetime.now().isoformat(),
+        }
     finally:
         try:
             original.close()
@@ -157,12 +165,13 @@ def main():
     (portable / "Notepad4.ini").write_text(
         "[Settings]\nSaveSettings=0\nFileWatchingMode=0\nAutoSaveOption=0\nWarnLineEndings=0\n"
         "LoadASCIIasUTF8=0\nLoadANSIasUTF8=0\n",
-        encoding="utf-16")
+        encoding="utf-16",
+    )
     user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWORD, c.c_void_p]
     user.CreateDesktopW.restype = w.HANDLE
     user.CloseDesktop.argtypes = [w.HANDLE]
     desktop_name = "save-backup-reference-" + str(os.getpid())
-    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1ff, None)
+    desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x1FF, None)
     if not desktop:
         raise c.WinError(c.get_last_error())
     fallback = local_backup_directory()
@@ -201,14 +210,21 @@ def main():
             print(f"Captured {case[0]}: {row['backups']}", flush=True)
     finally:
         user.CloseDesktop(desktop)
-        summary = {"original_revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
-                   "executable_sha256": sha256(executable.read_bytes()).hexdigest(),
-                   "ansi_cp": kernel.GetACP(), "oem_cp": kernel.GetOEMCP(),
-                   "fallback": str(fallback), "fixtures": results}
-        (output / "original.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        summary = {
+            "original_revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+            "executable_sha256": sha256(executable.read_bytes()).hexdigest(),
+            "ansi_cp": kernel.GetACP(),
+            "oem_cp": kernel.GetOEMCP(),
+            "fallback": str(fallback),
+            "fixtures": results,
+        }
+        (output / "original.json").write_text(
+            json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
     assert all(row["before"] == row["after"] for row in results)
-    assert all(len(row["backups"]) == int(row["case"] not in {"empty", "empty-untitled", "collision-both"})
-               for row in results)
+    assert all(
+        len(row["backups"]) == int(row["case"] not in {"empty", "empty-untitled", "collision-both"}) for row in results
+    )
 
 
 if __name__ == "__main__":

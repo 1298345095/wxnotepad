@@ -1,13 +1,14 @@
 """Query the pinned original's caret commands and portable settings, without desktop input."""
+
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import json
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
 
 def capture(executable, output):
@@ -42,9 +43,15 @@ def capture(executable, output):
     assert user.SystemParametersInfoW(0x2006, 0, c.byref(system_width), 0)
     result["system_width"] = system_width.value
     result["system_blink_period"] = user.GetCaretBlinkTime()
-    command_ids = {"Block (OVR Mode)": 40069, "Block (INS Mode)": 40070, "Line Width 1": 40071,
-                   "Line Width 2": 40072, "Line Width 3": 40073, "No Blink": 40074,
-                   "Draw Block Caret in Selection": 40075}
+    command_ids = {
+        "Block (OVR Mode)": 40069,
+        "Block (INS Mode)": 40070,
+        "Line Width 1": 40071,
+        "Line Width 2": 40072,
+        "Line Width 3": 40073,
+        "No Blink": 40074,
+        "Draw Block Caret in Selection": 40075,
+    }
 
     def save_now(frame):
         pid = w.DWORD()
@@ -65,7 +72,7 @@ def capture(executable, output):
         deadline = time.monotonic() + 10
         while not dialogs and time.monotonic() < deadline:
             user.EnumWindows(dialog, 0)
-            time.sleep(.05)
+            time.sleep(0.05)
         assert len(dialogs) == 1, "original Save Settings Now confirmation must appear"
         send(dialogs[0], 0x111, 1, 0)
 
@@ -93,7 +100,7 @@ def capture(executable, output):
         deadline = time.monotonic() + 10
         while not windows and time.monotonic() < deadline:
             user.EnumWindows(top, 0)
-            time.sleep(.05)
+            time.sleep(0.05)
         if len(windows) != 1:
             process.terminate()
             raise RuntimeError(f"owned original window missing: {windows}")
@@ -116,11 +123,14 @@ def capture(executable, output):
             # Original InitMenu checks are populated through WM_INITMENU.
             menu = user.GetMenu(frame)
             send(frame, 0x116, menu, 0)
-            return {"dpi": user.GetDpiForWindow(editor),
-                    "style": send(editor, 2513, 0, 0), "width": send(editor, 2189, 0, 0),
-                    "period": send(editor, 2075, 0, 0), "zoom": send(editor, 2374, 0, 0),
-                    "checks": {name: bool(user.GetMenuState(menu, number, 0) & 8)
-                               for name, number in command_ids.items()}}
+            return {
+                "dpi": user.GetDpiForWindow(editor),
+                "style": send(editor, 2513, 0, 0),
+                "width": send(editor, 2189, 0, 0),
+                "period": send(editor, 2075, 0, 0),
+                "zoom": send(editor, 2374, 0, 0),
+                "checks": {name: bool(user.GetMenuState(menu, number, 0) & 8) for name, number in command_ids.items()},
+            }
 
         try:
             inspect(frame, editor, state)
@@ -149,8 +159,19 @@ def capture(executable, output):
                             user.ReleaseDC(editor, dc)
 
                     result["paint"] = []
-                    for anchor, caret in [(0, 0), (1, 1), (2, 2), (5, 5), (9, 9), (10, 10), (12, 12),
-                                          (0, 5), (5, 0), (0, len(text)), (len(text), len(text))]:
+                    for anchor, caret in [
+                        (0, 0),
+                        (1, 1),
+                        (2, 2),
+                        (5, 5),
+                        (9, 9),
+                        (10, 10),
+                        (12, 12),
+                        (0, 5),
+                        (5, 0),
+                        (0, len(text)),
+                        (len(text), len(text)),
+                    ]:
                         send(editor, 2160, anchor, caret)
                         for style in [2, 258, 1, 17]:
                             for overstrike in [0, 1]:
@@ -159,10 +180,17 @@ def capture(executable, output):
                                 background = pixels(0, y)
                                 foreground = pixels(style, y)
                                 changed = [x for x, (a, b) in enumerate(zip(background, foreground)) if a != b]
-                                result["paint"].append({"anchor": anchor, "caret": caret, "style": style,
-                                    "overstrike": overstrike, "caret_x": send(editor, 2164, 0, caret),
-                                    "caret_y": send(editor, 2165, 0, caret),
-                                    "changed": [min(changed), max(changed) + 1] if changed else []})
+                                result["paint"].append(
+                                    {
+                                        "anchor": anchor,
+                                        "caret": caret,
+                                        "style": style,
+                                        "overstrike": overstrike,
+                                        "caret_x": send(editor, 2164, 0, caret),
+                                        "caret_y": send(editor, 2165, 0, caret),
+                                        "changed": [min(changed), max(changed) + 1] if changed else [],
+                                    }
+                                )
                     assert result["paint"][0]["changed"], "original native block paint must produce observable pixels"
                 finally:
                     kernel.VirtualFreeEx(handle, memory, 0, 0x8000)
@@ -178,8 +206,17 @@ def capture(executable, output):
 
         def commands(frame, editor, state):
             result["default"] = state()
-            for name in ["No Blink", "Block (INS Mode)", "Line Width 1", "Line Width 2", "Line Width 3",
-                         "Block (OVR Mode)", "Block (INS Mode)", "Draw Block Caret in Selection", "No Blink"]:
+            for name in [
+                "No Blink",
+                "Block (INS Mode)",
+                "Line Width 1",
+                "Line Width 2",
+                "Line Width 3",
+                "Block (OVR Mode)",
+                "Block (INS Mode)",
+                "Draw Block Caret in Selection",
+                "No Blink",
+            ]:
                 send(frame, 0x111, command_ids[name], 0)
                 result["commands"].append({"command": name, **state()})
             for width, number in [(1, 40071), (2, 40072), (3, 40073)]:
@@ -189,20 +226,35 @@ def capture(executable, output):
                     # The menu path reapplies Style_UpdateCaret after zoom.
                     send(frame, 0x111, number, 0)
                     result.setdefault("zoom", []).append({"requested_width": width, **state()})
+
         run(folder, "", commands)
-        for style, period in [(1, -1), (0, 0), (113, 275), (999, -7), (-1, -1), (104, 0),
-                              (2147483647, 2147483647), (-2147483648, -2147483648)]:
+        for style, period in [
+            (1, -1),
+            (0, 0),
+            (113, 275),
+            (999, -7),
+            (-1, -1),
+            (104, 0),
+            (2147483647, 2147483647),
+            (-2147483648, -2147483648),
+        ]:
             row = {"input_style": style, "input_period": period}
 
             def inspect(frame, editor, state):
                 row["initial"] = state()
                 save_now(frame)
-                row["saved_before_toggle"] = [line for line in (folder / "Notepad4.ini").read_text(encoding="utf-16").splitlines()
-                                              if line.startswith(("CaretStyle=", "CaretBlinkPeriod="))]
+                row["saved_before_toggle"] = [
+                    line
+                    for line in (folder / "Notepad4.ini").read_text(encoding="utf-16").splitlines()
+                    if line.startswith(("CaretStyle=", "CaretBlinkPeriod="))
+                ]
                 send(frame, 0x111, 40074, 0)
                 row["toggled"] = state()
+
             saved = run(folder, f"CaretStyle={style}\nCaretBlinkPeriod={period}", inspect)
-            row["saved"] = [line for line in saved.splitlines() if line.startswith(("CaretStyle=", "CaretBlinkPeriod="))]
+            row["saved"] = [
+                line for line in saved.splitlines() if line.startswith(("CaretStyle=", "CaretBlinkPeriod="))
+            ]
             result["settings"].append(row)
     output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     fixture = Path(__file__).resolve().parents[1] / "caret_reference.tsv"
@@ -211,7 +263,7 @@ def capture(executable, output):
         target.write("# input packed style, input blink period, queried core style, canonical packed style\n")
         for row in result["settings"]:
             saved = next((line.split("=", 1)[1] for line in row["saved"] if line.startswith("CaretStyle=")), "1")
-            target.write(f'{row["input_style"]}\t{row["input_period"]}\t{row["initial"]["style"]}\t{saved}\n')
+            target.write(f"{row['input_style']}\t{row['input_period']}\t{row['initial']['style']}\t{saved}\n")
     print(json.dumps(result, indent=2))
 
 

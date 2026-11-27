@@ -2,16 +2,15 @@
 
 import argparse
 import ctypes as c
-from ctypes import wintypes as w
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from ctypes import wintypes as w
+from pathlib import Path
 
 from original_host import CALLBACK, Original, user
-
 
 MODES = ("Off", "RGBA", "ARGB", "BGRA", "ABGR")
 REFERENCE_REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
@@ -74,7 +73,7 @@ def wait_until(condition, timeout=3):
         result = condition()
         if result:
             return result
-        time.sleep(.01)
+        time.sleep(0.01)
     return None
 
 
@@ -95,14 +94,17 @@ def hover(app, desktop, position):
     app.send(0x02A3)  # WM_MOUSELEAVE
     observed_position = move(app, position)
     start = time.monotonic()
-    popup = wait_until(lambda: visible_window(desktop, app, "CallTip"), timeout=.5)
+    popup = wait_until(lambda: visible_window(desktop, app, "CallTip"), timeout=0.5)
     result = {"hover": position, "point_position": observed_position, "active": bool(app.send(2202))}
     assert result["active"] == bool(popup)
     if popup:
         rect = w.RECT()
         assert user.GetWindowRect(popup, c.byref(rect))
-        result.update(elapsed_ms=round((time.monotonic() - start) * 1000),
-                      caret_at_show=app.send(2203), bounds=[rect.left, rect.top, rect.right, rect.bottom])
+        result.update(
+            elapsed_ms=round((time.monotonic() - start) * 1000),
+            caret_at_show=app.send(2203),
+            bounds=[rect.left, rect.top, rect.right, rect.bottom],
+        )
     return result, popup
 
 
@@ -132,19 +134,25 @@ def capture(args):
     output.mkdir(parents=True, exist_ok=False)
     executable = output / "Notepad4.exe"
     shutil.copy2(args.original, executable)
-    (output / "Notepad4.ini").write_text("[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16")
+    (output / "Notepad4.ini").write_text(
+        "[Settings]\nSaveSettings=0\n[Settings2]\nUILanguage=1033\n", encoding="utf-16"
+    )
     configure_win32()
     assert user.SetThreadDpiAwarenessContext(w.HANDLE(-4))
     name = f"wxnotepad-calltip-reference-{os.getpid()}"
-    desktop = user.CreateDesktopW(name, None, None, 0, 0x1ff, None)
+    desktop = user.CreateDesktopW(name, None, None, 0, 0x1FF, None)
     assert desktop
     app = None
     try:
         app = Original(None, executable, desktop, name)
-        results = {"revision": REFERENCE_REVISION,
-                   "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-                   "dpi": user.GetDpiForWindow(app.editor), "technology": app.send(2631),
-                   "hover_driver": "owned Win32 motion and dwell timer messages", "modes": {}}
+        results = {
+            "revision": REFERENCE_REVISION,
+            "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+            "dpi": user.GetDpiForWindow(app.editor),
+            "technology": app.send(2631),
+            "hover_driver": "owned Win32 motion and dwell timer messages",
+            "modes": {},
+        }
         for offset, mode in enumerate(MODES):
             app.command(40055 + offset)  # IDM_VIEW_SHOWCALLTIP_OFF plus the mode ordinal
             data = {"dwell_ms": app.send(2265), "observations": [], "edits": []}
@@ -169,12 +177,23 @@ def capture(args):
                         app.send(2176)  # SCI_UNDO
                         undone = app.state()
                         app.send(2011)  # SCI_REDO
-                        data["edits"].append({"sample": sample, "choice": choice, "rgb": initial,
-                                              "before": before, "after": after, "undo": undone, "redo": app.state()})
+                        data["edits"].append(
+                            {
+                                "sample": sample,
+                                "choice": choice,
+                                "rgb": initial,
+                                "before": before,
+                                "after": after,
+                                "undo": undone,
+                                "redo": app.state(),
+                            }
+                        )
             results["modes"][mode] = data
             (output / "original.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
-            print(f"Captured {mode}: {len(data['observations'])} hovers, {len(data['edits'])} chooser interactions",
-                  flush=True)
+            print(
+                f"Captured {mode}: {len(data['observations'])} hovers, {len(data['edits'])} chooser interactions",
+                flush=True,
+            )
         results["lifecycle"] = lifecycle(app, desktop)
         (output / "original.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     finally:
@@ -193,10 +212,10 @@ def lifecycle(app, desktop):
     _, popup = hover(app, desktop, 5)
     assert popup
     app.send(0x02A3)
-    time.sleep(.35)
+    time.sleep(0.35)
     after_leave = bool(app.send(2202))
     move(app, 8)
-    time.sleep(.35)
+    time.sleep(0.35)
     after_dwell_outside = bool(app.send(2202))
     _, popup = hover(app, desktop, 5)
     assert popup
@@ -215,10 +234,14 @@ def lifecycle(app, desktop):
     _, popup = hover(app, desktop, 5)
     assert popup
     app.command(40055)
-    return {"after_leave": after_leave, "after_dwell_outside": after_dwell_outside,
-            "after_escape": after_escape, "after_typing": after_typing,
-            "after_completion_hover": after_completion_hover,
-            "after_off_command": bool(app.send(2202))}
+    return {
+        "after_leave": after_leave,
+        "after_dwell_outside": after_dwell_outside,
+        "after_escape": after_escape,
+        "after_typing": after_typing,
+        "after_completion_hover": after_completion_hover,
+        "after_off_command": bool(app.send(2202)),
+    }
 
 
 if __name__ == "__main__":

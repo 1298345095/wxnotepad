@@ -1,8 +1,10 @@
 """Exercise publication races and the two observation callers' failure contracts."""
-from pathlib import Path
+
+import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -12,33 +14,63 @@ import resources
 
 
 class AppObservation(unittest.TestCase):
+    def test_observer_drivers_import_without_inherited_tools_path(self):
+        tests = Path(__file__).resolve().parent
+        probe = (
+            "import importlib\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            "sys.path.insert(0, sys.argv[1])\n"
+            "driver = importlib.import_module(sys.argv[2])\n"
+            "import app_observation\n"
+            "assert driver.read_state is app_observation.read_state\n"
+            "print(Path(app_observation.__file__).resolve())\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="observer-import-") as directory:
+            for driver in ("observed_shutdown_process", "window_routing_readiness"):
+                with self.subTest(driver=driver):
+                    result = subprocess.run(
+                        [sys.executable, "-E", "-X", "utf8", "-c", probe, str(tests), driver],
+                        cwd=directory,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        timeout=5,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout.strip(), str(tests.parent / "tools/app_observation.py"))
+
     def test_state_keeps_tabs_in_values_and_empty_fields(self):
         with tempfile.TemporaryDirectory() as name:
             folder = Path(name)
             (folder / "state").write_text("sequence\t2\npath\t中文\tfile\nempty\t\n", encoding="utf-8")
-            self.assertEqual(observation.read_state(folder), {
-                "sequence": "2", "path": "中文\tfile", "empty": ""})
+            self.assertEqual(observation.read_state(folder), {"sequence": "2", "path": "中文\tfile", "empty": ""})
 
     def test_wait_retries_publication_races_and_unmatched_snapshots(self):
         process = Mock()
         process.poll.return_value = None
         snapshots = [FileNotFoundError(), PermissionError(), {"sequence": "0"}, {"sequence": "1"}]
-        clock = Mock(side_effect=[0, 0, .01, .02, .03])
-        with patch.object(observation, "read_state", side_effect=snapshots), \
-                patch.object(observation.time, "sleep") as sleep:
+        clock = Mock(side_effect=[0, 0, 0.01, 0.02, 0.03])
+        with (
+            patch.object(observation, "read_state", side_effect=snapshots),
+            patch.object(observation.time, "sleep") as sleep,
+        ):
             state = observation.wait_state(Path("unused"), process, lambda s: s["sequence"] == "1", 1, clock)
         self.assertEqual(state, {"sequence": "1"})
-        self.assertEqual([call.args for call in sleep.call_args_list], [(.01,)] * 3)
+        self.assertEqual([call.args for call in sleep.call_args_list], [(0.01,)] * 3)
 
     def test_exited_process_is_reported_before_reading_state(self):
         process = Mock(returncode=7)
         process.poll.return_value = 7
         for module, error_type, message, clock_name in (
-                (resources, RuntimeError, "App exited 7", "perf_counter"),
-                (resource_process, AssertionError, "App exited: 7", "monotonic")):
-            with self.subTest(caller=module.__name__), \
-                    patch.object(module.time, clock_name, side_effect=[0, 0]), \
-                    patch.object(observation, "read_state") as read:
+            (resources, RuntimeError, "App exited 7", "perf_counter"),
+            (resource_process, AssertionError, "App exited: 7", "monotonic"),
+        ):
+            with (
+                self.subTest(caller=module.__name__),
+                patch.object(module.time, clock_name, side_effect=[0, 0]),
+                patch.object(observation, "read_state") as read,
+            ):
                 with self.assertRaises(error_type) as caught:
                     module.wait_state(Path("unused"), process, lambda _: True)
                 self.assertEqual(str(caught.exception), message)
@@ -46,13 +78,15 @@ class AppObservation(unittest.TestCase):
 
     def test_callers_keep_default_and_explicit_deadlines(self):
         for module, timeout, kwargs, error_type, message, clock_name in (
-                (resources, 30, {}, RuntimeError, "App state observation timed out", "perf_counter"),
-                (resource_process, 15, {}, AssertionError, "Actual app observation timed out", "monotonic"),
-                (resource_process, .2, {"timeout": .2}, AssertionError,
-                 "Actual app observation timed out", "monotonic")):
+            (resources, 30, {}, RuntimeError, "App state observation timed out", "perf_counter"),
+            (resource_process, 15, {}, AssertionError, "Actual app observation timed out", "monotonic"),
+            (resource_process, 0.2, {"timeout": 0.2}, AssertionError, "Actual app observation timed out", "monotonic"),
+        ):
             process = Mock()
-            with self.subTest(caller=module.__name__, timeout=timeout), \
-                    patch.object(module.time, clock_name, side_effect=[0, timeout]):
+            with (
+                self.subTest(caller=module.__name__, timeout=timeout),
+                patch.object(module.time, clock_name, side_effect=[0, timeout]),
+            ):
                 with self.assertRaises(error_type) as caught:
                     module.wait_state(Path("unused"), process, lambda _: True, **kwargs)
                 self.assertEqual(str(caught.exception), message)
@@ -76,8 +110,9 @@ class AppObservation(unittest.TestCase):
             folder = Path(name)
             target = folder / "command"
             for publish, expected in (
-                    (lambda: resource_process.command(folder, "1\n"), "1\n"),
-                    (lambda: resources.command(folder, 2, "open", "中文.txt"), "2\nopen\n中文.txt\n")):
+                (lambda: resource_process.command(folder, "1\n"), "1\n"),
+                (lambda: resources.command(folder, 2, "open", "中文.txt"), "2\nopen\n中文.txt\n"),
+            ):
                 target.write_text("previous", encoding="utf-8")
 
                 def complete(source, destination):

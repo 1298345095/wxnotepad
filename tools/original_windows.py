@@ -1,7 +1,8 @@
 """Find the pinned original editor's owned Windows frame and Scintilla controls."""
+
 import ctypes as c
-from ctypes import wintypes as w
 import time
+from ctypes import wintypes as w
 
 
 def find_frames(user, process, callback, timeout=10):
@@ -20,7 +21,7 @@ def find_frames(user, process, callback, timeout=10):
     deadline = time.monotonic() + timeout
     while not windows and time.monotonic() < deadline:
         user.EnumWindows(callback(window), 0)
-        time.sleep(.05)
+        time.sleep(0.05)
     return windows
 
 

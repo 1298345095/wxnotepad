@@ -1,19 +1,23 @@
 """Observe opt-in diagnostics through independent actual application processes."""
+
 import argparse
-from contextlib import redirect_stderr
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import time
+from contextlib import redirect_stderr
+from pathlib import Path
 
 from settings_process import Application
 
 
 def records(path, mixed=False):
     assert path.is_file(), "enabled diagnostic run must create its requested log"
-    rows = [dict(field.split("=", 1) for field in line.split("\t"))
-            for line in path.read_text(encoding="utf-8").splitlines() if not mixed or line.startswith("us=")]
+    rows = [
+        dict(field.split("=", 1) for field in line.split("\t"))
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if not mixed or line.startswith("us=")
+    ]
     assert rows and rows[0]["event"] == "header", rows
     for field in ("build", "backend", "wx", "core", "compiler"):
         assert rows[0][field], (field, rows[0])
@@ -35,7 +39,7 @@ def main():
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
-        (folder / "Notepad4.ini").write_text('[Settings2]\nUILanguage=1033\n', encoding="utf-16")
+        (folder / "Notepad4.ini").write_text("[Settings2]\nUILanguage=1033\n", encoding="utf-16")
         base = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         base.pop("WXNOTEPAD_DIAGNOSTICS", None)
         base.pop("WXNOTEPAD_DIAGNOSTIC_LOG", None)
@@ -57,18 +61,27 @@ def main():
             if enabled and not args.compiled_out:
                 rows = records(log)
                 events = [row["event"] for row in rows]
-                for expected in ("observer.request", "observer.ack", "close.request", "close.destroy-deferred",
-                                 "frame.destroy", "process.exit"):
+                for expected in (
+                    "observer.request",
+                    "observer.ack",
+                    "close.request",
+                    "close.destroy-deferred",
+                    "frame.destroy",
+                    "process.exit",
+                ):
                     assert expected in events, (expected, events)
                 assert events[-1] == "process.exit", events
-                assert "close.confirm" not in events, "ordinary refresh and clean close cannot claim a confirmation dialog"
+                assert "close.confirm" not in events, (
+                    "ordinary refresh and clean close cannot claim a confirmation dialog"
+                )
             else:
                 assert not log.exists(), "disabled or compiled-out run must leave no diagnostic file"
             print(f"PASS: runtime={'on' if enabled else 'off'} compiled_out={args.compiled_out}", flush=True)
         stderr_log = logs / "stderr.log"
         with stderr_log.open("w", encoding="utf-8") as captured, redirect_stderr(captured):
-            app = Application(executable, folder, dict(base, WXNOTEPAD_DIAGNOSTICS="1",
-                                                       WXNOTEPAD_DIAGNOSTIC_LOG="stderr"))
+            app = Application(
+                executable, folder, dict(base, WXNOTEPAD_DIAGNOSTICS="1", WXNOTEPAD_DIAGNOSTIC_LOG="stderr")
+            )
             try:
                 app.close()
             finally:
@@ -81,8 +94,9 @@ def main():
         if not args.compiled_out:
             log = logs / "terminated-诊断😀.log"
             log.unlink(missing_ok=True)
-            app = Application(executable, folder, dict(base, WXNOTEPAD_DIAGNOSTICS="1",
-                                                       WXNOTEPAD_DIAGNOSTIC_LOG=str(log)))
+            app = Application(
+                executable, folder, dict(base, WXNOTEPAD_DIAGNOSTICS="1", WXNOTEPAD_DIAGNOSTIC_LOG=str(log))
+            )
             try:
                 app.menu("Zoom In")
                 # Publication acknowledges the real menu first. Wait for its
@@ -93,7 +107,7 @@ def main():
                     if any(line.endswith("\n") and "\tevent=observer.ack\t" in line for line in lines):
                         break
                     assert time.monotonic() < deadline, "diagnostic acknowledgement record did not complete"
-                    time.sleep(.01)
+                    time.sleep(0.01)
                 app.process.terminate()
                 status = app.process.wait(timeout=10)
                 assert status != 0, f"controlled abnormal exit must retain the real failure status: {status}"

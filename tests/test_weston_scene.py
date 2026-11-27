@@ -1,22 +1,29 @@
 """Keep surface activation and title-based dialog mapping on the same scene rules."""
-from pathlib import Path
+
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from weston_scene import input_ready_toplevel, mapped_toplevel, mapped_toplevel_position
 
 
 def view(pid=42, surface=7, title="Save changes?", role="xdg_toplevel", marker=""):
-    return (f"\tView 1 (role {role}, PID {pid}, surface ID {surface}, "
-            f"top-level window '{title}' of app 'wxnotepad')\n"
-            f"\t\tposition: (0, 0)\n\t\t{marker}\n")
+    return (
+        f"\tView 1 (role {role}, PID {pid}, surface ID {surface}, "
+        f"top-level window '{title}' of app 'wxnotepad')\n"
+        f"\t\tposition: (0, 0)\n\t\t{marker}\n"
+    )
 
 
 class WestonScene(unittest.TestCase):
     def test_pointer_origin_requires_exact_owned_mapped_toplevel(self):
-        scene = ("Layer 0x1 (pos 0):\n" + view(surface=7, marker="[view is not mapped!]") +
-                 view(surface=8).replace("position: (0, 0)", "position: (-24, 138)") + view(pid=43))
+        scene = (
+            "Layer 0x1 (pos 0):\n"
+            + view(surface=7, marker="[view is not mapped!]")
+            + view(surface=8).replace("position: (0, 0)", "position: (-24, 138)")
+            + view(pid=43)
+        )
         self.assertEqual(mapped_toplevel_position(scene, 42, 8), (-24, 138))
         self.assertIsNone(mapped_toplevel_position(scene, 42, 7))
         self.assertIsNone(mapped_toplevel_position(scene, 42, 9))
@@ -46,8 +53,7 @@ class WestonScene(unittest.TestCase):
                 self.assertFalse(mapped_toplevel(scene, 42, surface))
 
     def test_views_outside_layers_and_popup_roles_do_not_match(self):
-        for scene in (view(), view() + "Layer 0x1 (pos 0):\n",
-                      "Layer 0x1 (pos 0):\n" + view(role="xdg_popup")):
+        for scene in (view(), view() + "Layer 0x1 (pos 0):\n", "Layer 0x1 (pos 0):\n" + view(role="xdg_popup")):
             with self.subTest(scene=scene):
                 self.assertFalse(mapped_toplevel(scene, 42, 7))
                 self.assertFalse(mapped_toplevel(scene, 42, title="Save changes?"))
@@ -61,16 +67,22 @@ class WestonScene(unittest.TestCase):
                     self.assertFalse(mapped_toplevel(scene, 42, title="Save changes?"))
 
     def test_other_views_cannot_supply_identity_or_unmapped_status(self):
-        scene = ("Layer 0x1 (pos 0):\n" + view(surface=7, marker="[view is not mapped!]") +
-                 view(surface=8) + view(pid=43, marker="[surface is not mapped!]"))
+        scene = (
+            "Layer 0x1 (pos 0):\n"
+            + view(surface=7, marker="[view is not mapped!]")
+            + view(surface=8)
+            + view(pid=43, marker="[surface is not mapped!]")
+        )
         self.assertFalse(mapped_toplevel(scene, 42, 7))
         self.assertTrue(mapped_toplevel(scene, 42, 8))
         self.assertTrue(mapped_toplevel(scene, 42, title="Save changes?"))
         self.assertFalse(mapped_toplevel(scene, 43, title="Save changes?"))
 
     def test_native_preparation_waits_for_input_capturing_startup_fade(self):
-        curtain = ("\tView 0 (role (null), PID 0, surface ID 0, desktop shell fade surface, 0x123):\n"
-                   "\t\tposition: (0, 0) -> (1600, 1000)\n\t\t[not opaque]\n\t\talpha: 0.170898\n")
+        curtain = (
+            "\tView 0 (role (null), PID 0, surface ID 0, desktop shell fade surface, 0x123):\n"
+            "\t\tposition: (0, 0) -> (1600, 1000)\n\t\t[not opaque]\n\t\talpha: 0.170898\n"
+        )
         mapped = "Layer 3 (pos 0xb0000000):\n" + view()
         fading = "Layer 0 (pos 0xffffffff):\n" + curtain + mapped
         self.assertTrue(mapped_toplevel(fading, 42, 7))
@@ -79,8 +91,10 @@ class WestonScene(unittest.TestCase):
         self.assertFalse(input_ready_toplevel(mapped, 43, 7))
 
     def test_inactive_curtain_does_not_block_native_preparation(self):
-        curtain = ("\tView 0 (role (null), PID 0, surface ID 0, desktop shell fade surface, 0x123):\n"
-                   "\t\t[view is not mapped!]\n")
+        curtain = (
+            "\tView 0 (role (null), PID 0, surface ID 0, desktop shell fade surface, 0x123):\n"
+            "\t\t[view is not mapped!]\n"
+        )
         mapped = "Layer 3 (pos 0xb0000000):\n" + view()
         self.assertTrue(input_ready_toplevel(curtain + mapped, 42, 7))
         self.assertTrue(input_ready_toplevel("Layer 0 (pos 0xffffffff):\n" + curtain + mapped, 42, 7))

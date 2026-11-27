@@ -1,13 +1,14 @@
 """Verify recent history through independent application processes and saved INI bytes."""
-from english_settings import english_settings
+
+import configparser
 import os
-from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
-import subprocess
-import configparser
+from pathlib import Path
 
+from english_settings import english_settings
 from settings_process import Application
 
 
@@ -22,8 +23,12 @@ def main():
         shutil.copy2(probe_source, probe)
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         seed = folder / "Notepad4.ini-default"
-        seed.write_text(english_settings("[Settings]\nSaveRecentFiles=65\nSaveSettings=0\nUnrelatedSetting=keep\n"
-                        "[Styles]\nUnrelatedStyle=keep\n"), encoding="utf-16")
+        seed.write_text(
+            english_settings(
+                "[Settings]\nSaveRecentFiles=65\nSaveSettings=0\nUnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=keep\n"
+            ),
+            encoding="utf-16",
+        )
         first = folder / "first.txt"
         first.write_bytes(b"first")
         app = Application(executable, folder, environment, first)
@@ -31,20 +36,30 @@ def main():
             app.close()
             saved = (folder / "Notepad4.ini").read_text(encoding="utf-16")
             assert "[Recent Files]" in saved and "first.txt" in saved, saved
-            assert "SaveRecentFiles=65" in saved and "UnrelatedSetting=keep" in saved and "UnrelatedStyle=keep" in saved, saved
+            assert (
+                "SaveRecentFiles=65" in saved and "UnrelatedSetting=keep" in saved and "UnrelatedStyle=keep" in saved
+            ), saved
             if os.name != "nt" or source.drive.lower() != Path(os.environ["WINDIR"]).drive.lower():
                 assert any(line in saved for line in ('01="first.txt"', '01=".\\first.txt"', '01="./first.txt"')), saved
         finally:
             app.stop()
+
         def history():
             document = configparser.ConfigParser(interpolation=None)
             document.read(folder / "Notepad4.ini", encoding="utf-16")
-            return [Path(value.removeprefix('"').removesuffix('"').replace("\\", os.sep)).name
-                    for value in document["Recent Files"].values()]
+            return [
+                Path(value.removeprefix('"').removesuffix('"').replace("\\", os.sep)).name
+                for value in document["Recent Files"].values()
+            ]
 
         def restart(paths):
-            result = subprocess.run([str(probe), "--history", *(str(path) for path in paths)], env=environment,
-                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            result = subprocess.run(
+                [str(probe), "--history", *(str(path) for path in paths)],
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
             assert result.returncode == 0, result.stdout
 
         restart([first])
@@ -55,8 +70,10 @@ def main():
             spaced.write_bytes(b"trailing-space document")
             (folder / "report").write_bytes(b"different unspaced document")
             ini = folder / "Notepad4.ini"
-            ini.write_text(english_settings("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n"
-                           "[Recent Files]\n01=report \n"), encoding="utf-16")
+            ini.write_text(
+                english_settings("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n[Recent Files]\n01=report \n"),
+                encoding="utf-16",
+            )
             restart([spaced])
             app = Application(executable, folder, environment, first)
             try:
@@ -67,8 +84,10 @@ def main():
                 assert (folder / "report").read_bytes() == b"different unspaced document"
             finally:
                 app.stop()
-            ini.write_text(english_settings("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n"
-                           "[Recent Files]\n01=first.txt\n"), encoding="utf-16")
+            ini.write_text(
+                english_settings("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n[Recent Files]\n01=first.txt\n"),
+                encoding="utf-16",
+            )
             app = Application(executable, folder, environment, spaced)
             try:
                 assert app.state["length"] == "23", app.state
@@ -77,8 +96,10 @@ def main():
                 assert '01="report "' in ini.read_text(encoding="utf-16"), repr(ini.read_bytes())
             finally:
                 app.stop()
-            ini.write_text(english_settings("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n"
-                           "[Recent Files]\n01=first.txt\n"), encoding="utf-16")
+            ini.write_text(
+                english_settings("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n[Recent Files]\n01=first.txt\n"),
+                encoding="utf-16",
+            )
             print("PASS: literal POSIX trailing-space filenames survive legacy INI load, merge-save and restart")
         second, third = folder / "second.txt", folder / "third.txt"
         second.write_bytes(b"second")
@@ -98,7 +119,10 @@ def main():
             second_process.stop()
         print("PASS: restart and sequential closes preserve each process's additions with original MergeSave order")
         ini = folder / "Notepad4.ini"
-        ini.write_text(english_settings(f"[Settings]\nSaveSettings=0\nUnrelatedSetting=keep\n[Recent Files]\n01={first}\n"), encoding="utf-16")
+        ini.write_text(
+            english_settings(f"[Settings]\nSaveSettings=0\nUnrelatedSetting=keep\n[Recent Files]\n01={first}\n"),
+            encoding="utf-16",
+        )
         restart([])
         app = Application(executable, folder, environment, third)
         try:
@@ -112,8 +136,12 @@ def main():
         for path in fixtures:
             path.write_bytes(b"capacity")
         entries = "".join(f"{index + 1:02}={path}\n" for index, path in enumerate(fixtures))
-        ini.write_text(english_settings("[Settings]\nSaveRecentFiles=81\n[Settings2]\nPortableMyDocs=0\n"
-                       "[Recent Files]\n" + entries), encoding="utf-16")
+        ini.write_text(
+            english_settings(
+                "[Settings]\nSaveRecentFiles=81\n[Settings2]\nPortableMyDocs=0\n[Recent Files]\n" + entries
+            ),
+            encoding="utf-16",
+        )
         restart(fixtures[:40])
         app = Application(executable, folder, environment, fixtures[40])
         try:
@@ -148,8 +176,12 @@ def main():
         upper = folder / "FIRST.TXT"
         if os.name != "nt":
             upper.write_bytes(b"distinct case")
-        ini.write_text(english_settings("[Settings]\nSaveRecentFiles=65\n[Settings2]\nRelativeFileMRU=0\n"
-                       f"[Recent Files]\n01={upper}\n"), encoding="utf-16")
+        ini.write_text(
+            english_settings(
+                f"[Settings]\nSaveRecentFiles=65\n[Settings2]\nRelativeFileMRU=0\n[Recent Files]\n01={upper}\n"
+            ),
+            encoding="utf-16",
+        )
         app = Application(executable, folder, environment, first)
         try:
             app.close()
@@ -159,14 +191,19 @@ def main():
         print("PASS: Windows ordinal case dedup retains stored spelling; case-sensitive hosts retain distinct paths")
         if os.name == "nt":
             import ctypes
-            from ctypes import wintypes
             import uuid
+            from ctypes import wintypes
+
             shell = ctypes.WinDLL("shell32")
             ole = ctypes.WinDLL("ole32")
             token = (ctypes.c_ubyte * 16).from_buffer_copy(uuid.UUID("fdd39ad0-238f-46af-adb4-6c85480369c7").bytes_le)
             documents = ctypes.c_void_p()
-            shell.SHGetKnownFolderPath.argtypes = [ctypes.c_void_p, wintypes.DWORD, wintypes.HANDLE,
-                                                   ctypes.POINTER(ctypes.c_void_p)]
+            shell.SHGetKnownFolderPath.argtypes = [
+                ctypes.c_void_p,
+                wintypes.DWORD,
+                wintypes.HANDLE,
+                ctypes.POINTER(ctypes.c_void_p),
+            ]
             ole.CoTaskMemFree.argtypes = [ctypes.c_void_p]
             assert shell.SHGetKnownFolderPath(ctypes.byref(token), 0, None, ctypes.byref(documents)) == 0
             try:
@@ -185,8 +222,12 @@ def main():
                 finally:
                     app.stop()
             environment["WXNOTEPAD_RECENT_FIXTURE"] = str(folder)
-            ini.write_text(english_settings("[Settings]\nSaveRecentFiles=65\n[Recent Files]\n"
-                           "01=%WXNOTEPAD_RECENT_FIXTURE%\\first.txt\n"), encoding="utf-16")
+            ini.write_text(
+                english_settings(
+                    "[Settings]\nSaveRecentFiles=65\n[Recent Files]\n01=%WXNOTEPAD_RECENT_FIXTURE%\\first.txt\n"
+                ),
+                encoding="utf-16",
+            )
             restart([first])
             print("PASS: portable Documents token and environment expansion resolve through native restart chooser")
     print("PASS: remembered recent history saves independently of SaveSettings")

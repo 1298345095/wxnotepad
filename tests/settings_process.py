@@ -1,14 +1,15 @@
 """Verify original settings through independent application processes."""
-from english_settings import english_settings
+
 import argparse
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 from contextlib import ExitStack
+from pathlib import Path
 
+from english_settings import english_settings
 from resource_process import command, observation_context, wait_state
 
 
@@ -25,9 +26,21 @@ class Application:
 
     def menu(self, item, menu=None):
         if menu is None:
-            menu = "Settings" if item in {"Auto Indent", "Auto-Shrink Horizontal Scrollbar", "Insert Tabs as Spaces",
-                                          "Tab Settings...", "Long Line Settings...", "Save Settings On Exit",
-                                          "Save Settings Now", "Remember Search Options"} else "View"
+            menu = (
+                "Settings"
+                if item
+                in {
+                    "Auto Indent",
+                    "Auto-Shrink Horizontal Scrollbar",
+                    "Insert Tabs as Spaces",
+                    "Tab Settings...",
+                    "Long Line Settings...",
+                    "Save Settings On Exit",
+                    "Save Settings Now",
+                    "Remember Search Options",
+                }
+                else "View"
+            )
         self.named_menu(menu, item)
 
     def named_menu(self, menu, item):
@@ -45,8 +58,10 @@ class Application:
         try:
             result = self.process.wait(timeout=10)
         except subprocess.TimeoutExpired as error:
-            error.add_note(f"Close transition: pid={self.process.pid}, requested={requested!r}, "
-                           f"last_ack={self.state!r}, observed={observation_context(self.folder, self.process)!r}")
+            error.add_note(
+                f"Close transition: pid={self.process.pid}, requested={requested!r}, "
+                f"last_ack={self.state!r}, observed={observation_context(self.folder, self.process)!r}"
+            )
             raise
         assert result == 0, f"Close exited with {result}: requested={requested!r}, last_ack={self.state!r}"
 
@@ -58,19 +73,26 @@ class Application:
 
 def view(state, wrap, numbers, whitespace):
     assert (state["wrap_mode"] != "0", state["line_numbers"] == "1", state["whitespace"] != "0") == (
-        wrap, numbers, whitespace), state
+        wrap,
+        numbers,
+        whitespace,
+    ), state
 
 
 def tabs(state, tab, indent, use_tabs, tab_indents=1, backspace=2):
-    assert tuple(int(state[key]) for key in ("tab_width", "indent_width", "use_tabs", "tab_indents",
-                                           "backspace_unindents")) == (tab, indent, use_tabs, tab_indents, backspace), state
+    assert tuple(
+        int(state[key]) for key in ("tab_width", "indent_width", "use_tabs", "tab_indents", "backspace_unindents")
+    ) == (tab, indent, use_tabs, tab_indents, backspace), state
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
-    parser.add_argument("--installed-directory", type=Path,
-                        help="Owned native Linux prefix used only for installation-discovery testing")
+    parser.add_argument(
+        "--installed-directory",
+        type=Path,
+        help="Owned native Linux prefix used only for installation-discovery testing",
+    )
     args = parser.parse_args()
     source = args.executable.resolve()
     with ExitStack() as stack:
@@ -86,10 +108,15 @@ def main():
         executable = executable_folder / source.name
         shutil.copy2(source, executable)
         seed = executable_folder / "Notepad4.ini-default"
-        seed.write_text(english_settings("[Settings]\nWordWrap=invalid\nAutoIndent=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
-                        "DefaultEOLMode=1\nWarnLineEndings=0\n"
-                        "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n"
-                        "[wxnotepad]\nAutoShrinkScrollWidth=invalid\nUnrelatedCustom=keep\n"), encoding="utf-16")
+        seed.write_text(
+            english_settings(
+                "[Settings]\nWordWrap=invalid\nAutoIndent=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
+                "DefaultEOLMode=1\nWarnLineEndings=0\n"
+                "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n"
+                "[wxnotepad]\nAutoShrinkScrollWidth=invalid\nUnrelatedCustom=keep\n"
+            ),
+            encoding="utf-16",
+        )
         startup = folder / "startup.txt"
         startup.write_bytes(b"settings survive\r\nstartup file loading\nlast")
         app = Application(executable, folder, environment)
@@ -101,7 +128,13 @@ def main():
             assert app.state["auto_indent"] == "1", app.state
             app.named_menu("Scheme", "JSON")
             tabs(app.state, 2, 2, 0)
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
+            for item in (
+                "Word Wrap",
+                "Line Numbers",
+                "Show Whitespace",
+                "Auto Indent",
+                "Auto-Shrink Horizontal Scrollbar",
+            ):
                 app.menu(item)
             view(app.state, False, False, True)
             assert app.state["auto_shrink_scroll_width"] == "1", app.state
@@ -121,7 +154,13 @@ def main():
             assert app.state["eol_mode"] == "2", app.state
             assert app.state["auto_indent"] == "0", app.state
             app.menu("Save Settings On Exit")
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
+            for item in (
+                "Word Wrap",
+                "Line Numbers",
+                "Show Whitespace",
+                "Auto Indent",
+                "Auto-Shrink Horizontal Scrollbar",
+            ):
                 app.menu(item)
             view(app.state, True, True, False)
             app.close()
@@ -136,10 +175,22 @@ def main():
         app = Application(executable, folder, environment)
         try:
             view(app.state, False, False, True)
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
+            for item in (
+                "Word Wrap",
+                "Line Numbers",
+                "Show Whitespace",
+                "Auto Indent",
+                "Auto-Shrink Horizontal Scrollbar",
+            ):
                 app.menu(item)
             app.menu("Save Settings Now")
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
+            for item in (
+                "Word Wrap",
+                "Line Numbers",
+                "Show Whitespace",
+                "Auto Indent",
+                "Auto-Shrink Horizontal Scrollbar",
+            ):
                 app.menu(item)
             app.close()
         finally:
@@ -159,10 +210,21 @@ def main():
         assert "AutoShrinkScrollWidth=" not in saved and "UnrelatedCustom=keep" in saved, saved
         assert "UnrelatedSetting=keep" in saved and "UnrelatedStyle=保留" in saved, saved
         assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, saved
-        for value, mode in (("0", "0"), ("1", "2"), ("2", "1"), ("-1", "0"), ("99", "1"), ("invalid", "0"),
-                            ("4294967296", "1"), ("-4294967297", "0"), ("1suffix", "2")):
+        for value, mode in (
+            ("0", "0"),
+            ("1", "2"),
+            ("2", "1"),
+            ("-1", "0"),
+            ("99", "1"),
+            ("invalid", "0"),
+            ("4294967296", "1"),
+            ("-4294967297", "0"),
+            ("1suffix", "2"),
+        ):
             (config_folder / "Notepad4.ini").write_text(
-                english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDefaultEOLMode=" + value + "\n"), encoding="utf-16")
+                english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDefaultEOLMode=" + value + "\n"),
+                encoding="utf-16",
+            )
             app = Application(executable, folder, environment)
             try:
                 assert app.state["eol_mode"] == mode, (value, app.state)
@@ -170,10 +232,15 @@ def main():
             finally:
                 app.stop()
         config = config_folder / "Notepad4.ini"
-        config.write_text(english_settings("[Settings]\nAutoIndent=0\nTabWidth=7\nIndentWidth=3\nTabsAsSpaces=1\nTabIndents=0\n"
-                          "BackspaceUnindents=3\n[Python Script]\nTabWidth=9\nIndentWidth=0\n"
-                          "TabsAsSpaces=0\nUseGlobalTabSettings=0\n[JSON Document]\nUseGlobalTabSettings=1\n"
-                          "[C/C++ Source]\nTabWidth=999\nIndentWidth=-5\nUseGlobalTabSettings=0\n"), encoding="utf-16")
+        config.write_text(
+            english_settings(
+                "[Settings]\nAutoIndent=0\nTabWidth=7\nIndentWidth=3\nTabsAsSpaces=1\nTabIndents=0\n"
+                "BackspaceUnindents=3\n[Python Script]\nTabWidth=9\nIndentWidth=0\n"
+                "TabsAsSpaces=0\nUseGlobalTabSettings=0\n[JSON Document]\nUseGlobalTabSettings=1\n"
+                "[C/C++ Source]\nTabWidth=999\nIndentWidth=-5\nUseGlobalTabSettings=0\n"
+            ),
+            encoding="utf-16",
+        )
         app = Application(executable, folder, environment)
         try:
             tabs(app.state, 7, 3, 0, 0, 3)
@@ -193,8 +260,13 @@ def main():
         saved = config.read_text(encoding="utf-16")
         assert "TabWidth=7" in saved and "IndentWidth=3" in saved and "BackspaceUnindents=3" in saved, saved
         assert "[Python Script]" in saved and "TabWidth=9" in saved and "IndentWidth=0" in saved, saved
-        config.write_text(english_settings("[Settings]\nSaveSettings=0\nTabWidth=6\n[Shell Script]\nTabWidth=9\n"
-                          "IndentWidth=2\nTabsAsSpaces=1\nUseGlobalTabSettings=0\n"), encoding="utf-16")
+        config.write_text(
+            english_settings(
+                "[Settings]\nSaveSettings=0\nTabWidth=6\n[Shell Script]\nTabWidth=9\n"
+                "IndentWidth=2\nTabsAsSpaces=1\nUseGlobalTabSettings=0\n"
+            ),
+            encoding="utf-16",
+        )
         app = Application(executable, folder, environment)
         try:
             for dialect in ("Bash", "C Shell", "m4"):
