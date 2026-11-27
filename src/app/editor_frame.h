@@ -145,6 +145,7 @@ private:
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();
     void RunSelectionAction(SelectionAction action);
+    void CalculateExpression();
     bool HandleSelectionActionKey(const wxKeyEvent& event);
     bool LaunchSelectionCommand(const wxString& command, const wxString& directory, wxString& error);
     void AppendEditingCommands(wxMenu* edit);

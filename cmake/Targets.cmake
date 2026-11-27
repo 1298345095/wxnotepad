@@ -181,6 +181,7 @@ add_library(app_shell STATIC
     src/app/open_targets.cpp
     src/app/run_command.cpp
     src/app/selection_actions.cpp
+    src/app/calculate_expression.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
@@ -189,6 +190,13 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(NOT WIN32)
     target_link_libraries(app_shell PUBLIC wx::net)
+    find_package(qjs CONFIG REQUIRED)
+    get_target_property(expression_engine_type qjs TYPE)
+    if(NOT expression_engine_type STREQUAL "STATIC_LIBRARY")
+        message(FATAL_ERROR "Calculate Expression requires the statically linked QuickJS engine")
+    endif()
+    target_sources(app_shell PRIVATE src/app/expression_evaluator_qjs.cpp)
+    target_link_libraries(app_shell PRIVATE qjs)
 endif()
 if(NOT WIN32)
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)

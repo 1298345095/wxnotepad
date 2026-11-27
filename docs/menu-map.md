@@ -13,6 +13,11 @@ etc. An existing selection keeps its endpoints and direction on right-click,
 including a click outside that selection. An empty selection moves to the
 hit-tested position. Keyboard invocation uses the current caret.
 
+Tools → Action on Selection also contains the original Calculate Expression
+command after Custom Action 2, separated from the launch actions. Its JavaScript,
+result selection, platform engine and history behavior are recorded in
+[Calculate Expression](observations/calculate-expression.md).
+
 ```text
 File
   New; New Window; Open; Open As GBK; Open As UTF-16LE
