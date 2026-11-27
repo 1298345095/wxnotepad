@@ -38,6 +38,7 @@ struct OriginalSettings {
     bool saveBeforeRunningTools = false;
     bool reuseWindow = false;
     bool singleFileInstance = true;
+    bool stickyWindowPosition = false;
     bool multiFileArg = false;
     wxString openWithDirectory;
     wxString favoritesDirectory;

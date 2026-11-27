@@ -206,6 +206,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         },
         alwaysOnTop);
     windowOptions->AppendSeparator();
+    AppendWindowPositionCommands(windowOptions);
     const auto appendRouting = [this](wxMenu* menu, const wxString& label, bool reuse) {
         const int id = wxWindow::NewControlId();
         menu->AppendCheckItem(id, label);

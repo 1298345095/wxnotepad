@@ -132,6 +132,7 @@ SettingsStore::SettingsStore(const wxString& path) : document_(path) {
     values.uiLanguage = UILanguage::Normalize(document_.ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
     values.reuseWindow = document_.ReadBool("ReuseWindow", defaults.reuseWindow, "Settings2");
     values.singleFileInstance = document_.ReadBool("SingleFileInstance", defaults.singleFileInstance, "Settings2");
+    values.stickyWindowPosition = document_.ReadBool("StickyWindowPosition", false, "Settings2");
     values.multiFileArg = document_.ReadBool("MultiFileArg", defaults.multiFileArg, "Settings2");
     const int recent = document_.ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
     values.saveRecentFiles = (recent & 1) != 0;
@@ -454,6 +455,14 @@ bool SettingsStore::Save(bool explicitSave) {
     if (!document_.Load()) return false;
     document_.WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
+        if (!values.stickyWindowPosition) {
+            WriteWindowPosition();
+        } else if (windowPosition_ && windowPosition_->coordinates) {
+            // Original SaveSettings rebuilds Settings without the generic monitor
+            // hint while sticky is active; the resolution record stays fixed.
+            document_.WriteString("WindowPosX", {}, {});
+            document_.WriteString("WindowPosY", {}, {});
+        }
         if (!SaveStyleProfile()) return false;
         WriteExtensions();
         document_.WriteInt("StyleTheme", std::to_underlying(values.fonts.theme), 0, "Styles");
@@ -643,6 +652,71 @@ bool SettingsStore::SaveWindowRouting(bool reuseWindow, bool singleFileInstance)
     if (!document_.Save()) return false;
     values.reuseWindow = reuseWindow;
     values.singleFileInstance = singleFileInstance;
+    return true;
+}
+
+wxPoint SettingsStore::LastWindowPosition() const {
+    return {document_.ReadInt("WindowPosX", 0), document_.ReadInt("WindowPosY", 0)};
+}
+
+std::optional<WindowPosition> SettingsStore::LoadWindowPosition(wxSize screen, bool coordinates) const {
+    const auto section = coordinates ? wxString::Format("Window Position %dx%d", screen.x, screen.y)
+                                     : wxString("wxnotepad Wayland Window");
+    const int width = document_.ReadInt("WindowSizeX", 0, section);
+    const int height = document_.ReadInt("WindowSizeY", 0, section);
+    if (width <= 0 || height <= 0) return std::nullopt;
+    if (coordinates && (!document_.FindValue("WindowPosX", section) || !document_.FindValue("WindowPosY", section)))
+        return std::nullopt;
+    return WindowPosition{
+        {document_.ReadInt("WindowPosX", 0, section), document_.ReadInt("WindowPosY", 0, section), width, height},
+        document_.ReadBool("WindowMaximized", false, section),
+        coordinates,
+        screen};
+}
+
+void SettingsStore::CaptureWindowPosition(const WindowPosition& position) {
+    windowPosition_ = position;
+}
+
+void SettingsStore::WriteWindowPosition() {
+    if (!windowPosition_) return;
+    const auto& position = *windowPosition_;
+    const auto section = position.coordinates
+                             ? wxString::Format("Window Position %dx%d", position.screen.x, position.screen.y)
+                             : wxString("wxnotepad Wayland Window");
+    if (position.coordinates) {
+        document_.WriteString("WindowPosX", wxString::Format("%d", position.normal.x), {}, section, true);
+        document_.WriteString("WindowPosY", wxString::Format("%d", position.normal.y), {}, section, true);
+        document_.WriteString("WindowPosX", wxString::Format("%d", position.normal.x), {}, "Settings", true);
+        document_.WriteString("WindowPosY", wxString::Format("%d", position.normal.y), {}, "Settings", true);
+    }
+    document_.WriteString("WindowSizeX", wxString::Format("%d", position.normal.width), {}, section, true);
+    document_.WriteString("WindowSizeY", wxString::Format("%d", position.normal.height), {}, section, true);
+    document_.WriteBool("WindowMaximized", position.maximized, false, section);
+}
+
+bool SettingsStore::SaveStickyWindowPosition(bool sticky) {
+    const wxLogNull noGuiLog;
+    if (wxFileExists(document_.Path()) && !wxIsWritable(document_.Path())) return false;
+    if (!document_.Load()) return false;
+    document_.WriteBool("StickyWindowPosition", sticky, false, "Settings2");
+    if (!document_.Save()) return false;
+    values.stickyWindowPosition = sticky;
+    return true;
+}
+
+bool SettingsStore::ClearWindowPositionHistory() {
+    if (values.stickyWindowPosition) return false;
+    const wxLogNull noGuiLog;
+    if (!document_.Load()) return false;
+    for (const auto& section : document_.SectionNames())
+        if (section.Lower().StartsWith("window position") || section == "wxnotepad Wayland Window")
+            document_.ReplaceHistorySection(section, {});
+    // Run is the currently shared dialog-size record, in device-independent units.
+    document_.WriteInt("RunDlgSizeX", 0, 0, "wxnotepad");
+    if (!document_.Save()) return false;
+    values.runCommandWidthDIP = 0;
+    windowPosition_.reset();
     return true;
 }
 

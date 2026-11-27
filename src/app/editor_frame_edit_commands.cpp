@@ -115,6 +115,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
         copyRtf);
+    AppendCopyWindowPosition(clipboard);
     edit->AppendSubMenu(clipboard, _("Cop&y to Clipboard"));
     edit->AppendSeparator();
     AppendEditingCommands(edit);

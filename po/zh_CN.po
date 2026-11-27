@@ -752,6 +752,11 @@ msgstr "行切分(&S)\tCtrl+I"
 msgid "&Standard"
 msgstr "标准(&S)"
 
+#. TRANSLATORS: Original IDM_VIEW_STICKY_WINDOW_POSITION under Settings > Window Options.
+#: src/app/window_position.cpp
+msgid "&Sticky Window Position"
+msgstr "固定窗口位置(&S)"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Strip trailing blanks when saving."
 msgstr "保存时移除行尾空白(&S)。"
@@ -845,6 +850,11 @@ msgstr "Web开发(&W)"
 msgid "&Wildcard search"
 msgstr "通配符搜索(&I)"
 
+#. TRANSLATORS: Original CMD_COPYWINPOS, Edit > Copy to Clipboard.
+#: src/app/window_position.cpp
+msgid "&Window Position\tCtrl+Shift+K"
+msgstr "窗口位置(&W)\tCtrl+Shift+K"
+
 #: src/app/editor_frame_commands.cpp
 msgid "&Windows (CR+LF)"
 msgstr "&Windows (CR+LF)"
@@ -912,6 +922,11 @@ msgid ""
 msgstr ""
 "-o  仅本次启动始终置顶。\n"
 "-o0, -o-, -oo  仅本次启动关闭始终置顶。"
+
+#. TRANSLATORS: Public five-field position argument. Keep -pos and field punctuation unchanged.
+#: src/app/main.cpp
+msgid "-pos x,y,width,height,maximized  Normal outer window rectangle and maximized state (0 or 1)."
+msgstr "-pos x,y,width,height,maximized  普通窗口外框矩形和最大化状态（0 或 1）。"
 
 #: src/app/editor_frame_settings_commands.cpp
 msgid "1/&3 Page"
@@ -1419,6 +1434,11 @@ msgstr "清空剪贴板(&B)"
 msgid "Clear History"
 msgstr "清除历史"
 
+#. TRANSLATORS: Original IDM_VIEW_CLEARWINPOS under Settings > Window Options.
+#: src/app/window_position.cpp
+msgid "Clear Position &History"
+msgstr "清除位置记录(&H)"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Click here to &select default encoding."
 msgstr "点击此处选择默认编码(&S)。"
@@ -1792,7 +1812,7 @@ msgstr "无法保存文件"
 
 #. TRANSLATORS: wxnotepad title for a settings-file write failure.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
-#: src/app/language_commands.cpp
+#: src/app/language_commands.cpp src/app/window_position.cpp
 msgid "Could not save settings"
 msgstr "无法保存设置"
 
@@ -1802,7 +1822,7 @@ msgstr "无法启动另一个 wxnotepad 进程。"
 
 #. TRANSLATORS: wxnotepad settings-write failure; %s is the literal settings-file pathname.
 #: src/app/editor_frame_commands.cpp src/app/editor_frame_settings_commands.cpp
-#: src/app/language_commands.cpp
+#: src/app/language_commands.cpp src/app/window_position.cpp
 #, c-format
 msgid "Could not write %s"
 msgstr "无法写入 %s"
@@ -4767,6 +4787,11 @@ msgstr "凸显配对括号(&V)\tCtrl+Shift+V"
 msgid "WJ — &Word joiner"
 msgstr "WJ — 单词连接符(&W)"
 
+#. TRANSLATORS: Wayland cannot export or apply global window coordinates.
+#: src/app/main.cpp
+msgid "Wayland applies size and maximized state; coordinates and default positioning are unavailable."
+msgstr "Wayland 应用窗口大小和最大化状态；坐标和默认定位不可用。"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Web Source Code"
 msgstr "Web 源代码"
@@ -4793,6 +4818,11 @@ msgstr "窗口选项(&P)"
 #: src/app/editor_frame_settings_commands.cpp
 msgid "Window Title Displa&y"
 msgstr "窗口标题显示(&Y)"
+
+#. TRANSLATORS: Wayland limitation: no compositor global-position protocol is available.
+#: src/app/window_position.cpp
+msgid "Window coordinates and default positioning are unavailable on Wayland."
+msgstr "Wayland 上无法获取窗口坐标或恢复默认位置。"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Windows (CR+LF)"
