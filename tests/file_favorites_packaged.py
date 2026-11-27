@@ -407,8 +407,14 @@ def exercise(app, dialogs, favorite_directory, target, other, evidence):
 
     def recent_paths():
         app.begin("menu", str(menu_id(app.state, "Recent (History)...")))
-        window = dialogs.wait(app.process, "Recent Files", message=app.state["document_path"])
-        paths = tuple(text for text in dialogs.texts(window) if str(target.parent) in text)
+        deadline = time.monotonic() + 10
+        window = dialogs.wait(app.process, "Recent Files")
+        while True:
+            paths = tuple(text for text in dialogs.texts(window) if str(target.parent) in text)
+            if any(app.state["document_path"] in text for text in paths):
+                break
+            assert time.monotonic() < deadline, paths
+            time.sleep(0.03)
         assert any(app.state["document_path"] in text for text in paths), paths
         cancel_dialog(dialogs, window)
         app.finish()
