@@ -85,35 +85,36 @@ bool EditorControl::IsOpenBraceMatched(intptr_t position, intptr_t startPosition
 
 // Port of Notepad4 89b8b36 EditAutoCloseBraceQuote and EditIsOpenBraceMatched.
 // Called from the original core's character notification, after its insertion.
-void TypingAssistance::InsertMatchingCharacter(int ch) {
+bool TypingAssistance::InsertMatchingCharacter(int ch) {
     using Scintilla::Message;
     const auto character = AutoInsertIndex(ch);
-    if (!character) return;
+    if (!character) return false;
     const int index = *character;
-    if (!(autoInsertMask_ & (1U << index))) return;
+    if (!(autoInsertMask_ & (1U << index))) return true;
     const auto position = editor_.Send(Message::GetCurrentPos);
     const int previous = static_cast<int>(editor_.Send(Message::GetCharAt, position - 2));
     const int next = static_cast<int>(editor_.Send(Message::GetCharAt, position));
     const int previousStyle = static_cast<int>(editor_.Send(Message::GetStyleIndexAt, position - 2));
     const int nextStyle = static_cast<int>(editor_.Send(Message::GetStyleIndexAt, position));
     const auto& styles = styles_;
-    if (InCharacterLiteral(styles, previousStyle, nextStyle)) return;
-    if (ch != ',' && IsEscapedInsertion(editor_, styles, position)) return;
+    if (InCharacterLiteral(styles, previousStyle, nextStyle)) return true;
+    if (ch != ',' && IsEscapedInsertion(editor_, styles, position)) return true;
     // Original GenerateAutoInsertMask(): matching ASCII closing character offsets.
     ch += (169U >> (2 * index)) & 3;
-    if (index == SquareBracket && styles.lexer == SCLEX_SMALI) return;
-    if (index == AngleBracket && !CompletionStyleContains(styles.genericTypes, previousStyle)) return;
-    if (index == SingleQuote && !CanCloseSingleQuote(editor_, styles, previous, previousStyle)) return;
-    if (index == Backtick && (styles.lexer == SCLEX_VERILOG || styles.lexer == SCLEX_VHDL)) return;
+    if (index == SquareBracket && styles.lexer == SCLEX_SMALI) return true;
+    if (index == AngleBracket && !CompletionStyleContains(styles.genericTypes, previousStyle)) return true;
+    if (index == SingleQuote && !CanCloseSingleQuote(editor_, styles, previous, previousStyle)) return true;
+    if (index == Backtick && (styles.lexer == SCLEX_VERILOG || styles.lexer == SCLEX_VHDL)) return true;
     if (index == Comma) {
         ch = ' ';
         if (next == ' ' || next == '\t' || (previous == '\'' && next == '\'') || (previous == '"' && next == '"'))
-            return;
+            return true;
     }
-    if (index < AngleBracket && editor_.IsOpenBraceMatched(position - 1, position)) return;
+    if (index < AngleBracket && editor_.IsOpenBraceMatched(position - 1, position)) return true;
     const char insertion[] = {static_cast<char>(ch), '\0'};
     editor_.Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(insertion));
     const auto caret = index == Comma ? position + 1 : position;
     editor_.Send(Message::SetSel, caret, caret);
     if (index < AngleBracket) editor_.Send(Message::Colourise, 0, position + 1);
+    return true;
 }

@@ -102,7 +102,7 @@ void TypingAssistance::IndentNewLine() {
         if (indent &&
             !(editor_.Send(Message::GetFoldLevel, line) & std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) {
             const auto parent = editor_.Send(Message::GetFoldParent, line);
-            if (parent >= 0 && parent + 1 == line) {
+            if (parent + 1 == line) {
                 const auto child = editor_.Send(Message::GetLastChild, parent, -1);
                 if (editor_.Send(Message::LineLength, child)) keywordEnd = {};
             } else {

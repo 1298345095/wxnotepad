@@ -68,7 +68,7 @@ bool CompletionCandidates::MatchesPrefix(std::string_view word) const noexcept {
 }
 
 CompletionCandidates::Node* CompletionCandidates::Skew(Node* node) noexcept {
-    if (node->level && node->link[0] && node->level == node->link[0]->level) {
+    if (node->link[0] && node->level == node->link[0]->level) {
         Node* save = node->link[0];
         node->link[0] = save->link[1];
         save->link[1] = node;
@@ -78,7 +78,7 @@ CompletionCandidates::Node* CompletionCandidates::Skew(Node* node) noexcept {
 }
 
 CompletionCandidates::Node* CompletionCandidates::Split(Node* node) noexcept {
-    if (node->level && node->link[1] && node->link[1]->link[1] && node->level == node->link[1]->link[1]->level) {
+    if (node->link[1] && node->link[1]->link[1] && node->level == node->link[1]->link[1]->level) {
         Node* save = node->link[1];
         node->link[1] = save->link[0];
         save->link[0] = node;
@@ -210,7 +210,7 @@ void CompletionCandidates::AddSubwords(std::string_view word) {
         }
         if (ch != '.' && (word[index + 1] == '>' || word[index + 1] == ':')) ++index;
         const auto suffix = word.substr(index + 1);
-        if (suffix.size() >= root_.size() && MatchesPrefix(suffix)) {
+        if (MatchesPrefix(suffix)) {
             AddWord(suffix);
             if (count < starts.size()) starts[count++] = static_cast<unsigned>(index + 1);
         }

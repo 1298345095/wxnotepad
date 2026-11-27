@@ -62,7 +62,6 @@ public:
     bool OpenInNewWindow();
     bool OpenSelection(bool containingFolder = false);
     bool OpenContainingFolder();
-    void AppendOpenTargetCommands(wxMenu* menu);
     bool Restart();
     OpenStatus ReceiveWindowRequest(const WindowRequest& request);
     bool ExecuteDocument();
@@ -96,7 +95,7 @@ private:
     OpenResult ReloadQuickEncoding(QuickReloadEncoding encoding);
     int recentFilesId_;
     int openSelectionId_ = wxID_NONE;
-    int selectionFolderId_ = wxID_NONE;
+    void AppendOpenTargetCommands(wxMenu* menu);
     bool ShowContainingFolder(const wxString& path);
 #ifdef __WXMSW__
     std::unique_ptr<ExplorerSelections> explorerSelections_;

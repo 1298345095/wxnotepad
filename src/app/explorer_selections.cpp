@@ -146,7 +146,7 @@ void ExplorerSelections::QueueFallback(const wxString& directory) {
     owner_.CallAfter([request = wxWeakRef<ExplorerSelections>(this), owner = wxWeakRef<wxWindow>(&owner_), directory] {
         if (!request || request->closing_ || !owner || owner->IsBeingDeleted()) return;
         wxString error;
-        if (!LaunchDesktopTarget(owner.get(), directory, directory, error))
+        if (!LaunchDesktopTarget(*owner, directory, directory, error))
             wxMessageBox(_("Could not open the selected target."), _("Could not open target"), wxOK | wxICON_ERROR,
                          owner.get());
     });

@@ -110,6 +110,9 @@ std::string MapCustomCase(std::string_view text, int command) {
     if (command >= CustomCaseCommand::EscapeC && command <= CustomCaseCommand::UnescapeHtml)
         return MapEscapeText(text, command);
     if (text.empty()) return {};
+    if (command != CustomCaseCommand::Title && command != CustomCaseCommand::Sentence &&
+        command != CustomCaseCommand::Invert)
+        return std::string(text);
     auto input = wxString::FromUTF8(text.data(), text.size());
     const auto original = input;
     wxString output;
@@ -117,7 +120,6 @@ std::string MapCustomCase(std::string_view text, int command) {
         output = LinguisticMap(LinguisticMap(input, false), true);
     } else {
         if (command == CustomCaseCommand::Sentence) input = LinguisticMap(input, false);
-        if (command != CustomCaseCommand::Invert && command != CustomCaseCommand::Sentence) return std::string(text);
         output = MapSentenceOrInvert(input, command);
     }
     // Edit.cpp:1596 uses StrIsEmpty and wcscmp after mapping the full selection.

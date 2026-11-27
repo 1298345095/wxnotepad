@@ -22,8 +22,10 @@ void EditorControl::SelectWord() {
             start = Send(WordEndPosition, position, false);
             end = Send(WordEndPosition, start, true);
         }
-        if (start != end) Send(SetSel, start, end);
-        if (!Send(GetSelectionEmpty)) return;
+        if (start != end) {
+            Send(SetSel, start, end);
+            return;
+        }
     }
     const auto line = Send(LineFromPosition, position);
     Send(SetSel, Send(GetLineIndentPosition, line), Send(GetLineEndPosition, line));

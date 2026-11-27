@@ -101,7 +101,7 @@ std::optional<int> Size(const wxString& style, int base) {
     if (number.starts_with('+')) number.remove_prefix(1);
     float points = 0;
     const auto parsed = std::from_chars(number.data(), number.data() + number.size(), points);
-    if (parsed.ptr == number.data() || parsed.ec != std::errc{} || !std::isfinite(points)) return std::nullopt;
+    if (parsed.ec != std::errc{} || !std::isfinite(points)) return std::nullopt;
     const bool relative = text.StartsWith('+') || text.StartsWith('-');
     // Keep the original 2pt floor and the core's integer size representation.
     const double scaled = points * Scintilla::FontSizeMultiplier + (relative ? base : 0);
@@ -123,8 +123,7 @@ wxString Family(const wxString& style, const FontSettings& settings, bool global
 }
 void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxString& style, int base,
                 uintptr_t target = DefaultStyle) {
-    if (!Value(style, "font").empty()) {
-        const auto family = Family(style, settings, false);
+    if (const auto family = Family(style, settings, false); !family.empty()) {
         const auto face = family.ToUTF8();
         editor.Send(Message::StyleSetFont, target, reinterpret_cast<intptr_t>(face.data()));
     }

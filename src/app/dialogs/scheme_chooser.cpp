@@ -70,6 +70,7 @@ public:
         : wxDialog(parent, wxID_ANY, favorite ? _("Favorite Schemes") : _("Select Scheme"), wxDefaultPosition,
                    wxDefaultSize, DialogLayout::Style(DialogLayout::Resize::Both)),
           settings_(settings), favoriteMode_(favorite), favorites_(FavoriteSyntaxSchemes(settings.favoriteSchemes)),
+          favoriteConfiguration_(settings.favoriteSchemes),
           temporaryDefault_(SyntaxFromOriginalSchemeId(settings.defaultScheme) ? settings.defaultScheme : 0) {
         // Adapted from pinned Styles.cpp::Style_AddAllLexerToTreeView and IDD_STYLESELECT.
         auto contents = std::make_unique<wxBoxSizer>(wxVERTICAL);
@@ -93,10 +94,7 @@ public:
         if (ShowModal() != wxID_OK) return std::nullopt;
         if (defaultEdited_) settings_.defaultScheme = temporaryDefault_;
         settings_.autoSelect = automatic_->GetValue();
-        if (favoriteMode_) {
-            if (const auto configuration = FavoriteConfiguration(settings_.favoriteSchemes, favorites_))
-                settings_.favoriteSchemes = *configuration;
-        }
+        if (favoriteMode_) settings_.favoriteSchemes = favoriteConfiguration_;
         return favoriteMode_ ? std::nullopt : Selected(*tree_);
     }
 
@@ -214,9 +212,12 @@ private:
         const auto found = std::ranges::find(favorites_, language);
         if (found != favorites_.end())
             favorites_.erase(found);
-        else if (favorites_.size() < SyntaxSchemeLimits::FavoriteCount)
+        else
             favorites_.push_back(language);
-        if (!FavoriteConfiguration(settings_.favoriteSchemes, favorites_)) favorites_ = previous;
+        if (const auto configuration = FavoriteConfiguration(settings_.favoriteSchemes, favorites_))
+            favoriteConfiguration_ = *configuration;
+        else
+            favorites_ = previous;
         RebuildFavorites(language, false);
     }
 
@@ -259,13 +260,17 @@ private:
             position = favorites_.end();
         }
         favorites_.insert(position, *language);
-        if (!FavoriteConfiguration(settings_.favoriteSchemes, favorites_)) favorites_ = previous;
+        if (const auto configuration = FavoriteConfiguration(settings_.favoriteSchemes, favorites_))
+            favoriteConfiguration_ = *configuration;
+        else
+            favorites_ = previous;
         RebuildFavorites(*language, tree_->IsExpanded(favoriteGroup_));
     }
 
     OriginalSettings& settings_;
     const bool favoriteMode_;
     std::vector<SyntaxLanguage> favorites_;
+    wxString favoriteConfiguration_;
     int temporaryDefault_;
     bool defaultEdited_ = false;
     std::optional<SyntaxLanguage> dragging_;

@@ -52,7 +52,6 @@ public:
         : wxDialog(parent, wxID_ANY, _("Open Document With"), wxDefaultPosition, wxDefaultSize,
                    wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
           directory_(directory) {
-        if (directory_.empty()) directory_ = DefaultProgramDirectory();
         auto* layout = new wxBoxSizer(wxVERTICAL);
         path_ = new wxTextCtrl(this, wxID_ANY, directory_, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
         path_->SetName("open-with-directory");
@@ -255,7 +254,7 @@ bool EditorFrame::ExecuteDocument() {
     if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before running tools?")))
         return false;
     wxString error;
-    if (LaunchDesktopTarget(this, document_.Path(), wxFileName(document_.Path()).GetPath(), error)) return true;
+    if (LaunchDesktopTarget(*this, document_.Path(), wxFileName(document_.Path()).GetPath(), error)) return true;
     // TRANSLATORS: IDM_FILE_LAUNCH error title; the message body contains the native launch error.
     wxMessageBox(error, _("Could not execute document"), wxOK | wxICON_ERROR, this);
     return false;

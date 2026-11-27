@@ -45,9 +45,9 @@ std::string NativeDefaultEncodingBytes(std::string_view text) {
     return std::string(text);
 }
 
-std::string NativeDefaultEncodingBuffer(std::string_view bytes, NativeByteRanges* raw,
+std::string NativeDefaultEncodingBuffer(std::string_view bytes, NativeByteRanges& raw,
                                         [[maybe_unused]] std::optional<unsigned> codePage) {
-    if (raw) raw->clear();
+    raw.clear();
 #ifdef __WXMSW__
     if (const auto native = codePage.value_or(GetACP()); native != CP_UTF8) {
         // Most buffers take the bulk conversion. Check round-trip identity too:
@@ -60,12 +60,10 @@ std::string NativeDefaultEncodingBuffer(std::string_view bytes, NativeByteRanges
         const auto appendRaw = [&](std::string_view part) {
             const auto start = static_cast<intptr_t>(result.size());
             const auto end = start + static_cast<intptr_t>(part.size());
-            if (raw) {
-                if (!raw->empty() && raw->back().end == start)
-                    raw->back().end = end;
-                else
-                    raw->push_back({start, end});
-            }
+            if (!raw.empty() && raw.back().end == start)
+                raw.back().end = end;
+            else
+                raw.push_back({start, end});
             result += part;
         };
         for (size_t offset = 0; offset < bytes.size();) {

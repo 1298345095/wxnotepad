@@ -14,7 +14,7 @@
 // The migrated core stores UTF-8, retaining undecodable native bytes as raw
 // invalid UTF-8 bytes. These two boundaries preserve the original ANSI buffer.
 std::string NativeDefaultEncodingBytes(std::string_view text);
-std::string NativeDefaultEncodingBuffer(std::string_view bytes, NativeByteRanges* raw = nullptr,
+std::string NativeDefaultEncodingBuffer(std::string_view bytes, NativeByteRanges& raw,
                                         std::optional<unsigned> codePage = std::nullopt);
 uint32_t NativeDefaultEncodingCharacter(std::string_view bytes);
 // Original EditConvertText(CP_ACP, CP_UTF8) boundary after an accepted encoding change.

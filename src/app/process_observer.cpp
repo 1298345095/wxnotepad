@@ -167,6 +167,7 @@ void ProcessObserver::Publish() {
     frame_->Editor()->Update();
     lastDirty_ = frame_->Editor()->Send(GetModify) != 0;
     lastActive_ = frame_->IsActive();
+    lastShown_ = frame_->IsShown() && !frame_->IsIconized();
     lastSelectionRevision_ = frame_->Editor()->SelectionRevision();
     lastReadOnly_ = frame_->Editor()->Send(GetReadOnly) != 0;
     lastPositionStatus_ = ObservePosition(frame_);
@@ -174,8 +175,7 @@ void ProcessObserver::Publish() {
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
-    const auto* encodingInfo = FindFileEncodingInfo(frame_->DocumentEncoding());
-    const char* encoding = encodingInfo ? encodingInfo->observationName : "CP936";
+    const char* encoding = FindFileEncodingInfo(frame_->DocumentEncoding()).observationName;
     wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"
@@ -184,8 +184,8 @@ void ProcessObserver::Publish() {
             "encoding\t%s\nbom\t%d\n"
             "tab_width\t%lld\nindent_width\t%lld\nuse_tabs\t%lld\ntab_indents\t%lld\nbackspace_unindents\t%lld\nauto_"
             "indent\t%d\n",
-            sequence_, result_, static_cast<long long>(frame_->Editor()->Send(GetLength)), lastDirty_,
-            frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
+            sequence_, result_, static_cast<long long>(frame_->Editor()->Send(GetLength)), lastDirty_, lastShown_,
+            wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->Editor()->GetHandle())),
             static_cast<long long>(frame_->Editor()->Send(GetWrapMode)),
             static_cast<long long>(frame_->Editor()->Send(WrapCount, 0)), frame_->Editor()->GetClientSize().x,
@@ -366,7 +366,7 @@ void ProcessObserver::Observe() {
             frame_->Editor()->SelectionRevision() != lastSelectionRevision_ ||
             (frame_->Editor()->Send(GetReadOnly) != 0) != lastReadOnly_ ||
             ObservePosition(frame_) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
-            frame_->GetSize() != lastFrameSize_)
+            (frame_->IsShown() && !frame_->IsIconized()) != lastShown_ || frame_->GetSize() != lastFrameSize_)
             Publish();
     }
 }

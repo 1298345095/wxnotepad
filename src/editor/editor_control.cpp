@@ -97,7 +97,6 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Send(Message::FoldDisplayTextSetStyle,
          static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldDisplayTextStyle::Boxed)));
     Send(Message::SetDefaultFoldDisplayText, 0, reinterpret_cast<intptr_t>("\xC2\xB7\xC2\xB7\xC2\xB7"));
-    occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
     Send(Message::SetCaretLineHighlightSubLine, 1);
@@ -489,10 +488,8 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     if (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer) {
         core_->WndProc(Message::AutoCCancel, 0, 0);
         typing_.ResetCompletionState();
+        occurrences_.Stop();
     }
-    if (occurrences_ &&
-        (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer))
-        occurrences_->Stop();
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
     if (message == Message::ClearAll) {

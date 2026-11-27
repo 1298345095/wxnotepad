@@ -93,7 +93,6 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     buttons->Add(new wxButton(this, wxID_BACKWARD, _("Find &Previous")), 0, wxEXPAND | wxBOTTOM, gap);
     findAllButton_ = new wxButton(this, wxID_ANY, _("&Find All"));
     findAllButton_->SetName("Find All");
-    findAllButton_->Enable(!query_->IsEmpty());
     buttons->Add(findAllButton_, 0, wxEXPAND | wxBOTTOM, gap);
     replaceButton_ = new wxButton(this, wxID_REPLACE, _("&Replace"));
     buttons->Add(replaceButton_, 0, wxEXPAND | wxBOTTOM, gap);
@@ -101,7 +100,6 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     buttons->Add(replaceAllButton_, 0, wxEXPAND | wxBOTTOM, gap);
     replaceSelectionButton_ = new wxButton(this, wxID_ANY, _("In &Selection"));
     replaceSelectionButton_->SetName("Replace in selection");
-    replaceSelectionButton_->Enable(!query_->IsEmpty());
     buttons->Add(replaceSelectionButton_, 0, wxEXPAND | wxBOTTOM, gap);
     buttons->Add(new wxButton(this, wxID_CANCEL, _("Close")), 0, wxEXPAND);
     findAllResult_ = new wxStaticText(this, wxID_ANY, "");
@@ -310,9 +308,6 @@ void FindReplaceDialog::Present(bool replace, int selectionOptions, bool toggle)
     replaceSelectionButton_->Show(replace);
     replacementResult_->Show(replace);
     DialogLayout::Fit(*this, GetSizer(), DialogLayout::Resize::Horizontal, true);
-    // Fit may keep the existing size. Still arrange rows after changing which
-    // controls participate in the Find/Replace layout.
-    Layout();
     Show();
     auto* focus = selected && replace ? replacement_ : query_;
     focus->SetFocus();
@@ -358,8 +353,6 @@ bool FindReplaceDialog::SeedQuery(bool firstTime) {
 }
 
 void FindReplaceDialog::ConfigureSearch() {
-    UpdateButtons();
-    if (query_->IsEmpty()) return;
     auto request = search_.Request();
     request.query = query_->GetValue();
     if (replace_) request.replacement = replacement_->GetValue();

@@ -19,10 +19,8 @@ wxString Text(std::string_view text) {
 }
 
 bool LoadCatalogs(wxTranslations& translations, const wxString& domain) {
-    if (!translations.AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH)) return false;
-    if (!translations.IsLoaded("wxstd")) return false;
-    if (!translations.AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH)) return false;
-    return translations.IsLoaded(domain);
+    return translations.AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH) &&
+           translations.AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH);
 }
 
 #ifdef __WXMSW__
@@ -81,10 +79,9 @@ void Initialize(uint16_t preference) {
             if (language.langId == MenuPreference(preference)) effective = Text(language.code);
     }
     translations->SetLanguage(effective);
-    // AddCatalog() may succeed without loading an MO. Both domains must actually
-    // load in the same language before exposing a translated interface.
-    // wxWidgets searches the most recently loaded catalog first. Load stock first
-    // so application wording takes precedence while other toolkit keys fall back.
+    // Both domains must load an MO in the selected language before exposing a
+    // translated interface. wxWidgets searches the most recently loaded catalog
+    // first, so load stock first to let application wording take precedence.
     const wxLogNull noGuiLog;
     if (effective == sourceLanguage) return;
     if (LoadCatalogs(*translations, domain)) return;

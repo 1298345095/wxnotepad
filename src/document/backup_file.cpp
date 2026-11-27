@@ -101,7 +101,7 @@ wxString Write(const wxString& source, std::string_view bytes, bool automatic, b
     }
 
     const auto directory = Directory();
-    if (!wxDirExists(directory)) wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
     const auto backup = wxFileName(directory, wxFileName(sibling).GetFullName()).GetFullPath();
     if (untitled) return CreateBackup(backup, bytes) == BackupCreation::Complete ? backup : wxString{};
     auto metadata = ("AutoSave for " + source).utf8_string();

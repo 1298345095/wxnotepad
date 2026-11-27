@@ -247,10 +247,6 @@ void SearchSession::Remember(bool replacement) {
     }
 }
 
-void SearchSession::ClearFindAll() {
-    if (editor_.Occurrences().FindAllCount().has_value()) editor_.Occurrences().Clear();
-}
-
 std::optional<size_t> SearchSession::MatchCount() {
     return editor_.Occurrences().FindAllCount();
 }
@@ -264,10 +260,10 @@ FindAllResult SearchSession::FindAll() {
     const bool multiline = request_.options.transformBackslashes && query.find_first_of("\r\n") != std::string::npos;
     editor_.Occurrences().FindAll(query, SearchFlags(), multiline, request_.bookmarkMatchedLines);
     if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::RegEx))) {
-        ClearFindAll();
+        editor_.Occurrences().Clear();
         return {InvalidPattern};
     }
-    return {Found, editor_.Occurrences().FindAllCount().value_or(0)};
+    return {Found, *editor_.Occurrences().FindAllCount()};
 }
 
 void SearchSession::SetWrapConfirmation(std::function<bool(SearchDirection)> confirm) {
@@ -372,7 +368,7 @@ ReplaceOneResult SearchSession::ReplaceOne(bool applyReplacement) {
     if (found >= 0 && (found != start || editor_.Send(GetTargetEnd) != end)) {
         return {false, SelectTarget(false)};
     }
-    if (found != start || editor_.Send(GetTargetEnd) != end) {
+    if (found < 0) {
         return {false, FindFrom(start, SearchDirection::Forward)};
     }
     const auto replacement = ReplacementBytes();

@@ -41,7 +41,7 @@ void CheckQuickReloadWithUtf8SystemAnsi() {
             "Quick ANSI adopts explicit GBK when strict legacy recoding succeeds on a UTF-8 system");
 #ifdef __WXMSW__
     NativeByteRanges raw;
-    const auto buffer = NativeDefaultEncodingBuffer("\x{d6}\x{d0}\x{81}", &raw, malformed.nativeAnsiCodePage);
+    const auto buffer = NativeDefaultEncodingBuffer("\x{d6}\x{d0}\x{81}", raw, malformed.nativeAnsiCodePage);
     Require(buffer == "中\x{81}" && raw.size() == 1 && raw.front().start == 3 && raw.front().end == 4,
             "native GBK fallback decodes valid text and marks the malformed byte for lossless Save");
 #endif

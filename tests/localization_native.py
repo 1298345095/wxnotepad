@@ -123,39 +123,58 @@ class Dialogs:
         return texts
 
     def wait(self, process, title, message=None):
+        read_errors = ()
+        if sys.platform != 'win32':
+            from gi.repository import GLib
+            read_errors = (GLib.GError,)
         deadline = time.monotonic() + 10
         observed = []
+        observed_titles = []
+        last_error = None
         mapping_observed = False
         self.wait_sequence += 1
         while time.monotonic() < deadline:
             assert process.poll() is None, process.returncode
-            observed = self.windows(process)
-            for window in observed:
-                if self.title(window) == title:
-                    if sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland':
+            try:
+                observed = self.windows(process)
+                observed_titles = []
+                for window in observed:
+                    name = self.title(window)
+                    observed_titles.append(name)
+                    if name == title:
+                        if sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland':
+                            return window
+                        mapped, scene = self.wayland_mapping(process.pid, title, deadline)
+                        window.clear_cache()
+                        if mapped and window.get_state_set().contains(self.atspi.StateType.SHOWING):
+                            self.retain_native_scene(process.pid, 'mapped', scene)
+                            return window
+                        if not mapping_observed:
+                            self.retain_native_scene(process.pid, 'before-map', scene)
+                            mapping_observed = True
+                    if message is not None and any(message in text for text in self.texts(window)):
                         return window
-                    mapped, scene = self.wayland_mapping(process.pid, title, deadline)
-                    window.clear_cache()
-                    if mapped and window.get_state_set().contains(self.atspi.StateType.SHOWING):
-                        self.retain_native_scene(process.pid, 'mapped', scene)
-                        return window
-                    if not mapping_observed:
-                        self.retain_native_scene(process.pid, 'before-map', scene)
-                        mapping_observed = True
-                if message is not None and any(message in text for text in self.texts(window)):
-                    return window
-                if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
-                    # GTK3 exposes the alert type (Question/Error) as its AT-SPI
-                    # name. Select the actual visible application message.
-                    fragments = {'wxnotepad': 'Changing the UI language requires a restart of wxnotepad, restart now?',
-                                 'Save changes?': 'Save changes to ',
-                                 'Restart failed': 'Could not restart wxnotepad.',
-                                 'Could not save settings': 'Could not write '}
-                    if title in fragments and any(fragments[title] in text for text in self.texts(window)):
-                        return window
+                    if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
+                        # GTK3 exposes the alert type (Question/Error) as its AT-SPI
+                        # name. Select the actual visible application message.
+                        fragments = {'wxnotepad': 'Changing the UI language requires a restart of wxnotepad, restart now?',
+                                     'Save changes?': 'Save changes to ',
+                                     'Restart failed': 'Could not restart wxnotepad.',
+                                     'Could not save settings': 'Could not write '}
+                        if title in fragments and any(fragments[title] in text for text in self.texts(window)):
+                            return window
+            except read_errors as error:
+                if (error.domain != 'atspi_error' or error.code != ATSPI_IPC_ERROR or
+                        error.message != 'timeout from dbind'):
+                    raise
+                # These queries are read-only; retry discovery inside the same
+                # deadline when the native publisher is temporarily busy.
+                if last_error is None:
+                    print(f'Native dialog {title!r} read-only lookup: {error}', file=sys.stderr, flush=True)
+                last_error = str(error)
             time.sleep(.03)
         self.observe_wait_failure(process, title, observed)
-        raise AssertionError(f'Native dialog {title!r} not ready: {[self.title(w) for w in observed]}')
+        raise AssertionError(f'Native dialog {title!r} not ready: {observed_titles}; last read-only error: {last_error}')
 
     def wayland_mapping(self, pid, title, deadline):
         import subprocess

@@ -166,9 +166,8 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     const long parsed = std::strtol(timeoutText.c_str(), &end, 10);
     if (end != timeoutText.c_str())
         completion.scanWordsTimeout =
-            std::max(static_cast<int>(std::clamp(parsed, static_cast<long>(std::numeric_limits<int>::min()),
-                                                 static_cast<long>(std::numeric_limits<int>::max()))),
-                     WordCompletionLimits::MinScanTimeoutMs);
+            static_cast<int>(std::clamp(parsed, static_cast<long>(WordCompletionLimits::MinScanTimeoutMs),
+                                        static_cast<long>(std::numeric_limits<int>::max())));
     completion.completeScope = commitFlags(completeControls, WordCompletionScope::Other);
     completion.scanWordScope = commitFlags(scanControls, WordCompletionScope::Other);
     completion.fillUpMask = commitFlags(keyControls, 0);

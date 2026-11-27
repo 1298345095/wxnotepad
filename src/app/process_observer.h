@@ -28,6 +28,7 @@ private:
     wxTimer observer_;
     bool lastDirty_ = false;
     bool lastActive_ = false;
+    bool lastShown_ = false;
     uint64_t lastSelectionRevision_ = 0;
     bool lastReadOnly_ = false;
     wxString lastPositionStatus_;

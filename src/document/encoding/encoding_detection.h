@@ -12,7 +12,7 @@ struct FileEncodingInfo {
     const char* displayName;
     const char* observationName;
 };
-const FileEncodingInfo* FindFileEncodingInfo(FileEncoding encoding);
+const FileEncodingInfo& FindFileEncodingInfo(FileEncoding encoding);
 
 enum class QuickReloadEncoding : std::uint8_t { Ansi, Oem, Default };
 struct EncodingChoice {
