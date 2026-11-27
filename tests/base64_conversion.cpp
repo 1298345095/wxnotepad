@@ -22,6 +22,11 @@ constexpr std::array<const char*, 5> labels = {"Standard Encode", "URL Safe Enco
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+void Progress(const char* phase) {
+    std::fprintf(stderr, "Base64 stage: %s\n", phase);
+    std::fflush(stderr);
+    std::fflush(stdout);
+}
 void Menu(EditorFrame* frame, const char* label) {
     const int id = frame->GetMenuBar()->FindMenuItem("Tools", label);
     Require(id != wxNOT_FOUND, "Tools/Base64 exposes the original command");
@@ -145,6 +150,7 @@ public:
     }
 };
 std::string ObserveCharacterInfo(EditorFrame* frame) {
+    Progress("native ANSI character information");
 #ifdef __WXGTK__
     NativeKeys::Shortcut(frame, 'A', true); // Gives Wayland the real owned input serial for clipboard publication.
 #endif
@@ -158,6 +164,7 @@ std::string ObserveCharacterInfo(EditorFrame* frame) {
     Require(command != wxNOT_FOUND, "reachable native Character Info command exists");
     CharacterFeedback feedback;
     NativeSearch::Command(frame, command);
+    Progress("native ANSI character information returned");
     Require(feedback.shown == 1 && !feedback.payload.empty(), "native Character Info displays its technical payload");
     wxTextDataObject copied;
     {
@@ -524,14 +531,18 @@ public:
                 Require(frame->NewDocument(), "start unnamed original-path sample");
                 frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
                 Require(frame->DocumentEncoding() == FileEncoding::Utf8, "use the original UTF-8 edit buffer");
+                Progress("498 captured command samples");
                 CapturedCommands(frame);
+                Progress("command availability and selection states");
                 CommandStates(frame);
+                Progress("native ANSI byte preservation");
                 NativeAnsiBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
                 DiagnosticPrint::Print(stderr, "FAIL: {}\n", error.what());
             }
             frame->Editor()->Send(Scintilla::Message::SetSavePoint);
+            Progress("destroy frame");
             frame->Destroy();
         });
         return true;

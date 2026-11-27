@@ -288,11 +288,11 @@ public:
     }
     bool Complete() const noexcept { return processKey_ && released_; }
     bool InitialDownObserved() const noexcept { return initialDown_; }
-    int RawHookCode() const noexcept { return rawHookCode_; }
+    int EscapeHookCount() const noexcept { return escapeHooks_; }
     int FilterEvent(wxEvent& event) override {
         if (event.GetEventType() == wxEVT_CHAR_HOOK) {
             const auto& key = static_cast<wxKeyEvent&>(event);
-            if (key.GetKeyCode() == WXK_ESCAPE) rawHookCode_ = static_cast<int>(key.GetRawKeyCode());
+            if (key.GetKeyCode() == WXK_ESCAPE) ++escapeHooks_;
         }
         return Event_Skip;
     }
@@ -337,7 +337,7 @@ private:
     bool initialDown_ = false;
     bool processKey_ = false;
     bool released_ = false;
-    int rawHookCode_ = 0;
+    int escapeHooks_ = 0;
 };
 void PhysicalEscape(EditorFrame* frame) {
     const auto window = static_cast<HWND>(frame->GetHandle());
@@ -370,8 +370,11 @@ void CheckCancelledCompositionKey(EditorFrame* frame) {
         Await([frame, &replay] { return frame->IsIconized() || replay.Complete(); },
               "cancelled IME key finishes native dispatch");
         Require(!frame->IsIconized(), "IME cancellation before the keyboard hook must not also minimize");
-        Require(replay.InitialDownObserved() && replay.RawHookCode() == VK_ESCAPE && replay.Complete(),
-                "initial Escape hook and retrieved VK_PROCESSKEY follow the captured native order");
+        Require(replay.InitialDownObserved() && replay.Complete(),
+                "initial physical Escape and retrieved VK_PROCESSKEY follow the captured native order");
+        // wxMSW 3.3.4 handles Escape after GetMessage, where the IME has
+        // already replaced this consumed key with VK_PROCESSKEY.
+        Require(replay.EscapeHookCount() == 0, "IME-consumed Escape never reaches the application character hook");
         Require(TestEditor::Text(editor) == "committed IME word!" && editor->Send(Scintilla::Message::CanUndo),
                 "cancelled IME key preserves document bytes and Undo");
     }

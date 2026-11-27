@@ -301,6 +301,8 @@ jobs:
             .ci/build/cmake/eol_open.pdb
             .ci/build/cmake/character_information.exe
             .ci/build/cmake/character_information.pdb
+            .ci/build/cmake/base64_conversion.exe
+            .ci/build/cmake/base64_conversion.pdb
             .ci/build/cmake/native_byte_information.exe
             .ci/build/cmake/native_byte_information.pdb
             .ci/original-reference/cmake/native_original_viewport.exe

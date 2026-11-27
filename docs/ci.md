@@ -614,7 +614,12 @@ hard parent termination and CTest timeout cleanup.
 The Windows original Character Info fixture uses the same monitor with a
 75-second capture under its existing 90-second CTest guard. Its evidence also
 retains the last flushed fixture phase, the dump, and the matching binary and
-any PDB. Windows clipboard errors go to stderr so the fixture reports a failed
+any PDB. The Windows Base64 fixture also uses this existing monitor, capturing
+at 45 seconds under its original 60-second guard. Its flushed phases distinguish
+the 498 captured conversions, command states, native ANSI bytes, character
+information and frame cleanup. The evidence retains its matching binary and
+any PDB; all original samples and assertions remain in force. Windows clipboard
+errors in the Character Info fixture go to stderr so it reports a failed
 assertion without opening an additional modal error dialog.
 
 The JSON native fixture waits for GTK's initial folder load before selecting a

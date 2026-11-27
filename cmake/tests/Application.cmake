@@ -99,7 +99,16 @@ add_editor_test(read_only original_read_only_mode 120)
 target_compile_definitions(read_only PRIVATE
     "READ_ONLY_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/read_only_reference.tsv\"")
 add_editor_test(url_conversion original_url_conversion 60)
-add_editor_test(base64_conversion original_base64_conversion 60)
+if(WIN32)
+    add_gui_program(base64_conversion tests/base64_conversion.cpp app_shell)
+    add_test(NAME original_base64_conversion COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_hang_monitor.py"
+        --dump-directory "${CMAKE_BINARY_DIR}/Testing/Temporary/base64-hangs" --dump-after 45
+        -- "$<TARGET_FILE:base64_conversion>")
+    set_tests_properties(original_base64_conversion PROPERTIES TIMEOUT 60)
+else()
+    add_editor_test(base64_conversion original_base64_conversion 60)
+endif()
 target_compile_definitions(base64_conversion PRIVATE
     "BASE64_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/base64_reference.tsv\"")
 target_compile_definitions(url_conversion PRIVATE

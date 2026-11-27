@@ -1,4 +1,4 @@
-# wxWidgets 3.3.4 modal and accelerator observations
+# wxWidgets 3.3.4 modal, accelerator and Escape observations
 
 The first PR284 coverage run failed `original_run_command` and
 `original_default_fonts` on both Linux backends:
@@ -51,17 +51,58 @@ code and receipt of the exit callback. All literal executable-name, actual-child
 argv, working-directory and disk-byte assertions remain unchanged. An exit-check
 failure preserves any earlier action error.
 
+## Windows IME-consumed Escape
+
+The comparison run at `6d4db037` failed `original_extra_escape` on Windows.
+Same-host unchanged 3.3.3 passed the complete case in 3.53 seconds. On 3.3.4,
+the physical initial keydown and retrieved VK_PROCESSKEY press/release pair
+were observed, but the old expected Escape CHAR_HOOK was absent. The preceding
+no-minimize, composing text, selection and undo checks passed.
+
+Upstream
+[058ce47c60](https://github.com/wxWidgets/wxWidgets/commit/058ce47c60e773f60e70b9e3e9c0fdf524205ecd)
+intentionally moves Escape character-hook generation from WH_KEYBOARD to
+`wxGUIEventLoop::PreProcessMessage` to fix IME cancellation problems, including
+[#27145](https://github.com/wxWidgets/wxWidgets/issues/27145). The retained native
+replay transforms the consumed Escape into VK_PROCESSKEY at WH_GETMESSAGE;
+3.3.4 correctly emits no Escape character hook for that message.
+
+The user approved checking exactly zero Escape character hooks while retaining
+the physical non-repeat keydown, complete VK_PROCESSKEY pair, no minimize,
+document/Undo, next independent Escape minimize, restore and working Undo.
+The complete candidate case passed in 3.35 seconds and its configuration
+lifecycle case passed in 22.56 seconds. Product Escape handling is unchanged.
+
+## Base64 timeout evidence
+
+The same hosted Windows comparison timed out `original_base64_conversion` at
+its unchanged 60-second guard without flushed output. Same-host 3.3.4 complete
+checks passed once in 17.75 seconds and three monitored runs passed in
+15.81–16.40 seconds; the 3.3.3 control passed in 17.27 seconds. These are
+correctness checks, not benchmark results. They do not establish a timeout fix.
+
+The fixture now flushes its major phases and reuses the existing external
+Windows hang monitor to capture at 45 seconds before the original timeout.
+The hosted artifact retains the dump and matching executable. All 498 captured
+samples, command/selection/history, native ANSI and character-information
+assertions remain unchanged. A new captured stall is required to identify the
+timeout's cause; a passing rerun alone is not treated as a repair.
+
 ## Approval and validation
 
-The user explicitly approved these two observation-point changes after reviewing
-the exact candidate and old/new evidence. Neither product behavior nor samples
-were changed. The existing 90-second Run Command and 60-second font limits,
-inner waits, default concurrency and 80%/3% quality gates remain.
+The user explicitly approved the modal, accelerator and Escape observation
+changes after reviewing the exact candidates and old/new evidence. Neither
+product behavior nor samples were changed. The existing 90-second Run Command,
+60-second font/Escape/Base64 and 120-second Escape lifecycle limits, inner
+waits, default concurrency and 80%/3% quality gates remain.
 
 Both complete cases passed with the candidate on 3.3.3 and 3.3.4, under X11 and
 Wayland: eight Linux case executions. Both Windows 3.3.4 cases also passed.
 Canonical clang-format passed for all 574 maintained files. Hosted final-state
 checks remain required separately.
+
+The final Windows follow-up with the registered Base64 monitor and approved
+Escape observation passed both complete cases (15.82 and 3.51 seconds).
 
 Local evidence and the approved proposal are retained under
 `F:/wxnotepad-evidence/wxwidgets-3.3.4-upgrade-2026-11-26/ci-284/`, with native
