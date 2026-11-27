@@ -20,13 +20,18 @@ VARIANT through system `propsys!VariantToString`. Native ANSI documents retain
 the existing original native-code-page conversion boundary. File encodings,
 BOMs, EOL metadata and document save points use the existing document commands.
 
-Linux statically links QuickJS-ng 0.16.2 from the pinned vcpkg baseline, without
+Linux statically links QuickJS-ng 0.16.2, overlay port revision 1, without
 its optional I/O modules or command-line programs. The CMake target must be a
 static library. Existing shared system runtimes remain the runtime boundary.
 The original Windows Automation numeric conversion is retained: its 15-digit
 candidate is used when it round-trips exactly, otherwise the original 18-digit
 format is used. Captured examples include PI = `3.14159265358979312`,
 `0.1+0.2` = `0.300000000000000044`, true = `-1`, NaN = `-1.#IND`, infinity = `inf`.
+The engine overlay retains the original canonical NaN/sign behavior through
+Number, Math, unary operations, variables and object results; positive NaN prints
+`1.#QNAN`, including `-NaN`. The formatter reads the actual value/sign, with no
+expression-text inference. Thirty-six independent original system samples match
+the patched installed library; see the overlay's README and patch provenance.
 The original null-terminated result insertion also stops at embedded NULs. The
 original `wsprintfW` Math wrapper has a 1024 UTF-16-unit source limit; Linux
 retains that same limit and rejects the independently captured over-limit sample
