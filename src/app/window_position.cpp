@@ -150,8 +150,8 @@ void EditorFrame::RememberInitialWindowPosition(bool maximized) {
 }
 
 void EditorFrame::CaptureNormalWindowPosition() {
-    if (FullScreenActive() || IsIconized()) return;
 #ifdef __WXGTK__
+    if (FullScreenActive() || IsIconized()) return;
     auto* native = gtk_widget_get_window(GTK_WIDGET(GetHandle()));
     if (native && (gdk_window_get_state(native) & GDK_WINDOW_STATE_FULLSCREEN)) return;
 #endif
@@ -159,6 +159,9 @@ void EditorFrame::CaptureNormalWindowPosition() {
         if (!IsMaximized()) return;
         pendingMaximize_ = false;
     }
+#ifndef __WXGTK__
+    if (FullScreenActive() || IsIconized()) return;
+#endif
     normalWindowPosition_.coordinates = HasGlobalWindowCoordinates();
     normalWindowPosition_.screen = wxDisplay(this).GetGeometry().GetSize();
 #ifdef __WXMSW__
@@ -217,6 +220,10 @@ void EditorFrame::DefaultWindowPosition() {
     if (target == GetRect()) target.x = work.x + DefaultInset;
     if (restoring) pendingDefaultPosition_ = target;
     if (FullScreenActive()) SetFullScreen(false);
+#ifdef __WXGTK__
+    // This explicit ordinary placement supersedes fullscreen's maximize restore.
+    pendingMaximize_ = false;
+#endif
     if (IsIconized()) Iconize(false);
     Maximize(false);
     if (restoring) {
