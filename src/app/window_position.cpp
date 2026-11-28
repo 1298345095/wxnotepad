@@ -146,15 +146,19 @@ void EditorFrame::RememberInitialWindowPosition(bool maximized) {
     normalWindowPosition_.normal = GetRect();
     normalWindowPosition_.maximized = maximized;
     normalWindowSize_ = GetSize();
-    pendingInitialMaximize_ = maximized;
+    pendingMaximize_ = maximized;
 }
 
 void EditorFrame::CaptureNormalWindowPosition() {
-    if (pendingInitialMaximize_) {
-        if (!IsMaximized()) return;
-        pendingInitialMaximize_ = false;
-    }
     if (FullScreenActive() || IsIconized()) return;
+#ifdef __WXGTK__
+    auto* native = gtk_widget_get_window(GTK_WIDGET(GetHandle()));
+    if (native && (gdk_window_get_state(native) & GDK_WINDOW_STATE_FULLSCREEN)) return;
+#endif
+    if (pendingMaximize_) {
+        if (!IsMaximized()) return;
+        pendingMaximize_ = false;
+    }
     normalWindowPosition_.coordinates = HasGlobalWindowCoordinates();
     normalWindowPosition_.screen = wxDisplay(this).GetGeometry().GetSize();
 #ifdef __WXMSW__
