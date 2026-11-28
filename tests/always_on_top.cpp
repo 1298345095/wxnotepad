@@ -212,7 +212,11 @@ void Check(EditorFrame* frame) {
             Require(TestEditor::Text(editor) == text && editor->Send(GetAnchor) == 9 &&
                         editor->Send(GetCurrentPos) == 2 && editor->Send(CanUndo) && !editor->Send(CanRedo),
                     "topmost preserves native editor contents, reversed selection and Undo/Redo");
-            Require(frame->GetRect() == bounds, "topmost preserves native frame position and size");
+            const auto current = frame->GetRect();
+            if (current != bounds)
+                std::println(stderr, "topmost frame actual={},{},{},{} expected={},{},{},{}", current.x, current.y,
+                             current.width, current.height, bounds.x, bounds.y, bounds.width, bounds.height);
+            Require(current == bounds, "topmost preserves native frame position and size");
         };
         const auto verify = [&](bool active) {
             std::printf("verify effective topmost=%d\n", active);
