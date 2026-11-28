@@ -21,7 +21,7 @@ def run(*arguments):
 def rectangle(app, expected):
     deadline = time.monotonic() + 4
     while True:
-        actual = native_rectangle(app)
+        actual = native_rectangle(app, deadline=deadline)
         if actual == expected:
             return
         assert time.monotonic() < deadline, (actual, expected)

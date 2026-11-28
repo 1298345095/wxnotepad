@@ -29,7 +29,7 @@ CAPTIONS = {
 }
 
 
-def native_rectangle(app):
+def native_rectangle(app, *, deadline=None):
     """Query the owned native outer rectangle independently of the app observer."""
     if sys.platform == "win32":
         from capture_window_positions import Placement
@@ -41,7 +41,8 @@ def native_rectangle(app):
         normal = placement.normal
         return (normal.left, normal.top, normal.right - normal.left, normal.bottom - normal.top)
     identity = app.state["frame_x11_window"]
-    deadline = time.monotonic() + 4
+    if deadline is None:
+        deadline = time.monotonic() + 4
     while True:
         extents = subprocess.check_output(["xprop", "-id", identity, "_NET_FRAME_EXTENTS"], text=True)
         if "=" in extents:
