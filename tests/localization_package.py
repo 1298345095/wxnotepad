@@ -3,7 +3,9 @@
 import configparser
 import ctypes
 import importlib.util
+import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -11,7 +13,7 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-from resource_process import command, wait_state
+from resource_process import command, observation_context, wait_state
 from settings_process import Application
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,6 +82,17 @@ def language_id(state, preference):
     return next(identity for identity, item in menus(state).items() if item["path"] == system_path)
 
 
+def _retain_startup_failure(error, report, processes, log_path):
+    try:
+        report.mkdir(parents=True, exist_ok=True)
+        if log_path.parent != report:
+            shutil.copy2(log_path, report / log_path.name)
+        contexts = [observation_context(folder, process) for folder, process in processes]
+        (report / "startup-failure.json").write_text(json.dumps(contexts, indent=2), encoding="utf-8")
+    except Exception as capture_error:
+        error.add_note(f"Startup failure capture: {capture_error!r}")
+
+
 class Process(Application):
     def __init__(self, executable, folder, environment, startup=None, arguments=(), cwd=None, log_path=None):
         self.folder = folder
@@ -92,15 +105,27 @@ class Process(Application):
         log_path = log_path if log_path is not None else folder / "stderr.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         self.log = log_path.open("wb")
-        self.process = subprocess.Popen(args, env=environment, cwd=cwd, stdout=self.log, stderr=self.log)
-        self.state = wait_state(
-            folder,
-            self.process,
-            lambda state: (
-                state["sequence"] == "0" and (state["backend"] != "GdkWaylandDisplay" or state["active"] == "1")
-            ),
-        )
-        assert self.state["shown"] == "1", self.state
+        try:
+            self.process = subprocess.Popen(args, env=environment, cwd=cwd, stdout=self.log, stderr=self.log)
+            self.state = wait_state(
+                folder,
+                self.process,
+                lambda state: (
+                    state["sequence"] == "0" and (state["backend"] != "GdkWaylandDisplay" or state["active"] == "1")
+                ),
+            )
+            assert self.state["shown"] == "1", self.state
+        except BaseException as error:
+            if hasattr(self, "process") and "window-routing-settings" in log_path.parts and folder.name == "app-002":
+                _retain_startup_failure(error, log_path.parent, [(folder, self.process)], log_path)
+            try:
+                if hasattr(self, "process"):
+                    self.stop()
+                else:
+                    self.log.close()
+            except Exception as cleanup_error:
+                error.add_note(f"Startup failure cleanup: {cleanup_error!r}")
+            raise
 
     def begin(self, operation, source=""):
         self.sequence += 1
@@ -119,9 +144,11 @@ class Process(Application):
         return self.send("menu", str(identity))
 
     def stop(self):
-        super().stop()
-        if hasattr(self, "log"):
-            self.log.close()
+        try:
+            super().stop()
+        finally:
+            if hasattr(self, "log"):
+                self.log.close()
 
 
 class Child:

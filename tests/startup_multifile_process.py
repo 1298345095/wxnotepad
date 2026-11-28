@@ -13,7 +13,15 @@ from contextlib import contextmanager, nullcontext
 from pathlib import Path
 
 from localization_native import Dialogs
-from localization_package import Child, Process, bundle_application, environment, menu_id, settings
+from localization_package import (
+    Child,
+    Process,
+    _retain_startup_failure,
+    bundle_application,
+    environment,
+    menu_id,
+    settings,
+)
 from resource_process import wait_state
 from startup_options_process import start, unreadable
 
@@ -414,6 +422,8 @@ def partial_failures(executable, root, directory_only=False):
         elif choice == "unreadable":
             bad.write_bytes(original)
         good_app = bad_app = peer = None
+        previous_pids = package_pids(executable)
+        failure = None
         with (folder / "parent.log").open("wb") as log, unreadable(bad) if choice == "unreadable" else nullcontext():
             parent = subprocess.Popen(
                 [str(executable), "-s", "json", "-ro", "+", good.name, bad.name],
@@ -469,16 +479,56 @@ def partial_failures(executable, root, directory_only=False):
                     assert bad.read_bytes() == b""
                 elif choice in ("no", "cancel"):
                     assert not bad.exists()
+            except BaseException as error:
+                failure = error
+                report = os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR")
+                if choice == "directory" and report:
+                    try:
+                        processes = [(observed / str(parent.pid), parent)]
+                        processes += [
+                            (observed / str(pid), Child(pid))
+                            for pid in package_pids(executable) - previous_pids - {parent.pid}
+                        ]
+                        _retain_startup_failure(
+                            error, Path(report) / f"startup-directory-{parent.pid}", processes, folder / "parent.log"
+                        )
+                    except Exception as capture_error:
+                        error.add_note(f"Startup failure capture: {capture_error!r}")
+                raise
             finally:
+                cleanup_errors = []
+                known_processes = {parent.pid: parent}
+                if peer:
+                    known_processes[peer.pid] = peer
                 for app in (bad_app, good_app):
                     if app:
-                        app.stop()
-                if peer and peer.poll() is None:
-                    peer.terminate()
-                    peer.wait(timeout=5)
-                if parent.poll() is None:
-                    parent.terminate()
-                    parent.wait(timeout=5)
+                        known_processes[app.process.pid] = app.process
+                        try:
+                            app.stop()
+                        except Exception as cleanup_error:
+                            cleanup_errors.append(cleanup_error)
+                # Discovery can fail before either child is assigned above.
+                try:
+                    owned_pids = package_pids(executable) - previous_pids
+                except Exception as cleanup_error:
+                    cleanup_errors.append(cleanup_error)
+                    owned_pids = set()
+                for pid in owned_pids | known_processes.keys():
+                    try:
+                        child = known_processes.get(pid) or Child(pid)
+                        if child.poll() is None:
+                            child.terminate()
+                            child.wait(timeout=5)
+                    except Exception as cleanup_error:
+                        cleanup_errors.append(cleanup_error)
+                if cleanup_errors:
+                    if failure is None:
+                        failure = cleanup_errors.pop(0)
+                        for cleanup_error in cleanup_errors:
+                            failure.add_note(f"Startup failure cleanup: {cleanup_error!r}")
+                        raise failure
+                    for cleanup_error in cleanup_errors:
+                        failure.add_note(f"Startup failure cleanup: {cleanup_error!r}")
         print(
             f"PASS: independent {choice} startup path preserves the other actual document and process lifecycle",
             flush=True,
