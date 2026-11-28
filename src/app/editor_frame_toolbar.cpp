@@ -15,6 +15,7 @@
 #include <wx/settings.h>
 #ifdef __WXGTK__
 #include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 #include <gtk/gtk.h>
 #endif
 #ifdef __WXMSW__
@@ -266,8 +267,8 @@ void EditorFrame::CreateDefaultToolbar() {
     // A synchronous clipboard query yields inside GTK frame-clock dispatch:
     // a pending Wayland configure can then be committed before GTK allocates
     // its new geometry. Idle toolbar updates consume the asynchronous offer.
-    // Async replies wake wx idle. Query only after ownership changes so a
-    // reply cannot perpetually schedule another toolbar query.
+    // Async replies wake wx idle. Cache external offers so a reply cannot
+    // perpetually schedule another toolbar query.
     struct ClipboardAvailability {
         bool hasText = false;
         bool queryNeeded = true;
@@ -291,8 +292,13 @@ void EditorFrame::CreateDefaultToolbar() {
     toolbar->Bind(
         wxEVT_UPDATE_UI,
         [this, toolbar, availability](wxUpdateUIEvent& event) {
-            event.Enable(editor_->CanPasteText(availability->hasText));
-            if (availability->queryNeeded && !availability->queryPending && !wxTheClipboard->IsOpened()) {
+            if (const auto* local = wxTheClipboard->GTKGetDataObject(GDK_SELECTION_CLIPBOARD)) {
+                // wxGTK owns this object until selection_clear. Its formats can
+                // change without a GtkClipboard owner-change on Wayland.
+                availability->hasText = local->IsSupported(wxDF_UNICODETEXT) || local->IsSupported(wxDF_TEXT);
+                // Refresh the external offer after this local object is cleared.
+                availability->queryNeeded = true;
+            } else if (availability->queryNeeded && !availability->queryPending && !wxTheClipboard->IsOpened()) {
                 wxTheClipboard->UsePrimarySelection(false);
                 // An ownership notification during the request must stay dirty.
                 availability->queryNeeded = false;
@@ -302,6 +308,7 @@ void EditorFrame::CreateDefaultToolbar() {
                     availability->queryNeeded = true;
                 }
             }
+            event.Enable(editor_->CanPasteText(availability->hasText));
         },
         wxID_PASTE);
 #endif
