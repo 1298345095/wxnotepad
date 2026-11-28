@@ -93,6 +93,84 @@ bool HasGlobalWindowCoordinates() {
 #endif
 }
 
+#ifdef __WXGTK__
+void EditorFrame::InitializeInitialWindowPosition() {
+    if (!HasGlobalWindowCoordinates()) return;
+    initialWindowPositionHandler_ = g_signal_connect(
+        GTK_WIDGET(GetHandle()), "event-after", G_CALLBACK(+[](GtkWidget* widget, GdkEvent* event, gpointer data) {
+            if (event->any.window == gtk_widget_get_window(widget) &&
+                (event->type == GDK_MAP || event->type == GDK_CONFIGURE || event->type == GDK_WINDOW_STATE))
+                static_cast<EditorFrame*>(data)->ApplyInitialWindowRectangle(event->type == GDK_CONFIGURE);
+        }),
+        this);
+}
+
+void EditorFrame::FinishInitialWindowPosition() {
+    if (initialWindowPositionHandler_) {
+        g_signal_handler_disconnect(GTK_WIDGET(GetHandle()), initialWindowPositionHandler_);
+        initialWindowPositionHandler_ = 0;
+    }
+    initialWindowRectangle_.reset();
+}
+
+void EditorFrame::DoSetSize(int x, int y, int width, int height, int sizeFlags) {
+    if (!initialWindowPositionHandler_) {
+        wxFrame::DoSetSize(x, y, width, height, sizeFlags);
+        return;
+    }
+    const bool ordinary = !FullScreenActive();
+    const bool initial = ordinary && (!initialWindowRectangle_ || !initialWindowRectangle_->requested);
+    // Show can precede Map. Keep the latest ordinary sizing intent until the
+    // first native request; fullscreen's own bounds retain its normal history.
+    // A later explicit sizing operation supersedes the startup operation. Its
+    // GTK acknowledgement must never reapply an older initial rectangle.
+    if (ordinary && !initial && initialWindowRectangle_) FinishInitialWindowPosition();
+    auto target = initialWindowRectangle_ ? initialWindowRectangle_->rectangle : GetRect();
+    wxFrame::DoSetSize(x, y, width, height, sizeFlags);
+    if (!initial || (!initialWindowRectangle_ && !(sizeFlags & wxSIZE_ALLOW_MINUS_ONE) && x == wxDefaultCoord &&
+                     y == wxDefaultCoord))
+        return;
+    if ((sizeFlags & wxSIZE_ALLOW_MINUS_ONE) || x != wxDefaultCoord) target.x = x;
+    if ((sizeFlags & wxSIZE_ALLOW_MINUS_ONE) || y != wxDefaultCoord) target.y = y;
+    target.SetSize(GetSize());
+    initialWindowRectangle_ = InitialWindowRectangle{target, sizeFlags};
+    CaptureNormalWindowPosition();
+}
+
+void EditorFrame::ApplyInitialWindowRectangle(bool configured) {
+    auto* widget = GTK_WIDGET(GetHandle());
+    if (!gtk_widget_get_mapped(widget)) return;
+    if (!initialWindowRectangle_ || IsMaximized()) {
+        FinishInitialWindowPosition();
+        return;
+    }
+    if (pendingMaximize_ || FullScreenActive() || IsIconized()) return;
+    auto* window = gtk_widget_get_window(widget);
+    GdkRectangle outer{};
+    gdk_window_get_frame_extents(window, &outer);
+    const auto target = initialWindowRectangle_->rectangle;
+    const wxRect actual(outer.x, outer.y, outer.width, outer.height);
+    // A WM may constrain the requested rectangle. Its real Configure is also
+    // acknowledgement: subsequent native user moves must resume normal capture.
+    if (GetRect() == actual && (actual == target || (configured && initialWindowRectangle_->requested))) {
+        FinishInitialWindowPosition();
+        CaptureNormalWindowPosition();
+        return;
+    }
+    if (initialWindowRectangle_->requested) return;
+    initialWindowRectangle_->requested = true;
+    int clientWidth = 0, clientHeight = 0;
+    gdk_window_get_geometry(window, nullptr, nullptr, &clientWidth, &clientHeight);
+    wxFrame::DoSetSize(target.x, target.y, target.width, target.height,
+                       initialWindowRectangle_->sizeFlags | wxSIZE_ALLOW_MINUS_ONE);
+    // wxGTK skips native geometry requests when its cache already matches.
+    // Issue this one post-map request using the actual native decoration size.
+    gtk_window_move(GTK_WINDOW(widget), target.x, target.y);
+    gtk_window_resize(GTK_WINDOW(widget), std::max(1, target.width - (outer.width - clientWidth)),
+                      std::max(1, target.height - (outer.height - clientHeight)));
+}
+#endif
+
 void SetInitialWindowRectangle(EditorFrame& window, const wxRect& rectangle, int sizeFlags) {
 #ifdef __WXMSW__
     const auto previousDpi = window.GetDPI();
@@ -143,7 +221,11 @@ bool ApplyWindowPosition(EditorFrame& window, const WindowPosition& position) {
 }
 
 void EditorFrame::RememberInitialWindowPosition(bool maximized) {
+#ifdef __WXGTK__
+    normalWindowPosition_.normal = initialWindowRectangle_ ? initialWindowRectangle_->rectangle : GetRect();
+#else
     normalWindowPosition_.normal = GetRect();
+#endif
     normalWindowPosition_.maximized = maximized;
     normalWindowSize_ = GetSize();
     pendingMaximize_ = maximized;
@@ -151,6 +233,13 @@ void EditorFrame::RememberInitialWindowPosition(bool maximized) {
 
 void EditorFrame::CaptureNormalWindowPosition() {
 #ifdef __WXGTK__
+    if (initialWindowRectangle_) {
+        normalWindowPosition_.normal = initialWindowRectangle_->rectangle;
+        normalWindowPosition_.coordinates = true;
+        normalWindowPosition_.screen = RectangleDisplay(normalWindowPosition_.normal).GetGeometry().GetSize();
+        normalWindowSize_ = normalWindowPosition_.normal.GetSize();
+        return;
+    }
     if (FullScreenActive() || IsIconized()) return;
     auto* native = gtk_widget_get_window(GTK_WIDGET(GetHandle()));
     if (native && (gdk_window_get_state(native) & GDK_WINDOW_STATE_FULLSCREEN)) return;

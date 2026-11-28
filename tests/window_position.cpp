@@ -110,7 +110,21 @@ public:
                 Require(ready, "owned window is presented");
                 const auto section = PositionSection(*frame);
                 const bool coordinates = section != "wxnotepad Wayland Window";
-                Await([&] { return frame->GetSize() == wxSize(640, 480); }, "normal rectangle is presented");
+                Await(
+                    [&] {
+                        if (frame->GetSize() != wxSize(640, 480)) return false;
+#ifdef __WXGTK__
+                        if (coordinates) {
+                            GdkRectangle native{};
+                            gdk_window_get_frame_extents(gtk_widget_get_window(GTK_WIDGET(frame->GetHandle())),
+                                                         &native);
+                            return wxRect(native.x, native.y, native.width, native.height) ==
+                                   wxRect(100, 120, 640, 480);
+                        }
+#endif
+                        return true;
+                    },
+                    "normal rectangle is presented");
                 Choose(*frame, "Sticky Window Position");
                 IniDocument ini(path_);
                 Require(ini.Load() && ini.ReadBool("StickyWindowPosition", false, "Settings2"),
