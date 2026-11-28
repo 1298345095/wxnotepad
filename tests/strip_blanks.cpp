@@ -2,6 +2,7 @@
 #include "app/editor_frame.h"
 #include <array>
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/app.h>
@@ -80,7 +81,8 @@ void Selections(EditorFrame* frame) {
     }
     std::puts("PASS: selection-limited regex, partial lines, endpoint direction and one-step history");
 }
-void NativeKey(EditorControl* editor, bool shift = false, bool control = false) {
+void NativeKey(EditorFrame* frame, bool shift = false, bool control = false) {
+    auto* editor = frame->Editor();
 #ifdef __WXMSW__
     const bool handled = NativeSearch::WindowsShortcut(
         editor, 'T', {{VK_MENU, 0x80}, {VK_CONTROL, control ? 0x80 : 0}, {VK_SHIFT, shift ? 0x80 : 0}});
@@ -88,6 +90,7 @@ void NativeKey(EditorControl* editor, bool shift = false, bool control = false) 
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display helper");
+    NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
     bool released = false;
     wxEvtHandler observer;
     observer.Bind(wxEVT_KEY_UP, [&released](wxKeyEvent& event) {
@@ -113,11 +116,11 @@ void NativeAndProtection(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Set(editor, " A \t\r\n B\t", 1, 1);
-    NativeKey(editor, true);
-    NativeKey(editor, false, true);
+    NativeKey(frame, true);
+    NativeKey(frame, false, true);
     Require(TestEditor::Text(editor) == " A \t\r\n B\t" && !editor->Send(CanUndo),
             "extra Shift or Control does not invoke Alt+T");
-    NativeKey(editor);
+    NativeKey(frame);
     Require(TestEditor::Text(editor) == " A\r\n B", "actual native Alt+T invokes manual trailing cleanup");
     for (const bool leading : {false, true}) {
         Set(editor, " A \n B \n C ");
