@@ -138,7 +138,7 @@ def main():
     if not args.packaged and args.cmake_dir is None:
         parser.error("--cmake-dir is required unless --packaged is used")
     with ExitStack() as stack:
-        root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="always-on-top-")))
+        root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="always-on-top-"))).resolve()
         executable = (
             args.executable.resolve()
             if args.packaged

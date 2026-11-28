@@ -365,6 +365,9 @@ void EditorFrame::SetFullScreen(bool active) {
     }
 #else
 #ifdef __WXGTK__
+    // Leaving fullscreen can briefly report an ordinary window before the WM
+    // restores its previous maximized state. Keep the saved normal rectangle.
+    if (!active && normalWindowPosition_.maximized) pendingMaximize_ = true;
     if (active) {
         auto* screen = gtk_widget_get_screen(GTK_WIDGET(GetHandle()));
         if (GDK_IS_X11_DISPLAY(gdk_screen_get_display(screen)) &&

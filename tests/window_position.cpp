@@ -36,9 +36,15 @@ wxString PositionSection(EditorFrame& frame) {
     const auto size = wxDisplay(&frame).GetGeometry().GetSize();
     return wxString::Format("Window Position %dx%d", size.x, size.y);
 }
-void SavedRectangle(const wxString& path, wxSize size, const wxString& section) {
+void SavedRectangle(const wxString& path, wxSize size, const wxString& section, const char* phase = "normal") {
     IniDocument ini(path);
     Require(ini.Load(), "read actual position INI");
+    if (ini.ReadInt("WindowSizeX", 0, section) != size.x || ini.ReadInt("WindowSizeY", 0, section) != size.y)
+        std::println(stderr, "position history phase={} section={} actual={},{},{},{} maximized={} expected={}x{}",
+                     phase, section.utf8_str().data(), ini.ReadInt("WindowPosX", 0, section),
+                     ini.ReadInt("WindowPosY", 0, section), ini.ReadInt("WindowSizeX", 0, section),
+                     ini.ReadInt("WindowSizeY", 0, section), ini.ReadBool("WindowMaximized", false, section), size.x,
+                     size.y);
     Require(ini.ReadInt("WindowSizeX", 0, section) == size.x && ini.ReadInt("WindowSizeY", 0, section) == size.y,
             "INI stores normal outer dimensions rather than client, minimized or full-screen dimensions");
     Require(ini.ReadString("Marker", {}, "Unrelated") == "retained", "position commands retain unrelated settings");
@@ -70,18 +76,18 @@ void MaximizedFullScreenHistory(EditorFrame& frame, const wxString& path, const 
     frame.Maximize();
     Await([&] { return frame.IsMaximized(); }, "owned window is maximized");
     Choose(frame, "Save Settings Now");
-    SavedRectangle(path, {700, 510}, section);
+    SavedRectangle(path, {700, 510}, section, "after-maximize");
     if (coordinates) Require(Copy(frame).ends_with(",700,510,1"), "copy exports normal rectangle with maximized flag");
     NativeKeys::Shortcut(&frame, WXK_F11, false);
     Await([&] { return FullScreen(frame); }, "owned maximized window enters actual native full-screen mode");
     Choose(frame, "Save Settings Now");
-    SavedRectangle(path, {700, 510}, section);
+    SavedRectangle(path, {700, 510}, section, "in-fullscreen");
     if (coordinates)
         Require(Copy(frame).ends_with(",700,510,1"), "full-screen copy retains prior ordinary maximized flag");
     NativeKeys::Shortcut(&frame, WXK_ESCAPE, false);
     Await([&] { return !FullScreen(frame) && frame.IsMaximized(); }, "full-screen exits to the native maximized state");
     Choose(frame, "Save Settings Now");
-    SavedRectangle(path, {700, 510}, section);
+    SavedRectangle(path, {700, 510}, section, "after-fullscreen-exit");
     IniDocument ini(path);
     Require(ini.Load() && ini.ReadBool("WindowMaximized", false, section),
             "maximized full-screen cycle retains its original history flag");
@@ -156,6 +162,20 @@ public:
                     const wxRect left(work.x + 16, work.y + 16, width, height);
                     Await([&] { return frame->GetRect() == left; },
                           "default shortcut toggles to original left rectangle");
+#ifdef __WXGTK__
+                    frame->Maximize();
+                    Await([&] { return frame->IsMaximized(); }, "owned default-position fixture is maximized");
+                    NativeKeys::Shortcut(frame, WXK_F11, false);
+                    Await([&] { return FullScreen(*frame); }, "maximized default-position fixture enters fullscreen");
+                    NativeKeys::Shortcut(frame, 'P', true, false, true);
+                    Await([&] { return !FullScreen(*frame) && !frame->IsMaximized() && frame->GetRect() == right; },
+                          "explicit default placement exits maximized fullscreen to the original normal rectangle");
+                    Choose(*frame, "Save Settings Now");
+                    SavedRectangle(path_, right.GetSize(), section, "default-from-maximized-fullscreen");
+                    Require(Copy(*frame) ==
+                                wxString::Format("-pos %d,%d,%d,%d,0", right.x, right.y, width, height).utf8_string(),
+                            "default placement replaces fullscreen's pending maximize history and clipboard tuple");
+#endif
                 } else {
                     const auto before = frame->GetSize();
                     NativeKeys::Shortcut(frame, 'P', true, false, true);

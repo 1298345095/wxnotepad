@@ -124,6 +124,8 @@ def shortcut(path, target=None):
         if target is not None:
             path.symlink_to(target, target_is_directory=Path(target).is_dir())
         return os.readlink(path)
+    if target is None:
+        assert path.is_file(), (str(path), [entry.name for entry in path.parent.iterdir()])
     script = (
         "$ErrorActionPreference='Stop';[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);"
         "$link=(New-Object -ComObject WScript.Shell).CreateShortcut($env:WXNOTEPAD_FAVORITE_LINK);"
@@ -448,7 +450,12 @@ def exercise(app, dialogs, favorite_directory, target, other, evidence):
         app.finish()
 
     add_name("文档 favorite", "The favorite was added successfully.")
-    assert Path(shortcut(link)) == target, shortcut(link)
+    actual_target = shortcut(link)
+    assert Path(actual_target) == target, (
+        str(link),
+        actual_target,
+        [entry.name for entry in favorite_directory.iterdir()],
+    )
     original = link.read_bytes() if sys.platform == "win32" else os.readlink(link)
     add_name("文档 favorite", "A favorite with this name already exists.")
     assert (link.read_bytes() if sys.platform == "win32" else os.readlink(link)) == original
@@ -618,7 +625,7 @@ def main():
     args.evidence.mkdir(parents=True, exist_ok=True)
     dialogs = Dialogs(args.evidence)
     with tempfile.TemporaryDirectory(prefix="wxnotepad-favorites-package-") as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         package = root / "package"
         package.mkdir()
         if args.cmake_dir:

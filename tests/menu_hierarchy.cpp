@@ -68,15 +68,22 @@ void CheckMenu(EditorFrame* frame) {
                             "Print...",
                             "Open Containing Folder",
                             "Update File Time",
+                            "Favorites",
                             "Recent (History)...",
                             "Exit"});
     Groups(bar->GetMenu(0),
-           {"New", "File Mode", "Encoding", "Page Setup...", "Open Containing Folder", "Recent (History)...", "Exit"});
+           {"New", "File Mode", "Encoding", "Page Setup...", "Open Containing Folder", "Favorites", "Exit"});
+    // Notepad4.rc 89b8b36: Favorites shares the group immediately before Recent (History).
+    Order(Submenu(bar->GetMenu(0), "Favorites"), {"Open Favorites...", "Add Current File...", "Manage..."});
     Order(Submenu(bar->GetMenu(0), "Open As"),
           {"Open As GBK...", "Open As UTF-16LE...", "Open As Windows-1252...", "Open As DOS-437..."});
     Order(bar->GetMenu(1),
           {"Undo", "Redo", "Cut", "Copy", "Paste", "Delete", "Select All", "Swap", "Clear Clipboard",
            "Copy to Clipboard", "Selection", "Enclose Selection", "Lines", "Convert", "Insert", "Special"});
+    auto* clipboard = Submenu(bar->GetMenu(1), "Copy to Clipboard");
+    Order(clipboard, {"File Name", "File Name and Ext.", "Full Path Name", "Copy All", "Copy Add", "Copy as RTF",
+                      "Window Position"});
+    Groups(clipboard, {"File Name", "Copy All", "Window Position"});
     Order(Submenu(bar->GetMenu(1), "Selection"),
           {"Duplicate", "Toggle Line Comment", "Toggle Block Comment", "Indent", "Unindent", "Strip Trailing Blanks",
            "Strip First Character", "Strip Last Character", "Strip Leading Blanks", "Merge Blank Lines",
@@ -162,9 +169,11 @@ void CheckMenu(EditorFrame* frame) {
     // Single File Instance starts the following group before File Change Notification.
     auto* windowOptions = Submenu(bar->GetMenu(5), "Window Options");
     if (windowOptions->FindItemByPosition(0)->IsEnabled())
-        Order(windowOptions, {"Always On Top", "Reuse Window"});
+        Order(windowOptions, {"Always On Top", "Reuse Window", "Sticky Window Position", "Clear Position History"});
     else
-        Order(windowOptions, {"Always On Top", "Always On Top is unavailable on this desktop.", "Reuse Window"});
+        Order(windowOptions, {"Always On Top", "Always On Top is unavailable on this desktop.", "Reuse Window",
+                              "Sticky Window Position", "Clear Position History"});
+    Groups(windowOptions, {"Always On Top", "Reuse Window"});
     Order(Submenu(bar->GetMenu(5), "Window Title Display"),
           {"File Name Only", "File Name and Directory", "Full Path Name", "Text Excerpt"});
     // Pinned Notepad4.rc: customize and automatic scaling follow Show Toolbar.
@@ -188,8 +197,16 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
     Order(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Open in New Window", "Execute Document",
-                            "Open Document With...", "Run Command...", "Action on Selection", "Base64"});
+                            "Open Document With...", "Run Command...", "Action on Selection", "Base64", "Web Tools"});
     Groups(bar->GetMenu(6), {"Save Before Running Tools", "Restart", "Execute Document", "Action on Selection"});
+    // Notepad4.rc 89b8b36: calculation separates open-target and search actions.
+    auto* selection = Submenu(bar->GetMenu(6), "Action on Selection");
+    Order(selection,
+          {"Open File, Folder, Link, etc.", "Open Containing Folder", "Calculate Expression", "Search with Google",
+           "Search with Bing", "Search on Wikipedia", "Custom Action 1", "Custom Action 2"});
+    Groups(selection,
+           {"Open File, Folder, Link, etc.", "Calculate Expression", "Search with Google", "Custom Action 1"});
+    Order(Submenu(bar->GetMenu(6), "Web Tools"), {"CSS/JS/JSON Compress", "CSS/JS/JSON Pretty"});
     auto* schemes = bar->GetMenu(4);
     Order(schemes, {"Syntax Scheme...",
                     "Customize Schemes...",

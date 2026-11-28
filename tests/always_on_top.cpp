@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #ifdef __WXGTK__
 #include <X11/Xatom.h>
 #endif
@@ -57,16 +58,8 @@ bool NativeTopmost(wxTopLevelWindow* frame) {
 #endif
 }
 
-bool AbovePeer(wxTopLevelWindow* frame, wxTopLevelWindow* peer) {
-#ifdef __WXMSW__
-    const auto first = static_cast<HWND>(frame->GetHandle());
-    const auto second = static_cast<HWND>(peer->GetHandle());
-    for (auto window = GetTopWindow(nullptr); window; window = GetWindow(window, GW_HWNDNEXT)) {
-        if (window == first) return true;
-        if (window == second) return false;
-    }
-    throw std::runtime_error("owned native windows remain in Windows stacking order");
-#elif defined(__WXGTK__)
+#ifdef __WXGTK__
+std::optional<bool> X11PeerOrder(wxTopLevelWindow* frame, wxTopLevelWindow* peer) {
     auto* window = gtk_widget_get_window(GTK_WIDGET(frame->GetHandle()));
     auto* display = GDK_WINDOW_XDISPLAY(window);
     Atom type = 0;
@@ -86,8 +79,34 @@ bool AbovePeer(wxTopLevelWindow* frame, wxTopLevelWindow* peer) {
     const bool found = firstPosition != order + count && secondPosition != order + count;
     const bool above = firstPosition > secondPosition;
     XFree(bytes);
-    Require(found, "native WM stacking contains both owned clients");
+    if (!found) return std::nullopt;
     return above;
+}
+#endif
+
+bool ManagedClients(wxTopLevelWindow* frame, wxTopLevelWindow* peer) {
+#ifdef __WXGTK__
+    if (!gtk_widget_get_mapped(GTK_WIDGET(frame->GetHandle())) || !gtk_widget_get_mapped(GTK_WIDGET(peer->GetHandle())))
+        return false;
+    return X11PeerOrder(frame, peer).has_value();
+#else
+    return frame->IsShownOnScreen() && peer->IsShownOnScreen();
+#endif
+}
+
+bool AbovePeer(wxTopLevelWindow* frame, wxTopLevelWindow* peer) {
+#ifdef __WXMSW__
+    const auto first = static_cast<HWND>(frame->GetHandle());
+    const auto second = static_cast<HWND>(peer->GetHandle());
+    for (auto window = GetTopWindow(nullptr); window; window = GetWindow(window, GW_HWNDNEXT)) {
+        if (window == first) return true;
+        if (window == second) return false;
+    }
+    throw std::runtime_error("owned native windows remain in Windows stacking order");
+#elif defined(__WXGTK__)
+    const auto order = X11PeerOrder(frame, peer);
+    Require(order.has_value(), "native WM stacking contains both owned clients");
+    return *order;
 #endif
 }
 
@@ -100,7 +119,8 @@ void CheckOwner(EditorFrame* frame, wxTopLevelWindow* dialog) {
     Require(gtk_window_get_transient_for(GTK_WINDOW(dialog->GetHandle())) == GTK_WINDOW(frame->GetHandle()),
             "native GTK dialog retains its existing transient-for owner");
 #endif
-    Await([&] { return AbovePeer(dialog, frame); }, "native owned dialog stays above its editor owner");
+    Await([&] { return ManagedClients(dialog, frame) && AbovePeer(dialog, frame); },
+          "native owned dialog stays above its editor owner");
 }
 
 void CheckFind(EditorFrame* frame, int topmost) {
@@ -200,7 +220,11 @@ void Check(EditorFrame* frame) {
     auto* peer = new wxFrame(nullptr, wxID_ANY, "Owned topmost stacking peer", wxPoint(30, 30), wxSize(400, 300));
     peer->Show();
     try {
-        Await([&] { return peer->IsShownOnScreen(); }, "owned stacking peer is shown");
+        Await([&] { return peer->IsShownOnScreen() && ManagedClients(frame, peer); }, "owned stacking peer is shown");
+#ifdef __WXGTK__
+        wxString focusFile;
+        NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
+#endif
         auto* editor = frame->Editor();
         using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "alpha beta\nsecond\n");
@@ -212,7 +236,11 @@ void Check(EditorFrame* frame) {
             Require(TestEditor::Text(editor) == text && editor->Send(GetAnchor) == 9 &&
                         editor->Send(GetCurrentPos) == 2 && editor->Send(CanUndo) && !editor->Send(CanRedo),
                     "topmost preserves native editor contents, reversed selection and Undo/Redo");
-            Require(frame->GetRect() == bounds, "topmost preserves native frame position and size");
+            const auto current = frame->GetRect();
+            if (current != bounds)
+                std::println(stderr, "topmost frame actual={},{},{},{} expected={},{},{},{}", current.x, current.y,
+                             current.width, current.height, bounds.x, bounds.y, bounds.width, bounds.height);
+            Require(current == bounds, "topmost preserves native frame position and size");
         };
         const auto verify = [&](bool active) {
             std::printf("verify effective topmost=%d\n", active);
@@ -248,6 +276,9 @@ void Check(EditorFrame* frame) {
         NativeSearch::Command(frame, std::to_underlying(AppCommand::GoToLine));
         if (modal.failure) std::rethrow_exception(modal.failure);
         Require(modal.opened, "real Go To Line command opens the existing native modal");
+#ifdef __WXGTK__
+        NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
+#endif
         verify(true);
         NativeKeys::Shortcut(frame, WXK_F11, false);
         NativeKeys::Shortcut(frame, WXK_F11, false);

@@ -146,15 +146,22 @@ void EditorFrame::RememberInitialWindowPosition(bool maximized) {
     normalWindowPosition_.normal = GetRect();
     normalWindowPosition_.maximized = maximized;
     normalWindowSize_ = GetSize();
-    pendingInitialMaximize_ = maximized;
+    pendingMaximize_ = maximized;
 }
 
 void EditorFrame::CaptureNormalWindowPosition() {
-    if (pendingInitialMaximize_) {
-        if (!IsMaximized()) return;
-        pendingInitialMaximize_ = false;
-    }
+#ifdef __WXGTK__
     if (FullScreenActive() || IsIconized()) return;
+    auto* native = gtk_widget_get_window(GTK_WIDGET(GetHandle()));
+    if (native && (gdk_window_get_state(native) & GDK_WINDOW_STATE_FULLSCREEN)) return;
+#endif
+    if (pendingMaximize_) {
+        if (!IsMaximized()) return;
+        pendingMaximize_ = false;
+    }
+#ifndef __WXGTK__
+    if (FullScreenActive() || IsIconized()) return;
+#endif
     normalWindowPosition_.coordinates = HasGlobalWindowCoordinates();
     normalWindowPosition_.screen = wxDisplay(this).GetGeometry().GetSize();
 #ifdef __WXMSW__
@@ -213,6 +220,10 @@ void EditorFrame::DefaultWindowPosition() {
     if (target == GetRect()) target.x = work.x + DefaultInset;
     if (restoring) pendingDefaultPosition_ = target;
     if (FullScreenActive()) SetFullScreen(false);
+#ifdef __WXGTK__
+    // This explicit ordinary placement supersedes fullscreen's maximize restore.
+    pendingMaximize_ = false;
+#endif
     if (IsIconized()) Iconize(false);
     Maximize(false);
     if (restoring) {
@@ -296,7 +307,6 @@ void EditorFrame::AppendWindowPositionCommands(wxMenu* menu) {
             event.Enable(!(settings_ ? settings_->values : defaults_).stickyWindowPosition);
         },
         clear);
-    menu->AppendSeparator();
 }
 
 void EditorFrame::AppendCopyWindowPosition(wxMenu* menu) {

@@ -8,6 +8,7 @@
 #include "file_helpers.h"
 #include "file_command_driver.h"
 #include "native_completion_helpers.h"
+#include "native_key_helpers.h"
 #include "native_tree_input.h"
 #include "settings/settings_store.h"
 #include <SciLexer.h>
@@ -296,6 +297,16 @@ size_t OriginalScriptOperations(EditorFrame* frame, const std::filesystem::path&
                                 PaintDocument paintDocument) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
+#ifdef __WXGTK__
+    // Completion needs acknowledged native focus, including when wx's logical
+    // focus still names this editor after a scheme chooser has closed.
+    wxString target = "wxnotepad";
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget)))
+        target = wxString::Format("x11-window:%lu", gdk_x11_window_get_xid(gtk_widget_get_window(widget)));
+    wxString focusFile;
+    NativeKeys::FocusEditor(frame, target, focusFile);
+#endif
     std::ifstream input(reference);
     Require(input.is_open(), "independent original script operation fixtures open");
     std::string line;

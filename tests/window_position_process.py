@@ -29,7 +29,7 @@ CAPTIONS = {
 }
 
 
-def native_rectangle(app):
+def native_rectangle(app, *, deadline=None):
     """Query the owned native outer rectangle independently of the app observer."""
     if sys.platform == "win32":
         from capture_window_positions import Placement
@@ -41,17 +41,23 @@ def native_rectangle(app):
         normal = placement.normal
         return (normal.left, normal.top, normal.right - normal.left, normal.bottom - normal.top)
     identity = app.state["frame_x11_window"]
-    deadline = time.monotonic() + 4
+    if deadline is None:
+        deadline = time.monotonic() + 4
     while True:
         extents = subprocess.check_output(["xprop", "-id", identity, "_NET_FRAME_EXTENTS"], text=True)
         if "=" in extents:
-            break
+            info = subprocess.check_output(["xwininfo", "-id", identity], text=True)
+            # Frame extents can arrive before MapNotify; only a viewable owned
+            # window has the actual outer rectangle tested below.
+            if "Map State: IsViewable" in info:
+                break
         if time.monotonic() >= deadline:
             detail = subprocess.check_output(["xwininfo", "-id", identity, "-tree"], text=True)
             properties = subprocess.check_output(["xprop", "-id", identity], text=True)
-            raise AssertionError(f"owned X11 frame extents unavailable: {extents}\n{detail}\n{properties}")
+            raise AssertionError(
+                f"owned X11 frame not yet mapped with frame extents: {extents}\n{detail}\n{properties}"
+            )
         time.sleep(0.01)
-    info = subprocess.check_output(["xwininfo", "-id", identity], text=True)
 
     def number(label):
         return int(re.search(rf"{label}:\s+(-?\d+)", info)[1])
@@ -233,6 +239,11 @@ def main():
             nonlocal run
             run += 1
             app = Process(executable, folder / f"observed-{run}", environment, arguments=arguments)
+            if app.state["backend"] == "GdkX11Display":
+                # The observer deliberately permits shown-before-map routing
+                # tests. This geometry fixture needs its owned native map first.
+                native_rectangle(app)
+                app.send("snapshot")
             tested_dpi.add(int(app.state["dpi"]))
             return app
 
@@ -259,9 +270,10 @@ def main():
                 assert entries[sticky]["path"].rsplit("/", 1)[0] == entries[clear]["path"].rsplit("/", 1)[0]
                 assert entries[sticky]["checked"] == "0" and entries[clear]["enabled"] == "1"
                 assert entries[copy]["enabled"] == str(int(not wayland))
-                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480)
+                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480), app.state
                 if not wayland:
-                    assert native_rectangle(app) == (100, 120, 640, 480)
+                    actual = native_rectangle(app)
+                    assert actual == (100, 120, 640, 480), (actual, (100, 120, 640, 480))
                     seed_clipboard()
                     app.choose(copy)
                     copied = native_clipboard()
@@ -284,9 +296,10 @@ def main():
                 app.stop()
             app = launch()
             try:
-                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480)
+                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480), app.state
                 if not wayland:
-                    assert native_rectangle(app) == (100, 120, 640, 480)
+                    actual = native_rectangle(app)
+                    assert actual == (100, 120, 640, 480), (actual, (100, 120, 640, 480))
                 app.choose(sticky)
                 app.choose(clear)
                 assert not any(name.startswith("Window Position") for name in read_settings(config).sections())

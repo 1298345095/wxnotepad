@@ -78,7 +78,7 @@ private:
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
     WindowPosition normalWindowPosition_;
-    bool pendingInitialMaximize_ = false;
+    bool pendingMaximize_ = false;
     std::optional<wxRect> pendingDefaultPosition_;
     void ApplyPendingWindowPosition();
     void CaptureNormalWindowPosition();
