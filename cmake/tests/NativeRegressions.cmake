@@ -704,20 +704,20 @@ set_tests_properties(packaged_startup_missing_parameters PROPERTIES TIMEOUT 120)
 
 add_test(NAME packaged_window_routing_settings COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-settings")
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-settings")
 set_tests_properties(packaged_window_routing_settings PROPERTIES TIMEOUT 120)
 add_test(NAME packaged_window_routing_same COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-same" --scenario same)
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-same" --scenario same)
 set_tests_properties(packaged_window_routing_same PROPERTIES TIMEOUT 120)
 add_test(NAME packaged_window_routing_forward COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-forward" --scenario forward)
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-forward" --scenario forward)
 set_tests_properties(packaged_window_routing_forward PROPERTIES TIMEOUT 120)
 foreach(language en zh_CN zh_TW)
     add_test(NAME packaged_window_routing_matrix_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-matrix-${language}"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-matrix-${language}"
         --scenario matrix --language ${language})
     set_tests_properties(packaged_window_routing_matrix_${language} PROPERTIES TIMEOUT 120)
     add_test(NAME packaged_window_routing_policy_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
@@ -727,7 +727,7 @@ foreach(language en zh_CN zh_TW)
     set_tests_properties(packaged_window_routing_policy_${language} PROPERTIES TIMEOUT 120)
     add_test(NAME packaged_window_routing_busy_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-busy-${language}"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-busy-${language}"
         --scenario busy --language ${language})
     set_tests_properties(packaged_window_routing_busy_${language} PROPERTIES TIMEOUT 120)
     foreach(scenario closing sessions activation forward-current force-new)
@@ -742,14 +742,14 @@ foreach(language en zh_CN zh_TW)
         add_test(NAME packaged_window_routing_startup-id_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/managed_x11_session.py" "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-            --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-startup-id-${language}"
+            --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-startup-id-${language}"
             --scenario startup-id --language ${language})
         set_tests_properties(packaged_window_routing_startup-id_${language} PROPERTIES TIMEOUT 120)
     endif()
 endforeach()
 add_test(NAME packaged_window_routing_aliases COMMAND "${Python3_EXECUTABLE}" -X utf8
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-aliases" --scenario aliases)
+    --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-aliases" --scenario aliases)
 set_tests_properties(packaged_window_routing_aliases PROPERTIES TIMEOUT 120)
 
 add_test(NAME packaged_startup_csv COMMAND "${Python3_EXECUTABLE}" -X utf8
@@ -764,14 +764,14 @@ set_tests_properties(packaged_window_routing_csv PROPERTIES TIMEOUT 120)
 foreach(language en zh_CN zh_TW)
     add_test(NAME packaged_window_routing_policy_pending_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-policy-pending-${language}"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-policy-pending-${language}"
         --scenario policy-pending --language ${language})
     set_tests_properties(packaged_window_routing_policy_pending_${language} PROPERTIES TIMEOUT 120)
 endforeach()
 if(UNIX)
     add_test(NAME packaged_window_routing_policy_disconnect COMMAND "${Python3_EXECUTABLE}" -X utf8
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_routing_process.py" "$<TARGET_FILE:wxnotepad>"
-        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/window-routing-policy-disconnect"
+        --cmake-dir "${CMAKE_BINARY_DIR}" --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/window-routing-policy-disconnect"
         --scenario policy-disconnect)
     set_tests_properties(packaged_window_routing_policy_disconnect PROPERTIES TIMEOUT 120)
     add_test(NAME native_x11_routing_map_readiness COMMAND "${Python3_EXECUTABLE}" -X utf8
