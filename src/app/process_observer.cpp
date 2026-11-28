@@ -235,6 +235,8 @@ void ProcessObserver::Publish() {
     const auto position = frame_->GetPosition();
     const auto size = frame_->GetSize();
     lastFrameSize_ = size;
+    lastInitialWindowPositionPending_ = frame_->InitialWindowPositionPending();
+    contents += wxString::Format("initial_position_pending\t%d\n", lastInitialWindowPositionPending_);
     contents +=
         wxString::Format("frame_x\t%d\nframe_y\t%d\nframe_width\t%d\nframe_height\t%d\nmaximized\t%d\ndpi\t%d\n",
                          position.x, position.y, size.x, size.y, frame_->IsMaximized(), frame_->GetDPI().x);
@@ -366,7 +368,8 @@ void ProcessObserver::Observe() {
             frame_->Editor()->SelectionRevision() != lastSelectionRevision_ ||
             (frame_->Editor()->Send(GetReadOnly) != 0) != lastReadOnly_ ||
             ObservePosition(frame_) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
-            (frame_->IsShown() && !frame_->IsIconized()) != lastShown_ || frame_->GetSize() != lastFrameSize_)
+            (frame_->IsShown() && !frame_->IsIconized()) != lastShown_ || frame_->GetSize() != lastFrameSize_ ||
+            frame_->InitialWindowPositionPending() != lastInitialWindowPositionPending_)
             Publish();
     }
 }

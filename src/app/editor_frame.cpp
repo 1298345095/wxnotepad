@@ -112,6 +112,9 @@ EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTo
         event.Skip();
     });
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+#ifdef __WXGTK__
+        if (initialWindowRectangle_ && initialWindowRectangle_->requested) ApplyInitialWindowRectangle(false);
+#endif
         if (!FullScreenActive() && !IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
         CaptureNormalWindowPosition();
         ApplyPendingWindowPosition();

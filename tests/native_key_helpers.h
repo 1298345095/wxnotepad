@@ -110,19 +110,28 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
             }
             bool Presented() {
                 if (!window_ || paintedFrame_ < 0) return false;
+                if (const auto* frame = dynamic_cast<EditorFrame*>(window_.get());
+                    frame && frame->InitialWindowPositionPending())
+                    return false;
                 auto* object = g_weak_ref_get(&native_);
                 if (!object) return false;
                 auto* widget = GTK_WIDGET(object);
                 auto* native = gtk_widget_get_window(widget);
                 bool ready = native && gtk_widget_get_mapped(widget) &&
                              !(gdk_window_get_state(native) & GDK_WINDOW_STATE_WITHDRAWN);
+                XWindowAttributes attributes{};
+                ready = ready &&
+                        XGetWindowAttributes(GDK_WINDOW_XDISPLAY(native), GDK_WINDOW_XID(native), &attributes) &&
+                        attributes.map_state == IsViewable;
                 if (ready) {
                     GdkRectangle outer{};
                     gdk_window_get_frame_extents(native, &outer);
                     // Map and wx's shown flag precede the final GTK allocation.
-                    // Observe a real painted frame whose native and wx geometry agree.
-                    ready = window_->GetRect() == wxRect(outer.x, outer.y, outer.width, outer.height) &&
-                            gtk_widget_get_allocated_width(widget) == gdk_window_get_width(native) &&
+                    // Frames must also agree with their wx geometry. Stock native
+                    // dialogs expose the GTK widget without maintaining that rectangle.
+                    const bool frameReady = !window_->IsKindOf(wxCLASSINFO(wxFrame)) ||
+                                            window_->GetRect() == wxRect(outer.x, outer.y, outer.width, outer.height);
+                    ready = frameReady && gtk_widget_get_allocated_width(widget) == gdk_window_get_width(native) &&
                             gtk_widget_get_allocated_height(widget) == gdk_window_get_height(native);
                 }
                 g_object_unref(object);

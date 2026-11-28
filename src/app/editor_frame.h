@@ -65,6 +65,7 @@ public:
     bool OpenContainingFolder();
     bool Restart();
     void RememberInitialWindowPosition(bool maximized);
+    bool InitialWindowPositionPending() const;
     OpenStatus ReceiveWindowRequest(const WindowRequest& request);
     bool ExecuteDocument();
     bool OpenDocumentWith();

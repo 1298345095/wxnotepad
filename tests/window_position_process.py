@@ -10,17 +10,19 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from ctypes import wintypes as w
 from pathlib import Path
 
 from localization_package import Process, bundle_application, menu_id, menus, read_settings
+from resource_process import wait_state
 
 # Pinned Notepad4/Scintilla and native platform protocol values.
 CF_UNICODETEXT = 13
 CSIDL_LOCAL_APPDATA = 0x1C
 MONITOR_DEFAULTTONEAREST = 2
 SPI_GETWORKAREA = 0x30
+CLIPBOARD_PEER_TIMEOUT_SECONDS = 5
 
 CAPTIONS = {
     1033: ("Sticky Window Position", "Clear Position History", "Window Position", "Save Settings Now"),
@@ -71,6 +73,22 @@ def native_rectangle(app, *, deadline=None):
     )
 
 
+def prepare_geometry(app):
+    """Acknowledge this frame's startup within the existing native map budget."""
+    if app.state["backend"] != "GdkX11Display":
+        return
+    deadline = time.monotonic() + 4
+    native_rectangle(app, deadline=deadline)
+    app.begin("snapshot")
+    app.state = wait_state(
+        app.folder,
+        app.process,
+        lambda state: state["sequence"] == str(app.sequence) and state["initial_position_pending"] == "0",
+        timeout=max(0, deadline - time.monotonic()),
+    )
+    assert app.state["result"] == "ok", app.state
+
+
 def native_clipboard():
     if sys.platform == "win32":
         user, kernel = c.WinDLL("user32"), c.WinDLL("kernel32")
@@ -112,7 +130,8 @@ def gtk_clipboard():
     return gtk, glib, gtk.gtk_clipboard_get(gdk.gdk_atom_intern_static_string(b"CLIPBOARD"))
 
 
-def seed_clipboard():
+@contextmanager
+def seed_clipboard(peer=None):
     if sys.platform == "win32":
         user = c.WinDLL("user32")
         assert user.OpenClipboard(None)
@@ -120,10 +139,48 @@ def seed_clipboard():
             assert user.EmptyClipboard()
         finally:
             user.CloseClipboard()
+        yield
     else:
-        gtk, _, clipboard = gtk_clipboard()
-        gtk.gtk_clipboard_set_text.argtypes = [c.c_void_p, c.c_char_p, c.c_int]
-        gtk.gtk_clipboard_set_text(clipboard, b"owned window-position fixture seed", -1)
+        # The owner must answer TARGETS while this driver waits for the app's
+        # Copy acknowledgement. Reuse the independently pumping native peer.
+        with tempfile.TemporaryDirectory(prefix="wxnotepad-position-clipboard-") as temporary:
+            folder = Path(temporary)
+            (folder / "offer.txt").write_bytes(b"owned window-position fixture seed")
+            process = subprocess.Popen([str(peer), str(folder)], stdout=subprocess.DEVNULL, stderr=sys.stderr)
+
+            def request(value):
+                (folder / "response").unlink(missing_ok=True)
+                packet = folder / "request.tmp"
+                packet.write_text(value, encoding="utf-8")
+                packet.replace(folder / "request")
+
+            failure = None
+            try:
+                request("utility-offer")
+                deadline = time.monotonic() + CLIPBOARD_PEER_TIMEOUT_SECONDS
+                while not (folder / "response").exists():
+                    assert process.poll() is None, ("Clipboard seed peer exited", process.returncode)
+                    assert time.monotonic() < deadline, "Independent clipboard seed must become ready"
+                    time.sleep(0.01)
+                assert (folder / "response").read_text(encoding="utf-8") == "ready"
+                yield
+            except BaseException as error:
+                failure = error
+                raise
+            finally:
+                try:
+                    try:
+                        assert process.poll() is None, ("Clipboard seed peer exited before quit", process.returncode)
+                        request("quit")
+                        assert process.wait(timeout=CLIPBOARD_PEER_TIMEOUT_SECONDS) == 0, process.returncode
+                    finally:
+                        if process.poll() is None:
+                            process.kill()
+                            process.wait(timeout=CLIPBOARD_PEER_TIMEOUT_SECONDS)
+                except Exception as cleanup_error:
+                    if failure is None:
+                        raise
+                    failure.add_note(f"Clipboard seed peer cleanup failed: {cleanup_error!r}")
 
 
 def native_work_area(app):
@@ -242,8 +299,7 @@ def main():
             if app.state["backend"] == "GdkX11Display":
                 # The observer deliberately permits shown-before-map routing
                 # tests. This geometry fixture needs its owned native map first.
-                native_rectangle(app)
-                app.send("snapshot")
+                prepare_geometry(app)
             tested_dpi.add(int(app.state["dpi"]))
             return app
 
@@ -274,9 +330,9 @@ def main():
                 if not wayland:
                     actual = native_rectangle(app)
                     assert actual == (100, 120, 640, 480), (actual, (100, 120, 640, 480))
-                    seed_clipboard()
-                    app.choose(copy)
-                    copied = native_clipboard()
+                    with seed_clipboard(args.executable.resolve().with_name("clipboard_peer")):
+                        app.choose(copy)
+                        copied = native_clipboard()
                     assert copied == ("/pos" if sys.platform == "win32" else "-pos") + " 100,120,640,480,0"
                 app.choose(sticky)
                 stored = read_settings(config)
@@ -368,9 +424,9 @@ def main():
                 app = launch(("-pos", argument))
                 try:
                     assert native_rectangle(app) == position, (native_rectangle(app), position)
-                    seed_clipboard()
-                    app.choose(menu_id(app.state, "Window Position"))
-                    copied = native_clipboard()
+                    with seed_clipboard():
+                        app.choose(menu_id(app.state, "Window Position"))
+                        copied = native_clipboard()
                     assert copied == "/pos " + argument
                     app.choose(menu_id(app.state, "Save Settings Now"))
                     app.close()
