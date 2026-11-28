@@ -89,7 +89,7 @@ private:
     std::optional<InitialWindowRectangle> initialWindowRectangle_;
     unsigned long initialWindowPositionHandler_ = 0;
     void InitializeInitialWindowPosition();
-    void ApplyInitialWindowRectangle();
+    void ApplyInitialWindowRectangle(bool configured);
     void FinishInitialWindowPosition();
     void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO) override;
 #endif
