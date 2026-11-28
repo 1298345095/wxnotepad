@@ -82,13 +82,53 @@ def language_id(state, preference):
     return next(identity for identity, item in menus(state).items() if item["path"] == system_path)
 
 
+def _linux_startup_resources(contexts):
+    def read(path):
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError as error:
+            return f"unavailable: {error!r}"
+
+    for context in contexts:
+        context["linux"] = {name: read(Path("/proc") / str(context["pid"]) / name) for name in ("stat", "wchan")}
+    try:
+        cpu_count = os.process_cpu_count() or "unavailable: no available CPU count"
+    except OSError as error:
+        cpu_count = f"unavailable: {error!r}"
+    try:
+        affinity = sorted(os.sched_getaffinity(0))
+    except OSError as error:
+        affinity = f"unavailable: {error!r}"
+    cgroup = read(Path("/proc/self/cgroup"))
+    if cgroup.startswith("unavailable:"):
+        quota = cgroup
+    else:
+        unified = next((line[3:] for line in cgroup.splitlines() if line.startswith("0::")), None)
+        quota = (
+            read(Path("/sys/fs/cgroup") / unified.lstrip("/") / "cpu.max")
+            if unified is not None
+            else "unavailable: no unified cgroup in /proc/self/cgroup"
+        )
+    return {
+        "available_cpu_count": cpu_count,
+        "affinity": affinity,
+        "loadavg": read(Path("/proc/loadavg")),
+        "cgroup_cpu_max": quota,
+        "cpu_pressure": read(Path("/proc/pressure/cpu")),
+        "io_pressure": read(Path("/proc/pressure/io")),
+    }
+
+
 def _retain_startup_failure(error, report, processes, log_path):
     try:
         report.mkdir(parents=True, exist_ok=True)
         if log_path.parent != report:
             shutil.copy2(log_path, report / log_path.name)
         contexts = [observation_context(folder, process) for folder, process in processes]
+        host = _linux_startup_resources(contexts) if sys.platform == "linux" else None
         (report / "startup-failure.json").write_text(json.dumps(contexts, indent=2), encoding="utf-8")
+        if host is not None:
+            (report / "startup-host.json").write_text(json.dumps(host, indent=2), encoding="utf-8")
     except Exception as capture_error:
         error.add_note(f"Startup failure capture: {capture_error!r}")
 

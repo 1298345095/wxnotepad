@@ -173,6 +173,20 @@ class ObservedStartupLifecycle(unittest.TestCase):
         self.assertEqual(context["pid"], self.owned[0].pid)
         self.assertIsNone(context["returncode"])
         self.assertEqual(context["files"]["state"], raw)
+        if sys.platform == "linux":
+            self.assertEqual(int(context["linux"]["stat"].split(" ", 1)[0]), self.owned[0].pid)
+            self.assertTrue(context["linux"]["wchan"].strip())
+            host = json.loads((folder / "startup-host.json").read_text(encoding="utf-8"))
+            self.assertGreater(host["available_cpu_count"], 0)
+            self.assertEqual(host["affinity"], sorted(os.sched_getaffinity(0)))
+            self.assertEqual(len(host["loadavg"].split()), 5)
+            self.assertEqual(
+                set(host),
+                {"available_cpu_count", "affinity", "loadavg", "cgroup_cpu_max", "cpu_pressure", "io_pressure"},
+            )
+        else:
+            self.assertNotIn("linux", context)
+            self.assertFalse((folder / "startup-host.json").exists())
         self.assertIsNotNone(self.owned[0].poll())
         self.assertTrue(self.logs[0].closed)
 
@@ -239,6 +253,11 @@ class ObservedStartupLifecycle(unittest.TestCase):
             self.assertEqual({row["pid"] for row in contexts[1:]}, {child.pid for child in self.owned[1:]})
             self.assertTrue(all(row["returncode"] is None for row in contexts[1:]))
             self.assertEqual(contexts[0]["returncode"], 0)
+            if sys.platform == "linux":
+                for field in ("stat", "wchan"):
+                    self.assertIn("unavailable:", contexts[0]["linux"][field])
+                self.assertTrue(all("state" in row["files"] for row in contexts))
+                self.assertTrue(all(int(row["linux"]["stat"].split(" ", 1)[0]) == row["pid"] for row in contexts[1:]))
             self.assertEqual((report / "parent.log").read_bytes(), (working / "directory/parent.log").read_bytes())
 
     def test_multifile_failed_discovery_reaps_new_children_and_preserves_existing_same_package(self):
