@@ -239,6 +239,11 @@ def main():
             nonlocal run
             run += 1
             app = Process(executable, folder / f"observed-{run}", environment, arguments=arguments)
+            if app.state["backend"] == "GdkX11Display":
+                # The observer deliberately permits shown-before-map routing
+                # tests. This geometry fixture needs its owned native map first.
+                native_rectangle(app)
+                app.send("snapshot")
             tested_dpi.add(int(app.state["dpi"]))
             return app
 
@@ -293,7 +298,8 @@ def main():
             try:
                 assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480)
                 if not wayland:
-                    assert native_rectangle(app) == (100, 120, 640, 480)
+                    actual = native_rectangle(app)
+                    assert actual == (100, 120, 640, 480), (actual, (100, 120, 640, 480))
                 app.choose(sticky)
                 app.choose(clear)
                 assert not any(name.startswith("Window Position") for name in read_settings(config).sections())
