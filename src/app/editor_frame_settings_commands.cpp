@@ -206,7 +206,6 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         },
         alwaysOnTop);
     windowOptions->AppendSeparator();
-    AppendWindowPositionCommands(windowOptions);
     const auto appendRouting = [this](wxMenu* menu, const wxString& label, bool reuse) {
         const int id = wxWindow::NewControlId();
         menu->AppendCheckItem(id, label);
@@ -238,6 +237,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     };
     // TRANSLATORS: Original IDM_VIEW_REUSEWINDOW menu caption under Window Options.
     appendRouting(windowOptions, _("&Reuse Window"), true);
+    AppendWindowPositionCommands(windowOptions);
     // TRANSLATORS: Original Notepad4.rc Window Options submenu under Settings.
     view->AppendSubMenu(windowOptions, _("Window O&ptions"));
     AppendWindowTitleOptions(view);

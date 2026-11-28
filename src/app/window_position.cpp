@@ -296,7 +296,6 @@ void EditorFrame::AppendWindowPositionCommands(wxMenu* menu) {
             event.Enable(!(settings_ ? settings_->values : defaults_).stickyWindowPosition);
         },
         clear);
-    menu->AppendSeparator();
 }
 
 void EditorFrame::AppendCopyWindowPosition(wxMenu* menu) {
