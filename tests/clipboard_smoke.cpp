@@ -2160,6 +2160,54 @@ void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     SwapSavedState(frame, editor, peer);
 }
 
+#ifdef __WXGTK__
+void UnchangedToolbarClipboard(EditorFrame* frame) {
+    auto* toolbar = frame->GetToolBar();
+    SettleClipboard();
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(toolbar->GetToolEnabled(wxID_PASTE), "toolbar reflects the settled native text offer");
+    class Probe final : public wxEvtHandler {
+    public:
+        explicit Probe(wxToolBar* toolbar) : toolbar_(toolbar) {
+            sentinel_.Bind(wxEVT_CLIPBOARD_CHANGED, [this](wxClipboardEvent&) { completed = true; });
+            toolbar_->Bind(wxEVT_CLIPBOARD_CHANGED, &Probe::OnFormats, this);
+        }
+        ~Probe() override { toolbar_->Unbind(wxEVT_CLIPBOARD_CHANGED, &Probe::OnFormats, this); }
+        bool tested = false;
+        bool accepted = false;
+        bool completed = false;
+
+    private:
+        void OnFormats(wxClipboardEvent& event) {
+            if (!scheduled_) {
+                scheduled_ = true;
+                // Run after the toolbar consumes its response, before idle can
+                // ask again. wxGTK permits only one pending async clipboard sink.
+                CallAfter([this] {
+                    toolbar_->UpdateWindowUI();
+                    accepted = wxTheClipboard->IsSupportedAsync(&sentinel_);
+                    tested = true;
+                });
+            }
+            event.Skip();
+        }
+        wxToolBar* toolbar_;
+        wxEvtHandler sentinel_;
+        bool scheduled_ = false;
+    } probe(toolbar);
+    wxTheClipboard->UsePrimarySelection(false);
+    // A false return means a toolbar response is already in flight.
+    wxTheClipboard->IsSupportedAsync(toolbar);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while ((!probe.tested || (probe.accepted && !probe.completed)) && std::chrono::steady_clock::now() < deadline) {
+        NativeSearch::DispatchEvents(frame);
+        wxMilliSleep(10);
+    }
+    Require(probe.tested && probe.accepted && probe.completed,
+            "unchanged toolbar UpdateUI leaves the async clipboard sink available to an independent requester");
+}
+#endif
+
 void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using enum Scintilla::Message;
     {
@@ -2241,6 +2289,9 @@ void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     TextOffer(editor);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(wxID_PASTE), "text from external app enables Paste");
+#ifdef __WXGTK__
+    UnchangedToolbarClipboard(frame);
+#endif
     editor->Send(SetSel, 0, 1);
     editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
