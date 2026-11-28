@@ -162,6 +162,20 @@ public:
                     const wxRect left(work.x + 16, work.y + 16, width, height);
                     Await([&] { return frame->GetRect() == left; },
                           "default shortcut toggles to original left rectangle");
+#ifdef __WXGTK__
+                    frame->Maximize();
+                    Await([&] { return frame->IsMaximized(); }, "owned default-position fixture is maximized");
+                    NativeKeys::Shortcut(frame, WXK_F11, false);
+                    Await([&] { return FullScreen(*frame); }, "maximized default-position fixture enters fullscreen");
+                    NativeKeys::Shortcut(frame, 'P', true, false, true);
+                    Await([&] { return !FullScreen(*frame) && !frame->IsMaximized() && frame->GetRect() == right; },
+                          "explicit default placement exits maximized fullscreen to the original normal rectangle");
+                    Choose(*frame, "Save Settings Now");
+                    SavedRectangle(path_, right.GetSize(), section, "default-from-maximized-fullscreen");
+                    Require(Copy(*frame) ==
+                                wxString::Format("-pos %d,%d,%d,%d,0", right.x, right.y, width, height).utf8_string(),
+                            "default placement replaces fullscreen's pending maximize history and clipboard tuple");
+#endif
                 } else {
                     const auto before = frame->GetSize();
                     NativeKeys::Shortcut(frame, 'P', true, false, true);
