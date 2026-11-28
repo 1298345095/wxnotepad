@@ -120,9 +120,11 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
                     GdkRectangle outer{};
                     gdk_window_get_frame_extents(native, &outer);
                     // Map and wx's shown flag precede the final GTK allocation.
-                    // Observe a real painted frame whose native and wx geometry agree.
-                    ready = window_->GetRect() == wxRect(outer.x, outer.y, outer.width, outer.height) &&
-                            gtk_widget_get_allocated_width(widget) == gdk_window_get_width(native) &&
+                    // Frames must also agree with their wx geometry. Stock native
+                    // dialogs expose the GTK widget without maintaining that rectangle.
+                    const bool frameReady = !window_->IsKindOf(wxCLASSINFO(wxFrame)) ||
+                                            window_->GetRect() == wxRect(outer.x, outer.y, outer.width, outer.height);
+                    ready = frameReady && gtk_widget_get_allocated_width(widget) == gdk_window_get_width(native) &&
                             gtk_widget_get_allocated_height(widget) == gdk_window_get_height(native);
                 }
                 g_object_unref(object);
