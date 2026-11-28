@@ -149,10 +149,10 @@ void EditorFrame::ApplyInitialWindowRectangle() {
     }
     if (initialWindowRectangle_->requested) return;
     initialWindowRectangle_->requested = true;
-    wxFrame::DoSetSize(target.x, target.y, target.width, target.height,
-                       initialWindowRectangle_->sizeFlags | wxSIZE_ALLOW_MINUS_ONE);
     int clientWidth = 0, clientHeight = 0;
     gdk_window_get_geometry(window, nullptr, nullptr, &clientWidth, &clientHeight);
+    wxFrame::DoSetSize(target.x, target.y, target.width, target.height,
+                       initialWindowRectangle_->sizeFlags | wxSIZE_ALLOW_MINUS_ONE);
     // wxGTK skips native geometry requests when its cache already matches.
     // Issue this one post-map request using the actual native decoration size.
     gtk_window_move(GTK_WINDOW(widget), target.x, target.y);
