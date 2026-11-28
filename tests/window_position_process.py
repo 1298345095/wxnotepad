@@ -270,7 +270,7 @@ def main():
                 assert entries[sticky]["path"].rsplit("/", 1)[0] == entries[clear]["path"].rsplit("/", 1)[0]
                 assert entries[sticky]["checked"] == "0" and entries[clear]["enabled"] == "1"
                 assert entries[copy]["enabled"] == str(int(not wayland))
-                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480)
+                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480), app.state
                 if not wayland:
                     actual = native_rectangle(app)
                     assert actual == (100, 120, 640, 480), (actual, (100, 120, 640, 480))
@@ -296,7 +296,7 @@ def main():
                 app.stop()
             app = launch()
             try:
-                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480)
+                assert tuple(int(app.state[key]) for key in ("frame_width", "frame_height")) == (640, 480), app.state
                 if not wayland:
                     actual = native_rectangle(app)
                     assert actual == (100, 120, 640, 480), (actual, (100, 120, 640, 480))
