@@ -88,6 +88,9 @@ EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTo
                 settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { return HandleFileChange(); }), search_(*editor_) {
+#ifdef __WXGTK__
+    InitializeInitialWindowPosition();
+#endif
     // Establish the single editor child before preferences calculate wrapped geometry.
     Layout();
     const auto& preferences = settings ? settings->values : defaults_;
@@ -220,6 +223,9 @@ EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTo
 }
 
 EditorFrame::~EditorFrame() {
+#ifdef __WXGTK__
+    FinishInitialWindowPosition();
+#endif
 #ifdef __WXMSW__
     // wxMSW leaves attached HMENUs for DestroyWindow to free. Restore native
     // ownership even when we hid the bar without detaching wx's accelerators.

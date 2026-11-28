@@ -80,6 +80,19 @@ private:
     WindowPosition normalWindowPosition_;
     bool pendingMaximize_ = false;
     std::optional<wxRect> pendingDefaultPosition_;
+#ifdef __WXGTK__
+    struct InitialWindowRectangle {
+        wxRect rectangle;
+        int sizeFlags;
+        bool requested = false;
+    };
+    std::optional<InitialWindowRectangle> initialWindowRectangle_;
+    unsigned long initialWindowPositionHandler_ = 0;
+    void InitializeInitialWindowPosition();
+    void ApplyInitialWindowRectangle();
+    void FinishInitialWindowPosition();
+    void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO) override;
+#endif
     void ApplyPendingWindowPosition();
     void CaptureNormalWindowPosition();
     void RestoreWindowPosition();
