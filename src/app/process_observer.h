@@ -33,6 +33,7 @@ private:
     bool lastReadOnly_ = false;
     wxString lastPositionStatus_;
     wxSize lastFrameSize_;
+    bool lastInitialWindowPositionPending_ = false;
     bool publishPending_ = false;
     bool commandPending_ = false;
     bool dispatching_ = false;

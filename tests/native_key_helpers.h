@@ -110,12 +110,19 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
             }
             bool Presented() {
                 if (!window_ || paintedFrame_ < 0) return false;
+                if (const auto* frame = dynamic_cast<EditorFrame*>(window_.get());
+                    frame && frame->InitialWindowPositionPending())
+                    return false;
                 auto* object = g_weak_ref_get(&native_);
                 if (!object) return false;
                 auto* widget = GTK_WIDGET(object);
                 auto* native = gtk_widget_get_window(widget);
                 bool ready = native && gtk_widget_get_mapped(widget) &&
                              !(gdk_window_get_state(native) & GDK_WINDOW_STATE_WITHDRAWN);
+                XWindowAttributes attributes{};
+                ready = ready &&
+                        XGetWindowAttributes(GDK_WINDOW_XDISPLAY(native), GDK_WINDOW_XID(native), &attributes) &&
+                        attributes.map_state == IsViewable;
                 if (ready) {
                     GdkRectangle outer{};
                     gdk_window_get_frame_extents(native, &outer);

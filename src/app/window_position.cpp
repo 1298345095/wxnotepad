@@ -140,12 +140,21 @@ void EditorFrame::DoSetSize(int x, int y, int width, int height, int sizeFlags) 
 void EditorFrame::ApplyInitialWindowRectangle(bool configured) {
     auto* widget = GTK_WIDGET(GetHandle());
     if (!gtk_widget_get_mapped(widget)) return;
-    if (!initialWindowRectangle_ || IsMaximized()) {
+    if (!initialWindowRectangle_) {
+        FinishInitialWindowPosition();
+        return;
+    }
+    auto* window = gtk_widget_get_window(widget);
+    // GTK marks its widget mapped before the WM has made this X window viewable.
+    XWindowAttributes attributes{};
+    if (!XGetWindowAttributes(GDK_WINDOW_XDISPLAY(window), GDK_WINDOW_XID(window), &attributes) ||
+        attributes.map_state != IsViewable)
+        return;
+    if (IsMaximized()) {
         FinishInitialWindowPosition();
         return;
     }
     if (pendingMaximize_ || FullScreenActive() || IsIconized()) return;
-    auto* window = gtk_widget_get_window(widget);
     GdkRectangle outer{};
     gdk_window_get_frame_extents(window, &outer);
     const auto target = initialWindowRectangle_->rectangle;
@@ -170,6 +179,14 @@ void EditorFrame::ApplyInitialWindowRectangle(bool configured) {
                       std::max(1, target.height - (outer.height - clientHeight)));
 }
 #endif
+
+bool EditorFrame::InitialWindowPositionPending() const {
+#ifdef __WXGTK__
+    return initialWindowRectangle_.has_value();
+#else
+    return false;
+#endif
+}
 
 void SetInitialWindowRectangle(EditorFrame& window, const wxRect& rectangle, int sizeFlags) {
 #ifdef __WXMSW__

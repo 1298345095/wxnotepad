@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from localization_package import Process, menu_id, read_settings
-from window_position_process import gtk_clipboard, native_clipboard, native_rectangle, seed_clipboard
+from window_position_process import gtk_clipboard, native_clipboard, native_rectangle, prepare_geometry, seed_clipboard
 
 
 def run(*arguments):
@@ -89,9 +89,9 @@ def main():
                 run("xdotool", "windowactivate", "--sync", app.state["frame_x11_window"])
                 run("xdotool", "key", "--clearmodifiers", "ctrl+shift+p")
                 rectangle(app, (606, 16, 968, 968))
-                seed_clipboard()
-                app.choose(menu_id(app.state, "Window Position"))
-                assert native_clipboard() == "-pos 606,16,968,968,0"
+                with seed_clipboard(source.with_name("clipboard_peer")):
+                    app.choose(menu_id(app.state, "Window Position"))
+                    assert native_clipboard() == "-pos 606,16,968,968,0"
                 run("xdotool", "key", "--clearmodifiers", "ctrl+shift+p")
                 rectangle(app, (556, 16, 968, 968))
                 app.choose(menu_id(app.state, "Clear Position History"))
@@ -127,10 +127,11 @@ def main():
             )
             app = Process(executable, folder / "maximized-fitted", environment)
             try:
+                prepare_geometry(app)
                 assert app.state["maximized"] == "1", app.state
-                seed_clipboard()
-                app.choose(menu_id(app.state, "Window Position"))
-                exported = native_clipboard()
+                with seed_clipboard(source.with_name("clipboard_peer")):
+                    app.choose(menu_id(app.state, "Window Position"))
+                    exported = native_clipboard()
                 assert exported == "-pos 0,0,1600,1000,1", exported
                 app.choose(menu_id(app.state, "Save Settings Now"))
                 saved = read_settings(config)["Window Position 1600x1000"]
