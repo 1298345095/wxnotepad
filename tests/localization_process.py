@@ -556,7 +556,10 @@ class Acceptance:
         ]
         assert len(copies) == 3
         for code in ("en", "zh_CN", "zh_TW"):
-            app = self.start(PREFERENCE[code])
+            # GTK's accessibility resize requests a minimum size. Start below
+            # the later 1100x720 target so this retains the two-axis growth case.
+            arguments = ("--window-position", "0,0,900,600,0") if sys.platform != "win32" else ()
+            app = self.start(PREFERENCE[code], arguments=arguments)
             try:
                 readonly = next(
                     identity for identity, item in self.reference.items() if item["label"] == "&Read Only Mode\tF10"
