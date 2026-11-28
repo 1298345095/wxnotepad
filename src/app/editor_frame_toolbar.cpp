@@ -15,6 +15,8 @@
 #include <wx/settings.h>
 #ifdef __WXGTK__
 #include <wx/clipbrd.h>
+#include <wx/dataobj.h>
+#include <gtk/gtk.h>
 #endif
 #ifdef __WXMSW__
 #include <commctrl.h>
@@ -153,6 +155,7 @@ std::vector<ToolbarCommand> ToolbarCommands(wxMenuBar* menuBar) {
                                             {21, wxID_PRINT},
                                             {24, std::to_underlying(FoldDefaultLevels)},
                                             {25, std::to_underlying(ExecuteDocument)},
+                                            {26, std::to_underlying(AlwaysOnTop)},
                                             {27, std::to_underlying(NewWindow)}});
     std::vector<ToolbarCommand> commands;
     for (const auto& [identity, id] : specifications)
@@ -264,18 +267,48 @@ void EditorFrame::CreateDefaultToolbar() {
     // A synchronous clipboard query yields inside GTK frame-clock dispatch:
     // a pending Wayland configure can then be committed before GTK allocates
     // its new geometry. Idle toolbar updates consume the asynchronous offer.
-    auto clipboardHasText = std::make_shared<bool>(false);
-    toolbar->Bind(wxEVT_CLIPBOARD_CHANGED, [clipboardHasText](wxClipboardEvent& event) {
-        *clipboardHasText = event.SupportsFormat(wxDF_UNICODETEXT) || event.SupportsFormat(wxDF_TEXT);
+    // Async replies wake wx idle. Cache external offers so a reply cannot
+    // perpetually schedule another toolbar query.
+    struct ClipboardAvailability {
+        bool hasText = false;
+        bool queryNeeded = true;
+        bool queryPending = false;
+    };
+    auto availability = std::make_shared<ClipboardAvailability>();
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    const auto ownerChanged =
+        g_signal_connect(clipboard, "owner-change", G_CALLBACK(+[](GtkClipboard*, GdkEventOwnerChange*, gpointer data) {
+                             static_cast<ClipboardAvailability*>(data)->queryNeeded = true;
+                         }),
+                         availability.get());
+    toolbar->Bind(wxEVT_DESTROY, [toolbar, clipboard, ownerChanged, availability](wxWindowDestroyEvent& event) {
+        if (event.GetEventObject() == toolbar) g_signal_handler_disconnect(clipboard, ownerChanged);
+        event.Skip();
+    });
+    toolbar->Bind(wxEVT_CLIPBOARD_CHANGED, [availability](wxClipboardEvent& event) {
+        availability->queryPending = false;
+        availability->hasText = event.SupportsFormat(wxDF_UNICODETEXT) || event.SupportsFormat(wxDF_TEXT);
     });
     toolbar->Bind(
         wxEVT_UPDATE_UI,
-        [this, toolbar, clipboardHasText](wxUpdateUIEvent& event) {
-            event.Enable(editor_->CanPasteText(*clipboardHasText));
-            if (!wxTheClipboard->IsOpened()) {
+        [this, toolbar, availability](wxUpdateUIEvent& event) {
+            if (const auto* local = wxTheClipboard->GTKGetDataObject(GDK_SELECTION_CLIPBOARD)) {
+                // wxGTK owns this object until selection_clear. Its formats can
+                // change without a GtkClipboard owner-change on Wayland.
+                availability->hasText = local->IsSupported(wxDF_UNICODETEXT) || local->IsSupported(wxDF_TEXT);
+                // Refresh the external offer after this local object is cleared.
+                availability->queryNeeded = true;
+            } else if (availability->queryNeeded && !availability->queryPending && !wxTheClipboard->IsOpened()) {
                 wxTheClipboard->UsePrimarySelection(false);
-                wxTheClipboard->IsSupportedAsync(toolbar);
+                // An ownership notification during the request must stay dirty.
+                availability->queryNeeded = false;
+                if (wxTheClipboard->IsSupportedAsync(toolbar)) {
+                    availability->queryPending = true;
+                } else {
+                    availability->queryNeeded = true;
+                }
             }
+            event.Enable(editor_->CanPasteText(availability->hasText));
         },
         wxID_PASTE);
 #endif

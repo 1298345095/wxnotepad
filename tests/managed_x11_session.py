@@ -17,6 +17,9 @@ def main():
     executable = shutil.which("openbox")
     if not executable:
         raise RuntimeError("Native X11 minimize/restore requires test-only Openbox; install Ubuntu package openbox")
+    # The preceding test's owned WM has exited. Do not accept its leftover
+    # acknowledgement while the next owned WM is still starting.
+    subprocess.run(["xprop", "-root", "-remove", "_NET_SUPPORTING_WM_CHECK"], check=True, capture_output=True)
     with tempfile.TemporaryDirectory(prefix="wxnotepad-openbox-") as directory:
         config = Path(directory) / "rc.xml"
         config.write_text(

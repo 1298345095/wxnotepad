@@ -48,6 +48,109 @@ inline int UnshiftedPunctuation(int key) {
 inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)> callback) {
 #ifdef __WXGTK__
     auto* widget = GTK_WIDGET(window->GetHandle());
+    if (GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget))) {
+        class Preparation final : public wxTimer {
+        public:
+            Preparation(wxTopLevelWindow* window, std::function<void(bool)> callback)
+                : window_(window), callback_(std::move(callback)),
+                  deadline_(std::chrono::steady_clock::now() + std::chrono::seconds(3)) {
+                auto* widget = GTK_WIDGET(window->GetHandle());
+                g_weak_ref_init(&native_, G_OBJECT(widget));
+                eventHandler_ = g_signal_connect(widget, "event-after",
+                                                 G_CALLBACK(+[](GtkWidget* widget, GdkEvent* event, gpointer data) {
+                                                     if (event->any.window != gtk_widget_get_window(widget) ||
+                                                         (event->type != GDK_MAP && event->type != GDK_CONFIGURE))
+                                                         return;
+                                                     auto& preparation = *static_cast<Preparation*>(data);
+                                                     preparation.paintedFrame_ = -1;
+                                                     preparation.ObserveClock(widget);
+                                                     gtk_widget_queue_draw(widget);
+                                                 }),
+                                                 this);
+                ObserveClock(widget);
+                gtk_widget_queue_draw(widget);
+            }
+            ~Preparation() override {
+                if (auto* widget = g_weak_ref_get(&native_)) {
+                    g_signal_handler_disconnect(widget, eventHandler_);
+                    g_object_unref(widget);
+                }
+                g_weak_ref_clear(&native_);
+                if (clock_) {
+                    g_signal_handler_disconnect(clock_, paintHandler_);
+                    g_object_unref(clock_);
+                }
+            }
+            void StartWaiting(std::shared_ptr<Preparation> pending) {
+                pending_ = std::move(pending);
+                Start(10);
+            }
+            void Notify() override {
+                const bool ready = Presented();
+                if (!ready && window_ && std::chrono::steady_clock::now() < deadline_) return;
+                Stop();
+                auto completed = std::move(pending_);
+                auto callback = std::move(callback_);
+                callback(ready);
+            }
+
+        private:
+            void ObserveClock(GtkWidget* widget) {
+                auto* window = gtk_widget_get_window(widget);
+                if (clock_ || !window) return;
+                clock_ = gdk_window_get_frame_clock(window);
+                if (!clock_) return;
+                g_object_ref(clock_);
+                paintHandler_ =
+                    g_signal_connect(clock_, "after-paint", G_CALLBACK(+[](GdkFrameClock* clock, gpointer data) {
+                                         static_cast<Preparation*>(data)->paintedFrame_ =
+                                             gdk_frame_clock_get_frame_counter(clock);
+                                     }),
+                                     this);
+            }
+            bool Presented() {
+                if (!window_ || paintedFrame_ < 0) return false;
+                if (const auto* frame = dynamic_cast<EditorFrame*>(window_.get());
+                    frame && frame->InitialWindowPositionPending())
+                    return false;
+                auto* object = g_weak_ref_get(&native_);
+                if (!object) return false;
+                auto* widget = GTK_WIDGET(object);
+                auto* native = gtk_widget_get_window(widget);
+                bool ready = native && gtk_widget_get_mapped(widget) &&
+                             !(gdk_window_get_state(native) & GDK_WINDOW_STATE_WITHDRAWN);
+                XWindowAttributes attributes{};
+                ready = ready &&
+                        XGetWindowAttributes(GDK_WINDOW_XDISPLAY(native), GDK_WINDOW_XID(native), &attributes) &&
+                        attributes.map_state == IsViewable;
+                if (ready) {
+                    GdkRectangle outer{};
+                    gdk_window_get_frame_extents(native, &outer);
+                    // Map and wx's shown flag precede the final GTK allocation.
+                    // Frames must also agree with their wx geometry. Stock native
+                    // dialogs expose the GTK widget without maintaining that rectangle.
+                    const bool frameReady = !window_->IsKindOf(wxCLASSINFO(wxFrame)) ||
+                                            window_->GetRect() == wxRect(outer.x, outer.y, outer.width, outer.height);
+                    ready = frameReady && gtk_widget_get_allocated_width(widget) == gdk_window_get_width(native) &&
+                            gtk_widget_get_allocated_height(widget) == gdk_window_get_height(native);
+                }
+                g_object_unref(object);
+                return ready;
+            }
+            wxWeakRef<wxTopLevelWindow> window_;
+            std::function<void(bool)> callback_;
+            std::chrono::steady_clock::time_point deadline_;
+            GWeakRef native_{};
+            GdkFrameClock* clock_ = nullptr;
+            gulong eventHandler_ = 0;
+            gulong paintHandler_ = 0;
+            gint64 paintedFrame_ = -1;
+            std::shared_ptr<Preparation> pending_;
+        };
+        auto preparation = std::make_shared<Preparation>(window, std::move(callback));
+        preparation->StartWaiting(preparation);
+        return;
+    }
     if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) {
         // Keep the normal main loop running until Weston sees this exact view.
         // Entering a synchronous shortcut wait before the first commit can leave

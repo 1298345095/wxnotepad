@@ -12,6 +12,7 @@
 #include "app/file_change_monitor.h"
 #include "app/word_wrap_state.h"
 #include "app/status_fields.h"
+#include "settings/window_position.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -24,7 +25,7 @@ class ExplorerSelections;
 
 class EditorFrame final : public wxFrame {
 public:
-    explicit EditorFrame(SettingsStore* settings = nullptr);
+    explicit EditorFrame(SettingsStore* settings = nullptr, std::optional<bool> alwaysOnTopOverride = std::nullopt);
     ~EditorFrame() override;
 #ifdef __WXMSW__
     bool MSWTranslateMessage(WXMSG* message) override;
@@ -63,6 +64,8 @@ public:
     bool OpenSelection(bool containingFolder = false);
     bool OpenContainingFolder();
     bool Restart();
+    void RememberInitialWindowPosition(bool maximized);
+    bool InitialWindowPositionPending() const;
     OpenStatus ReceiveWindowRequest(const WindowRequest& request);
     bool ExecuteDocument();
     bool OpenDocumentWith();
@@ -75,9 +78,37 @@ private:
     SettingsStore* settings_;
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
+    WindowPosition normalWindowPosition_;
+    bool pendingMaximize_ = false;
+    std::optional<wxRect> pendingDefaultPosition_;
+#ifdef __WXGTK__
+    struct InitialWindowRectangle {
+        wxRect rectangle;
+        int sizeFlags;
+        bool requested = false;
+    };
+    std::optional<InitialWindowRectangle> initialWindowRectangle_;
+    unsigned long initialWindowPositionHandler_ = 0;
+    void InitializeInitialWindowPosition();
+    void ApplyInitialWindowRectangle(bool configured);
+    void FinishInitialWindowPosition();
+    void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO) override;
+#endif
+    void ApplyPendingWindowPosition();
+    void CaptureNormalWindowPosition();
+    void RestoreWindowPosition();
+    void DefaultWindowPosition();
+    void CopyWindowPosition();
+    void AppendWindowPositionCommands(wxMenu* menu);
+    void AppendCopyWindowPosition(wxMenu* menu);
+    std::optional<bool> alwaysOnTopOverride_;
     bool FullScreenActive() const;
     void SetFullScreen(bool active);
     void HandleFullScreenKey(int modifiers);
+    bool SupportsAlwaysOnTop() const;
+    bool AlwaysOnTopActive() const;
+    void ApplyAlwaysOnTop();
+    void ToggleAlwaysOnTop();
     bool HandleEscapeKey(int modifiers);
 #ifdef __WXMSW__
     struct FullScreenPlacement;
@@ -132,6 +163,10 @@ private:
     void ShowEditorContextMenu(wxContextMenuEvent& event);
     void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
+    void AppendFileFavorites(wxMenu* file);
+    void AddFileFavorite();
+    void OpenFileFavorites();
+    void ManageFileFavorites();
     void AppendReloadEncodingCommands(wxMenu* reload);
     void AppendEncodingCommands(wxMenu* file);
     wxMenu* CreateEditMenu();
@@ -140,10 +175,12 @@ private:
     wxMenu* CreateSearchMenu();
     wxMenu* CreateSettingsMenu();
     wxMenu* CreateToolsMenu();
+    void AppendCodeFormatting(wxMenu* web);
     void AppendDocumentTools(wxMenu* tools);
     void AppendRunCommand(wxMenu* tools);
     void ShowRunCommand();
     void RunSelectionAction(SelectionAction action);
+    void CalculateExpression();
     bool HandleSelectionActionKey(const wxKeyEvent& event);
     bool LaunchSelectionCommand(const wxString& command, const wxString& directory, wxString& error);
     void AppendEditingCommands(wxMenu* edit);

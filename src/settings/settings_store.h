@@ -3,6 +3,7 @@
 #include "settings/original_settings.h"
 #include "settings/ini_document.h"
 #include "syntax/syntax_catalog.h"
+#include "settings/window_position.h"
 
 class SettingsStore final {
 public:
@@ -18,6 +19,11 @@ public:
     wxString DarkProfilePath() const;
     bool SaveUILanguage(int language);
     bool SaveWindowRouting(bool reuseWindow, bool singleFileInstance);
+    wxPoint LastWindowPosition() const;
+    std::optional<WindowPosition> LoadWindowPosition(wxSize screen, bool coordinates) const;
+    void CaptureWindowPosition(const WindowPosition& position);
+    bool SaveStickyWindowPosition(bool sticky);
+    bool ClearWindowPositionHistory();
     int OriginalRunCommandWidth(int screenWidth, int screenHeight) const;
     wxString SelectionActionTemplate(SelectionAction action);
     bool SaveSchemeTabs(SyntaxLanguage language);
@@ -29,6 +35,8 @@ public:
 
 private:
     IniDocument document_;
+    std::optional<WindowPosition> windowPosition_;
+    void WriteWindowPosition();
     FontSettings loadedFonts_;
     SyntaxExtensions loadedExtensions_;
     void WriteExtensions();

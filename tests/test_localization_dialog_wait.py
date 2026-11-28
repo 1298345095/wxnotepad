@@ -1,6 +1,9 @@
 """Exercise native dialog discovery across transient accessibility reads."""
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -53,6 +56,67 @@ class DialogWait(unittest.TestCase):
         self.assertEqual(self.window.get_role.call_count, 1)
         self.assertEqual(self.dialogs.wayland_mapping.call_count, 2)
         self.assertLess(self.now, 10)
+
+    def test_available_owned_dialog_is_found_before_slow_unrelated_window_body(self):
+        main = Mock()
+        main.get_name.return_value = "Owned editor"
+        main.get_role.return_value = "frame"
+
+        def slow_native_children():
+            self.advance(10)
+            return 0
+
+        main.get_child_count.side_effect = slow_native_children
+        self.dialogs.windows.return_value = [main, self.window]
+        self.dialogs.wayland_mapping.return_value = (True, "owned dialog is mapped")
+        self.assertIs(
+            self.dialogs.wait(self.process, "Owned chooser role readiness", "Expected native message"), self.window
+        )
+        self.assertLess(self.now, 10, "An already available dialog must retain the original discovery budget")
+
+    def test_expired_mapping_budget_retains_native_failure_snapshot(self):
+        title = "Owned chooser role readiness"
+
+        def delayed_native_title():
+            if self.now == 0:
+                self.advance(10)
+            return title
+
+        self.window.get_name.side_effect = delayed_native_title
+        self.window.get_state_set.return_value.get_states.return_value = ["showing"]
+        self.dialogs.wayland_mapping = localization_native.Dialogs.wayland_mapping.__get__(self.dialogs)
+        self.dialogs.observe_wait_failure = localization_native.Dialogs.observe_wait_failure.__get__(self.dialogs)
+        folder = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.dialogs.evidence = folder
+        self.enterContext(patch("subprocess.run", return_value=SimpleNamespace(stdout="Owned native scene", stderr="")))
+        with self.assertRaisesRegex(AssertionError, "Native dialog mapping deadline expired"):
+            self.dialogs.wait(self.process, title)
+        retained = json.loads((folder / "native-wait-123-1.json").read_text(encoding="utf-8"))
+        self.assertEqual(retained["expected"], title)
+        self.assertEqual(retained["windows"][0]["title"], title)
+        self.assertEqual((folder / "native-wait-123-1.scene.txt").read_text(encoding="utf-8"), "Owned native scene")
+        self.assertEqual(self.now, 10, "Retention must not restart the discovery budget")
+
+    def test_snapshot_error_does_not_replace_expired_mapping_verdict(self):
+        title = "Owned chooser role readiness"
+
+        def delayed_native_title():
+            if self.now == 0:
+                self.advance(10)
+            return title
+
+        self.window.get_name.side_effect = delayed_native_title
+        self.window.get_state_set.return_value.get_states.return_value = ["showing"]
+        self.dialogs.wayland_mapping = localization_native.Dialogs.wayland_mapping.__get__(self.dialogs)
+        self.dialogs.observe_wait_failure = localization_native.Dialogs.observe_wait_failure.__get__(self.dialogs)
+        folder = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.dialogs.evidence = folder
+        self.enterContext(patch("subprocess.run", side_effect=OSError("Native scene service unavailable")))
+        with self.assertRaisesRegex(AssertionError, "Native dialog mapping deadline expired") as raised:
+            self.dialogs.wait(self.process, title)
+        self.assertTrue((folder / "native-wait-123-1.json").is_file())
+        self.assertIn("Native scene service unavailable", raised.exception.__notes__[0])
+        self.assertEqual(self.now, 10)
 
     def test_alert_role_timeout_recovers_before_matching_message(self):
         self.window.get_name.return_value = "Question"

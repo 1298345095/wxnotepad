@@ -152,7 +152,17 @@ class Dialogs:
                     if name == title:
                         if sys.platform == "win32" or os.environ.get("GDK_BACKEND") != "wayland":
                             return window
-                        mapped, scene = self.wayland_mapping(process.pid, title, deadline)
+                        try:
+                            mapped, scene = self.wayland_mapping(process.pid, title, deadline)
+                        except AssertionError as failure:
+                            # A native read can finish after the budget expires,
+                            # before the first scene probe. Keep that failure's
+                            # evidence without replacing its original verdict.
+                            try:
+                                self.observe_wait_failure(process, title, observed)
+                            except Exception as capture_error:
+                                failure.add_note(f"Could not retain native dialog failure: {capture_error}")
+                            raise
                         window.clear_cache()
                         if mapped and window.get_state_set().contains(self.atspi.StateType.SHOWING):
                             self.retain_native_scene(process.pid, "mapped", scene)
@@ -160,6 +170,10 @@ class Dialogs:
                         if not mapping_observed:
                             self.retain_native_scene(process.pid, "before-map", scene)
                             mapping_observed = True
+                # Inspect every owned top-level title before recursive message
+                # lookup: the editor's accessibility tree can consume the wait
+                # budget even when the requested dialog is already available.
+                for window in observed:
                     if message is not None and any(message in text for text in self.texts(window)):
                         return window
                     if sys.platform != "win32" and window.get_role() == self.atspi.Role.ALERT:

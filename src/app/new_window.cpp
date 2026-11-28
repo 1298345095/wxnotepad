@@ -13,31 +13,44 @@
 #include <wx/filename.h>
 #include <wx/log.h>
 #include <limits>
+#include <cstdint>
 #include <array>
 #include <vector>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
 
-bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argument) {
+std::optional<WindowPosition> ParseWindowPosition(const wxString& argument) {
     const auto parts = wxSplit(argument, ',');
     std::array<int, 5> values{};
-    if (parts.size() != values.size()) return false;
+    if (parts.size() != values.size()) return std::nullopt;
     for (size_t i = 0; i < parts.size(); ++i) {
         long value = 0;
         if (!parts[i].ToLong(&value) || value < std::numeric_limits<int>::min() ||
             value > std::numeric_limits<int>::max())
-            return false;
+            return std::nullopt;
         values[i] = static_cast<int>(value);
     }
     const auto [x, y, width, height, maximized] = values;
-    if (width <= 0 || height <= 0 || (maximized != 0 && maximized != 1)) return false;
+    if (width <= 0 || height <= 0 || (maximized != 0 && maximized != 1)) return std::nullopt;
+    if (static_cast<int64_t>(x) + width > std::numeric_limits<int>::max() ||
+        static_cast<int64_t>(y) + height > std::numeric_limits<int>::max())
+        return std::nullopt;
+    return WindowPosition{{x, y, width, height}, maximized != 0};
+}
+
+bool ApplyInitialWindowPosition(EditorFrame& window, const wxString& argument) {
+    const auto position = ParseWindowPosition(argument);
+    if (!position) return false;
+    const auto& normal = position->normal;
 #ifdef __WXMSW__
-    window.SetSize(x, y, width, height);
+    SetInitialWindowRectangle(window, normal, wxSIZE_AUTO);
 #else
-    window.SetSize(width, height);
+    window.SetSize(normal.GetSize());
 #endif
-    window.Maximize(maximized != 0);
+    window.SendSizeEvent();
+    window.RememberInitialWindowPosition(position->maximized);
+    window.Maximize(position->maximized);
     return true;
 }
 

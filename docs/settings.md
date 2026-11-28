@@ -5,6 +5,16 @@ creating the frame and applies the stored values to the existing editor. Feature
 modules do not read configuration files. Later settings work adds original fields
 to this same store and applies them through the responsible feature module.
 
+`[Settings] AlwaysOnTop` defaults to `0`. Settings > Window Options > Always On
+Top, Alt+Shift+T and optional toolbar identity 26 toggle the same native frame.
+The preference follows Save Settings Now and Save Settings On Exit; default `0`
+is omitted on save. Original `o`/`o0`/`o-`/`oo` startup switches temporarily force
+the new window on/off without changing this preference. A manual toggle clears
+the override and changes the preference. New Window and Restart load the saved
+preference independently. Unsupported GTK backends retain it on disk while the
+localized menu/button remain disabled and unchecked. See
+[native stacking evidence](observations/always-on-top.md).
+
 `[Settings2] UILanguage` retains the original LANGID integer, default `1024`
 (System Language). Explicit UI-language changes save this field independently
 of Save Settings On Exit; ordinary saves preserve the latest value on disk.

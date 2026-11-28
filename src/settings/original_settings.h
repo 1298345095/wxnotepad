@@ -38,11 +38,15 @@ struct OriginalSettings {
     bool saveBeforeRunningTools = false;
     bool reuseWindow = false;
     bool singleFileInstance = true;
+    bool stickyWindowPosition = false;
+    bool multiFileArg = false;
     wxString openWithDirectory;
+    wxString favoritesDirectory;
     int runCommandWidthDIP = 0;
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
     bool showToolbar = true;
+    bool alwaysOnTop = false;
     int autoScaleToolbar = DisplayUnits::DefaultDpi;
     wxString toolbarButtons = DefaultToolbarButtons;
     bool showStatusbar = true;

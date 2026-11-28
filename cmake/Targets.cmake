@@ -55,6 +55,7 @@ add_library(editor_runtime STATIC
     src/editor/url_conversion.cpp
     src/editor/base64_conversion.cpp
     src/editor/rtf_export.cpp
+    src/editor/code_format.cpp
     src/editor/platform/native_encoding.cpp
     src/editor/native_byte_history.cpp
     src/editor/compress_whitespace.cpp
@@ -128,6 +129,10 @@ target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPA
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/file_favorites.cpp
+    src/app/editor_frame_favorites.cpp
+    src/app/dialogs/file_favorites_dialog.cpp
+    src/app/code_format.cpp
     src/app/app_icon.cpp
     src/app/dialogs/auto_completion_settings_dialog.cpp
     src/app/dialogs/auto_save_settings_dialog.cpp
@@ -175,10 +180,12 @@ add_library(app_shell STATIC
     src/app/desktop_launch.cpp
     src/app/document_tools.cpp
     src/app/new_window.cpp
+    src/app/window_position.cpp
     src/app/window_routing.cpp
     src/app/open_targets.cpp
     src/app/run_command.cpp
     src/app/selection_actions.cpp
+    src/app/calculate_expression.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
@@ -187,6 +194,13 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(NOT WIN32)
     target_link_libraries(app_shell PUBLIC wx::net)
+    find_package(qjs CONFIG REQUIRED)
+    get_target_property(expression_engine_type qjs TYPE)
+    if(NOT expression_engine_type STREQUAL "STATIC_LIBRARY")
+        message(FATAL_ERROR "Calculate Expression requires the statically linked QuickJS engine")
+    endif()
+    target_sources(app_shell PRIVATE src/app/expression_evaluator_qjs.cpp)
+    target_link_libraries(app_shell PRIVATE qjs)
 endif()
 if(NOT WIN32)
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/artwork/wxnotepad.ico" WXNOTEPAD_ICON_HEX HEX)

@@ -101,6 +101,15 @@ wxMenu* EditorFrame::CreateToolsMenu() {
     auto* selection = new wxMenu;
     AppendOpenTargetCommands(selection);
     selection->AppendSeparator();
+    const int calculate = wxWindow::NewControlId();
+    selection->Append(calculate, _("&Calculate Expression"),
+                      _("Evaluate the selected JavaScript expression in Math scope."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { CalculateExpression(); }, calculate);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        calculate);
+    selection->AppendSeparator();
     // TRANSLATORS: CMD_ONLINE_SEARCH_GOOGLE/BING/WIKI and CMD_CUSTOM_ACTION1/2, in original menu order.
     const std::array selectionActions{std::pair{SelectionAction::Google, _("Search with &Google")},
                                       std::pair{SelectionAction::Bing, _("Search with &Bing")},
@@ -143,6 +152,10 @@ wxMenu* EditorFrame::CreateToolsMenu() {
             id);
     }
     tools->AppendSubMenu(base64, _("&Base64"));
+    auto* web = new wxMenu;
+    AppendCodeFormatting(web);
+    // TRANSLATORS: Original Tools/Web Tools submenu.
+    tools->AppendSubMenu(web, _("&Web Tools"));
     return tools;
 }
 
@@ -426,6 +439,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, containingFolder);
     file->Append(updateTime, _("Update File Time"));
     file->AppendSeparator();
+    AppendFileFavorites(file);
     AppendRecentFilesCommand(file);
     file->AppendSeparator();
     // TRANSLATORS: IDR_MAINWND IDM_FILE_EXIT; close through the existing unsaved-document workflow.

@@ -14,7 +14,8 @@ if(WIN32)
     target_link_libraries(editor_features PRIVATE advapi32 shell32 ole32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
     target_sources(app_shell PRIVATE src/app/explorer_selections.cpp)
-    target_link_libraries(app_shell PRIVATE shell32 ole32 oleaut32 uuid comdlg32)
+    target_sources(app_shell PRIVATE src/app/expression_evaluator_msw.cpp)
+    target_link_libraries(app_shell PRIVATE shell32 ole32 oleaut32 uuid comdlg32 propsys)
 endif()
 
 # The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.

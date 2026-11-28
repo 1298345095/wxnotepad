@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/new_window.h"
 #ifdef __WXMSW__
 #include "app/explorer_selections.h"
 #endif
@@ -26,6 +27,7 @@
 #include <wx/fontutil.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
+#include <X11/Xatom.h>
 #undef None
 #endif
 #include <wx/msgdlg.h>
@@ -33,6 +35,7 @@
 #include <wx/filename.h>
 #include <wx/translation.h>
 #include <array>
+#include <algorithm>
 #ifdef __WXMSW__
 #include <wx/msw/wrapwin.h>
 #endif
@@ -68,12 +71,13 @@ struct EditorFrame::FullScreenPlacement {
 };
 #endif
 
-EditorFrame::EditorFrame(SettingsStore* settings)
+EditorFrame::EditorFrame(SettingsStore* settings, std::optional<bool> alwaysOnTopOverride)
     : wxFrame(nullptr, wxID_ANY, wxString::Format(_("%s - wxnotepad"), _("Untitled")), wxDefaultPosition,
               wxSize(900, 600)),
       editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
-      indentation_(settings ? settings->values : defaults_), wordWrap_(*editor_),
+      alwaysOnTopOverride_(alwaysOnTopOverride), indentation_(settings ? settings->values : defaults_),
+      wordWrap_(*editor_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
                                                   settings->values.noHtmlGuess,
@@ -84,6 +88,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                 settings ? settings->values.autoSave : AutoSaveOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { return HandleFileChange(); }), search_(*editor_) {
+#ifdef __WXGTK__
+    InitializeInitialWindowPosition();
+#endif
     // Establish the single editor child before preferences calculate wrapped geometry.
     Layout();
     const auto& preferences = settings ? settings->values : defaults_;
@@ -105,7 +112,16 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+#ifdef __WXGTK__
+        if (initialWindowRectangle_ && initialWindowRectangle_->requested) ApplyInitialWindowRectangle(false);
+#endif
         if (!FullScreenActive() && !IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+        CaptureNormalWindowPosition();
+        ApplyPendingWindowPosition();
+        event.Skip();
+    });
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event) {
+        CaptureNormalWindowPosition();
         event.Skip();
     });
     editor_->SetFontSettings(preferences.fonts);
@@ -155,6 +171,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     document_.New();
     indentation_.Apply(*editor_, document_.Language());
     CreateMenus();
+    ApplyAlwaysOnTop();
     CreateDefaultToolbar();
     SetIcons(ApplicationIcons());
     CreatePositionStatus();
@@ -203,11 +220,15 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
 #endif
+    RestoreWindowPosition();
     UpdateDocumentState();
     editor_->SetFocus();
 }
 
 EditorFrame::~EditorFrame() {
+#ifdef __WXGTK__
+    FinishInitialWindowPosition();
+#endif
 #ifdef __WXMSW__
     // wxMSW leaves attached HMENUs for DestroyWindow to free. Restore native
     // ownership even when we hid the bar without detaching wx's accelerators.
@@ -225,17 +246,34 @@ bool EditorFrame::Destroy() {
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     const bool keyDown = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
     const auto handle = static_cast<HWND>(GetHandle());
-    const bool windowModeKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE;
-    if (keyDown && windowModeKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
+    const bool interceptedKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE || message->wParam == VK_F9 ||
+                                message->wParam == 'P' || message->wParam == 'K';
+    if (keyDown && interceptedKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
         const int modifiers = (::GetKeyState(VK_CONTROL) < 0 ? wxMOD_CONTROL : 0) |
                               (::GetKeyState(VK_MENU) < 0 ? wxMOD_ALT : 0) |
                               (::GetKeyState(VK_SHIFT) < 0 ? wxMOD_SHIFT : 0) |
                               ((::GetKeyState(VK_LWIN) < 0 || ::GetKeyState(VK_RWIN) < 0) ? wxMOD_META : 0);
+        if (modifiers == (wxMOD_CONTROL | wxMOD_SHIFT)) {
+            if (message->wParam == 'P') {
+                DefaultWindowPosition();
+                return true;
+            }
+            if (message->wParam == 'K') {
+                CopyWindowPosition();
+                return true;
+            }
+        }
         if (message->wParam == VK_F11) {
             HandleFullScreenKey(modifiers);
             return true;
         }
         if (message->wParam == VK_ESCAPE && HandleEscapeKey(modifiers)) return true;
+        if (message->wParam == VK_F9 && modifiers == wxMOD_ALT) {
+            // Run after native message retrieval, not in WH_KEYBOARD: shell
+            // dispatch pumps messages and could otherwise replay this as F9.
+            ManageFileFavorites();
+            return true;
+        }
     }
     // A hidden native menu receives no WM_INITMENU to refresh command state.
     // Refresh command gestures, leaving ordinary character input alone.
@@ -250,6 +288,60 @@ bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
 }
 #endif
 
+bool EditorFrame::SupportsAlwaysOnTop() const {
+#ifdef __WXGTK__
+    auto* widget = GTK_WIDGET(GetHandle());
+    return GDK_IS_X11_DISPLAY(gtk_widget_get_display(widget)) &&
+           gdk_x11_screen_supports_net_wm_hint(gtk_widget_get_screen(widget),
+                                               gdk_atom_intern_static_string("_NET_WM_STATE_ABOVE"));
+#else
+    return true;
+#endif
+}
+
+bool EditorFrame::AlwaysOnTopActive() const {
+    if (!SupportsAlwaysOnTop()) return false;
+#ifdef __WXMSW__
+    return (::GetWindowLongPtrW(static_cast<HWND>(GetHandle()), GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+#elif defined(__WXGTK__)
+    auto* window = gtk_widget_get_window(GTK_WIDGET(GetHandle()));
+    if (!window) return false;
+    // GDK's cached state can omit ABOVE even after the WM applies it. Read
+    // the actual X11 property so the menu and toolbar reflect native state.
+    auto* display = GDK_WINDOW_XDISPLAY(window);
+    const auto state = XInternAtom(display, "_NET_WM_STATE", False);
+    const auto above = XInternAtom(display, "_NET_WM_STATE_ABOVE", False);
+    Atom type = 0;
+    int format = 0;
+    unsigned long count = 0, remaining = 0;
+    unsigned char* bytes = nullptr;
+    constexpr long MaximumStateAtoms = 64;
+    const int status = XGetWindowProperty(display, GDK_WINDOW_XID(window), state, 0, MaximumStateAtoms, False,
+                                          AnyPropertyType, &type, &format, &count, &remaining, &bytes);
+    const auto* atoms = reinterpret_cast<const Atom*>(bytes);
+    const bool active = status == Success && type == XA_ATOM && format == 32 && bytes &&
+                        std::find(atoms, atoms + count, above) != atoms + count;
+    if (bytes) XFree(bytes);
+    return active;
+#else
+    return (GetWindowStyleFlag() & wxSTAY_ON_TOP) != 0;
+#endif
+}
+
+void EditorFrame::ApplyAlwaysOnTop() {
+    if (!SupportsAlwaysOnTop()) return;
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    SetWindowStyleFlag(alwaysOnTopOverride_.value_or(preferences.alwaysOnTop) ? GetWindowStyleFlag() | wxSTAY_ON_TOP
+                                                                              : GetWindowStyleFlag() & ~wxSTAY_ON_TOP);
+}
+
+void EditorFrame::ToggleAlwaysOnTop() {
+    if (!SupportsAlwaysOnTop()) return;
+    (settings_ ? settings_->values : defaults_).alwaysOnTop = !AlwaysOnTopActive();
+    alwaysOnTopOverride_.reset();
+    ApplyAlwaysOnTop();
+}
+
 bool EditorFrame::FullScreenActive() const {
 #ifdef __WXMSW__
     return fullScreenPlacement_ != nullptr;
@@ -260,6 +352,7 @@ bool EditorFrame::FullScreenActive() const {
 
 void EditorFrame::SetFullScreen(bool active) {
     if (active == FullScreenActive()) return;
+    if (active) CaptureNormalWindowPosition();
 #ifdef __WXMSW__
     const auto window = static_cast<HWND>(GetHandle());
     if (active) {
@@ -281,6 +374,9 @@ void EditorFrame::SetFullScreen(bool active) {
     }
 #else
 #ifdef __WXGTK__
+    // Leaving fullscreen can briefly report an ordinary window before the WM
+    // restores its previous maximized state. Keep the saved normal rectangle.
+    if (!active && normalWindowPosition_.maximized) pendingMaximize_ = true;
     if (active) {
         auto* screen = gtk_widget_get_screen(GTK_WIDGET(GetHandle()));
         if (GDK_IS_X11_DISPLAY(gdk_screen_get_display(screen)) &&
@@ -365,6 +461,8 @@ void EditorFrame::ApplyBarVisibility() {
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
+    CaptureNormalWindowPosition();
+    settings_->CaptureWindowPosition(normalWindowPosition_);
 #ifdef __WXMSW__
     settings_->values.renderingTechnology = static_cast<int>(editor_->Send(Scintilla::Message::GetTechnology));
     settings_->values.fontQuality = static_cast<int>(editor_->Send(Scintilla::Message::GetFontQuality));

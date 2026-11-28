@@ -52,7 +52,14 @@ void Resize(EditorFrame* frame, int width) {
     do {
         frame->Layout();
         NativePaint::Complete(editor);
-        if (frame->GetClientSize() == requested && editor->GetSize() == requested) return;
+        bool nativeSizeMatches = true;
+#ifdef __WXGTK__
+        // wx size caches can match before GTK applies the native allocation.
+        auto* widget = GTK_WIDGET(editor->GetHandle());
+        nativeSizeMatches = gtk_widget_get_allocated_width(widget) == requested.x &&
+                            gtk_widget_get_allocated_height(widget) == requested.y;
+#endif
+        if (nativeSizeMatches && frame->GetClientSize() == requested && editor->GetSize() == requested) return;
         wxYield();
         wxMilliSleep(1);
     } while (std::chrono::steady_clock::now() < deadline);

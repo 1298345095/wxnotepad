@@ -394,28 +394,48 @@ def matrix(fixture):
     b.write_bytes(b"other\r\nfile\r\n")
     code = fixture.args.language
     rows = []
+    started = time.monotonic()
+
+    def stage(name):
+        record = {
+            "row_index": index,
+            "row": row,
+            "stage": name,
+            "parent_pid": app.process.pid if app else None,
+            "requester_pid": requester.process.pid if requester else None,
+            "elapsed_seconds": time.monotonic() - started,
+        }
+        (fixture.logs / "routing-matrix-stage.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+
     for index, row in enumerate(reference["rows"]):
-        app = fixture.start(PREFERENCE[code], code, startup=a, arguments=("-n",))
+        app = None
         requester = None
+        stage("start-parent")
+        app = fixture.start(PREFERENCE[code], code, startup=a, arguments=("-n",))
         try:
             configure_routing(fixture, row["reuse"], row["single"])
             prefix = ("/", "-", "--")[index % 3] if sys.platform == "win32" else ("-", "--")[index % 2]
             arguments = [prefix + row["switch"][1:]] if row["switch"] else []
             if row["path"] != "none":
                 arguments.append(str(a if row["path"] == "same" else b))
+            stage("start-requester")
             requester = incoming(fixture, arguments, code)
+            stage("wait-ready-or-exit")
             if row["new_window"]:
                 finish_start(requester)
                 assert requester.process.pid != app.process.pid and app.process.poll() is None
                 expected = b"" if row["path"] == "none" else a.read_bytes() if row["path"] == "same" else b.read_bytes()
                 destination = fixture.directory / f"child-{index}.txt"
+                stage("save-requester")
                 requester.send("save", str(destination))
                 assert destination.read_bytes() == expected, row
+                stage("close-requester")
                 requester.close()
             else:
                 assert requester.process.wait(timeout=5) == 0, row
             expected = bytes.fromhex(row["parent_hex"])
             destination = fixture.directory / f"parent-{index}.txt"
+            stage("save-parent")
             app.send("save", str(destination))
             assert destination.read_bytes() == expected, row
             assert a.read_bytes() == b"first\r\nsecond\r\n" and b.read_bytes() == b"other\r\nfile\r\n"
@@ -428,11 +448,13 @@ def matrix(fixture):
                 )
             )
             (fixture.logs / "routing-matrix.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
+            stage("close-parent")
             app.close()
         finally:
             app.stop()
             if requester:
                 requester.stop()
+    stage("complete")
     (fixture.logs / "routing-matrix.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
     print(f"PASS: {code} all 60 independent original settings/override/path routes, including SFI miss", flush=True)
 
