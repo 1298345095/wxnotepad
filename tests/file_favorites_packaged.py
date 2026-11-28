@@ -10,6 +10,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 from localization_layout import capture_and_check, owned_topmost
@@ -30,6 +32,16 @@ WM_GETMINMAXINFO = 0x24
 WM_GETTEXT = 0xD
 WM_KEYDOWN = 0x100
 WM_SETTEXT = 0xC
+
+CLSCTX_INPROC_SERVER = 1
+STGM_READ = 0
+SHELL_LINK_PATH_CAPACITY = 32768
+IUNKNOWN_QUERY_INTERFACE = 0
+IUNKNOWN_RELEASE = 2
+SHELL_LINK_GET_PATH = 3
+SHELL_LINK_SET_PATH = 20
+PERSIST_FILE_LOAD = 5
+PERSIST_FILE_SAVE = 6
 
 CAPTIONS = {
     1033: (
@@ -118,29 +130,131 @@ def default_name(dialogs, window, name_label, target):
     assert observed == expected, (observed, expected)
 
 
-def shortcut(path, target=None):
-    """Create/read an independent native WSH shortcut, or a POSIX symbolic link."""
+def shortcut(path, target=None, *, diagnostics=None):
+    """Create/read a Unicode Windows ShellLink, or a POSIX symbolic link."""
     if sys.platform != "win32":
         if target is not None:
             path.symlink_to(target, target_is_directory=Path(target).is_dir())
         return os.readlink(path)
     if target is None:
         assert path.is_file(), (str(path), [entry.name for entry in path.parent.iterdir()])
-    script = (
-        "$ErrorActionPreference='Stop';[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);"
-        "$link=(New-Object -ComObject WScript.Shell).CreateShortcut($env:WXNOTEPAD_FAVORITE_LINK);"
-        "if($env:WXNOTEPAD_FAVORITE_TARGET){$link.TargetPath=$env:WXNOTEPAD_FAVORITE_TARGET;$link.Save()};"
-        "$link.TargetPath"
-    )
     result = subprocess.run(
-        ["pwsh", "-NoLogo", "-NoProfile", "-Command", script],
-        env=dict(os.environ, WXNOTEPAD_FAVORITE_LINK=str(path), WXNOTEPAD_FAVORITE_TARGET=str(target or "")),
+        [sys.executable, "-X", "utf8", str(Path(__file__).resolve()), "--native-shortcut"],
+        input=json.dumps({"path": str(path), "target": str(target) if target is not None else None}),
         capture_output=True,
         encoding="utf-8",
         check=True,
         timeout=10,
     )
-    return result.stdout.strip()
+    response = json.loads(result.stdout)
+    if diagnostics is not None:
+        diagnostics.update(response)
+    if "error" in response:
+        raise OSError(response["error"])
+    return response["target"]
+
+
+def native_shortcut(path, target, results):
+    """Narrow child-process implementation; the caller retains its ten-second limit."""
+
+    def guid(value):
+        return (ctypes.c_ubyte * 16).from_buffer_copy(uuid.UUID(value).bytes_le)
+
+    def method(pointer, index, *argument_types):
+        table = ctypes.cast(pointer, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+        return ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, *argument_types)(table[index])
+
+    def checked(name, result):
+        results[name] = result
+        if result < 0:
+            raise OSError(f"{name} failed: HRESULT 0x{result & 0xFFFFFFFF:08x}")
+
+    ole = ctypes.OleDLL("ole32")
+    ole.CoInitialize.argtypes = [ctypes.c_void_p]
+    ole.CoCreateInstance.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_void_p]
+    ole.CoUninitialize.argtypes = []
+    ole.CoUninitialize.restype = None
+    link = ctypes.c_void_p()
+    file = ctypes.c_void_p()
+    # WSH's automation shortcut interface converts paths through the ACP.
+    # IShellLinkW and IPersistFile accept UTF-16 for both the link and its target.
+    clsid = guid("00021401-0000-0000-C000-000000000046")
+    shell_link_w = guid("000214F9-0000-0000-C000-000000000046")
+    persist_file = guid("0000010B-0000-0000-C000-000000000046")
+    ole.CoInitialize(None)
+    try:
+        ole.CoCreateInstance(
+            ctypes.byref(clsid), None, CLSCTX_INPROC_SERVER, ctypes.byref(shell_link_w), ctypes.byref(link)
+        )
+        checked(
+            "QueryInterface",
+            method(link, IUNKNOWN_QUERY_INTERFACE, ctypes.c_void_p, ctypes.c_void_p)(
+                link, ctypes.byref(persist_file), ctypes.byref(file)
+            ),
+        )
+        if target is not None:
+            checked("SetPath", method(link, SHELL_LINK_SET_PATH, ctypes.c_wchar_p)(link, str(target)))
+            checked("Save", method(file, PERSIST_FILE_SAVE, ctypes.c_wchar_p, ctypes.c_int)(file, str(path), True))
+        else:
+            checked(
+                "Load", method(file, PERSIST_FILE_LOAD, ctypes.c_wchar_p, ctypes.c_ulong)(file, str(path), STGM_READ)
+            )
+        value = ctypes.create_unicode_buffer(SHELL_LINK_PATH_CAPACITY)
+        checked(
+            "GetPath",
+            method(link, SHELL_LINK_GET_PATH, ctypes.c_wchar_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_ulong)(
+                link, value, len(value), None, 0
+            ),
+        )
+        results["target"] = value.value
+        return value.value
+    finally:
+        if file:
+            method(file, IUNKNOWN_RELEASE)(file)
+        if link:
+            method(link, IUNKNOWN_RELEASE)(link)
+        ole.CoUninitialize()
+
+
+def retain_shortcuts(root, evidence, failure):
+    """Keep original link bytes and native reader results before temporary cleanup."""
+    output = evidence / "shortcut-failure"
+    output.mkdir(parents=True, exist_ok=True)
+    records = []
+    for index, path in enumerate(root.rglob("*.lnk")):
+        record = {"path": str(path), "native_reader": {}}
+        records.append(record)
+        try:
+            original = path.read_bytes()
+            saved = output / f"{index}.lnk.bin"
+            saved.write_bytes(original)
+            record.update(length=len(original), original_bytes=saved.name)
+            record["reader_result"] = shortcut(path, diagnostics=record["native_reader"])
+        except Exception as error:
+            record["reader_error"] = repr(error)
+    (output / "results.json").write_text(
+        json.dumps(
+            {"system_acp": ctypes.windll.kernel32.GetACP(), "failure": repr(failure), "links": records},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+@contextmanager
+def favorite_workspace(evidence):
+    with tempfile.TemporaryDirectory(prefix="wxnotepad-favorites-package-") as temporary:
+        root = Path(temporary).resolve()
+        try:
+            yield root
+        except Exception as error:
+            if sys.platform == "win32":
+                try:
+                    retain_shortcuts(root, evidence, error)
+                except Exception as diagnostic_error:
+                    error.add_note(f"Shortcut evidence capture failed: {diagnostic_error!r}")
+            raise
 
 
 def select_favorite(dialogs, app, window, index=0):
@@ -624,8 +738,7 @@ def main():
     source = args.executable.resolve()
     args.evidence.mkdir(parents=True, exist_ok=True)
     dialogs = Dialogs(args.evidence)
-    with tempfile.TemporaryDirectory(prefix="wxnotepad-favorites-package-") as temporary:
-        root = Path(temporary).resolve()
+    with favorite_workspace(args.evidence) as root:
         package = root / "package"
         package.mkdir()
         if args.cmake_dir:
@@ -763,4 +876,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:] == ["--native-shortcut"]:
+        request = json.load(sys.stdin)
+        response = {"system_acp": ctypes.windll.kernel32.GetACP()}
+        try:
+            native_shortcut(request["path"], request["target"], response)
+        except Exception as error:
+            response["error"] = repr(error)
+        print(json.dumps(response))
+    else:
+        main()
